@@ -1,0 +1,8 @@
+@OPH_SERVER_LOCATION@/log/server.log {
+   weekly
+   rotate 10
+   compress
+   missingok
+   notifempty
+   copytruncate
+}

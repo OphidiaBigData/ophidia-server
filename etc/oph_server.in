@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# /etc/init.d/oph_server
+# Subsystem file for "oph_server" server
+#
+# chkconfig: 2345 95 05
+# description: oph_server server daemon
+#
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+RETVAL=0
+prog="oph_server"
+exec="@OPH_SERVER_LOCATION@/bin/${prog}"
+logfile="@OPH_SERVER_LOCATION@/log/server.log"
+pidfile="/var/run/${prog}.pid"
+lockfile="/var/lock/subsys/${prog}"
+
+start() {
+	echo -n $"Starting $prog:"
+	if [ -s ${pidfile} ]; then
+		RETVAL=1
+		echo -n "Already running !" && warning
+		echo
+	else
+		$exec -d -l $logfile > /dev/null 2>&1 &
+	       	RETVAL=$?
+	       	PID=$!
+		[ "$RETVAL" = 0 ] && touch ${lockfile} && success || failure
+		echo	
+		echo $PID > ${pidfile}
+	fi
+}
+
+stop() {
+	echo -n $"Stopping $prog:"
+	killproc $prog -TERM
+	RETVAL=$?
+	[ "$RETVAL" = 0 ] && rm -f ${lockfile} && rm -f ${pidfile}
+	echo
+}
+
+reload() {
+	echo -n $"Reloading $prog:"
+	killproc $prog -HUP
+	RETVAL=$?
+	echo
+}
+
+case "$1" in	
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+	reload)
+		reload
+		;;
+	condrestart)
+		if [ -f $lockfile ] ; then
+			stop
+			# avoid race
+			sleep 3
+			start
+		fi
+		;;
+	status)
+		status $prog
+		RETVAL=$?
+		;;
+	*)	(10)
+		echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
+		RETVAL=1
+esac
+exit $RETVAL
