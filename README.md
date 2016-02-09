@@ -2,9 +2,9 @@
 
 ### Description
 
-The Ophidia Server is the Ophidia front-end. It supports several interfaces (WS-I, GSI/VOMS, WPS) and works as a web service.
-It also provides user authorization and confidentialy (based on TLS/SSL protocol for WS-I and WPS).
-The server processes JSON Requests structured according to the Ophidia Workflow JSON Schema and returns JSON Responses back to clients.
+The Ophidia Server is the Ophidia front-end. It supports WS-I and GSI/VOMS interfaces and works as a web service.
+It also provides user authorization and confidentialy (based on TLS/SSL protocol for WS-I).
+The server processes JSON Requests structured according to the Ophidia Workflow [JSON Schema](http://ophidia.cmcc.it/documentation/users/appendix/json_request.html) and returns [JSON Responses](http://ophidia.cmcc.it/documentation/users/appendix/json_response.html) back to clients.
 
 ### Requirements
 
