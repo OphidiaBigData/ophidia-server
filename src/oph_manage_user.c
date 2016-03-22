@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 	pthread_mutex_init(&global_flag, NULL);
 #endif
 	int ch, msglevel = LOG_ERROR;
-	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = NULL;
+	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no";
 	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, black_listed = 0, update = 0;
 	while ((ch = getopt(argc, argv, "a:bc:e:f:hm:n:p:r:s:t:u:vw"))!=-1)
 	{
@@ -308,6 +308,19 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
+		char* _password = password;
+#ifdef INTERFACE_TYPE_IS_SSL
+		char sha_password[2*SHA_DIGEST_LENGTH+2];
+		_password = oph_sha(sha_password, password);
+		if (!_password)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"SHA digest cannot be created!\n");
+			cleanup();
+			return 1;
+		}
+		pmesg(LOG_DEBUG, __FILE__,__LINE__,"Use SHA digest: %s\n",_password);
+#endif
+
 		// users.dat
 		file = fopen(filename,"a");
 		if (!file)
@@ -316,7 +329,7 @@ int main(int argc, char* argv[])
 			cleanup();
 			return 1;
 		}
-		fprintf(file,"%s%s%s\n",username,OPH_SEPARATOR_BASIC,password);
+		fprintf(file,"%s%s%s\n",username,OPH_SEPARATOR_BASIC,_password);
 		fclose(file);
 
 		// folders

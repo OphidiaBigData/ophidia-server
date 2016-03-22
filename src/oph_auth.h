@@ -138,5 +138,9 @@ char* oph_expand_role_string(const char* role); // The result has to be freed
 
 int oph_auth_check_role(oph_auth_user_role role, oph_auth_user_role permission);
 
+#ifdef INTERFACE_TYPE_IS_SSL
+char* oph_sha(char* to, const char* passwd);
+#endif
+
 #endif /* OPH_AUTH_H */
 

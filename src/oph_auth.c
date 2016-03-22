@@ -26,6 +26,10 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
+#ifdef INTERFACE_TYPE_IS_SSL
+#include <openssl/sha.h>
+#endif
+
 #define OPH_AUTH_MAX_COUNT 5
 
 extern char* oph_auth_location;
@@ -249,6 +253,40 @@ int oph_drop_from_bl(const char* userid, const char* host)
 	return OPH_SERVER_OK;
 }
 
+#ifdef INTERFACE_TYPE_IS_SSL
+char *octet2hex(char *to, const unsigned char *str, size_t len)
+{
+	const char hexvalue[] = "0123456789ABCDEF";
+	for (; len; --len, ++str)
+	{
+		*to++ = hexvalue[(*str) >> 4];
+		*to++ = hexvalue[(*str) & 0x0F];
+	}
+	*to= '\0';
+	return to;
+}
+char* oph_sha(char* to, const char* passwd)
+{
+	char* result = to;
+	if (passwd && to)
+	{
+		unsigned char hash_stage[SHA_DIGEST_LENGTH];
+		SHA_CTX sha1_context;
+		if (!SHA1_Init(&sha1_context)) return NULL;
+		if (!SHA1_Update(&sha1_context, passwd, strlen(passwd))) return NULL;
+		memset(hash_stage,0,SHA_DIGEST_LENGTH);
+		if (!SHA1_Final(hash_stage, &sha1_context)) return NULL;
+		if (!SHA1_Init(&sha1_context)) return NULL;
+		if (!SHA1_Update(&sha1_context, hash_stage, SHA_DIGEST_LENGTH)) return NULL;
+		memset(hash_stage,0,SHA_DIGEST_LENGTH);
+		if (!SHA1_Final(hash_stage, &sha1_context)) return NULL;
+		*to++= '*';
+		octet2hex(to, hash_stage, SHA_DIGEST_LENGTH);
+	}
+	return result;
+}
+#endif
+
 int oph_auth_user(const char* userid, const char* passwd, const char* host)
 {
 	int result = OPH_SERVER_ERROR;
@@ -259,6 +297,11 @@ int oph_auth_user(const char* userid, const char* passwd, const char* host)
 
 	char oph_auth_file[OPH_MAX_STRING_SIZE], deadline[OPH_MAX_STRING_SIZE];
 	snprintf(oph_auth_file,OPH_MAX_STRING_SIZE,OPH_AUTH_FILE,oph_auth_location);
+
+#ifdef INTERFACE_TYPE_IS_SSL
+	char sha_passwd[2*SHA_DIGEST_LENGTH+2];
+	oph_sha(sha_passwd, passwd);
+#endif
 
 	if ((file = fopen(oph_auth_file,"r")))
 	{
@@ -294,6 +337,14 @@ int oph_auth_user(const char* userid, const char* passwd, const char* host)
 					oph_drop_from_bl(userid,host);
 					result = OPH_SERVER_OK;
 				}
+#ifdef INTERFACE_TYPE_IS_SSL
+				else if (!strcmp(sha_passwd, password))
+				{
+					pmesg(LOG_DEBUG, __FILE__,__LINE__,"User '%s' is authorized\n",userid);
+					oph_drop_from_bl(userid,host);
+					result = OPH_SERVER_OK;
+				}
+#endif
 				else if (!count) oph_add_to_bl(userid,host);
 				break;
 			}

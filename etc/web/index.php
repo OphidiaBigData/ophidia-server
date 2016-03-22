@@ -41,11 +41,12 @@
 				$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
 				if ($handle)
 				{
+					$sha_password = '*' . strtoupper(sha1(sha1($password, true)));
 					while (($buffer = fgets($handle, 4096)))
 					{
 						$user = strtok($buffer,":\n");
 						$passwd = strtok(":\n");
-						if (!strcmp($username,$user) && !strcmp($password,$passwd))
+						if (!strcmp($username,$user) && ( !strcmp($password,$passwd) || !strcmp($sha_password,$passwd) ))
 						{
 							$result = true;
 							break;
