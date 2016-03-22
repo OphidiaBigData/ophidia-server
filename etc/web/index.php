@@ -1,4 +1,6 @@
-<!--
+<?php
+
+/*
     Ophidia Server
     Copyright (C) 2012-2016 CMCC Foundation
 
@@ -14,8 +16,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
--->
-<?php
+*/
+
 	include('env.php');
 	if (empty($_SERVER['HTTPS'])) header('Location: '.$oph_web_server_secure.'/index.php');
 	else 
@@ -55,7 +57,6 @@
 				{
 					session_start();
 					$_SESSION['userid']=$username;
-					/*$_SESSION['time']=time();*/
 					if (isset($_SESSION['url']))
 					{
 						header('Location: '.$oph_web_server.'/sessions.php'.$_SESSION['url']);
@@ -69,6 +70,23 @@
 	if (!isset($continue))
 	{
 ?>
+<!--
+    Ophidia Server
+    Copyright (C) 2012-2016 CMCC Foundation
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
 <!DOCTYPE HTML>
 <HTML>
 	<HEAD>
