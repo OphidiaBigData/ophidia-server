@@ -255,12 +255,10 @@ int oph_auth_user(const char* userid, const char* passwd, const char* host)
 	FILE* file;
 	short count;
 
-	if (!userid) return OPH_SERVER_NULL_POINTER;
+	if (!userid || !passwd) return OPH_SERVER_NULL_POINTER;
 
 	char oph_auth_file[OPH_MAX_STRING_SIZE], deadline[OPH_MAX_STRING_SIZE];
-
-	if (passwd) snprintf(oph_auth_file,OPH_MAX_STRING_SIZE,OPH_AUTH_FILE,oph_auth_location);
-	else snprintf(oph_auth_file,OPH_MAX_STRING_SIZE,OPH_AUTH_DN_FILE,oph_auth_location);
+	snprintf(oph_auth_file,OPH_MAX_STRING_SIZE,OPH_AUTH_FILE,oph_auth_location);
 
 	if ((file = fopen(oph_auth_file,"r")))
 	{
