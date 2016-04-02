@@ -112,7 +112,7 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 	{
 		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
 		{
-			if (!file && (entry->d_type == DT_REG))
+			if (!file && ((entry->d_type == DT_REG) || (entry->d_type == DT_UNKNOWN)))
 			{
 				pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Found file '%s'\n",entry->d_name);
 				(*counter)++;
