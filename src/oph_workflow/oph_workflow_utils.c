@@ -89,7 +89,7 @@ int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, i
 	if ((task_index<0) || (task_index>workflow->tasks_num) || ((task_index==workflow->tasks_num) && strcmp(workflow->tasks[task_index].name,OPH_WORKFLOW_FINAL_TASK)))
 	{
 		pmesg(LOG_ERROR,__FILE__,__LINE__,"Index out of boundaries\n");
-		if (error) *error = strdup("Null parameter");
+		if (error) *error = strdup("Index out of boundaries");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	int subtask = light_task_index>=0;

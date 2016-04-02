@@ -3207,42 +3207,48 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							}
 							if (output_cubes)
 							{
-								char* cubeid = strrchr(output_cubes,OPH_SEPARATOR_FOLDER[0]);
-								if (cubeid)
+								char* cubeid = NULL;
+								do
 								{
-									cubeid++;
-									if (wf->exit_values)
+									cubeid = strrchr(output_cubes,OPH_SEPARATOR_FOLDER[0]);
+									if (cubeid)
 									{
-										int write = 1;
-										char* last_block = strrchr(wf->exit_values,OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
-										if (!last_block) last_block = wf->exit_values;
-										else last_block++;
-										char* last_index = strchr(last_block,OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
-										if (last_index)
+										cubeid++;
+										if (wf->exit_values)
 										{
-											last_index++;
-											if (strtol(last_index,NULL,10)+1 == strtol(cubeid,NULL,10))
+											int write = 1;
+											char* last_block = strrchr(wf->exit_values,OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
+											if (!last_block) last_block = wf->exit_values;
+											else last_block++;
+											char* last_index = strchr(last_block,OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
+											if (last_index)
 											{
-												strcpy(tmp, wf->exit_values);
-												snprintf(tmp + (last_index-wf->exit_values), OPH_MAX_STRING_SIZE-strlen(tmp)+strlen(last_index), "%s", cubeid);
-												write = 0;
+												last_index++;
+												if (strtol(last_index,NULL,10)+1 == strtol(cubeid,NULL,10))
+												{
+													strcpy(tmp, wf->exit_values);
+													snprintf(tmp + (last_index-wf->exit_values), OPH_MAX_STRING_SIZE-strlen(tmp)+strlen(last_index), "%s", cubeid);
+													write = 0;
+												}
 											}
-										}
-										else
-										{
-											if (strtol(last_block,NULL,10)+1 == strtol(cubeid,NULL,10))
+											else
 											{
-												snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values, OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
-												write = 0;
+												if (strtol(last_block,NULL,10)+1 == strtol(cubeid,NULL,10))
+												{
+													snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values, OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
+													write = 0;
+												}
 											}
+											if (write) snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
+											free(wf->exit_values);
+											wf->exit_values = strdup(tmp);
 										}
-										if (write) snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
-										free(wf->exit_values);
-										wf->exit_values = strdup(tmp);
+										else wf->exit_values = strdup(cubeid);
+										cubeid = strrchr(output_cubes,OPH_SEPARATOR_SUBPARAM_STR[0]);
+										if (cubeid) *cubeid = 0;
 									}
-									else wf->exit_values = strdup(cubeid);
 								}
-								else pmesg(LOG_WARNING, __FILE__,__LINE__, "%c%d: discard '%s' for final operation due to wrong format\n", ttype, jobid, output_cubes);
+								while (cubeid);
 								free(output_cubes);
 								output_cubes = NULL;
 								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: updated KV pair '%s=%c%s%c' for final operation\n", ttype, jobid, OPH_ARG_CUBE, OPH_SEPARATOR_SUBPARAM_OPEN, wf->exit_values, OPH_SEPARATOR_SUBPARAM_CLOSE);
