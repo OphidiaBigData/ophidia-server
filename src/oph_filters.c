@@ -41,7 +41,11 @@ int oph_filter_level(char* value, char* tables, char* where_clause, pthread_mute
 
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause," AND (",s);
 	}
 	else snprintf(where_clause,OPH_MAX_STRING_SIZE,"(");
@@ -51,18 +55,32 @@ int oph_filter_level(char* value, char* tables, char* where_clause, pthread_mute
 		level = (int)strtol(key_list[i],NULL,10);
 		if (i)
 		{
-			if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+			if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+			{
+				oph_tp_free_multiple_value_param_list(key_list, key_num);
+				return OPH_MF_ERROR;
+			}
 			strncat(where_clause, " OR ", s);
 		}
 		snprintf(condition,OPH_MAX_STRING_SIZE,"%s.level='%d'",OPH_MF_ARG_DATACUBE,level);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause,condition,s);
 	}
 
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+	{
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		return OPH_MF_ERROR;
+	}
 	strncat(where_clause,")",s);
 
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_LEVEL,value);
 	return OPH_MF_OK;
@@ -79,12 +97,14 @@ int oph_filter_measure(const char* value, char* tables, char* where_clause, pthr
 	int s;
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND ",s);
 	}
 	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.measure='%s'",OPH_MF_ARG_DATACUBE,value);
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_MEASURE,value);
 	return OPH_MF_OK;
@@ -128,19 +148,22 @@ int oph_filter_parent(char* value, char* tables, char* where_clause, pthread_mut
 
 	if (*tables)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0) return OPH_MF_ERROR;
 		strncat(tables,",",s);
 	}
 	strncat(tables,"task AS taskp,hasinput AS hasinputp,datacube AS datacubep",OPH_MAX_STRING_SIZE-strlen(tables));
 
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND ",s);
 	}
 	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube='%d' AND datacubep.idcontainer='%d'",OPH_MF_ARG_DATACUBE,idparent,idcontainer);
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_PARENT,value);
 	return OPH_MF_OK;
@@ -157,7 +180,7 @@ int oph_filter_using_subset(char* value, char* tables, char* where_clause, pthre
 
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND (",s);
 	}
 	else snprintf(where_clause,OPH_MAX_STRING_SIZE,"(");
@@ -184,7 +207,7 @@ int oph_filter_using_subset(char* value, char* tables, char* where_clause, pthre
 	{
 		if (i)
 		{
-			if ((s=OPH_MAX_STRING_SIZE-strlen(condition))<=1)
+			if ((s=OPH_MAX_STRING_SIZE-strlen(condition)-1)<=0)
 			{
 				oph_subset_free(subset_struct);
 				return OPH_MF_ERROR;
@@ -192,7 +215,7 @@ int oph_filter_using_subset(char* value, char* tables, char* where_clause, pthre
 			strncat(condition, " OR ", s);
 		}
 		snprintf(temp, OPH_MAX_STRING_SIZE, OPH_SUBSET_ISINSUBSET_PLUGIN, OPH_MF_ARG_DATACUBE, "iddatacube", subset_struct->start[i], subset_struct->stride[i], subset_struct->end[i]);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(condition))<=1)
+		if ((s=OPH_MAX_STRING_SIZE-strlen(condition)-1)<=0)
 		{
 			oph_subset_free(subset_struct);
 			return OPH_MF_ERROR;
@@ -201,11 +224,13 @@ int oph_filter_using_subset(char* value, char* tables, char* where_clause, pthre
 	}
 	oph_subset_free(subset_struct);
 
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
 
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,")",s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_DATACUBE_FILTER,value);
 	return OPH_MF_OK;
@@ -236,12 +261,14 @@ int oph_filter_container(char* value, char* path, char* sessionid, ophidiadb* oD
 
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND ",s);
 	}
 	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.containername='%s' AND %s.idfolder='%d'",OPH_MF_ARG_CONTAINER,value,OPH_MF_ARG_CONTAINER,folder_id);
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_CONTAINER,value);
 	return OPH_MF_OK;
@@ -271,12 +298,14 @@ int oph_filter_container_pid(char* value, char* tables, char* where_clause, pthr
 	int s;
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND ",s);
 	}
 	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.idcontainer='%d'",OPH_MF_ARG_DATACUBE,idcontainer);
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_CONTAINER_PID,value);
 	return OPH_MF_OK;
@@ -297,12 +326,20 @@ int oph_filter_metadata_key(char* value, char* tables, char* where_clause, pthre
 	int s;
 	if (*tables)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(tables,",",s);
 	}
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause," AND ",s);
 	}
 
@@ -310,22 +347,37 @@ int oph_filter_metadata_key(char* value, char* tables, char* where_clause, pthre
 	for (i=0;i<key_num;++i)
 	{
 		if (i)
-		{	if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		{	if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0)
+			{
+				oph_tp_free_multiple_value_param_list(key_list, key_num);
+				return OPH_MF_ERROR;
+			}
 			strncat(tables,",",s);
 		}
 		snprintf(condition,OPH_MAX_STRING_SIZE,"metadatakey AS metadatakey%d,metadatainstance AS metadatainstance%d",i,i);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0) return OPH_MF_ERROR;
 		strncat(tables,condition,s);
 
 		if (i)
-		{	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		{	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+			{
+				oph_tp_free_multiple_value_param_list(key_list, key_num);
+				return OPH_MF_ERROR;
+			}
 			strncat(where_clause," AND ",s);
 		}
 		snprintf(condition,OPH_MAX_STRING_SIZE,"metadatakey%d.idkey=metadatainstance%d.idkey AND metadatainstance%d.iddatacube=%s.iddatacube AND metadatakey%d.label='%s'",i,i,i,OPH_MF_ARG_DATACUBE,i,key_list[i]);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause,condition,s);
 	}
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_METADATA_KEY,value);
 	return OPH_MF_OK;
@@ -344,19 +396,42 @@ int _oph_filter_metadata_value(char* key, char* value, char* tables, char* where
 	char** value_list=NULL;
 	if (oph_tp_parse_multiple_value_param (key, &key_list, &key_num)) return OPH_MF_ERROR;
 	if (!key_num) return OPH_MF_ERROR;
-	if (oph_tp_parse_multiple_value_param (value, &value_list, &value_num)) return OPH_MF_ERROR;
-	if (!value_num) return OPH_MF_ERROR;
-	if (key_num != value_num) return OPH_MF_ERROR;
+	if (oph_tp_parse_multiple_value_param (value, &value_list, &value_num))
+	{
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		return OPH_MF_ERROR;
+	}
+	if (!value_num)
+	{
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		return OPH_MF_ERROR;
+	}
+	if (key_num != value_num)
+	{
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		oph_tp_free_multiple_value_param_list(value_list, value_num);
+		return OPH_MF_ERROR;
+	}
 
 	int s;
 	if (*tables)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			oph_tp_free_multiple_value_param_list(value_list, value_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(tables,",",s);
 	}
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			oph_tp_free_multiple_value_param_list(value_list, value_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause," AND ",s);
 	}
 
@@ -364,23 +439,46 @@ int _oph_filter_metadata_value(char* key, char* value, char* tables, char* where
 	for (i=0;i<key_num;++i)
 	{
 		if (i)
-		{	if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		{	if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0)
+			{
+				oph_tp_free_multiple_value_param_list(key_list, key_num);
+				oph_tp_free_multiple_value_param_list(value_list, value_num);
+				return OPH_MF_ERROR;
+			}
 			strncat(tables,",",s);
 		}
 		snprintf(condition,OPH_MAX_STRING_SIZE,"metadatakey AS metadatakey%dk%d,metadatainstance AS metadatainstance%dk%d",prefix,i,prefix,i);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(tables))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			oph_tp_free_multiple_value_param_list(value_list, value_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(tables,condition,s);
 
 		if (i)
-		{	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		{	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+			{
+				oph_tp_free_multiple_value_param_list(key_list, key_num);
+				oph_tp_free_multiple_value_param_list(value_list, value_num);
+				return OPH_MF_ERROR;
+			}
 			strncat(where_clause," AND ",s);
 		}
 		snprintf(condition,OPH_MAX_STRING_SIZE,"metadatakey%dk%d.idkey=metadatainstance%dk%d.idkey AND metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatakey%dk%d.label='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) LIKE '%%%s%%'",prefix,i,prefix,i,prefix,i,OPH_MF_ARG_DATACUBE,prefix,i,key_list[i],prefix,i,value_list[i]);
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0)
+		{
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			oph_tp_free_multiple_value_param_list(value_list, value_num);
+			return OPH_MF_ERROR;
+		}
 		strncat(where_clause,condition,s);
 	}
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
 	oph_tp_free_multiple_value_param_list(value_list, value_num);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(tables)-1)<=0) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s'\n",OPH_MF_ARG_METADATA_VALUE,value);
 	return OPH_MF_OK;
@@ -396,11 +494,11 @@ int oph_add_folder(int folder_id, int* counter, char* where_clause, ophidiadb* o
 	char condition[OPH_MAX_STRING_SIZE];
 	if (*counter)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," OR ",s);
 	}
 	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.idfolder='%d'",OPH_MF_ARG_CONTAINER,folder_id);
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
 	(*counter)++;
 
@@ -413,6 +511,8 @@ int oph_add_folder(int folder_id, int* counter, char* where_clause, ophidiadb* o
 		if (subfolder_id) free(subfolder_id);
 		if (i<num_subfolders) return OPH_MF_ERROR;
 	}
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	return OPH_MF_OK;
 }
@@ -446,7 +546,7 @@ int oph_filter_path(char* path, char* recursive, char* depth, char* sessionid, o
 
 	if (*where_clause)
 	{
-		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND (",s);
 	}
 	else snprintf(where_clause,OPH_MAX_STRING_SIZE,"(");
@@ -457,8 +557,10 @@ int oph_filter_path(char* path, char* recursive, char* depth, char* sessionid, o
 		return OPH_MF_ERROR;
 	}
 
-	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause))<=1) return OPH_MF_ERROR;
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,")",s);
+
+	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s='%s' (%s=%s)\n",OPH_MF_ARG_PATH,path,OPH_MF_ARG_RECURSIVE,recursive_flag?OPH_MF_ARG_VALUE_YES:OPH_MF_ARG_VALUE_NO);
 	return OPH_MF_OK;
