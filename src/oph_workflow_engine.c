@@ -1065,7 +1065,15 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level)
 					free(tmp);
 					if (kk<svalues_num) break;
 				}
-				else if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
+			}
+			if (j<wf->tasks[i].arguments_num)
+			{
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n",wf->tasks[i].name);
+				break;
+			}
+			for (j=0;j<wf->tasks[i].arguments_num;++j)
+			{
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
 				{
 					oph_subset* subset_struct = NULL;
 					if (oph_subset_init(&subset_struct))

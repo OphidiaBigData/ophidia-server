@@ -163,7 +163,7 @@ int oph_subset_parse(const char* cond, unsigned long len, oph_subset* subset, lo
 			else subset->end[i] = subset->start[i];
 		}
 
-		if (!subset->stride[i] || (subset->start[i]>subset->end[i]) || (max && (subset->end[i]>max)))
+		if (!subset->stride[i] || (subset->start[i]>subset->end[i]))
 		{
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong input data: 'start', 'stop' or 'step' parameters are not correctly set\n");
 			retval = OPH_SUBSET_LIB_DATA_ERR;

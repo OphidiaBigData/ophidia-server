@@ -645,7 +645,20 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 					if (kk<svalues_num) break;
 					if (!is_for && (svalues_num>1)) pmesg(LOG_WARNING, __FILE__, __LINE__, "Only the first value of the list will be considered\n");
 				}
-				else if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
+				else if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_PARALLEL) && !mode)
+				{
+					if (!strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_YES)) mode = 1;
+					else if (strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NO)) break;
+				}
+			}
+			if (j<wf->tasks[i].arguments_num)
+			{
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n",wf->tasks[i].name);
+				break;
+			}
+			for (j=0;j<wf->tasks[i].arguments_num;++j)
+			{
+				if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
 				{
 					oph_subset* subset_struct = NULL;
 					if (oph_subset_init(&subset_struct))
@@ -677,11 +690,11 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 					}
 					oph_subset_free(subset_struct);
 				}
-				else if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_PARALLEL) && !mode)
-				{
-					if (!strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_YES)) mode = 1;
-					else if (strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NO)) break;
-				}
+			}
+			if (j<wf->tasks[i].arguments_num)
+			{
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n",wf->tasks[i].name);
+				break;
 			}
 			for (kk=0;name && (kk<(int)strlen(name));++kk) // check compliance with IEEE Std 1003.1-2001 conventions
 			{
