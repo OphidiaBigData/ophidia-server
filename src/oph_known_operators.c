@@ -25,6 +25,7 @@
 #include "oph_workflow_engine.h"
 #include "oph_subset_library.h"
 
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <dirent.h>
 
@@ -1423,78 +1424,83 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			oph_init_args_list(&session_args_list);
 
 			oph_argument* session_args = NULL;
+			struct stat file_stat;
 
-			while (success && !readdir_r(dirp, &save_entry, &entry) && entry) if (entry->d_type == DT_LNK)
+			while (success && !readdir_r(dirp, &save_entry, &entry) && entry)
 			{
 				snprintf(filename,OPH_MAX_STRING_SIZE,"%s/%s",directory,entry->d_name);
-				oph_init_args(&session_args);
-				if (!oph_load_file(filename, &session_args))
+				lstat(filename, &file_stat);
+				if (S_ISLNK(file_stat.st_mode))
 				{
-					pmesg(LOG_DEBUG, __FILE__,__LINE__, "check for %s\n",OPH_SESSION_LAST_ACCESS_TIME);
-					if (!oph_get_arg(session_args,OPH_SESSION_LAST_ACCESS_TIME,tmp))
+					oph_init_args(&session_args);
+					if (!oph_load_file(filename, &session_args))
 					{
-						last_access_time = strtol(tmp,NULL,10);
-						pmesg(LOG_DEBUG, __FILE__,__LINE__, "check for %s\n",OPH_SESSION_AUTOREMOVE);
-						if (timeout_value && !oph_get_arg(session_args,OPH_SESSION_AUTOREMOVE,tmp) && !strcmp(tmp,OPH_DEFAULT_YES))
+						pmesg(LOG_DEBUG, __FILE__,__LINE__, "check for %s\n",OPH_SESSION_LAST_ACCESS_TIME);
+						if (!oph_get_arg(session_args,OPH_SESSION_LAST_ACCESS_TIME,tmp))
 						{
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "found a removable session '%s', last access on %d\n",filename,last_access_time);
-							if (tv.tv_sec > last_access_time + timeout_value*OPH_DEFAULT_DAY_TO_SEC) // Timeout
+							last_access_time = strtol(tmp,NULL,10);
+							pmesg(LOG_DEBUG, __FILE__,__LINE__, "check for %s\n",OPH_SESSION_AUTOREMOVE);
+							if (timeout_value && !oph_get_arg(session_args,OPH_SESSION_AUTOREMOVE,tmp) && !strcmp(tmp,OPH_DEFAULT_YES))
 							{
-								pmesg(LOG_INFO, __FILE__,__LINE__, "session '%s' has expired... removing it\n",filename);
-								remove(filename);
-								oph_cleanup_args(&session_args);
-
-								if (num_sessions>0) num_sessions--;
-								else
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "found a removable session '%s', last access on %d\n",filename,last_access_time);
+								if (tv.tv_sec > last_access_time + timeout_value*OPH_DEFAULT_DAY_TO_SEC) // Timeout
 								{
-									closedir(dirp);
-									pmesg(LOG_ERROR, __FILE__,__LINE__, "error in handling session number\n");
-									pthread_mutex_unlock(&global_flag);
-									oph_cleanup_args(&args);
-									oph_cleanup_args(&user_args);
-									if (task_tbl) hashtbl_destroy(task_tbl);
-									oph_cleanup_args_list(&session_args_list);
-									oph_json_free(oper_json);
-									oph_odb_disconnect_from_ophidiadb(&oDB);
-									return OPH_SERVER_SYSTEM_ERROR;
-								}
-								save_user=1;
+									pmesg(LOG_INFO, __FILE__,__LINE__, "session '%s' has expired... removing it\n",filename);
+									remove(filename);
+									oph_cleanup_args(&session_args);
 
-								continue;
+									if (num_sessions>0) num_sessions--;
+									else
+									{
+										closedir(dirp);
+										pmesg(LOG_ERROR, __FILE__,__LINE__, "error in handling session number\n");
+										pthread_mutex_unlock(&global_flag);
+										oph_cleanup_args(&args);
+										oph_cleanup_args(&user_args);
+										if (task_tbl) hashtbl_destroy(task_tbl);
+										oph_cleanup_args_list(&session_args_list);
+										oph_json_free(oper_json);
+										oph_odb_disconnect_from_ophidiadb(&oDB);
+										return OPH_SERVER_SYSTEM_ERROR;
+									}
+									save_user=1;
+
+									continue;
+								}
 							}
 						}
+
+					}
+					else
+					{
+						closedir(dirp);
+						pmesg(LOG_ERROR, __FILE__,__LINE__, "error in opening session file '%s'\n",filename);
+						pthread_mutex_unlock(&global_flag);
+						oph_cleanup_args(&args);
+						oph_cleanup_args(&user_args);
+						if (task_tbl) hashtbl_destroy(task_tbl);
+						oph_cleanup_args_list(&session_args_list);
+						oph_json_free(oper_json);
+						oph_odb_disconnect_from_ophidiadb(&oDB);
+						return OPH_SERVER_SYSTEM_ERROR;
+					}
+			
+					if (oph_append_args_list(&session_args_list,session_args,last_access_time))
+					{
+						closedir(dirp);
+						pmesg(LOG_ERROR, __FILE__,__LINE__, "error in handling session list\n");
+						pthread_mutex_unlock(&global_flag);
+						oph_cleanup_args(&args);
+						oph_cleanup_args(&user_args);
+						if (task_tbl) hashtbl_destroy(task_tbl);
+						oph_cleanup_args_list(&session_args_list);
+						oph_json_free(oper_json);
+						oph_odb_disconnect_from_ophidiadb(&oDB);
+						return OPH_SERVER_SYSTEM_ERROR;
 					}
 
+					check_num_sessions++;
 				}
-				else
-				{
-					closedir(dirp);
-					pmesg(LOG_ERROR, __FILE__,__LINE__, "error in opening session file '%s'\n",filename);
-					pthread_mutex_unlock(&global_flag);
-					oph_cleanup_args(&args);
-					oph_cleanup_args(&user_args);
-					if (task_tbl) hashtbl_destroy(task_tbl);
-					oph_cleanup_args_list(&session_args_list);
-					oph_json_free(oper_json);
-					oph_odb_disconnect_from_ophidiadb(&oDB);
-					return OPH_SERVER_SYSTEM_ERROR;
-				}
-			
-				if (oph_append_args_list(&session_args_list,session_args,last_access_time))
-				{
-					closedir(dirp);
-					pmesg(LOG_ERROR, __FILE__,__LINE__, "error in handling session list\n");
-					pthread_mutex_unlock(&global_flag);
-					oph_cleanup_args(&args);
-					oph_cleanup_args(&user_args);
-					if (task_tbl) hashtbl_destroy(task_tbl);
-					oph_cleanup_args_list(&session_args_list);
-					oph_json_free(oper_json);
-					oph_odb_disconnect_from_ophidiadb(&oDB);
-					return OPH_SERVER_SYSTEM_ERROR;
-				}
-
-				check_num_sessions++;
 			}
 			closedir(dirp);
 

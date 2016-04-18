@@ -27,7 +27,11 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
+
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <libxml/parser.h>
 #include <libxml/valid.h>
 #include <libxml/tree.h>
@@ -50,6 +54,8 @@ int oph_tp_retrieve_function_xml_file(const char *function_name, const char *fun
     DIR *dir;
     struct dirent *ent, save_ent;
     int found = 0;
+    char full_filename[OPH_TP_BUFLEN];
+    struct stat file_stat;
 
     if ((dir = opendir (folder)) != NULL) {
         if (function_version == NULL) {
@@ -65,6 +71,10 @@ int oph_tp_retrieve_function_xml_file(const char *function_name, const char *fun
 
 	    while (!readdir_r(dir,&save_ent,&ent) && ent)
             {
+		snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+	        lstat(full_filename, &file_stat);
+
+		if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
                 if (strcasestr(ent->d_name,*xml_filename)) {
                     ptr1 = strrchr(ent->d_name,'_');
                     ptr2 = strrchr(ent->d_name,'.');
@@ -146,6 +156,10 @@ int oph_tp_retrieve_function_xml_file(const char *function_name, const char *fun
             if ((dir = opendir (folder)) != NULL) {
 		while (!readdir_r(dir,&save_ent,&ent) && ent)
 		{
+                    snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+                    lstat(full_filename, &file_stat);
+
+                    if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
                     if (strcasestr(ent->d_name,*xml_filename)) {
                         ptr1 = strrchr(ent->d_name,'_');
                         ptr2 = strrchr(ent->d_name,'.');
@@ -230,6 +244,10 @@ int oph_tp_retrieve_function_xml_file(const char *function_name, const char *fun
             snprintf(*xml_filename,OPH_TP_BUFLEN,"%s_"OPH_TP_XML_OPERATOR_TYPE"_%s.xml",function_name, function_version);
 	    while (!readdir_r(dir,&save_ent,&ent) && ent)
             {
+                snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+                lstat(full_filename, &file_stat);
+
+                if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
                 if (!strcasecmp(*xml_filename,ent->d_name)) {
                     found = 1;
                     snprintf(*xml_filename,OPH_TP_BUFLEN,"%s",ent->d_name);

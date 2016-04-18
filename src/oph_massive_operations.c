@@ -26,6 +26,7 @@
 #include "oph_filters.h"
 #include "oph_odb_job.h"
 
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <glob.h>
@@ -107,12 +108,17 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 	}
 	else pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Search in directory '%s'\n",path);
 
+	char full_filename[OPH_MAX_STRING_SIZE];
+	struct stat file_stat;
+
 	int result;
 	while (!readdir_r(dirp,&save_entry,&entry) && entry)
 	{
 		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
 		{
-			if (!file && ((entry->d_type == DT_REG) || (entry->d_type == DT_UNKNOWN)))
+			snprintf(full_filename, OPH_MAX_STRING_SIZE, "%s/%s", path, entry->d_name);
+			lstat(full_filename, &file_stat);
+			if (!file && S_ISREG(file_stat.st_mode))
 			{
 				pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Found file '%s'\n",entry->d_name);
 				(*counter)++;
@@ -124,7 +130,7 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 				}
 				else asprintf(buffer,"%s/%s%s",path,entry->d_name,OPH_SEPARATOR_PARAM);
 			}
-			else if (recursive && (entry->d_type == DT_DIR))
+			else if (recursive && S_ISDIR(file_stat.st_mode))
 			{
 				sub = NULL;
 				asprintf(&sub,"%s/%s",path,entry->d_name);

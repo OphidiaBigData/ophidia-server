@@ -446,35 +446,39 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 						pmesg(LOG_ERROR, __FILE__,__LINE__, "%c%d: error in opening session directory '%s'\n",ttype,jobid,directory);
 						return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 					}
+					struct stat file_stat;
 
-					while (!readdir_r(dirp, &save_entry, &entry) && entry) if (entry->d_type == DT_LNK)
+					while (!readdir_r(dirp, &save_entry, &entry) && entry)
 					{
 						snprintf(filename,OPH_MAX_STRING_SIZE,"%s/%s",directory,entry->d_name);
-						oph_init_args(&args);
-						if (!oph_load_file(filename, &args)) // entry->d_type
+						lstat(filename, &file_stat);
+						if (S_ISLNK(file_stat.st_mode))
 						{
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: check for %s\n",ttype,jobid,OPH_SESSION_AUTOREMOVE);
-							if (!oph_get_arg(args,OPH_SESSION_AUTOREMOVE,tmp) && !strcmp(tmp,OPH_DEFAULT_YES))
+							oph_init_args(&args);
+							if (!oph_load_file(filename, &args)) // entry->d_type
 							{
-								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: check for %s\n",ttype,jobid,OPH_SESSION_LAST_ACCESS_TIME);
-								if (!oph_get_arg(args,OPH_SESSION_LAST_ACCESS_TIME,tmp))
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: check for %s\n",ttype,jobid,OPH_SESSION_AUTOREMOVE);
+								if (!oph_get_arg(args,OPH_SESSION_AUTOREMOVE,tmp) && !strcmp(tmp,OPH_DEFAULT_YES))
 								{
-									last_access_time = strtol(tmp,NULL,10);
-									pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: found a removable session '%s', last access on %d\n",ttype,jobid,filename,last_access_time);
-									if (tv.tv_sec > last_access_time + timeout_value*OPH_DEFAULT_DAY_TO_SEC) // Timeout
+									pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: check for %s\n",ttype,jobid,OPH_SESSION_LAST_ACCESS_TIME);
+									if (!oph_get_arg(args,OPH_SESSION_LAST_ACCESS_TIME,tmp))
 									{
-										pmesg(LOG_INFO, __FILE__,__LINE__, "%c%d: session '%s' has expired... removing it\n",ttype,jobid,filename);
-										remove(filename);
-										oph_cleanup_args(&args);
-										continue;
+										last_access_time = strtol(tmp,NULL,10);
+										pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: found a removable session '%s', last access on %d\n",ttype,jobid,filename,last_access_time);
+										if (tv.tv_sec > last_access_time + timeout_value*OPH_DEFAULT_DAY_TO_SEC) // Timeout
+										{
+											pmesg(LOG_INFO, __FILE__,__LINE__, "%c%d: session '%s' has expired... removing it\n",ttype,jobid,filename);
+											remove(filename);
+											oph_cleanup_args(&args);
+											continue;
+										}
 									}
 								}
 							}
+							oph_cleanup_args(&args);
+							(*num_sessions)++;
 						}
-						oph_cleanup_args(&args);
-						(*num_sessions)++;
 					}
-
 					closedir(dirp);
 				}
 
