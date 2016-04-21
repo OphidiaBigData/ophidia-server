@@ -279,17 +279,17 @@ lib_LTLIBRARIES = $(LIBRARY)
 oph_client_SOURCES= $(INTERFACE_TYPE)/oph_client.c
 oph_client_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYCFLAGS)
 oph_client_LDFLAGS= $(MYLDFLAGS)
-oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -ldebug
+oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -ldebug -lstdsoap2
 
 oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) -L. -loph_json -loph_workflow -lsoapServer -ldebug -lhashtbl -lthreads -loph_plugin -loph_job_list -loph_trash -loph_memory_job -loph_auth -loph_ophidiadb -loph_notify -loph_odb_job -loph_parser -loph_rmanager -loph_ssh_submit -loph_massive_operations -loph_task_parser_library -loph_filters -loph_subset_library -loph_ophidiadb_fs_library -loph_session_report -lutils -loph_known_operators -loph_execute_main
+oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_json -loph_workflow -lsoapServer -lstdsoap2 -ldebug -lhashtbl -lthreads -loph_plugin -loph_job_list -loph_trash -loph_memory_job -loph_auth -loph_ophidiadb -loph_notify -loph_odb_job -loph_parser -loph_rmanager -loph_ssh_submit -loph_massive_operations -loph_task_parser_library -loph_filters -loph_subset_library -loph_ophidiadb_fs_library -loph_session_report -lutils -loph_known_operators -loph_execute_main
 
 oph_manage_user_SOURCES= oph_manage_user.c
 oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)
 oph_manage_user_LDFLAGS= $(GLOBUS_BASIC)
-oph_manage_user_LDADD= $(ADDITIONAL_LIBS) -L. -ldebug -lhashtbl -loph_parser -loph_auth -loph_ophidiadb
+oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -lhashtbl -loph_parser -loph_auth -loph_ophidiadb
 
 clean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
