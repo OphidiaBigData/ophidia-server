@@ -746,13 +746,20 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow_task* task, oph_workflow* wf, ophidiadb* oDB, char*** output_list, int* output_list_dim)
+int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim)
 {
-	if (!task || !output_list || !output_list_dim)
+	if (!wf || !output_list || !output_list_dim)
 	{
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n",ttype,jobid);
 		return OPH_SERVER_NULL_POINTER;
 	}
+	if ((task_index<0) || (task_index>wf->tasks_num))
+	{
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: index %d out of boundaries\n",ttype,jobid,task_index);
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
+
+	oph_workflow_task* task = &(wf->tasks[task_index]);
 	if (task->light_tasks_num)
 	{
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: found %d massive operation children already set\n",ttype,jobid,task->light_tasks_num);
@@ -765,7 +772,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow_task* ta
 	}
 
 	int i, res=OPH_SERVER_OK;
-	char *src_path = 0, *datacube_input = 0, *measure = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0, *cwd_value = 0;
+	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
 	for (i=0; i<task->arguments_num;++i)
 	{
 		if (!strcmp(task->arguments_keys[i],OPH_ARG_SRC_PATH))
@@ -785,7 +792,24 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow_task* ta
 		}
 		else if (!strcmp(task->arguments_keys[i],OPH_ARG_CWD)) cwd_value = task->arguments_values[i];
 	}
-	if (src_path) datacube_input = 0;
+
+	char target_base[OPH_WORKFLOW_MAX_STRING]; // measure_base[OPH_WORKFLOW_MAX_STRING], cwd_base[OPH_WORKFLOW_MAX_STRING];
+	if (src_path)
+	{
+		datacube_input = 0;
+		strcpy(target_base,src_path);
+		src_path = target_base;
+	}
+	else
+	{
+		strcpy(target_base,datacube_input);
+		datacube_input = target_base;
+	}
+	if (oph_workflow_var_substitute(wf, task_index, target_base, NULL))
+	{
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n",ttype,jobid,task->name);
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 
 	if (datacube_input || src_path)
 	{
@@ -1442,7 +1466,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 		char **output_list = NULL;
 		int output_list_dim = 0;
-		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(ttype, jobid, &(wf->tasks[i]), wf, oDB, &output_list, &output_list_dim))))
+		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(ttype, jobid, wf, i, oDB, &output_list, &output_list_dim))))
 		{
 			odb_jobid = 0;
 			// Create the child job in OphidiaDB

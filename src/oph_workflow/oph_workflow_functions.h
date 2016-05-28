@@ -86,4 +86,13 @@ int oph_workflow_get_submitted_string(oph_workflow *workflow, int task_index, in
  */
 int oph_workflow_is_child_of(oph_workflow *wf, int p, int c);
 
+/* \brief Function for variable substitution
+ * \param workflow Input OPH_WORKFLOW
+ * \param task_index Input index of the target task
+ * \param submit_string String to be parsed
+ * \param error Pointer to save a possible error message
+ * \return 1 if the task c depends on the task p
+ */
+int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, char* submit_string, char** error);
+
 #endif //__OPH_WORKFLOW_FUNCTIONS_H

@@ -261,42 +261,111 @@ int oph_extract_from_json(char** key, const char* json_string)
 			}
 		}
 
-		unsigned int irow, icol;
+		unsigned int irow = 0, icol = 0;
+		char all_values = 0;
 		if (colkey)
 		{
-			for (icol=0; icol<obj->keys_num; ++icol) if (obj->keys && !strcmp(obj->keys[icol],colkey)) break;
-			if (icol>=obj->keys_num)
+			if (obj->keys) for (; icol<obj->keys_num; ++icol) if (!strcmp(obj->keys[icol],colkey)) break;
+			if (!obj->keys || (icol>=obj->keys_num))
 			{
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: rowkey not found\n");
 				if (json) oph_json_free(json);
 				return OPH_SERVER_ERROR;
 			}
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' at column %d\n",colkey,icol);
 		}
 		else
 		{
-			icol = col ? (unsigned int)strtol(col,NULL,10) : 0;
-			if (icol) icol--; // Non 'C'-like indexing
+			if (col && !strcmp(col,OPH_WORKFLOW_GENERIC_VALUE)) all_values = 2;
+			else
+			{
+				icol = col ? (unsigned int)strtol(col,NULL,10) : 0;
+				if (icol) icol--; // Non 'C'-like indexing
+			}
 		}
-		irow = row ? (unsigned int)strtol(row,NULL,10) : 0;
-		if (irow) irow--; // Non 'C'-like indexing
+		if (row && !strcmp(row,OPH_WORKFLOW_GENERIC_VALUE))
+		{
+			if (all_values)
+			{
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: only scalars and vectors can be extracted\n");
+				if (json) oph_json_free(json);
+				return OPH_SERVER_ERROR;
+			}
+			all_values = 1;
+		}
+		else
+		{
+			irow = row ? (unsigned int)strtol(row,NULL,10) : 0;
+			if (irow) irow--; // Non 'C'-like indexing
+		}
 
-		if ((irow>=obj->values_num1) || (icol>=obj->values_num2))
+		if ( (irow>=obj->values_num1) || (icol>=obj->values_num2) )
 		{
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: index out of boundaries\n");
 			if (json) oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 
-		free(*key);
-		*key = strdup(obj->values[irow][icol]);
-		if (!(*key))
+		free(*key); *key=NULL;
+		if (all_values)
 		{
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
-			if (json) oph_json_free(json);
-			return OPH_SERVER_ERROR;
+			char* tmp_key = NULL;
+			switch (all_values)
+			{
+				case 1: // All the rows
+					if (obj->values_num1) *key = strdup(obj->values[0][icol]);
+					for (irow=1; irow<obj->values_num1; irow++)
+					{
+						tmp_key = *key;
+						*key = (char*)malloc(strlen(tmp_key)+2+strlen(obj->values[irow][icol]));
+						if (!(*key))
+						{
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+							if (tmp_key) free(tmp_key);
+							if (json) oph_json_free(json);
+							return OPH_SERVER_ERROR;
+						}
+						sprintf(*key,"%s%s%s",tmp_key,OPH_SEPARATOR_SUBPARAM_STR,obj->values[irow][icol]);
+						if (tmp_key) free(tmp_key);
+						tmp_key = NULL;
+					}
+					break;
+				case 2: // All the columns
+					if (obj->values_num2) *key = strdup(obj->values[irow][0]);
+					for (icol=1; icol<obj->values_num2; icol++)
+					{
+						tmp_key = *key;
+						*key = (char*)malloc(strlen(tmp_key)+2+strlen(obj->values[irow][icol]));
+						if (!(*key))
+						{
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+							if (tmp_key) free(tmp_key);
+							if (json) oph_json_free(json);
+							return OPH_SERVER_ERROR;
+						}
+						sprintf(*key,"%s%s%s",tmp_key,OPH_SEPARATOR_SUBPARAM_STR,obj->values[irow][icol]);
+						if (tmp_key) free(tmp_key);
+						tmp_key = NULL;
+					}
+					break;
+				default:
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: wrong condition\n");
+					if (json) oph_json_free(json);
+					return OPH_SERVER_ERROR;
+			}
+		}
+		else
+		{
+			*key = strdup(obj->values[irow][icol]);
+			if (!(*key))
+			{
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+				if (json) oph_json_free(json);
+				return OPH_SERVER_ERROR;
+			}
 		}
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Key updated to '%s'\n",*key);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Key '%s' updated to '%s'\n",title,*key);
 	}
 	else
 	{
@@ -619,29 +688,53 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_NAME) && !name) name = wf->tasks[i].arguments_values[j];
 				else if (((is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUES)) || (!is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUE))) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
 				{
-					pch = strchr(wf->tasks[i].arguments_values[j],OPH_SEPARATOR_SUBPARAM);
-					for (svalues_num++; pch; svalues_num++) pch = strchr(pch+1,OPH_SEPARATOR_SUBPARAM);
-					svalues = (char**)malloc(svalues_num * sizeof(char*));
-					if (!svalues) break;
-					char *tmp = strdup(wf->tasks[i].arguments_values[j]);
+					char *tmp = strdup(wf->tasks[i].arguments_values[j]), expansion;
 					if (!tmp) break;
-					pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					for (kk=0; kk<svalues_num; ++kk)
+					do
 					{
-						svalues[kk] = strndup(pch,OPH_WORKFLOW_MAX_STRING);
-						if (!svalues[kk]) break;
-						// Begin check in input JSON Response
-						for (h=0; h<wf->tasks_num; ++h) if (wf->tasks[h].response)
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
+						expansion = svalues_num = 0;
+						pch = strchr(tmp,OPH_SEPARATOR_SUBPARAM);
+						for (svalues_num++; pch; svalues_num++) pch = strchr(pch+1,OPH_SEPARATOR_SUBPARAM);
+						svalues = (char**)malloc(svalues_num * sizeof(char*));
+						if (!svalues) break;
+						pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+						for (kk=0; kk<svalues_num; ++kk)
 						{
-							for (hh=0; hh<wf->tasks[h].dependents_indexes_num; ++hh) if (wf->tasks[h].dependents_indexes[hh] == i)
+							svalues[kk] = strndup(pch,OPH_WORKFLOW_MAX_STRING);
+							if (!svalues[kk]) break;
+							// Begin check in input JSON Response
+							for (h=0; h<wf->tasks_num; ++h) if (wf->tasks[h].response)
 							{
-								if (!oph_extract_from_json(svalues+kk,wf->tasks[h].response)) break; // Found a correspondence
+								for (hh=0; hh<wf->tasks[h].dependents_indexes_num; ++hh) if (wf->tasks[h].dependents_indexes[hh] == i)
+								{
+									if (!oph_extract_from_json(svalues+kk,wf->tasks[h].response)) // Found a correspondence
+									{
+										if (strchr(svalues[kk],OPH_SEPARATOR_SUBPARAM))
+										{
+											hh = 0;
+											char expanded_value[1+strlen(wf->tasks[i].arguments_values[j])+strlen(svalues[kk])];
+											for (h=0; h<kk; ++h) hh = sprintf(expanded_value+hh, "%s%c", svalues[h], OPH_SEPARATOR_SUBPARAM);
+											hh = sprintf(expanded_value+hh, "%s", svalues[kk]);
+											pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+											if (pch) sprintf(expanded_value+hh, "%c%s", OPH_SEPARATOR_SUBPARAM, pch);
+											pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values expansion: %s\n", expanded_value);
+											free(tmp);
+											tmp = strdup(expanded_value);
+											for (h=0; h<=kk; ++h) free(svalues[h]);
+											free(svalues);
+											expansion = 1;
+										}
+										break;
+									}
+								}
+								if (expansion || (hh<wf->tasks[h].dependents_indexes_num)) break;
 							}
-							if (hh<wf->tasks[h].dependents_indexes_num) break;
+							// End check
+							if (!expansion) pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 						}
-						// End check
-						pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 					}
+					while (expansion);
 					free(tmp);
 					if (kk<svalues_num) break;
 					if (!is_for && (svalues_num>1)) pmesg(LOG_WARNING, __FILE__, __LINE__, "Only the first value of the list will be considered\n");

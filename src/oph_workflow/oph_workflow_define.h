@@ -38,6 +38,7 @@
 #define OPH_WORKFLOW_NAME_EXPANSION2	"%s,%d)"
 #define OPH_WORKFLOW_NAME_EXPANSION_END	OPH_WORKFLOW_BRACKET_END[0]
 #define OPH_WORKFLOW_OBJECT		"."
+#define OPH_WORKFLOW_GENERIC_VALUE	"*"
 
 #define OPH_WORKFLOW_FIXED_VALUE	""
 #define OPH_WORKFLOW_EXT_SUB_STRING	"operator=%s;sessionid=%s;workflowid=%d;markerid=%d;username="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";userrole=%d;parentid=%d;taskindex=%d;lighttaskindex=%d;"
