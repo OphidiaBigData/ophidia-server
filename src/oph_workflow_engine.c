@@ -800,19 +800,20 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 		strcpy(target_base,src_path);
 		src_path = target_base;
 	}
-	else
+	else if (datacube_input)
 	{
 		strcpy(target_base,datacube_input);
 		datacube_input = target_base;
 	}
-	if (oph_workflow_var_substitute(wf, task_index, target_base, NULL))
-	{
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n",ttype,jobid,task->name);
-		return OPH_SERVER_SYSTEM_ERROR;
-	}
 
 	if (datacube_input || src_path)
 	{
+		if (oph_workflow_var_substitute(wf, task_index, target_base, NULL))
+		{
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n",ttype,jobid,task->name);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
 		char **datacube_inputs=NULL, **measure_name=NULL;
 		int running=0;
 		unsigned int number=0;
