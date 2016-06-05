@@ -23,6 +23,7 @@
 #include <sys/select.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 #include <sys/time.h>
 #include <sys/types.h>
@@ -75,6 +76,7 @@ int oph_ssh_submit(const char* cmd)
     unsigned long hostaddr;
     int sock;
     struct sockaddr_in sin;
+    struct addrinfo hints, *result;
     LIBSSH2_SESSION *session;
     LIBSSH2_CHANNEL *channel;
     int rc;
@@ -90,13 +92,25 @@ int oph_ssh_submit(const char* cmd)
         return OPH_LIBSSH_ERROR;
     }
 
-    hostaddr = inet_addr(oph_ip_target_host);
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
+    hints.ai_protocol = 0;
+    result = NULL;
+
+    rc = getaddrinfo(oph_ip_target_host, NULL, &hints, &result);
+    if (rc != 0) {
+  pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Unable to resolve address from target hostname: %s\n", gai_strerror(rc));
+      return OPH_LIBSSH_ERROR;
+    }
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
-
     sin.sin_family = AF_INET;
     sin.sin_port = htons(22);
-    sin.sin_addr.s_addr = hostaddr;
+    sin.sin_addr.s_addr = ((struct sockaddr_in *)result->ai_addr)->sin_addr.s_addr;
+    freeaddrinfo(result);
+
     if (connect(sock, (struct sockaddr*)(&sin), sizeof(struct sockaddr_in)) != 0) {
 	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Failed to connect to submission host\n");
         return OPH_LIBSSH_ERROR;
