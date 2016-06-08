@@ -62,6 +62,9 @@
 
 #define OPH_WORKFLOW_FINAL_TASK		"Final task"
 
+#define OPH_WORKFLOW_BVAR_KEYS		{"OPH_SESSION_ID","OPH_SESSION_CODE","OPH_WORKFLOW_ID"}
+#define OPH_WORKFLOW_BVAR_KEYS_SIZE	3
+
 #define OPH_OPERATOR_SET		"oph_set"
 #define OPH_OPERATOR_FOR		"oph_for"
 #define OPH_OPERATOR_ENDFOR		"oph_endfor"

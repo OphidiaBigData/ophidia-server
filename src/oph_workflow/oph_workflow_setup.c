@@ -52,6 +52,7 @@ int workflow_s_remove(workflow_s_nodes *s, workflow_node **node);
 int workflow_s_nodes_free(workflow_s_nodes *s);
 int workflow_node_free(workflow_node *node);
 int workflow_validate_fco(oph_workflow *wf);
+int oph_get_session_code(char* session_id, char* session_code);
 
 // API functions
 
@@ -258,7 +259,8 @@ int oph_workflow_validate(oph_workflow *workflow) {
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num) {
+int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num)
+{
 	if (!tasks || tasks_num < 1 || !initial_tasks_indexes || !initial_tasks_indexes_num) {
 		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -386,8 +388,8 @@ int workflow_node_free(workflow_node *node) {
 
 int oph_workflow_is_child_of(oph_workflow *wf, int p, int c)
 {
-	if (!wf || (p<0) || (p>=wf->tasks_num) || (c<0) || (c>=wf->tasks_num)) return 0;
-	if (p==c) return 1;
+	if (!wf || (p>=wf->tasks_num) || (c<0) || (c>=wf->tasks_num)) return 0;
+	if ((p<0) || (p==c)) return 1;
 	int i,j;
 	for (i=0;i<wf->tasks[p].dependents_indexes_num;++i)
 	{
@@ -476,6 +478,48 @@ int workflow_validate_fco(oph_workflow *wf)
 	{
 		pmesg(LOG_ERROR,__FILE__,__LINE__,"Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_set_basic_var(oph_workflow *wf)
+{
+	if (!wf)
+	{
+		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
+	oph_workflow_var var;
+	var.caller = -1; // Don't care
+
+	int i;
+	char* key[OPH_WORKFLOW_MIN_STRING] = OPH_WORKFLOW_BVAR_KEYS;
+	for (i=0; i<OPH_WORKFLOW_BVAR_KEYS_SIZE; ++i)
+	{
+		*var.svalue = 0;
+		switch (i)
+		{
+			case 0:
+				if (wf->sessionid) strcpy(var.svalue,wf->sessionid);
+				break;
+			case 1:
+				if (wf->sessionid)
+				{
+					char session_code[OPH_WORKFLOW_MAX_STRING];
+					if (oph_get_session_code(wf->sessionid, session_code)) pmesg(LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
+					else strcpy(var.svalue,session_code);
+				}
+				break;
+			case 2:
+				if (wf->sessionid) snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING,"%d",wf->workflowid);
+				break;
+			default:
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n",i,wf->name);
+		}
+		if (hashtbl_insert_with_size(wf->vars, key[i], (void *)&var, sizeof(oph_workflow_var))) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n",key[i],wf->name);
+		else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n",key[i],var.svalue,wf->name);
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;

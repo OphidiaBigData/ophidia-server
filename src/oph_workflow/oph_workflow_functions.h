@@ -95,4 +95,10 @@ int oph_workflow_is_child_of(oph_workflow *wf, int p, int c);
  */
 int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, char* submit_string, char** error);
 
+/* \brief Function to set basic variables
+ * \param workflow Input OPH_WORKFLOW
+ * \return 1 if the task c depends on the task p
+ */
+int oph_workflow_set_basic_var(oph_workflow *workflow);
+
 #endif //__OPH_WORKFLOW_FUNCTIONS_H
