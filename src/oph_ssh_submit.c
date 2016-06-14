@@ -73,7 +73,6 @@ int waitsocket(int socket_fd, LIBSSH2_SESSION *session)
 
 int oph_ssh_submit(const char* cmd)
 {
-    unsigned long hostaddr;
     int sock;
     struct sockaddr_in sin;
     struct addrinfo hints, *result;
@@ -101,8 +100,8 @@ int oph_ssh_submit(const char* cmd)
 
     rc = getaddrinfo(oph_ip_target_host, NULL, &hints, &result);
     if (rc != 0) {
-  pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Unable to resolve address from target hostname: %s\n", gai_strerror(rc));
-      return OPH_LIBSSH_ERROR;
+	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Unable to resolve address from target hostname: %s\n", gai_strerror(rc));
+	return OPH_LIBSSH_ERROR;
     }
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
