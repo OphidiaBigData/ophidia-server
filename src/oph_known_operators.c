@@ -688,14 +688,19 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_NAME) && !name) name = wf->tasks[i].arguments_values[j];
 				else if (((is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUES)) || (!is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUE))) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
 				{
-					char *tmp = strdup(wf->tasks[i].arguments_values[j]), expansion;
+					char *tmp = strdup(wf->tasks[i].arguments_values[j]), expansion, *pch1;
 					if (!tmp) break;
 					do
 					{
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
 						expansion = svalues_num = 0;
 						pch = strchr(tmp,OPH_SEPARATOR_SUBPARAM);
-						for (svalues_num++; pch; svalues_num++) pch = strchr(pch+1,OPH_SEPARATOR_SUBPARAM);
+						for (svalues_num++; pch; svalues_num++)
+						{
+							pch1 = pch+1;
+							if (pch1) break;
+							pch = strchr(pch1,OPH_SEPARATOR_SUBPARAM);
+						}
 						svalues = (char**)malloc(svalues_num * sizeof(char*));
 						if (!svalues) break;
 						pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);

@@ -1078,8 +1078,14 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level)
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_NAME) && !name) name = wf->tasks[i].arguments_values[j];
 				else if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
 				{
+					char *pch1;
 					pch = strchr(wf->tasks[i].arguments_values[j],OPH_SEPARATOR_SUBPARAM);
-					for (svalues_num++; pch; svalues_num++) pch = strchr(pch+1,OPH_SEPARATOR_SUBPARAM);
+					for (svalues_num++; pch; svalues_num++)
+					{
+						pch1 = pch+1;
+						if (pch1) break;
+						pch = strchr(pch1,OPH_SEPARATOR_SUBPARAM);
+					}
 					svalues = (char**)malloc(svalues_num * sizeof(char*));
 					if (!svalues) break;
 					char *tmp = strdup(wf->tasks[i].arguments_values[j]);
