@@ -698,7 +698,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 						for (svalues_num++; pch; svalues_num++)
 						{
 							pch1 = pch+1;
-							if (pch1) break;
+							if (!pch1 || !*pch1) break;
 							pch = strchr(pch1,OPH_SEPARATOR_SUBPARAM);
 						}
 						svalues = (char**)malloc(svalues_num * sizeof(char*));

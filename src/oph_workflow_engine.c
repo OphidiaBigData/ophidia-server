@@ -1083,7 +1083,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level)
 					for (svalues_num++; pch; svalues_num++)
 					{
 						pch1 = pch+1;
-						if (pch1) break;
+						if (!pch1 || !*pch1) break;
 						pch = strchr(pch1,OPH_SEPARATOR_SUBPARAM);
 					}
 					svalues = (char**)malloc(svalues_num * sizeof(char*));
