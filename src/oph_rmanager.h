@@ -48,7 +48,7 @@ struct _oph_rmanager
 };
 typedef struct _oph_rmanager oph_rmanager;
 
-int oph_serve_request(const char* request, const int ncores, const char* sessionid, const char* markerid, const char* error, struct oph_plugin_data *state, int* odb_wf_id, int* task_id, int* light_task_id, int *odb_jobid, char** response, char** jobid);
+int oph_serve_request(const char* request, const int ncores, const char* sessionid, const char* markerid, const char* error, struct oph_plugin_data *state, int* odb_wf_id, int* task_id, int* light_task_id, int *odb_jobid, char** response, char** jobid, enum oph__oph_odb_job_status *exit_code);
 int initialize_rmanager(oph_rmanager *orm);
 int oph_read_rmanager_conf(oph_rmanager *orm);
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager* orm, int jobid, char** cmd);

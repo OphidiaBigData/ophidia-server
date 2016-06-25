@@ -113,6 +113,7 @@ typedef struct _oph_workflow_dep {
  * \param vars List of stacked variables specified for the task
  * \param on_error Action to be executed in case of error
  * \param on_exit Action to be taken at the end of workflow execution
+ * \param is_skipped Flag used to skip task execution
  */
 typedef struct _oph_workflow_task {
 	int idjob;
@@ -149,6 +150,7 @@ typedef struct _oph_workflow_task {
 	HASHTBL *vars;
 	char* on_error;
 	char* on_exit;
+	int is_skipped;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations
@@ -185,7 +187,11 @@ typedef struct _oph_workflow_task_out {
  * \param arguments_keys Array of explicit parameters keys for the operator
  * \param arguments_values Array of explicit parameters values for the operator
  * \param arguments_num Number of explicit parameters for the operator
+ * \param deps_task_index Indexes of tasks the current task depends on
+ * \param deps_num Size of array 'deps_task_index'
  * \param residual_deps_num Number of residual dependencies to be satisfied (initialized to deps_num)
+ * \param dependents_indexes Array of the indexes of all tasks depending on the current task
+ * \param dependents_indexes_num Number of dependents
  */
 typedef struct _oph_workflow_stack_task {
 	char **arguments_keys;
@@ -194,6 +200,8 @@ typedef struct _oph_workflow_stack_task {
 	int *deps_task_index;
 	int deps_num;
 	int residual_deps_num;
+	int *dependents_indexes;
+	int dependents_indexes_num;
 } oph_workflow_stack_task;
 
 /* \brief Struct for the stack of an OPH_WORKFLOW

@@ -74,6 +74,40 @@ AC_ARG_ENABLE(optimization,
         [optimization="no"]
         )
 
+matheval_support=no
+MATHEVAL_CONFIG=
+AC_ARG_WITH(matheval_path,
+           [  --with-matheval-path=PATH  Set the MathEval library root dir],
+           [
+                matheval_path="$withval"
+                                matheval_support=yes
+                                MATHEVAL_CONFIG="${withval}/lib/pkgconfig/libmatheval.pc"
+           ],
+           [
+                        MATHEVAL_CONFIG="/usr/local/lib/pkgconfig/libmatheval.pc"
+                        echo -n "checking for $MATHEVAL_CONFIG... "
+                        if test -e "$MATHEVAL_CONFIG" ; then
+                                matheval_support=yes
+                        fi
+                        echo "$matheval_support"
+           ]
+           )
+if test "x${matheval_support}" = "xyes"; then
+	MATHEVAL_CFLAGS="`pkg-config $MATHEVAL_CONFIG --cflags`"
+	MATHEVAL_LIBS="`pkg-config $MATHEVAL_CONFIG --libs`"
+        if test "x${MATHEVAL_LIBS}" != "x"; then
+                AC_SUBST(MATHEVAL_CFLAGS)
+                AC_SUBST(MATHEVAL_LIBS)
+                AC_MSG_NOTICE("Matheval support enabled")
+        else
+                AC_MSG_WARN("Matheval support disabled")
+                matheval_support=no
+        fi
+else
+	AC_MSG_WARN("Matheval support disabled")
+fi
+AM_CONDITIONAL([MATHEVAL_SUPPORT], [test "x$matheval_support" = "xyes"])
+
 AC_ARG_ENABLE(debug,
 	   [  --enable-debug	Enable debug. (Disabled by default)],
 	   [ debug="yes"],

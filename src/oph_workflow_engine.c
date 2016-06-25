@@ -280,6 +280,7 @@ int oph_workflow_reset_task(oph_workflow *wf, int* dependents_indexes, int depen
 			wf->tasks[i].idjob = 0;
 			wf->tasks[i].markerid = 0;
 			wf->tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+			wf->tasks[i].is_skipped = 0;
 			wf->tasks[i].residual_retry_num = wf->tasks[i].retry_num;
 			if (wf->tasks[i].arguments_keys)
 			{
@@ -324,6 +325,7 @@ int oph_workflow_reset_task(oph_workflow *wf, int* dependents_indexes, int depen
 			}
 			for (j=0;j<wf->tasks[i].deps_num;++j) wf->tasks[i].deps[j].task_index = stack->tasks[i].deps_task_index[j];
 			wf->tasks[i].residual_deps_num = stack->tasks[i].residual_deps_num;
+			for (j=0;j<wf->tasks[i].dependents_indexes_num;++j) wf->tasks[i].dependents_indexes[j] = stack->tasks[i].dependents_indexes[j];
 			oph_output_data_free(wf->tasks[i].outputs_keys,wf->tasks[i].outputs_num);
 			oph_output_data_free(wf->tasks[i].outputs_values,wf->tasks[i].outputs_num);
 			wf->tasks[i].outputs_keys = NULL;
@@ -1493,7 +1495,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 			snprintf(str_markerid,OPH_SHORT_STRING_SIZE,"%d",wf->tasks[i].markerid);
 			
 			char error_message[OPH_MAX_STRING_SIZE];
-			snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent job data processing failed!");
+			snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent task data processing failed!");
 
 			while (!success)
 			{
@@ -2046,6 +2048,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	// Submit the commands
 	int response, old_task_id, nnn=0, nnnn=0;
 	char* json_response = NULL;
+	enum oph__oph_odb_job_status exit_code;
 	nn=0;
 	for (k=0;k<tasks_indexes_num;++k)
 	{
@@ -2066,11 +2069,11 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (success_notification) free(success_notification);
 					nnn++;
 				}
-				else if ((response = oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid, request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id, &request_data[k][j].jobid, &json_response, jobid_response)) != OPH_SERVER_OK)
+				else if ((response = oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid, request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id, &request_data[k][j].jobid, &json_response, jobid_response, &exit_code)) != OPH_SERVER_OK)
 				{
 					if (response == OPH_SERVER_NO_RESPONSE)
 					{
-						char *success_notification = oph_remake_notification(request_data[k][j].error_notification, request_data[k][j].task_id, request_data[k][j].light_task_id, request_data[k][j].jobid, OPH_ODB_STATUS_COMPLETED, request_data[k][j].submission_string, sessionid);
+						char *success_notification = oph_remake_notification(request_data[k][j].error_notification, request_data[k][j].task_id, request_data[k][j].light_task_id, request_data[k][j].jobid, exit_code, request_data[k][j].submission_string, sessionid);
 						response=0;
 						oph_workflow_notify(state, ttype, jobid, success_notification ? success_notification : request_data[k][j].output_json, json_response, &response);
 						if (response) pmesg_safe(&global_flag, LOG_WARNING, __FILE__,__LINE__, "%c%d: error %d in notify\n", ttype,jobid, response);
@@ -2381,6 +2384,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		case OPH_ODB_STATUS_DESTROY_ERROR:
 		case OPH_ODB_STATUS_UNSET_ENV_ERROR:
 		case OPH_ODB_STATUS_ABORTED:
+		case OPH_ODB_STATUS_SKIPPED:
 		case OPH_ODB_STATUS_EXPIRED:
 			status = OPH_ODB_STATUS_ERROR;
 			break;
@@ -2526,7 +2530,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					// Save the output
 					if (outputs_keys)
 					{
-						// Save well-known parameters and publish it on web
+						// Save well-known parameters and publish them on web
 						char linkname[OPH_SHORT_STRING_SIZE];
 						for (i=0;i<outputs_num;++i)
 						{
@@ -2599,7 +2603,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					snprintf(str_markerid,OPH_SHORT_STRING_SIZE,"%d",wf->tasks[task_index].markerid);
 
 					char error_message[OPH_MAX_STRING_SIZE];
-					snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent job data processing failed!");
+					snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent task data processing failed!");
 
 					while (!success)
 					{
@@ -3080,6 +3084,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 				if (status == OPH_ODB_STATUS_COMPLETED)
 				{
+					if (wf->tasks[task_index].is_skipped && (wf->tasks[task_index].status <= (int)OPH_ODB_STATUS_COMPLETED)) wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
+
 					wf->residual_tasks_num--;
 
 					pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of workflow '%s' is ended (%d tasks to go)\n", ttype, jobid, wf->tasks[task_index].name, wf->name, wf->residual_tasks_num);
@@ -3204,7 +3210,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								}
 								if (!wf->tasks[dep_task_index].residual_deps_num)
 								{
-									pmesg(LOG_WARNING, __FILE__,__LINE__, "%c%d: too dependences were coded for '%s'\n", ttype, jobid, wf->name);
+									pmesg(LOG_WARNING, __FILE__,__LINE__, "%c%d: too dependencies were coded for task '%s' of '%s'\n", ttype, jobid, wf->tasks[dep_task_index].name, wf->name);
 									pthread_mutex_unlock(&global_flag);
 									*response = OPH_SERVER_SYSTEM_ERROR;
 									return SOAP_OK;
@@ -3617,7 +3623,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		{
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: starting to format JSON file\n", ttype, jobid);
 
-			int num_fields = 8, iii,jjj=0;
+			int num_fields = 8, iii,jjj=0, skipped_num;
 
 			char **jsonkeys = NULL;
 			char **fieldtypes = NULL;
@@ -3633,13 +3639,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					break;
 				}
 
-				  num_fields = 2;
+				  num_fields = 3;
 				  jsonkeys = (char **)malloc(sizeof(char *)*num_fields);
 				  if (!jsonkeys) {
 					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 					  break;
 				  }
 				  jsonkeys[jjj] = strdup("NUMBER OF COMPLETED TASKS");
+				  if (!jsonkeys[jjj]) {
+					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+					  for (iii=0;iii<jjj;iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
+					  if (jsonkeys) free(jsonkeys);
+					  break;
+				  }
+				  jjj++;
+				  jsonkeys[jjj] = strdup("NUMBER OF SKIPPED TASKS");
 				  if (!jsonkeys[jjj]) {
 					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 					  for (iii=0;iii<jjj;iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
@@ -3681,6 +3695,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					  if (fieldtypes) free(fieldtypes);
 					  break;
 				  }
+				  jjj++;
+				  fieldtypes[jjj] = strdup(OPH_JSON_INT);
+				  if (!fieldtypes[jjj]) {
+					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+					  for (iii = 0; iii < num_fields; iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
+					  if (jsonkeys) free(jsonkeys);
+					  for (iii = 0; iii < jjj; iii++) if (fieldtypes[iii]) free(fieldtypes[iii]);
+					  if (fieldtypes) free(fieldtypes);
+					  break;
+				  }
 				  if (oph_json_add_grid(oper_json,OPH_JSON_OBJKEY_WORKFLOW_PROGRESS,"Workflow Progress",NULL,jsonkeys,num_fields,fieldtypes,num_fields)) {
 					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
 					  for (iii = 0; iii < num_fields; iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
@@ -3698,8 +3722,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 					  break;
 				  }
+
+				  for (iii = skipped_num = 0; iii < wf->tasks_num; iii++) if (wf->tasks[iii].status >= (int)OPH_ODB_STATUS_ABORTED) skipped_num++;
+
 				  jjj=0;
-				  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",wf->tasks_num-wf->residual_tasks_num);
+				  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",wf->tasks_num-wf->residual_tasks_num-skipped_num);
+				  jsonvalues[jjj] = strdup(jsontmp);
+				  if (!jsonvalues[jjj]) {
+					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+					  for (iii = 0; iii < jjj; iii++) if (jsonvalues[iii]) free(jsonvalues[iii]);
+					  if (jsonvalues) free(jsonvalues);
+					  break;
+				  }
+				  jjj++;
+				  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",skipped_num);
 				  jsonvalues[jjj] = strdup(jsontmp);
 				  if (!jsonvalues[jjj]) {
 					  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -3985,7 +4021,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						  for (iii = 0; iii < num_fields; iii++) if (jsonvalues[iii]) free(jsonvalues[iii]);
 						  if (jsonvalues) free(jsonvalues);
 					}
-					else if (!check_for_aborted && (wtmp->status == OPH_ODB_STATUS_ABORTED)) check_for_aborted=1;
+					else if (wtmp->status == OPH_ODB_STATUS_ABORTED) check_for_aborted++;
 
 					wtmp = wtmp->next;
 				}
@@ -4001,9 +4037,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			else if (wf->status == OPH_ODB_STATUS_ERROR)
 			{
 				if (check_for_constraint) snprintf(error_message,OPH_MAX_STRING_SIZE,"Workflow constraint violated on task '%s'!",failed_task?failed_task:"unknown");
-				else snprintf(error_message,OPH_MAX_STRING_SIZE,"One or more jobs failed!");
+				else
+				{
+					int ii, num_errors;
+					for (ii = num_errors = 0; ii < wf->tasks_num; ++ii) if ((wf->tasks[ii].status >= (int)OPH_ODB_STATUS_ERROR) && (wf->tasks[ii].status < (int)OPH_ODB_STATUS_ABORTED)) num_errors++;
+					snprintf(error_message,OPH_MAX_STRING_SIZE,"%d task%s failed!",num_errors,num_errors==1?"":"s");
+				}
 			}
-			else if (check_for_aborted) snprintf(error_message,OPH_MAX_STRING_SIZE,"One or more jobs skipped!");
+			else if (check_for_aborted) snprintf(error_message,OPH_MAX_STRING_SIZE,"%d task%s %s aborted!",check_for_aborted,check_for_aborted==1?"":"s",check_for_aborted==1?"was":"were");
 		}
 
 		if (oper_json)

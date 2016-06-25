@@ -2156,7 +2156,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								{
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: starting to format JSON file\n", ttype, jobid);
 
-									int num_fields, iii,jjj=0;
+									int num_fields, iii,jjj=0, skipped_num;
 
 									char **jsonkeys = NULL;
 									char **fieldtypes = NULL;
@@ -2173,13 +2173,21 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 										}
 
 										// Progress
-										  num_fields = 2;
+										  num_fields = 3;
 										  jsonkeys = (char **)malloc(sizeof(char *)*num_fields);
 										  if (!jsonkeys) {
 											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 											  break;
 										  }
 										  jsonkeys[jjj] = strdup("NUMBER OF COMPLETED TASKS");
+										  if (!jsonkeys[jjj]) {
+											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+											  for (iii=0;iii<jjj;iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
+											  if (jsonkeys) free(jsonkeys);
+											  break;
+										  }
+										  jjj++;
+										  jsonkeys[jjj] = strdup("NUMBER OF SKIPPED TASKS");
 										  if (!jsonkeys[jjj]) {
 											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 											  for (iii=0;iii<jjj;iii++) if (jsonkeys[iii]) free(jsonkeys[iii]);
@@ -2238,8 +2246,20 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 											  break;
 										  }
+
+										  for (iii = skipped_num = 0; iii < wf->tasks_num; iii++) if (wf->tasks[iii].status >= (int)OPH_ODB_STATUS_ABORTED) skipped_num++;
+
 										  jjj=0;
-										  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",item->wf->tasks_num-item->wf->residual_tasks_num);
+										  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",item->wf->tasks_num-item->wf->residual_tasks_num-skipped_num);
+										  jsonvalues[jjj] = strdup(jsontmp);
+										  if (!jsonvalues[jjj]) {
+											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+											  for (iii = 0; iii < jjj; iii++) if (jsonvalues[iii]) free(jsonvalues[iii]);
+											  if (jsonvalues) free(jsonvalues);
+											  break;
+										  }
+										  jjj++;
+										  snprintf(jsontmp,OPH_MAX_STRING_SIZE,"%d",skipped_num);
 										  jsonvalues[jjj] = strdup(jsontmp);
 										  if (!jsonvalues[jjj]) {
 											  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2537,7 +2557,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 												  for (iii = 0; iii < num_fields; iii++) if (jsonvalues[iii]) free(jsonvalues[iii]);
 												  if (jsonvalues) free(jsonvalues);
 											}
-											else if (!check_for_aborted && (item->wf->tasks[i].status == OPH_ODB_STATUS_ABORTED)) check_for_aborted=1;
+											else if (item->wf->tasks[i].status == OPH_ODB_STATUS_ABORTED) check_for_aborted++;
 										  }
 
 										if (i<item->wf->tasks_num) break;
@@ -2547,8 +2567,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 								if (success)
 								{
-									if (item->wf->status == OPH_ODB_STATUS_ERROR) snprintf(error_message,OPH_MAX_STRING_SIZE,"One or more jobs failed!");
-									else if (check_for_aborted) snprintf(error_message,OPH_MAX_STRING_SIZE,"One or more jobs were skipped!");
+									if (item->wf->status == OPH_ODB_STATUS_ERROR)
+									{
+										int ii, num_errors;
+										for (ii = num_errors = 0; ii < item->wf->tasks_num; ++ii) if ((item->wf->tasks[ii].status >= (int)OPH_ODB_STATUS_ERROR) && (item->wf->tasks[ii].status < (int)OPH_ODB_STATUS_ABORTED)) num_errors++;
+										snprintf(error_message,OPH_MAX_STRING_SIZE,"%d task%s failed!",num_errors,num_errors==1?"":"s");
+									}
+									else if (check_for_aborted) snprintf(error_message,OPH_MAX_STRING_SIZE,"%d task%s %s aborted!",check_for_aborted,check_for_aborted==1?"":"s",check_for_aborted==1?"was":"were");
 								}
 
 								if (oper_json)
@@ -2601,7 +2626,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								snprintf(str_markerid,OPH_SHORT_STRING_SIZE,"%d",item->wf->tasks[task_index].markerid);
 
 								char error_message[OPH_MAX_STRING_SIZE];
-								snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent job data processing failed!");
+								snprintf(error_message,OPH_MAX_STRING_SIZE,"Parent task data processing failed!");
 
 								while (!success)
 								{

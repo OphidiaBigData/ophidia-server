@@ -69,6 +69,10 @@ http://www.apache.org/licenses/
 GPLv2+</br>
 http://pywps.github.io/licence/index.html
 
+- GNU libmatheval</br>
+GPLv3</br>
+http://www.gnu.org/copyleft/gpl.html
+
 <b>Note</b>:</br>
 This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit.
 

@@ -19,9 +19,10 @@
 #ifndef OPH_KNOWN_OPERATORS_H
 #define OPH_KNOWN_OPERATORS_H
 
+#include "oph_gather.h"
 #include "oph_plugin.h"
 
-int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int *odb_jobid, char** response, char** jobid_response);
+int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int *odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status* exit_code);
 
 #endif /* OPH_KNOWN_OPERATORS_H */
 

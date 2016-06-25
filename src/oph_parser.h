@@ -96,6 +96,7 @@
 #define OPH_OPERATOR_PARAMETER_LINES_NUMBER "nlines"
 #define OPH_OPERATOR_PARAMETER_COUNTER "counter"
 #define OPH_OPERATOR_PARAMETER_PARALLEL "parallel"
+#define OPH_OPERATOR_PARAMETER_CONDITION "condition"
 
 // Known values
 #define OPH_COMMON_NULL "-"

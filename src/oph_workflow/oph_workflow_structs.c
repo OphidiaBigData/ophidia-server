@@ -354,12 +354,19 @@ int oph_workflow_push(oph_workflow *workflow, int caller, char* name, char **sva
 			}
 			else tmp->tasks[i].deps_task_index = NULL;
 			tmp->tasks[i].residual_deps_num = workflow->tasks[i].residual_deps_num;
+			tmp->tasks[i].dependents_indexes_num = workflow->tasks[i].dependents_indexes_num;
+			if (workflow->tasks[i].dependents_indexes_num)
+			{
+				tmp->tasks[i].dependents_indexes = (int*)malloc(workflow->tasks[i].dependents_indexes_num * sizeof(int));
+				for (j=0;j<workflow->tasks[i].dependents_indexes_num;++j) tmp->tasks[i].dependents_indexes[j] = workflow->tasks[i].dependents_indexes[j];
+			}
+			else tmp->tasks[i].dependents_indexes = NULL;
 		}
 	}
 
 	tmp->caller = caller;
 	tmp->index = 0; // From 0 to values_num-1
-	tmp->name = name;
+	tmp->name = strdup(name);
 	tmp->svalues = svalues;
 	tmp->ivalues = ivalues;
 	tmp->values_num = values_num;
@@ -392,9 +399,11 @@ int oph_workflow_pop(oph_workflow *workflow, oph_workflow_stack* prev)
 			if (tmp->tasks[i].arguments_keys) free(tmp->tasks[i].arguments_keys);
 			if (tmp->tasks[i].arguments_values) free(tmp->tasks[i].arguments_values);
 			if (tmp->tasks[i].deps_task_index) free(tmp->tasks[i].deps_task_index);
+			if (tmp->tasks[i].dependents_indexes) free(tmp->tasks[i].dependents_indexes);
 		}
 		free(tmp->tasks);
 	}
+	if (tmp->name) free(tmp->name);
 	if (tmp->svalues)
 	{
 		for (i=0;i<tmp->values_num;++i) if(tmp->svalues[i]) free(tmp->svalues[i]);

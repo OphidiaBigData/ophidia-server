@@ -29,6 +29,10 @@
 #include <sys/time.h>
 #include <dirent.h>
 
+#ifdef MATHEVAL_SUPPORT
+#include <matheval.h>
+#endif
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
@@ -36,6 +40,50 @@ extern pthread_cond_t termination_flag;
 extern char* oph_web_server;
 extern char* oph_log_file_name;
 extern char* oph_auth_location;
+
+// Thread unsafe
+int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, int skip_the_next)
+{
+	if (wf->tasks[task_index].dependents_indexes_num)
+	{
+		if (!wf->tasks[task_index].dependents_indexes)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__, "Null pointer\n");
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+		int i,j,k,res;
+		for (k=0;k<wf->tasks[task_index].dependents_indexes_num;++k)
+		{
+			if (nk<0) nk=k;
+			i = wf->tasks[task_index].dependents_indexes[k];
+			if (wf->tasks[i].parent == parent)
+			{
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "Found '%s' child of task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				
+				// Adapt dependencies
+				wf->tasks[parent].dependents_indexes[nk] = i;
+				for (j=0;j<wf->tasks[i].deps_num;++j) if (wf->tasks[i].deps[j].task_index == task_index) wf->tasks[i].deps[j].task_index = parent;
+
+				if (strncasecmp(wf->tasks[i].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE)) wf->tasks[i].is_skipped = skip_the_next;
+				
+				continue;
+			}
+			if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)
+			{
+				if (!wf->residual_tasks_num)
+				{
+					pmesg(LOG_WARNING, __FILE__,__LINE__, "Number of residual tasks of '%s' cannot be reduced\n",wf->tasks[i].name);
+					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+				}
+				wf->residual_tasks_num--;
+			}
+			wf->tasks[i].status = status;
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Status of '%s' is set to '%s'\n",wf->tasks[i].name,oph_odb_convert_status_to_str(status));
+			if ((res = oph_set_status_of_selection_block(wf, i, status, parent, nk, skip_the_next))) return res;
+		}
+	}
+	return OPH_SERVER_OK;
+}
 
 // Thread unsafe
 int oph_extract_from_json(char** key, const char* json_string)
@@ -378,8 +426,10 @@ int oph_extract_from_json(char** key, const char* json_string)
 	return OPH_SERVER_OK;
 }
 
-int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb *oDB)
+int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb *oDB, enum oph__oph_odb_job_status *exit_code)
 {
+	if (exit_code) *exit_code = OPH_ODB_STATUS_ERROR;
+
 	char *jstring = NULL;
 	if (oper_json)
 	{
@@ -402,6 +452,7 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 				  return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
+			else if (exit_code) *exit_code = OPH_ODB_STATUS_COMPLETED;
 		}
 		oph_json_free(oper_json);
 	}
@@ -421,11 +472,12 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 	return OPH_SERVER_OK;
 }
 
-int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response)
+int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status *exit_code)
 {
 	UNUSED(ncores)
 
 	int error = OPH_SERVER_UNKNOWN;
+	if (exit_code) *exit_code = (int)OPH_ODB_STATUS_COMPLETED;
 
 	if (!request)
 	{
@@ -594,7 +646,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 		}
 
 		if (success) *error_message = 0;
-		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB)) return OPH_SERVER_SYSTEM_ERROR;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
@@ -682,13 +734,24 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				  break;
 			}
 
+			char arg_value[OPH_WORKFLOW_MAX_STRING], *error_msg = NULL;
+
 			// Extract arguments. Warning: task parser is not used. Note that the access to oph_jobinfo is unavoidable!
 			for (j=0;j<wf->tasks[i].arguments_num;++j)
 			{
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_NAME) && !name) name = wf->tasks[i].arguments_values[j];
-				else if (((is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUES)) || (!is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUE))) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
+				snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",wf->tasks[i].arguments_values[j]);
+				if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 				{
-					char *tmp = strdup(wf->tasks[i].arguments_values[j]), expansion, *pch1;
+					snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution");
+					pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+					if (error_msg) free(error_msg);
+					break;
+				}
+
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_NAME) && !name) name = wf->tasks[i].arguments_values[j]; // it should not be 'arg_value'!
+				else if (((is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUES)) || (!is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_VALUE))) && !svalues && strcasecmp(arg_value,OPH_COMMON_NULL))
+				{
+					char *tmp = strdup(arg_value), expansion, *pch1;
 					if (!tmp) break;
 					do
 					{
@@ -718,7 +781,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 										if (strchr(svalues[kk],OPH_SEPARATOR_SUBPARAM))
 										{
 											hh = 0;
-											char expanded_value[1+strlen(wf->tasks[i].arguments_values[j])+strlen(svalues[kk])];
+											char expanded_value[1+strlen(arg_value)+strlen(svalues[kk])];
 											for (h=0; h<kk; ++h) hh = sprintf(expanded_value+hh, "%s%c", svalues[h], OPH_SEPARATOR_SUBPARAM);
 											hh = sprintf(expanded_value+hh, "%s", svalues[kk]);
 											pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
@@ -746,18 +809,27 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				}
 				else if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_PARALLEL) && !mode)
 				{
-					if (!strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_YES)) mode = 1;
-					else if (strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NO)) break;
+					if (!strcasecmp(arg_value,OPH_COMMON_YES)) mode = 1;
+					else if (strcasecmp(arg_value,OPH_COMMON_NO)) break;
 				}
 			}
-			if (j<wf->tasks[i].arguments_num)
+			if ((j<wf->tasks[i].arguments_num) || error_msg)
 			{
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n",wf->tasks[i].name);
 				break;
 			}
 			for (j=0;j<wf->tasks[i].arguments_num;++j)
 			{
-				if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j],OPH_COMMON_NULL))
+				snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",wf->tasks[i].arguments_values[j]);
+				if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
+				{
+					snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution");
+					pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+					if (error_msg) free(error_msg);
+					break;
+				}
+
+				if (is_for && !strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(arg_value,OPH_COMMON_NULL))
 				{
 					oph_subset* subset_struct = NULL;
 					if (oph_subset_init(&subset_struct))
@@ -765,7 +837,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 						oph_subset_free(subset_struct);
 						break;
 					}
-					if (oph_subset_parse(wf->tasks[i].arguments_values[j],strlen(wf->tasks[i].arguments_values[j]),subset_struct,svalues_num))
+					if (oph_subset_parse(arg_value,strlen(arg_value),subset_struct,svalues_num))
 					{
 						oph_subset_free(subset_struct);
 						break;
@@ -790,10 +862,22 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 					oph_subset_free(subset_struct);
 				}
 			}
-			if (j<wf->tasks[i].arguments_num)
+			if ((j<wf->tasks[i].arguments_num) || error_msg)
 			{
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n",wf->tasks[i].name);
 				break;
+			}
+			if (name)
+			{
+				snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",name);
+				if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
+				{
+					snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",error_msg?error_msg:"Error in variable substitution");
+					pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+					if (error_msg) free(error_msg);
+					break;
+				}
+				name = arg_value;
 			}
 			for (kk=0;name && (kk<(int)strlen(name));++kk) // check compliance with IEEE Std 1003.1-2001 conventions
 			{
@@ -806,12 +890,6 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			{
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s'.\n",OPH_OPERATOR_PARAMETER_NAME);
 				snprintf(error_message,OPH_MAX_STRING_SIZE,"Bad argument '%s'.",OPH_OPERATOR_PARAMETER_NAME);
-				break;
-			}
-			if (j<wf->tasks[i].arguments_num)
-			{
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s'.\n",wf->tasks[i].arguments_keys[j]);
-				snprintf(error_message,OPH_MAX_STRING_SIZE,"Bad argument '%s'.",wf->tasks[i].arguments_keys[j]);
 				break;
 			}
 			if (mode)
@@ -899,7 +977,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 		}
 
 		if (success) *error_message = 0;
-		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB)) return OPH_SERVER_SYSTEM_ERROR;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
@@ -1066,10 +1144,300 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 		}
 
 		if (success) *error_message = 0;
-		if (oph_finalize_known_operator(wf->tasks[i].idjob, oper_json, operator_name, error_message, success, response, &oDB)) return OPH_SERVER_SYSTEM_ERROR;
+		if (oph_finalize_known_operator(wf->tasks[i].idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
+	else if (!strncasecmp(operator_name,OPH_OPERATOR_IF,OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name,OPH_OPERATOR_ELSEIF,OPH_MAX_STRING_SIZE)) // oph_if, oph_elseif
+	{
+#ifndef MATHEVAL_SUPPORT
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
+		return OPH_SERVER_SYSTEM_ERROR;
+#endif
+		if (!task_id)
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__,__LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		if (light_task_id && (*light_task_id >= 0))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__,__LINE__, "Operator '%s' cannot be used within massive operations\n", operator_name);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		pthread_mutex_lock(&global_flag);
+
+		oph_job_info* item = NULL, *prev = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev)))
+		{
+			pmesg(LOG_WARNING, __FILE__,__LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		oph_workflow* wf = item->wf;
+		int i = *task_id, j, idjob = wf->tasks[i].idjob, check = 0;
+
+		// JSON Response creation
+		int success=0;
+		oph_json* oper_json = NULL;
+		char error_message[OPH_MAX_STRING_SIZE];
+		snprintf(error_message,OPH_MAX_STRING_SIZE,"Failure in obtaining JSON data!");
+		while (!success)
+		{
+			if (oph_json_alloc(&oper_json))
+			{
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+				break;
+			}
+			if (oph_json_set_source(oper_json,"oph","Ophidia",NULL,"Ophidia Data Source",wf->username))
+			{
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				break;
+			}
+			char session_code[OPH_MAX_STRING_SIZE];
+			if (oph_get_session_code(sessionid, session_code))
+			{
+				pmesg(LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json,"Session Code",session_code))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			char workflowid[OPH_SHORT_STRING_SIZE];
+			snprintf(workflowid, OPH_SHORT_STRING_SIZE,"%d",wf->workflowid);
+			if (oph_json_add_source_detail(oper_json,"Workflow",workflowid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			if (oph_json_add_source_detail(oper_json,"Marker",markerid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			char oph_jobid[OPH_MAX_STRING_SIZE];
+			snprintf(oph_jobid,OPH_MAX_STRING_SIZE,"%s%s%s%s%s",sessionid,OPH_SESSION_WORKFLOW_DELIMITER,workflowid,OPH_SESSION_MARKER_DELIMITER,markerid);
+			if (oph_json_add_source_detail(oper_json,"JobID",oph_jobid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			if (oph_json_add_consumer(oper_json,wf->username))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				  break;
+			}
+
+			if (!wf->tasks[i].is_skipped)
+			{
+				char arg_value[OPH_WORKFLOW_MAX_STRING], *condition = NULL, *error_msg = NULL;
+
+				// Extract arguments. Warning: task parser is not used. Note that the access to oph_jobinfo is unavoidable!
+				for (j=0;j<wf->tasks[i].arguments_num;++j) if (!strcasecmp(wf->tasks[i].arguments_keys[j],OPH_OPERATOR_PARAMETER_CONDITION))
+				{
+					snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",wf->tasks[i].arguments_values[j]);
+					if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg)) break;
+					condition = arg_value;
+					break;
+				}
+				if (error_msg)
+				{
+					snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",error_msg);
+					pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+					free(error_msg);
+					break;
+				}
+				if (condition)
+				{
+					// Evaluate expression
+					int count;
+					char** names;
+					void *me = evaluator_create(condition);
+					evaluator_get_variables(me, &names, &count);
+					if (count>0)
+					{
+						snprintf(error_message,OPH_MAX_STRING_SIZE,"Too variables in the expression '%s'!", condition);
+						pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+						evaluator_destroy(me);
+						break;
+					}
+					double return_value = evaluator_evaluate(me, count, names, NULL);
+					evaluator_destroy(me);
+
+					// In case condition is not satisfied...
+					if (!return_value) wf->tasks[i].is_skipped = 1;
+				}
+
+				check = 1;
+			}
+
+			success=1;
+		}
+
+		if (success)
+		{
+			if (wf->tasks[i].is_skipped)
+			{
+				// Skip this sub-block
+				if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check))
+				{
+					snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);
+				}
+				if (check) wf->tasks[i].is_skipped = 0;
+			}
+			else // Condition is satisfied
+			{
+				for (j=0;j<wf->tasks_num;++j) if ((wf->tasks[j].parent == i) && strncasecmp(operator_name,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE))
+				{
+					wf->tasks[j].is_skipped = 1;
+					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
+				}
+			}
+		}
+
+		pthread_mutex_unlock(&global_flag);
+
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+		if(oph_odb_read_config_ophidiadb(&oDB))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if(oph_odb_connect_to_ophidiadb(&oDB))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
+		if (success) *error_message = 0;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
+
+		error = OPH_SERVER_NO_RESPONSE;
+	}
+	else if (!strncasecmp(operator_name,OPH_OPERATOR_ELSE,OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE)) // oph_else, oph_endif
+	{
+#ifndef MATHEVAL_SUPPORT
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
+		return OPH_SERVER_SYSTEM_ERROR;
+#endif
+		if (!task_id)
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__,__LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		if (light_task_id && (*light_task_id >= 0))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__,__LINE__, "Operator '%s' cannot be used within massive operations\n", operator_name);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		pthread_mutex_lock(&global_flag);
+
+		oph_job_info* item = NULL, *prev = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev)))
+		{
+			pmesg(LOG_WARNING, __FILE__,__LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		oph_workflow* wf = item->wf;
+		int i = *task_id, idjob = wf->tasks[i].idjob;
+
+		// JSON Response creation
+		int success=0;
+		oph_json* oper_json = NULL;
+		char error_message[OPH_MAX_STRING_SIZE];
+		snprintf(error_message,OPH_MAX_STRING_SIZE,"Failure in obtaining JSON data!");
+		while (!success)
+		{
+			if (oph_json_alloc(&oper_json))
+			{
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+				break;
+			}
+			if (oph_json_set_source(oper_json,"oph","Ophidia",NULL,"Ophidia Data Source",wf->username))
+			{
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				break;
+			}
+			char session_code[OPH_MAX_STRING_SIZE];
+			if (oph_get_session_code(sessionid, session_code))
+			{
+				pmesg(LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json,"Session Code",session_code))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			char workflowid[OPH_SHORT_STRING_SIZE];
+			snprintf(workflowid, OPH_SHORT_STRING_SIZE,"%d",wf->workflowid);
+			if (oph_json_add_source_detail(oper_json,"Workflow",workflowid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			if (oph_json_add_source_detail(oper_json,"Marker",markerid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			char oph_jobid[OPH_MAX_STRING_SIZE];
+			snprintf(oph_jobid,OPH_MAX_STRING_SIZE,"%s%s%s%s%s",sessionid,OPH_SESSION_WORKFLOW_DELIMITER,workflowid,OPH_SESSION_MARKER_DELIMITER,markerid);
+			if (oph_json_add_source_detail(oper_json,"JobID",oph_jobid))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				  break;
+			}
+			if (oph_json_add_consumer(oper_json,wf->username))
+			{
+				  pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				  break;
+			}
+
+			success=1;
+		}
+
+		if (success && wf->tasks[i].is_skipped)
+		{
+			// Skip this sub-block
+			if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0))
+			{
+				snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
+				pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);
+			}
+		}
+
+		pthread_mutex_unlock(&global_flag);
+
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+		if(oph_odb_read_config_ophidiadb(&oDB))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if(oph_odb_connect_to_ophidiadb(&oDB))
+		{
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
+		if (success) *error_message = 0;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
+
+		error = OPH_SERVER_NO_RESPONSE;
+	}
+
 	else // Normal tasks
 
 	if (!strncasecmp(operator_name,OPH_OPERATOR_MANAGE_SESSION,OPH_MAX_STRING_SIZE))
@@ -2902,7 +3270,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 
 		if (task_tbl) hashtbl_destroy(task_tbl);
 
-		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB)) return OPH_SERVER_SYSTEM_ERROR;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
@@ -3277,7 +3645,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			return error;
 		}
 
-		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB)) return OPH_SERVER_SYSTEM_ERROR;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code)) return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
