@@ -1249,7 +1249,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 					free(error_msg);
 					break;
 				}
-				if (condition)
+				if (condition && strlen(condition))
 				{
 					// Evaluate expression
 					int count;
@@ -1290,10 +1290,10 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			}
 			else // Condition is satisfied
 			{
-				for (j=0;j<wf->tasks_num;++j) if ((wf->tasks[j].parent == i) && strncasecmp(operator_name,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE))
+				for (j=0;j<wf->tasks_num;++j) if ((wf->tasks[j].parent == i) && strncasecmp(wf->tasks[j].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE))
 				{
 					wf->tasks[j].is_skipped = 1;
-					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
+					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' (%s) and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
 				}
 			}
 		}
@@ -1405,7 +1405,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			success=1;
 		}
 
-		if (success && wf->tasks[i].is_skipped)
+		if (success && wf->tasks[i].is_skipped && !strncasecmp(operator_name,OPH_OPERATOR_ELSE,OPH_MAX_STRING_SIZE))
 		{
 			// Skip this sub-block
 			if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0))
