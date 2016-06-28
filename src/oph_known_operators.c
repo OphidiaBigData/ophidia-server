@@ -42,7 +42,7 @@ extern char* oph_log_file_name;
 extern char* oph_auth_location;
 
 // Thread unsafe
-int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, int skip_the_next)
+int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, int skip_the_next, int* exit_output)
 {
 	if (wf->tasks[task_index].dependents_indexes_num)
 	{
@@ -51,7 +51,7 @@ int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph
 			pmesg(LOG_ERROR, __FILE__,__LINE__, "Null pointer\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
-		int i,j,k,res;
+		int i,j,k,res,gparent;
 		for (k=0;k<wf->tasks[task_index].dependents_indexes_num;++k)
 		{
 			if (nk<0) nk=k;
@@ -59,27 +59,46 @@ int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph
 			if (wf->tasks[i].parent == parent)
 			{
 				pmesg(LOG_DEBUG, __FILE__,__LINE__, "Found '%s' child of task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
-				
-				// Adapt dependencies
-				wf->tasks[parent].dependents_indexes[nk] = i;
-				for (j=0;j<wf->tasks[i].deps_num;++j) if (wf->tasks[i].deps[j].task_index == task_index) wf->tasks[i].deps[j].task_index = parent;
-
 				if (strncasecmp(wf->tasks[i].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE)) wf->tasks[i].is_skipped = skip_the_next;
-				
+				else if (wf->tasks[i].branch_num > 1)
+				{
+					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+					wf->tasks[parent].dependents_indexes[nk] = parent;
+					for (j=0;j<wf->tasks[i].deps_num;++j) if (wf->tasks[i].deps[j].task_index == task_index) wf->tasks[i].deps[j].task_index = i;
+					wf->tasks[i].residual_deps_num--;
+				}
+				else
+				{
+					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Set dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+					wf->tasks[parent].dependents_indexes[nk] = i;
+					for (j=0;j<wf->tasks[i].deps_num;++j) if (wf->tasks[i].deps[j].task_index == task_index) wf->tasks[i].deps[j].task_index = parent;
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator,OPH_OPERATOR_IF,OPH_MAX_STRING_SIZE)) *exit_output = 0;
+				}
 				continue;
 			}
-			if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)
+			gparent = oph_gparent_of(wf,parent);
+			if (!strncasecmp(wf->tasks[i].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE) && (wf->tasks[i].parent == gparent))
 			{
-				if (!wf->residual_tasks_num)
-				{
-					pmesg(LOG_WARNING, __FILE__,__LINE__, "Number of residual tasks of '%s' cannot be reduced\n",wf->tasks[i].name);
-					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-				}
-				wf->residual_tasks_num--;
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				wf->tasks[gparent].dependents_indexes[nk] = i;
+				for (j=0;j<wf->tasks[i].deps_num;++j) if (wf->tasks[i].deps[j].task_index == task_index) wf->tasks[i].deps[j].task_index = gparent;
+				wf->tasks[i].residual_deps_num--;
 			}
-			wf->tasks[i].status = status;
-			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Status of '%s' is set to '%s'\n",wf->tasks[i].name,oph_odb_convert_status_to_str(status));
-			if ((res = oph_set_status_of_selection_block(wf, i, status, parent, nk, skip_the_next))) return res;
+			else
+			{
+				if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)
+				{
+					if (!wf->residual_tasks_num)
+					{
+						pmesg(LOG_WARNING, __FILE__,__LINE__, "Number of residual tasks of '%s' cannot be reduced\n",wf->tasks[i].name);
+						return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+					}
+					wf->residual_tasks_num--;
+				}
+				wf->tasks[i].status = status;
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "Status of '%s' is set to '%s'\n",wf->tasks[i].name,oph_odb_convert_status_to_str(status));
+				if ((res = oph_set_status_of_selection_block(wf, i, status, parent, nk, skip_the_next, exit_output))) return res;
+			}
 		}
 	}
 	return OPH_SERVER_OK;
@@ -472,12 +491,13 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 	return OPH_SERVER_OK;
 }
 
-int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status *exit_code)
+int oph_serve_known_operator(struct oph_plugin_data *state, const char* request, const int ncores, const char* sessionid, const char* markerid, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status *exit_code, int* exit_output)
 {
 	UNUSED(ncores)
 
 	int error = OPH_SERVER_UNKNOWN;
-	if (exit_code) *exit_code = (int)OPH_ODB_STATUS_COMPLETED;
+	if (exit_code) *exit_code = OPH_ODB_STATUS_COMPLETED;
+	if (exit_output) *exit_output = 1;
 
 	if (!request)
 	{
@@ -1281,7 +1301,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 			if (wf->tasks[i].is_skipped)
 			{
 				// Skip this sub-block
-				if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check))
+				if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check, exit_output))
 				{
 					snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
 					pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);
@@ -1293,7 +1313,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				for (j=0;j<wf->tasks_num;++j) if ((wf->tasks[j].parent == i) && strncasecmp(wf->tasks[j].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE))
 				{
 					wf->tasks[j].is_skipped = 1;
-					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' (%s) and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
+					pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
 				}
 			}
 		}
@@ -1408,7 +1428,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 		if (success && wf->tasks[i].is_skipped && !strncasecmp(operator_name,OPH_OPERATOR_ELSE,OPH_MAX_STRING_SIZE))
 		{
 			// Skip this sub-block
-			if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0))
+			if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0, exit_output))
 			{
 				snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
 				pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);

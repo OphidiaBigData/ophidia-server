@@ -2046,7 +2046,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	pthread_mutex_unlock(&global_flag);
 
 	// Submit the commands
-	int response, old_task_id, nnn=0, nnnn=0;
+	int response, old_task_id, nnn=0, nnnn=0, exit_output;
 	char* json_response = NULL;
 	enum oph__oph_odb_job_status exit_code;
 	nn=0;
@@ -2069,11 +2069,11 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (success_notification) free(success_notification);
 					nnn++;
 				}
-				else if ((response = oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid, request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id, &request_data[k][j].jobid, &json_response, jobid_response, &exit_code)) != OPH_SERVER_OK)
+				else if ((response = oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid, request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id, &request_data[k][j].jobid, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK)
 				{
 					if (response == OPH_SERVER_NO_RESPONSE)
 					{
-						char *success_notification = oph_remake_notification(request_data[k][j].error_notification, request_data[k][j].task_id, request_data[k][j].light_task_id, request_data[k][j].jobid, exit_code, request_data[k][j].submission_string, sessionid);
+						char *success_notification = oph_remake_notification(request_data[k][j].error_notification, request_data[k][j].task_id, request_data[k][j].light_task_id, request_data[k][j].jobid, exit_code, exit_output ? request_data[k][j].submission_string : NULL, sessionid);
 						response=0;
 						oph_workflow_notify(state, ttype, jobid, success_notification ? success_notification : request_data[k][j].output_json, json_response, &response);
 						if (response) pmesg_safe(&global_flag, LOG_WARNING, __FILE__,__LINE__, "%c%d: error %d in notify\n", ttype,jobid, response);

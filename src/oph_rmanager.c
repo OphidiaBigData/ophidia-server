@@ -538,14 +538,15 @@ int oph_get_result_from_file(char* filename, char **response)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_serve_request(const char* request, const int ncores, const char* sessionid, const char* markerid, const char* error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status *exit_code)
+int oph_serve_request(const char* request, const int ncores, const char* sessionid, const char* markerid, const char* error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id, int *light_task_id, int* odb_jobid, char** response, char** jobid_response, enum oph__oph_odb_job_status *exit_code, int* exit_output)
 {
 	pmesg_safe(&global_flag,LOG_DEBUG, __FILE__,__LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
 	if (exit_code) *exit_code = OPH_ODB_STATUS_COMPLETED;
+	if (exit_output) *exit_output = 1;
 
 	int result;
-	if ((result = oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code)) != OPH_SERVER_UNKNOWN) return result;
+	if ((result = oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output)) != OPH_SERVER_UNKNOWN) return result;
 
 	char *cmd = NULL;
 

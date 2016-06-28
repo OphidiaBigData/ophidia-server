@@ -91,14 +91,21 @@ int oph_workflow_is_child_of(oph_workflow *wf, int p, int c);
  * \param task_index Input index of the target task
  * \param submit_string String to be parsed
  * \param error Pointer to save a possible error message
- * \return 1 if the task c depends on the task p
+ * \return 1 in case of errors
  */
 int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, char* submit_string, char** error);
 
 /* \brief Function to set basic variables
  * \param workflow Input OPH_WORKFLOW
- * \return 1 if the task c depends on the task p
+ * \return 1 in case of errors
  */
 int oph_workflow_set_basic_var(oph_workflow *workflow);
+
+/* \brief Function to extract the grand parent of a task
+ * \param workflow Input OPH_WORKFLOW
+ * \param p Index of child task
+ * \return The index of grand parent of task k
+ */
+int oph_gparent_of(oph_workflow *wf, int k);
 
 #endif //__OPH_WORKFLOW_FUNCTIONS_H

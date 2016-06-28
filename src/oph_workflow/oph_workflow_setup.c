@@ -296,6 +296,20 @@ int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tas
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
+int oph_gparent_of(oph_workflow *wf, int k)
+{
+	if (k<0) return -2;
+	int p = wf->tasks[k].parent;
+	if (p<0) return -2;
+	do
+	{
+		k = p;
+		p = wf->tasks[k].parent;
+	}
+	while (p>=0);
+	return k;
+}
+
 // Other internal functions
 
 int workflow_s_add(workflow_s_nodes *s, workflow_node *node) {
@@ -399,7 +413,7 @@ int oph_workflow_is_child_of(oph_workflow *wf, int p, int c)
 	return 0;
 }
 
-unsigned int workflow_number_of(oph_workflow *wf, int k, int p, const char* op, const char* nop, char* flag, int bracket_number, int* child)
+unsigned int workflow_number_of(oph_workflow *wf, int k, int p, int gp, const char* op, const char* nop, char* flag, int bracket_number, int* child)
 {
 	if (!wf || (k<0) || (k>=wf->tasks_num)) return 0;
 	int i,j,res=0,bn;
@@ -408,7 +422,7 @@ unsigned int workflow_number_of(oph_workflow *wf, int k, int p, const char* op, 
 		j = wf->tasks[k].dependents_indexes[i];
 		if (!strncasecmp(wf->tasks[j].operator,op,OPH_WORKFLOW_MAX_STRING)) // Found an "end-task"
 		{
-			if (bracket_number) res += workflow_number_of(wf, j, p, op, nop, flag, bracket_number-1, child);
+			if (bracket_number) res += workflow_number_of(wf, j, p, gp, op, nop, flag, bracket_number-1, child);
 			else if (flag[j])
 			{
 				res++;
@@ -419,7 +433,8 @@ unsigned int workflow_number_of(oph_workflow *wf, int k, int p, const char* op, 
 					wf->tasks[p].child = j;
 					if (child) *child = j;
 				}
-				else if (wf->tasks[j].parent != p) res++; // Performance improvement
+				else if ((wf->tasks[j].parent != p) && (wf->tasks[j].parent != gp)) res++; // Performance improvement
+				wf->tasks[j].branch_num++;
 			}
 		}
 		else
@@ -438,7 +453,7 @@ unsigned int workflow_number_of(oph_workflow *wf, int k, int p, const char* op, 
 				bn++;
 				if (wf->tasks[p].nesting_level < bn) wf->tasks[p].nesting_level = bn;
 			}
-			res += workflow_number_of(wf, j, p, op, nop, flag, bn, child);
+			res += workflow_number_of(wf, j, p, gp, op, nop, flag, bn, child);
 		}
 		if (res>1) break; // Performance improvement
 	}
@@ -453,7 +468,7 @@ int workflow_validate_fco(oph_workflow *wf)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	int i,k,child;
+	int i,k,kk,child;
 	char flag[wf->tasks_num];
 	unsigned int number;
 
@@ -464,7 +479,7 @@ int workflow_validate_fco(oph_workflow *wf)
 		if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_FOR,OPH_WORKFLOW_MAX_STRING))
 		{
 			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			number = workflow_number_of(wf,k,k,OPH_OPERATOR_ENDFOR,OPH_OPERATOR_FOR,flag,0,&child);
+			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ENDFOR,OPH_OPERATOR_FOR,flag,0,&child);
 			if ( !number || (number>1) ) break;
 			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDFOR,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
 			if (i<wf->tasks_num) break;
@@ -473,7 +488,7 @@ int workflow_validate_fco(oph_workflow *wf)
 		{
 			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
 			child=-1;
-			number = workflow_number_of(wf,k,k,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
+			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
 			if (number>1) break;
 			if (child>=0)
 			{
@@ -484,28 +499,26 @@ int workflow_validate_fco(oph_workflow *wf)
 			{
 				for (i=0;i<wf->tasks_num;++i) flag[i]=1;
 				child=-1;
-				number += workflow_number_of(wf,k,k,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
+				number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
 				if (number>1) break;
 				if (child>=0)
 				{
 					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
 					if (i<wf->tasks_num) break;
 				}
-				else
-				{
-					for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-					number += workflow_number_of(wf,k,k,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
-					if ( !number || (number>1) ) break;
-					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-					if (i<wf->tasks_num) break;
-				}
 			}
+			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
+			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
+			if ( !number && (number>1) ) break;
+			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
+			if (i<wf->tasks_num) break;
 		}
 		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSEIF,OPH_WORKFLOW_MAX_STRING))
 		{
+			kk = oph_gparent_of(wf,k);
 			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
 			child=-1;
-			number = workflow_number_of(wf,k,k,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
+			number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
 			if (number>1) break;
 			if (child>=0)
 			{
@@ -516,7 +529,7 @@ int workflow_validate_fco(oph_workflow *wf)
 			{
 				for (i=0;i<wf->tasks_num;++i) flag[i]=1;
 				child=-1;
-				number += workflow_number_of(wf,k,k,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
+				number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
 				if (number>1) break;
 				if (child>=0)
 				{
@@ -526,7 +539,7 @@ int workflow_validate_fco(oph_workflow *wf)
 				else
 				{
 					for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-					number += workflow_number_of(wf,k,k,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
+					number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
 					if ( !number || (number>1) ) break;
 					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
 					if (i<wf->tasks_num) break;
@@ -535,8 +548,9 @@ int workflow_validate_fco(oph_workflow *wf)
 		}
 		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING))
 		{
+			kk = oph_gparent_of(wf,k);
 			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			number = workflow_number_of(wf,k,k,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
+			number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
 			if ( !number || (number>1) ) break;
 			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
 			if (i<wf->tasks_num) break;
