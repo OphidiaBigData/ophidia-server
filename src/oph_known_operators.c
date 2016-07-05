@@ -113,7 +113,7 @@ int oph_extract_from_json(char** key, const char* json_string)
 		return OPH_SERVER_ERROR;
 	}
 
-	unsigned int i,j,k = json->response_num;
+	unsigned int i,j=0,k = json->response_num;
 	for (i=0; i<json->response_num; ++i) if (json->response && json->response[i].objkey && !strcmp(json->response[i].objkey,objkey)) break;
 	if (i>=json->response_num)
 	{
@@ -383,7 +383,7 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 	char *jstring = NULL;
 	if (oper_json)
 	{
-		int return_code=0;
+		int return_code = 0;
 		if (!success)
 		{
 			if (!strlen(error_message)) snprintf(error_message,OPH_MAX_STRING_SIZE,"Operator '%s' failed!",operator_name);
@@ -398,8 +398,8 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 		{
 			if (oph_json_add_text(oper_json,OPH_JSON_OBJKEY_STATUS,"SUCCESS",strlen(error_message) ? error_message : NULL))
 			{
-				  pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
-				  return_code = -1;
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+				return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
 		}
@@ -501,7 +501,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 
 		if (success)
 		{
-			int jobid;
+			int jobid = 0;
 			char error_notification[OPH_MAX_STRING_SIZE];
 			*error_notification=0;
 
@@ -625,7 +625,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 		oph_workflow* wf = item->wf;
 		char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL, mode = 0;
 		int *ivalues = NULL; // If not allocated then it is equal to [1:values_num]
-		int i = *task_id, j, kk, h, hh, svalues_num = 0, ivalues_num = 0, idjob = wf->tasks[i].idjob;
+		int i = *task_id, j, kk = 0, h, hh, svalues_num = 0, ivalues_num = 0, idjob = wf->tasks[i].idjob;
 		unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 		long value;
 
@@ -1486,7 +1486,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 				}
 			}
 
-			int last_access_time, exist, check_num_sessions = 0;
+			int last_access_time = 0, exist, check_num_sessions = 0;
 			struct dirent *entry, save_entry;
 			char directory[OPH_MAX_STRING_SIZE];
 			snprintf(directory,OPH_MAX_STRING_SIZE,OPH_SESSION_DIR,oph_auth_location,_username);
@@ -1582,7 +1582,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 						oph_odb_disconnect_from_ophidiadb(&oDB);
 						return OPH_SERVER_SYSTEM_ERROR;
 					}
-			
+
 					if (oph_append_args_list(&session_args_list,session_args,last_access_time))
 					{
 						closedir(dirp);

@@ -57,6 +57,7 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 
 	struct dirent *entry = NULL, save_entry;
 	char *sub;
+	int s;
 
 	if (recursive<0) recursive++;
 
@@ -65,8 +66,7 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Search in directory '%s' using pattern '%s'\n",path,file);
 		glob_t globbuf;
 		char *path_and_file = NULL;
-		int s;
-		asprintf(&path_and_file,"%s/%s",path,file);
+		s = asprintf(&path_and_file,"%s/%s",path,file);
 		if (!path_and_file) return OPH_SERVER_SYSTEM_ERROR;
 		if ((s = glob(path_and_file, GLOB_MARK | GLOB_NOSORT, NULL, &globbuf)))
 		{
@@ -99,10 +99,10 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 			if (*buffer)
 			{
 				sub = *buffer;
-				asprintf(buffer,"%s%s%s",sub,globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+				s = asprintf(buffer,"%s%s%s",sub,globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
 				free(sub);
 			}
-			else asprintf(buffer,"%s%s",globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+			else s = asprintf(buffer,"%s%s",globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
 		}
 		globfree(&globbuf);
 	}
@@ -125,15 +125,15 @@ int openDir(const char* path, int recursive, unsigned int* counter, char** buffe
 				if (*buffer)
 				{
 					sub = *buffer;
-					asprintf(buffer,"%s%s/%s%s",sub,path,entry->d_name,OPH_SEPARATOR_PARAM);
+					s = asprintf(buffer,"%s%s/%s%s",sub,path,entry->d_name,OPH_SEPARATOR_PARAM);
 					free(sub);
 				}
-				else asprintf(buffer,"%s/%s%s",path,entry->d_name,OPH_SEPARATOR_PARAM);
+				else s = asprintf(buffer,"%s/%s%s",path,entry->d_name,OPH_SEPARATOR_PARAM);
 			}
 			else if (recursive && S_ISDIR(file_stat.st_mode))
 			{
 				sub = NULL;
-				asprintf(&sub,"%s/%s",path,entry->d_name);
+				s = asprintf(&sub,"%s/%s",path,entry->d_name);
 				if (!sub) result = OPH_SERVER_SYSTEM_ERROR;
 				else
 				{
@@ -278,10 +278,10 @@ int _oph_mf_parse_KV(char*** datacube_inputs, char*** measure_name, unsigned int
 				if (tbuffer)
 				{
 					pbuffer = tbuffer;
-					asprintf(&tbuffer,"%s%s%s",pbuffer,globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+					s = asprintf(&tbuffer,"%s%s%s",pbuffer,globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
 					free(pbuffer);
 				}
-				else asprintf(&tbuffer,"%s%s",globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+				else s = asprintf(&tbuffer,"%s%s",globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
 			}
 			globfree(&globbuf);
 		}

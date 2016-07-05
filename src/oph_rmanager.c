@@ -32,6 +32,8 @@ extern char* oph_operator_client;
 extern char* oph_json_location;
 extern oph_rmanager* orm;
 
+extern int oph_ssh_submit(const char* cmd);
+
 #ifdef LOCAL_FRAMEWORK
 extern int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char* data, char* json, int* response);
 
@@ -528,12 +530,12 @@ int oph_get_result_from_file(char* filename, char **response)
 	}
 
 	/* copy all the text into the buffer */
-	fread(*response, sizeof(char), numbytes, infile);
+	size_t n = fread(*response, sizeof(char), numbytes, infile);
 	(*response)[numbytes] = '\0';
 	fclose(infile);
 
 	/* confirm we have read the file by outputing it to the console */
-	pmesg_safe(&global_flag,LOG_DEBUG,__FILE__,__LINE__,"The file called %s contains this text\n\n%s", filename, *response);
+	pmesg_safe(&global_flag,LOG_DEBUG,__FILE__,__LINE__,"The file called %s contains this text\n\n%s\n\n%d chars\n", filename, *response, n);
 
 	return RMANAGER_SUCCESS;
 }

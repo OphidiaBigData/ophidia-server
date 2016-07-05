@@ -625,7 +625,6 @@ int oph_tp_task_params_parser(const char* operator, const char *task_string, HAS
 	//Parse till args section
 	long number_arguments = 0;
 	char value1[OPH_TP_TASKLEN] = {'\0'};
-	char *ptr_point1;
 	node = root->children;
 	while(node)
 	{
@@ -656,8 +655,6 @@ int oph_tp_task_params_parser(const char* operator, const char *task_string, HAS
 							xmlFreeDoc(document);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
-
-						ptr_point1 = value1;
 						hashtbl_insert(*hashtbl, (char *) content, value1);	
 					}
 					xmlFree(content);
@@ -728,7 +725,6 @@ int oph_tp_task_param_checker_and_role(const char* operator, const char *task_st
 	
 	//Parse till args section
 	char value1[OPH_TP_TASKLEN] = {'\0'};
-	char *ptr_point1;
 	node = root->children;
 	while (node)
 	{
@@ -754,7 +750,6 @@ int oph_tp_task_param_checker_and_role(const char* operator, const char *task_st
 								xmlFreeDoc(document);
 								return OPH_TP_TASK_PARSER_ERROR;
 							}
-							ptr_point1 = value1;
 							strcpy(value, value1);
 							xmlFree(content);
 							break;

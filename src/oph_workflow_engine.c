@@ -359,7 +359,7 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 
 	char *buffer = NULL, *pbuffer;
 
-	int j;
+	int n,j;
 	oph_workflow_task_out *tmp = wf->output;
 	while (tmp)
 	{
@@ -368,7 +368,7 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 			if (buffer)
 			{
 				pbuffer = buffer;
-				asprintf(&buffer,"%s%s",pbuffer,tmp->response);
+				n = asprintf(&buffer,"%s%s",pbuffer,tmp->response);
 				free(pbuffer);
 			}
 			else buffer = strdup(tmp->response);
@@ -382,7 +382,7 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 					if (buffer)
 					{
 						pbuffer = buffer;
-						asprintf(&buffer,"%s%s",pbuffer,tmp->light_task_outs[j].response);
+						n = asprintf(&buffer,"%s%s",pbuffer,tmp->light_task_outs[j].response);
 						free(pbuffer);
 					}
 					else buffer = strdup(tmp->light_task_outs[j].response);
@@ -2044,7 +2044,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	pthread_mutex_unlock(&global_flag);
 
 	// Submit the commands
-	int response, old_task_id, nnn=0, nnnn=0;
+	int response, nnn=0, nnnn=0;
 	char* json_response = NULL;
 	nn=0;
 	for (k=0;k<tasks_indexes_num;++k)
@@ -2054,7 +2054,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 		{
 			if (request_data[k][j].serve_request)
 			{
-				old_task_id = request_data[k][j].task_id;
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: call resource manager\n",ttype,jobid);
 				if (!request_data[k][j].run)
 				{
@@ -3218,7 +3217,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					// Exit operation
 					if (wf->tasks[task_index].exit_action)
 					{
-						char *pch, *pch2, *save_pointer = NULL, *output_cubes = NULL, tmp2[OPH_MAX_STRING_SIZE];
+						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_cubes = NULL, tmp2[OPH_MAX_STRING_SIZE];
 						for (k=0;k<wf->tasks[task_index].outputs_num;++k) if (!strncmp(wf->tasks[task_index].outputs_keys[k],OPH_ARG_CUBE,OPH_MAX_STRING_SIZE))
 						{
 							// Check input cubes in order to avoid to apply the exit action to read-only cubes

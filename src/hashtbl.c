@@ -208,7 +208,7 @@ int hashtbl_next(HASHTBL *hashtbl, char **key, void **data) // added
 	if (!key || !data) return -1;
 
 	int next_node=1;
-	struct hashnode_s *node;
+	struct hashnode_s *node = NULL;
 	hash_size hash=0;
 	if (*key)
 	{

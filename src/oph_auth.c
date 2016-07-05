@@ -386,36 +386,38 @@ int oph_load_user(const char* userid, oph_argument** args, int* save_in_odb)
 	snprintf(filename,OPH_MAX_STRING_SIZE,OPH_USER_FILE,oph_auth_location,userid);
 	if (stat(filename,&s) && (errno==ENOENT))
 	{
+		int n;
+
 		pmesg(LOG_DEBUG, __FILE__,__LINE__,"Automatic creation of configuration files\n");
 		oph_argument *tmp, *tail = *args = NULL;
 
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_OPENED_SESSIONS);
-		asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_OPENED_SESSIONS);
+		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_OPENED_SESSIONS);
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_SESSIONS);
-		asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_SESSIONS);
+		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_SESSIONS);
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_TIMEOUT_SESSION);
-		asprintf(&tmp->value,"%d",OPH_DEFAULT_SESSION_TIMEOUT);
+		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_SESSION_TIMEOUT);
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_CORES);
-		asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_CORES);
+		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_CORES);
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_HOSTS);
-		asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_HOSTS);
+		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_HOSTS);
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
@@ -722,7 +724,7 @@ oph_auth_user_role oph_string_to_role(const char* role)
 char* oph_role_to_string(oph_auth_user_role role)
 {
 	short owner=0, admin=0, writer=0;
-	char result[5];
+	char result[6];
 	sprintf(result,OPH_ROLE_NULL_STR);
 	if (role & OPH_ROLE_OWNER) { result[4]=OPH_ROLE_OWNER_STR[0]; owner=1; }
 	if (owner || (role & OPH_ROLE_ADMIN)) { result[3]=OPH_ROLE_ADMIN_STR[0]; admin=1; }
@@ -770,7 +772,7 @@ char* oph_code_role_string(const char* role)
 {
 	short owner=0, admin=0, writer=0, found;
 	unsigned int i;
-	char result[5];
+	char result[6];
 	sprintf(result,OPH_ROLE_NULL_STR);
 	if (!role) return strdup(result);
 
