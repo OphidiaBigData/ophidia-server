@@ -531,6 +531,11 @@ int oph_get_result_from_file(char* filename, char **response)
 
 	/* copy all the text into the buffer */
 	size_t n = fread(*response, sizeof(char), numbytes, infile);
+	if (!n) {
+		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__,"Unable to read response\n");
+		return RMANAGER_FILE_ERROR;
+	}
+
 	(*response)[numbytes] = '\0';
 	fclose(infile);
 

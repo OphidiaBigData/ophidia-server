@@ -339,8 +339,14 @@ int main(int argc, char* argv[])
 		fseek(fp, 0, SEEK_END);
 		long size = ftell(fp);
 		rewind(fp);
-		ch = fread(_query, size, 1, fp);
+		size_t r = fread(_query, size, 1, fp);
 		fclose(fp);
+		if (!r)
+		{
+			pmesg(LOG_ERROR,__FILE__,__LINE__,"JSON file cannot be read\n");
+			return 4;
+		}
+
 		pmesg(LOG_DEBUG,__FILE__,__LINE__,"Received file:\n%s\n",_query);
 
 		if (b64)
