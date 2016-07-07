@@ -18,7 +18,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = . src 
+SUBDIRS = . src test
 
 sysconf_DATA = etc/server.conf etc/ophidiadb.conf etc/rmanager.conf etc/oph_server etc/oph_server_logrotate
 

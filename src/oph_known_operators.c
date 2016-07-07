@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <dirent.h>
+#include <math.h>
 
 #ifdef MATHEVAL_SUPPORT
 #include <matheval.h>
@@ -110,6 +111,8 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 	int j, check = 0;
 	if (!wf->tasks[i].is_skipped)
 	{
+		pmesg(LOG_DEBUG, __FILE__,__LINE__, "Extract arguments of task '%s'.\n",wf->tasks[i].name);
+
 		char arg_value[OPH_WORKFLOW_MAX_STRING], *condition = NULL, *error_msg = NULL;
 
 		// Extract arguments. Warning: task parser is not used. Note that the access to oph_jobinfo is unavoidable!
@@ -129,6 +132,8 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 		}
 		if (condition && strlen(condition))
 		{
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Evaluate expression '%s'.\n",condition);
+
 			// Evaluate expression
 			int count;
 			char** names;
@@ -144,6 +149,14 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 			double return_value = evaluator_evaluate(me, count, names, NULL);
 			evaluator_destroy(me);
 
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Expression '%s' = %f.\n",condition,return_value);
+			if (isnan(return_value) || isinf(return_value))
+			{
+				snprintf(error_message,OPH_MAX_STRING_SIZE,"Wrong condition '%s'!", condition);
+				pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
+				return OPH_SERVER_ERROR;
+			}
+
 			// In case condition is not satisfied...
 			if (!return_value) wf->tasks[i].is_skipped = 1;
 		}
@@ -151,6 +164,8 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 	}
 	if (wf->tasks[i].is_skipped)
 	{
+		pmesg(LOG_DEBUG, __FILE__,__LINE__, "Skip the selection block associated with task '%s'.\n",wf->tasks[i].name);
+
 		// Skip this sub-block
 		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check, exit_output))
 		{
@@ -161,10 +176,12 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 	}
 	else // Condition is satisfied
 	{
+		pmesg(LOG_DEBUG, __FILE__,__LINE__, "Execute the selection block associated with task '%s'.\n",wf->tasks[i].name);
+
 		for (j=0;j<wf->tasks_num;++j) if ((wf->tasks[j].parent == i) && strncasecmp(wf->tasks[j].operator,OPH_OPERATOR_ENDIF,OPH_MAX_STRING_SIZE))
 		{
 			wf->tasks[j].is_skipped = 1;
-			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' and related branch of workflow '%s' will be skipped\n", wf->tasks[j].name, wf->name);
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Task '%s' and related branch of workflow '%s' will be skipped.\n", wf->tasks[j].name, wf->name);
 		}
 	}
 	return OPH_SERVER_OK;
@@ -175,6 +192,8 @@ int oph_else_impl(oph_workflow* wf, int i, char* error_message, int *exit_output
 {
 	if (wf->tasks[i].is_skipped)
 	{
+		pmesg(LOG_DEBUG, __FILE__,__LINE__, "Skip the selection block associated with task '%s'.\n",wf->tasks[i].name);
+
 		// Skip this sub-block
 		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0, exit_output))
 		{
@@ -539,10 +558,14 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 	int success = 0, ret = OPH_SERVER_OK;
 	while (!success)
 	{
+		pmesg(LOG_DEBUG, __FILE__,__LINE__, "Extract arguments of task '%s'.\n",wf->tasks[i].name);
+
 		// Extract arguments. Warning: task parser is not used. Note that the access to oph_jobinfo is unavoidable!
 		for (j=0;j<wf->tasks[i].arguments_num;++j)
 		{
 			snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",wf->tasks[i].arguments_values[j]);
+
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Check for variables in argument '%s' of task '%s'.\n",wf->tasks[i].arguments_keys[j],wf->tasks[i].name);
 			if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 			{
 				snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution");
@@ -675,6 +698,8 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 		if (name)
 		{
 			snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",name);
+
+			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Check for variables in argument '%s' of task '%s'.\n",OPH_OPERATOR_PARAMETER_NAME,wf->tasks[i].name);
 			if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 			{
 				snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",error_msg?error_msg:"Error in variable substitution");
@@ -685,6 +710,8 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			}
 			name = arg_value;
 		}
+
+		if (name) pmesg(LOG_DEBUG, __FILE__,__LINE__, "Check compliance of variable name '%s' of task '%s' with IEEE Std 1003.1-2001 conventions.\n",name,wf->tasks[i].name);
 		for (kk=0;name && (kk<(int)strlen(name));++kk) // check compliance with IEEE Std 1003.1-2001 conventions
 		{
 			if ((name[kk]=='_') || ((name[kk]>='A') && (name[kk]<='Z')) || ((name[kk]>='a') && (name[kk]<='z')) || (kk && (name[kk]>='0') && (name[kk]<='9'))) continue;
@@ -723,12 +750,19 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 
 		if (!mode && (error == OPH_SERVER_UNKNOWN) && (svalues_num > 0))
 		{
-			if (!is_for) hashtbl_remove(wf->vars, name); // Drop the previous value in case of oph_set
+			if (!is_for) // Drop the previous value in case of oph_set
+			{
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "Drop variable '%s'\n",name);
+				hashtbl_remove(wf->vars, name);
+			}
 
 			oph_workflow_var var;
 			var.caller = i;
 			if (ivalues) var.ivalue = ivalues[0]; else var.ivalue=1; // Non C-like indexing
 			if (svalues) strcpy(var.svalue,svalues[0]); else snprintf(var.svalue,OPH_WORKFLOW_MAX_STRING,"%d",var.ivalue);
+
+			if (svalues) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n",name,var.svalue,wf->name);
+			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n",name,var.ivalue,wf->name);
 			if (hashtbl_insert_with_size(wf->vars, name, (void *)&var, sizeof(oph_workflow_var)))
 			{
 				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n",name,wf->name);
@@ -736,10 +770,9 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
-			if (svalues) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n",name,var.svalue,wf->name);
-			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of workflow '%s'.\n",name,var.ivalue,wf->name);
 
 			// Push them into the stack, even in case only one loop has to be performed
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Push for-data into the stack of workflow '%s'.\n",wf->name);
 			if (is_for && oph_workflow_push(wf,i,name,svalues,ivalues,svalues_num))
 			{
 				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to push for-data into the stack of workflow '%s'.\n",wf->name);
@@ -786,14 +819,15 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 			var.caller = tmp->caller;
 			if (tmp->ivalues) var.ivalue = tmp->ivalues[tmp->index]; else var.ivalue=1+tmp->index; // Non C-like indexing
 			if (tmp->svalues) strcpy(var.svalue,tmp->svalues[tmp->index]); else snprintf(var.svalue,OPH_WORKFLOW_MAX_STRING,"%d",var.ivalue);
+
+			if (tmp->svalues) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%s' in environment of workflow '%s'.\n",tmp->name,var.svalue,wf->name);
+			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%d' in environment of workflow '%s'.\n",tmp->name,var.ivalue,wf->name);
 			if (hashtbl_insert_with_size(wf->vars, tmp->name, (void *)&var, sizeof(oph_workflow_var)))
 			{
 				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to update variable '%s' in environment of workflow '%s'.\n",tmp->name,wf->name);
 				pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
-			if (tmp->svalues) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%s' in environment of workflow '%s'.\n",tmp->name,var.svalue,wf->name);
-			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%d' in environment of workflow '%s'.\n",tmp->name,var.ivalue,wf->name);
 
 			if (odb_jobid) // Reset status
 			{
@@ -826,6 +860,8 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 			}
 		}
 		else wf->tasks[i].parallel_mode = 1; // used to trasform the end-for in a massive operator
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Pop for-data from the stack of workflow '%s'.\n",wf->name);
 		if (oph_workflow_pop(wf,tmpp))
 		{
 			snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to pop for-data from the stack of workflow '%s'.\n",wf->name);

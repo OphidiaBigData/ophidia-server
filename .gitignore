@@ -32,3 +32,5 @@ etc/web/env.php
 src/oph_server
 src/oph_client
 src/oph_manage_user
+test/oph_server_test
+
