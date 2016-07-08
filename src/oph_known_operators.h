@@ -26,7 +26,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 
 int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output);
 int oph_else_impl(oph_workflow* wf, int i, char* error_message, int *exit_output);
-int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int error);
+int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for);
 int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* trash, int *task_id, int* odb_jobid);
 
 #endif /* OPH_KNOWN_OPERATORS_H */

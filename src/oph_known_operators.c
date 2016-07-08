@@ -169,7 +169,7 @@ int oph_if_impl(oph_workflow* wf, int i, char* error_message, int *exit_output)
 		// Skip this sub-block
 		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check, exit_output))
 		{
-			snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
+			snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'.", wf->tasks[i].name);
 			pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);
 		}
 		if (check) wf->tasks[i].is_skipped = 0;
@@ -197,7 +197,7 @@ int oph_else_impl(oph_workflow* wf, int i, char* error_message, int *exit_output
 		// Skip this sub-block
 		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0, exit_output))
 		{
-			snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'", wf->tasks[i].name);
+			snprintf(error_message,OPH_MAX_STRING_SIZE,"Error in updating the status of dependents of '%s'.", wf->tasks[i].name);
 			pmesg(LOG_ERROR, __FILE__,__LINE__, "%s\n", error_message);
 		}
 	}
@@ -546,7 +546,7 @@ int oph_extract_from_json(char** key, const char* json_string)
 }
 
 // Thread unsafe
-int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int error)
+int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for)
 {
 	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL, mode = 0;
 	int *ivalues = NULL; // If not allocated then it is equal to [1:values_num]
@@ -568,7 +568,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Check for variables in argument '%s' of task '%s'.\n",wf->tasks[i].arguments_keys[j],wf->tasks[i].name);
 			if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 			{
-				snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution");
+				snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution!");
 				pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) free(error_msg);
 				break;
@@ -650,7 +650,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			snprintf(arg_value,OPH_WORKFLOW_MAX_STRING,"%s",wf->tasks[i].arguments_values[j]);
 			if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 			{
-				snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution");
+				snprintf(error_message,OPH_WORKFLOW_MAX_STRING,"%s",error_msg?error_msg:"Error in variable substitution!");
 				pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) free(error_msg);
 				break;
@@ -702,7 +702,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			pmesg(LOG_DEBUG, __FILE__,__LINE__, "Check for variables in argument '%s' of task '%s'.\n",OPH_OPERATOR_PARAMETER_NAME,wf->tasks[i].name);
 			if (oph_workflow_var_substitute(wf, i, arg_value, &error_msg))
 			{
-				snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",error_msg?error_msg:"Error in variable substitution");
+				snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",error_msg?error_msg:"Error in variable substitution!");
 				pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) free(error_msg);
 				ret = OPH_SERVER_ERROR;
@@ -748,7 +748,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 		}
 		else svalues_num = ivalues_num ? ivalues_num : 1; // One loop is executed by default
 
-		if (!mode && (error == OPH_SERVER_UNKNOWN) && (svalues_num > 0))
+		if (!mode && (svalues_num > 0))
 		{
 			if (!is_for) // Drop the previous value in case of oph_set
 			{
@@ -765,7 +765,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n",name,var.ivalue,wf->name);
 			if (hashtbl_insert_with_size(wf->vars, name, (void *)&var, sizeof(oph_workflow_var)))
 			{
-				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n",name,wf->name);
+				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.",name,wf->name);
 				pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
@@ -775,7 +775,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for, int 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Push for-data into the stack of workflow '%s'.\n",wf->name);
 			if (is_for && oph_workflow_push(wf,i,name,svalues,ivalues,svalues_num))
 			{
-				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to push for-data into the stack of workflow '%s'.\n",wf->name);
+				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to push for-data into the stack of workflow '%s'.",wf->name);
 				pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_SYSTEM_ERROR;
 				break;
@@ -806,15 +806,18 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 	while (tmp && (tmp->caller != wf->tasks[i].parent)) { tmpp = tmp; tmp = tmp->next; }
 	if (tmp)
 	{
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update index '%s' set by task '%s' in environment of workflow '%s'.\n",tmp->name,wf->tasks[tmp->caller].name,wf->name);
+
 		tmp->index++;
 		if (hashtbl_remove(wf->vars, tmp->name)) // Skip this in the last step to extend the scope of the variable to any descendent
 		{
-			snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to remove variable '%s' from environment of workflow '%s'.\n",tmp->name,wf->name);
+			snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to remove variable '%s' from environment of workflow '%s'.",tmp->name,wf->name);
 			pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (tmp->index < tmp->values_num)
 		{
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Create variable '%s' to be stored in environment of workflow '%s'.\n",tmp->name,wf->name);
 			oph_workflow_var var;
 			var.caller = tmp->caller;
 			if (tmp->ivalues) var.ivalue = tmp->ivalues[tmp->index]; else var.ivalue=1+tmp->index; // Non C-like indexing
@@ -824,7 +827,7 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 			else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%d' in environment of workflow '%s'.\n",tmp->name,var.ivalue,wf->name);
 			if (hashtbl_insert_with_size(wf->vars, tmp->name, (void *)&var, sizeof(oph_workflow_var)))
 			{
-				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to update variable '%s' in environment of workflow '%s'.\n",tmp->name,wf->name);
+				snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to update variable '%s' in environment of workflow '%s'.",tmp->name,wf->name);
 				pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
@@ -843,7 +846,7 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 
 				if (oph_workflow_reset_task(wf, wf->tasks[p].dependents_indexes, wf->tasks[p].dependents_indexes_num, i, tmp, &tasks_num))
 				{
-					snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to reset task data from '%s'.\n",wf->tasks[p].name);
+					snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to reset task data from '%s'.",wf->tasks[p].name);
 					pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 				}
 				else wf->residual_tasks_num += tasks_num;
@@ -864,10 +867,15 @@ int oph_endfor_impl(oph_workflow* wf, int i, char* error_message, oph_trash* tra
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Pop for-data from the stack of workflow '%s'.\n",wf->name);
 		if (oph_workflow_pop(wf,tmpp))
 		{
-			snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to pop for-data from the stack of workflow '%s'.\n",wf->name);
+			snprintf(error_message,OPH_MAX_STRING_SIZE, "Unable to pop for-data from the stack of workflow '%s'.",wf->name);
 			pmesg(LOG_WARNING,  __FILE__, __LINE__, "%s\n", error_message);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
+	}
+	else
+	{
+		snprintf(error_message,OPH_MAX_STRING_SIZE, "No index found in environment of workflow '%s'.",wf->name);
+		pmesg(LOG_DEBUG,  __FILE__, __LINE__, "%s\n", error_message);
 	}
 
 	return OPH_SERVER_OK;
@@ -1183,7 +1191,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 
 		if (success)
 		{
-			int ret = oph_for_impl(wf, i, error_message, is_for, error);
+			int ret = oph_for_impl(wf, i, error_message, is_for);
 			if (ret)
 			{
 				success = 0;

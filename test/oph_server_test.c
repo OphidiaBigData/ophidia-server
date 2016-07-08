@@ -714,10 +714,24 @@ int _check_oph_server(const char* operator, int option)
 			}
 			break;
 
+			case 7:
+			{
+				free(wf->tasks[0].arguments_values[3]);
+				wf->tasks[0].arguments_values[3] = strdup("yes");
+			}
+			break;
+
+			case 8:
+			{
+				free(wf->tasks[0].arguments_values[0]);
+				wf->tasks[0].arguments_values[0] = strdup("1ndex");
+			}
+			break;
+
 			default:;
 		}
 
-		int res = oph_for_impl(wf, 0, error_message, 1, OPH_SERVER_UNKNOWN);
+		int res = oph_for_impl(wf, 0, error_message, 1);
 
 		switch (option)
 		{
@@ -725,6 +739,52 @@ int _check_oph_server(const char* operator, int option)
 				if ((res != OPH_SERVER_ERROR) || strcasecmp(error_message,"Bad argument 'name'."))
 				{
 					pmesg(LOG_ERROR, __FILE__,__LINE__, "Error message: %s\n",error_message);
+					return 1;
+				}
+			break;
+
+			case 7:
+				if (res || strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nError message: %s\n",res,error_message);
+					return 1;
+				}
+				if (wf->stack)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Non-empty stack\n");
+					return 1;
+				}
+			break;
+
+			case 8:
+				if (res || !strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nEmpty error message\n",res);
+					return 1;
+				}
+				if (strcasecmp(error_message,"Change variable name '1ndex'."))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Wrong error message: %s\n",error_message);
+					return 1;
+				}
+				if (!wf->stack)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Empty stack\n");
+					return 1;
+				}
+				if (wf->stack->caller)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Flag 'caller' is wrong\n");
+					return 1;
+				}
+				if (wf->stack->index)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Index is wrong\n");
+					return 1;
+				}
+				if (!wf->stack->name)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
 					return 1;
 				}
 			break;
@@ -815,6 +875,321 @@ int _check_oph_server(const char* operator, int option)
 	}
 	else if (!strcmp(operator,"oph_endfor"))
 	{
+		// Tasks
+		wf->tasks_num = 3;
+		wf->residual_tasks_num = 3;
+		wf->tasks = (oph_workflow_task*)calloc(1+wf->tasks_num,sizeof(oph_workflow_task));
+		wf->vars = hashtbl_create(wf->tasks_num, NULL);
+
+		// FOR
+		wf->tasks[0].idjob = 2;
+		wf->tasks[0].markerid = 2;
+		wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
+		wf->tasks[0].name = strdup("FOR");
+		wf->tasks[0].operator = strdup("oph_for");
+		wf->tasks[0].role = oph_code_role("read");
+		wf->tasks[0].ncores = wf->ncores;
+		wf->tasks[0].arguments_num = 4;
+		wf->tasks[0].arguments_keys = (char**)calloc(wf->tasks[0].arguments_num,sizeof(char*));
+			wf->tasks[0].arguments_keys[0] = strdup("name");
+			wf->tasks[0].arguments_keys[1] = strdup("values");
+			wf->tasks[0].arguments_keys[2] = strdup("counter");
+			wf->tasks[0].arguments_keys[3] = strdup("parallel");
+		wf->tasks[0].arguments_values = (char**)calloc(wf->tasks[0].arguments_num,sizeof(char*));
+			wf->tasks[0].arguments_values[0] = strdup("index");
+			wf->tasks[0].arguments_values[1] = strdup("first|second|third");
+			wf->tasks[0].arguments_values[2] = strdup("1:3");
+			wf->tasks[0].arguments_values[3] = strdup("no");
+		wf->tasks[0].deps_num = 0;
+		wf->tasks[0].deps = NULL;
+		wf->tasks[0].dependents_indexes_num = 1;
+		wf->tasks[0].dependents_indexes = (int*)calloc(wf->tasks[0].dependents_indexes_num,sizeof(int));
+			wf->tasks[0].dependents_indexes[0] = 1;
+		wf->tasks[0].run = 1;
+		wf->tasks[0].parent = -1;
+		wf->tasks[0].outputs_num = 1;
+		wf->tasks[0].outputs_keys = (char**)calloc(wf->tasks[0].outputs_num,sizeof(char*));
+			wf->tasks[0].outputs_keys[0] = strdup("output_key");
+		wf->tasks[0].outputs_values = (char**)calloc(wf->tasks[0].outputs_num,sizeof(char*));
+			wf->tasks[0].outputs_values[0] = strdup("output_value");
+
+		// Operator
+		wf->tasks[1].idjob = 3;
+		wf->tasks[1].markerid = 3;
+		wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
+		wf->tasks[1].name = strdup("Operator");
+		wf->tasks[1].operator = strdup("oph_operator");
+		wf->tasks[1].role = oph_code_role("read");
+		wf->tasks[1].ncores = wf->ncores;
+		wf->tasks[1].arguments_num = 0;
+		wf->tasks[1].arguments_keys = NULL;
+		wf->tasks[1].arguments_values = NULL;
+		wf->tasks[1].deps = (oph_workflow_dep*)calloc(wf->tasks[1].deps_num,sizeof(oph_workflow_dep));
+			wf->tasks[1].deps[0].task_name = strdup("oph_for");
+			wf->tasks[1].deps[0].task_index = 0;
+			wf->tasks[1].deps[0].type = strdup("embedded");
+		wf->tasks[1].dependents_indexes_num = 1;
+		wf->tasks[1].dependents_indexes = (int*)calloc(wf->tasks[1].dependents_indexes_num,sizeof(int));
+			wf->tasks[1].dependents_indexes[0] = 2;
+		wf->tasks[1].run = 1;
+		wf->tasks[1].parent = -1;
+
+		// ENDFOR
+		wf->tasks[2].idjob = 4;
+		wf->tasks[2].markerid = 4;
+		wf->tasks[2].status = OPH_ODB_STATUS_PENDING;
+		wf->tasks[2].name = strdup("ENDFOR");
+		wf->tasks[2].operator = strdup("oph_endfor");
+		wf->tasks[2].role = oph_code_role("read");
+		wf->tasks[2].ncores = wf->ncores;
+		wf->tasks[2].arguments_num = 0;
+		wf->tasks[2].arguments_keys = NULL;
+		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].deps = (oph_workflow_dep*)calloc(wf->tasks[2].deps_num,sizeof(oph_workflow_dep));
+			wf->tasks[2].deps[0].task_name = strdup("oph_operator");
+			wf->tasks[2].deps[0].task_index = 1;
+			wf->tasks[2].deps[0].type = strdup("embedded");
+		wf->tasks[2].dependents_indexes_num = 0;
+		wf->tasks[2].dependents_indexes = NULL;
+		wf->tasks[2].run = 1;
+		wf->tasks[2].parent = 0;
+
+		char error_message[OPH_MAX_STRING_SIZE];
+		*error_message = 0;
+
+		int task_id = 2;
+		int odb_jobid = wf->tasks[2].idjob;
+
+		oph_trash* trash;
+		if (oph_trash_create(&trash)) return 1;
+
+		switch (option)
+		{
+			case 3:
+			{
+
+			}
+			break;
+
+			case 4:
+			{
+				int svalues_num = 3;
+				char** svalues = (char**)calloc(svalues_num,sizeof(char*));
+				svalues[0] = strdup("first");
+				svalues[1] = strdup("second");
+				svalues[2] = strdup("third");
+				int *ivalues = (int*)calloc(svalues_num,sizeof(int));
+				ivalues[0] = 1;
+				ivalues[1] = 2;
+				ivalues[2] = 3;
+				if (oph_workflow_push(wf,0,wf->tasks[0].arguments_values[0],svalues,ivalues,svalues_num)) return 1;
+			}
+			break;
+
+			case 5:
+			{
+				int svalues_num = 3;
+				char** svalues = (char**)calloc(svalues_num,sizeof(char*));
+				svalues[0] = strdup("first");
+				svalues[1] = strdup("second");
+				svalues[2] = strdup("third");
+				int *ivalues = (int*)calloc(svalues_num,sizeof(int));
+				ivalues[0] = 1;
+				ivalues[1] = 2;
+				ivalues[2] = 3;
+				if (oph_workflow_push(wf,0,wf->tasks[0].arguments_values[0],svalues,ivalues,svalues_num) || !wf->stack) return 1;
+
+				wf->stack->index = 2;
+
+				oph_workflow_var var;
+				var.caller = 0;
+				var.ivalue = ivalues[wf->stack->index];
+				snprintf(var.svalue,OPH_WORKFLOW_MAX_STRING,svalues[wf->stack->index]);
+				if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *)&var, sizeof(oph_workflow_var))) return 1;
+			}
+			break;
+
+			default:
+			{
+				int svalues_num = 3;
+				char** svalues = (char**)calloc(svalues_num,sizeof(char*));
+				svalues[0] = strdup("first");
+				svalues[1] = strdup("second");
+				svalues[2] = strdup("third");
+				int *ivalues = (int*)calloc(svalues_num,sizeof(int));
+				ivalues[0] = 1;
+				ivalues[1] = 2;
+				ivalues[2] = 3;
+				if (oph_workflow_push(wf,0,wf->tasks[0].arguments_values[0],svalues,ivalues,svalues_num) || !wf->stack) return 1;
+
+				oph_workflow_var var;
+				var.caller = 0;
+				var.ivalue = ivalues[wf->stack->index];
+				snprintf(var.svalue,OPH_WORKFLOW_MAX_STRING,svalues[wf->stack->index]);
+				if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *)&var, sizeof(oph_workflow_var))) return 1;
+			}
+		}
+
+		switch (option)
+		{
+			case 1:
+			{
+				free(wf->tasks[0].arguments_keys[1]);
+				wf->tasks[0].arguments_keys[1] = strdup("no-values");
+			}
+			break;
+
+			case 2:
+			{
+				free(wf->tasks[0].arguments_keys[2]);
+				wf->tasks[0].arguments_keys[2] = strdup("no-counter");
+			}
+			break;
+
+			default:;
+		}
+
+		int res = oph_endfor_impl(wf, 2, error_message, trash, &task_id, &odb_jobid);
+
+		switch (option)
+		{
+			case 3:
+			case 4:
+			case 5:
+				if (trash && trash->trash)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Non empty trash\n");
+					return 1;
+				}
+			break;
+
+			default:
+				if (!trash || !trash->trash || !trash->trash->key || !trash->trash->head || !trash->trash->head->item)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Empty trash\n");
+					return 1;
+				}
+				if (strcasecmp(trash->trash->key,wf->sessionid) || (trash->trash->head->item != 4))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Untrashed marker id\n");
+					return 1;
+				}
+		}
+
+		oph_trash_destroy(trash);
+
+		switch (option)
+		{
+			case 3:
+			{
+				if (res || !strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nError message: %s\n",res,error_message);
+					return 1;
+				}
+				if (strcasecmp(error_message,"No index found in environment of workflow 'test'."))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Wrong error message: %s\n",error_message);
+					return 1;
+				}
+			}
+			break;
+
+			case 4:
+			{
+				if ((res != OPH_SERVER_SYSTEM_ERROR) || !strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nError message: %s\n",res,error_message);
+					return 1;
+				}
+				if (strcasecmp(error_message,"Unable to remove variable 'index' from environment of workflow 'test'."))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Wrong error message: %s\n",error_message);
+					return 1;
+				}
+			}
+			break;
+
+			case 5:
+			{
+				if (res || strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nError message: %s\n",res,error_message);
+					return 1;
+				}
+			}
+			break;
+
+			default:
+				if ((res != OPH_SERVER_NO_RESPONSE) || strlen(error_message))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\nError message: %s\n",res,error_message);
+					return 1;
+				}
+				if (!wf->stack)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Empty stack\n");
+					return 1;
+				}
+				if (wf->stack->caller)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Flag 'caller' is wrong\n");
+					return 1;
+				}
+				if (wf->stack->index != 1)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Index is wrong\n");
+					return 1;
+				}
+				if (!wf->stack->name)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
+					return 1;
+				}
+				if (wf->tasks[0].outputs_num || wf->tasks[0].outputs_keys || wf->tasks[0].outputs_values)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Task status not reset\n");
+					return 1;
+				}
+		}
+
+		switch (option)
+		{
+			case 0:
+			case 2:
+			{
+				if (!wf->stack->svalues || (wf->stack->values_num != 3))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
+					return 1;
+				}
+				if (strcasecmp(wf->stack->svalues[0],"first") || strcasecmp(wf->stack->svalues[1],"second") || strcasecmp(wf->stack->svalues[2],"third"))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
+					return 1;
+				}
+			}
+			break;
+		}
+
+		switch (option)
+		{
+			case 0:
+			case 1:
+			{
+				if (!wf->stack->ivalues || (wf->stack->values_num != 3))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
+					return 1;
+				}
+				if ((wf->stack->ivalues[0] != 1) || (wf->stack->ivalues[1] != 2) || (wf->stack->ivalues[2] != 3))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Parameters are not correctly pushed into the stack\n");
+					return 1;
+				}
+			}
+			break;
+		}
 	}
 
 	//oph_workflow_free(wf);
@@ -844,14 +1219,42 @@ int main(int argc, char* argv[])
 	UNUSED(argv)
 	UNUSED(tid)
 
-	set_debug_level(LOG_DEBUG+10);
+	int ch, msglevel = LOG_INFO;
+	static char *USAGE = "\nUSAGE:\noph_server_test [-d] [-v] [-w]\n";
 
-	int i = 0, n = 18, j;
+	fprintf(stdout,"%s",OPH_VERSION);
+	fprintf(stdout,"%s",OPH_DISCLAIMER);
+
+	set_debug_level(msglevel+10);
+
+	while ((ch = getopt(argc, argv, "dvw"))!=-1)
+	{
+		switch (ch)
+		{
+			case 'd':
+				msglevel = LOG_DEBUG;
+			break;
+			case 'v':
+				return 0;
+			break;
+			case 'w':
+				if (msglevel<LOG_WARNING) msglevel = LOG_WARNING;
+			break;
+			default:
+				fprintf(stdout,"%s",USAGE);
+				return 0;
+		}
+	}
+
+	set_debug_level(msglevel+10);
+
+	int i = 0, j, n = 26;
 	printf("\n");
 
 	for (j=0; j<9; ++j) if (check_oph_server(&i,n,"oph_if", j)) return 1;
 	for (j=0; j<2; ++j) if (check_oph_server(&i,n,"oph_else", j)) return 1;
-	for (j=0; j<7; ++j) if (check_oph_server(&i,n,"oph_for", j)) return 1;
+	for (j=0; j<9; ++j) if (check_oph_server(&i,n,"oph_for", j)) return 1;
+	for (j=0; j<6; ++j) if (check_oph_server(&i,n,"oph_endfor", j)) return 1;
 
 	return 0;
 }
