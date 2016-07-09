@@ -748,7 +748,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim)
+int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim, char** query)
 {
 	if (!wf || !output_list || !output_list_dim)
 	{
@@ -821,7 +821,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 		unsigned int number=0;
 
 		pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: parsing task '%s' for massive operations\n",ttype,jobid,task->name);
-		if ((res = oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB))) return res;
+		if ((res = oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB, query))) return res;
 
 		if (datacube_inputs)
 		{
@@ -858,6 +858,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 				for (i=0;i<(int)number;++i) if (datacube_inputs[i]) free(datacube_inputs[i]);
 				free(datacube_inputs);
 				datacube_inputs = 0;
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: light tasks loaded from task '%s'\n",ttype,jobid,task->name);
 			}
 			else
 			{
@@ -1475,7 +1476,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 		char **output_list = NULL;
 		int output_list_dim = 0;
-		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(ttype, jobid, wf, i, oDB, &output_list, &output_list_dim))))
+		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(ttype, jobid, wf, i, oDB, &output_list, &output_list_dim, NULL))))
 		{
 			odb_jobid = 0;
 			// Create the child job in OphidiaDB

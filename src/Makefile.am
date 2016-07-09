@@ -89,6 +89,12 @@ endif
 
 LIBRARY =
 
+LIBRARY += libhashtbl.la
+libhashtbl_la_SOURCES = hashtbl.c
+libhashtbl_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+libhashtbl_la_LDFLAGS = -shared
+libhashtbl_la_LIBADD = $(ADDITIONAL_LIBS)
+
 LIBRARY += liboph_json.la
 liboph_json_la_SOURCES = oph_json/oph_json_common.c oph_json/oph_json_graph.c oph_json/oph_json_grid.c  oph_json/oph_json_multigrid.c oph_json/oph_json_text.c oph_json/oph_json_tree.c
 liboph_json_la_CFLAGS= -prefer-pic -I. -Ioph_json $(JANSSON_CFLAGS) ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
@@ -99,7 +105,7 @@ LIBRARY += liboph_workflow.la
 liboph_workflow_la_SOURCES = oph_workflow/oph_workflow_parsing.c oph_workflow/oph_workflow_setup.c oph_workflow/oph_workflow_structs.c oph_workflow/oph_workflow_utils.c
 liboph_workflow_la_CFLAGS= -prefer-pic -I. -Ioph_workflow $(JANSSON_CFLAGS) ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_workflow_la_LDFLAGS = -shared -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
-liboph_workflow_la_LIBADD = $(ADDITIONAL_LIBS) $(JANSSON_LIBS)
+liboph_workflow_la_LIBADD = $(ADDITIONAL_LIBS) $(JANSSON_LIBS) -L. -lhashtbl
 
 LIBRARY += libdebug.la
 libdebug_la_SOURCES = debug.c
@@ -107,17 +113,17 @@ libdebug_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libdebug_la_LDFLAGS = -shared
 libdebug_la_LIBADD = $(ADDITIONAL_LIBS)
 
-LIBRARY += libutils.la
-libutils_la_SOURCES = oph_utils.c
-libutils_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-libutils_la_LDFLAGS = -shared
-libutils_la_LIBADD = $(ADDITIONAL_LIBS)
+LIBRARY += libsoapC.la
+libsoapC_la_SOURCES = soapC.c
+libsoapC_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+libsoapC_la_LDFLAGS = -shared
+libsoapC_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += libstdsoap2.la
 libstdsoap2_la_SOURCES = stdsoap2.c
 libstdsoap2_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libstdsoap2_la_LDFLAGS = -shared
-libstdsoap2_la_LIBADD = $(ADDITIONAL_LIBS)
+libstdsoap2_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lsoapC
 
 LIBRARY += libthreads.la
 libthreads_la_SOURCES = threads.c
@@ -125,35 +131,23 @@ libthreads_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libthreads_la_LDFLAGS = -shared
 libthreads_la_LIBADD = $(ADDITIONAL_LIBS)
 
-LIBRARY += libsoapC.la
-libsoapC_la_SOURCES = soapC.c
-libsoapC_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-libsoapC_la_LDFLAGS = -shared
-libsoapC_la_LIBADD = $(ADDITIONAL_LIBS)
-
 LIBRARY += libsoapClient.la
 libsoapClient_la_SOURCES = soapClient.c
 libsoapClient_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libsoapClient_la_LDFLAGS = -shared
-libsoapClient_la_LIBADD = $(ADDITIONAL_LIBS) -lstdsoap2 -lsoapC
+libsoapClient_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lstdsoap2
 
 LIBRARY += libsoapServer.la
 libsoapServer_la_SOURCES = soapServer.c
 libsoapServer_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libsoapServer_la_LDFLAGS = -shared
-libsoapServer_la_LIBADD = $(ADDITIONAL_LIBS) -lstdsoap2 -lsoapC
+libsoapServer_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lstdsoap2
 
-LIBRARY += libhashtbl.la
-libhashtbl_la_SOURCES = hashtbl.c
-libhashtbl_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-libhashtbl_la_LDFLAGS = -shared
-libhashtbl_la_LIBADD = $(ADDITIONAL_LIBS)
-
-LIBRARY += liboph_auth.la
-liboph_auth_la_SOURCES = oph_auth.c
-liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-liboph_auth_la_LDFLAGS = -shared
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS)
+LIBRARY += libutils.la
+libutils_la_SOURCES = oph_utils.c
+libutils_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+libutils_la_LDFLAGS = -shared
+libutils_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lstdsoap2
 
 LIBRARY += liboph_parser.la
 liboph_parser_la_SOURCES = oph_parser.c
@@ -161,11 +155,23 @@ liboph_parser_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_parser_la_LDFLAGS = -shared
 liboph_parser_la_LIBADD = $(ADDITIONAL_LIBS)
 
+LIBRARY += liboph_auth.la
+liboph_auth_la_SOURCES = oph_auth.c
+liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+liboph_auth_la_LDFLAGS = -shared
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser
+
+LIBRARY += liboph_ssh_submit.la
+liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
+liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${SSH2_CFLAGS}
+liboph_ssh_submit_la_LDFLAGS = -shared
+liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${SSH2_LIBS}
+
 LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager.c
 liboph_rmanager_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
-liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS)
+liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_ssh_submit
 
 LIBRARY += liboph_subset_library.la
 liboph_subset_library_la_SOURCES = oph_subset_library.c
@@ -179,17 +185,11 @@ liboph_session_report_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFL
 liboph_session_report_la_LDFLAGS = -shared
 liboph_session_report_la_LIBADD = $(ADDITIONAL_LIBS)
 
-LIBRARY += liboph_plugin.la
-liboph_plugin_la_SOURCES = oph_plugin.c
-liboph_plugin_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow
-liboph_plugin_la_LDFLAGS = -shared
-liboph_plugin_la_LIBADD = $(ADDITIONAL_LIBS)
-
 LIBRARY += liboph_job_list.la
 liboph_job_list_la_SOURCES = oph_job_list.c
 liboph_job_list_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow
 liboph_job_list_la_LDFLAGS = -shared
-liboph_job_list_la_LIBADD = $(ADDITIONAL_LIBS)
+liboph_job_list_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow
 
 LIBRARY += liboph_trash.la
 liboph_trash_la_SOURCES = oph_trash.c
@@ -197,11 +197,17 @@ liboph_trash_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_trash_la_LDFLAGS = -shared
 liboph_trash_la_LIBADD = $(ADDITIONAL_LIBS)
 
+LIBRARY += liboph_plugin.la
+liboph_plugin_la_SOURCES = oph_plugin.c
+liboph_plugin_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow
+liboph_plugin_la_LDFLAGS = -shared
+liboph_plugin_la_LIBADD = $(ADDITIONAL_LIBS)
+
 LIBRARY += liboph_memory_job.la
 liboph_memory_job_la_SOURCES = oph_memory_job.c
 liboph_memory_job_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow
 liboph_memory_job_la_LDFLAGS = -shared
-liboph_memory_job_la_LIBADD = $(ADDITIONAL_LIBS)
+liboph_memory_job_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_job_list
 
 LIBRARY += liboph_ophidiadb.la
 liboph_ophidiadb_la_SOURCES = oph_ophidiadb.c
@@ -213,19 +219,25 @@ LIBRARY += liboph_ophidiadb_fs_library.la
 liboph_ophidiadb_fs_library_la_SOURCES = oph_ophidiadb_fs_library.c
 liboph_ophidiadb_fs_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_ophidiadb_fs_library_la_LDFLAGS = -shared
-liboph_ophidiadb_fs_library_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS}
+liboph_ophidiadb_fs_library_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_ophidiadb
+
+LIBRARY += liboph_task_parser_library.la
+liboph_task_parser_library_la_SOURCES = oph_task_parser_library.c
+liboph_task_parser_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${XML_CFLAGS}
+liboph_task_parser_library_la_LDFLAGS = -shared
+liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${XML_LIBS}
 
 LIBRARY += liboph_filters.la
 liboph_filters_la_SOURCES = oph_filters.c
 liboph_filters_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_filters_la_LDFLAGS = -shared
-liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -loph_ophidiadb_fs_library -loph_subset_library
+liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_task_parser_library -loph_ophidiadb_fs_library -loph_subset_library
 
 LIBRARY += liboph_massive_operations.la
 liboph_massive_operations_la_SOURCES = oph_massive_operations.c
 liboph_massive_operations_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_massive_operations_la_LDFLAGS = -shared
-liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -loph_filters
+liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters
 
 LIBRARY += liboph_odb_job.la
 liboph_odb_job_la_SOURCES = oph_odb_job.c
@@ -237,37 +249,25 @@ LIBRARY += liboph_workflow_engine.la
 liboph_workflow_engine_la_SOURCES = oph_workflow_engine.c
 liboph_workflow_engine_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
 liboph_workflow_engine_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -loph_odb_job -loph_massive_operations -loph_parser
+liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_rmanager -loph_trash
 
 LIBRARY += liboph_execute_main.la
 liboph_execute_main_la_SOURCES = oph_execute_main.c
 liboph_execute_main_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow $(MYCFLAGS_THREADS)
 liboph_execute_main_la_LDFLAGS = -shared
-liboph_execute_main_la_LIBADD = $(ADDITIONAL_LIBS) -loph_workflow_engine -loph_json -loph_workflow -loph_auth -loph_memory_job -loph_session_report
+liboph_execute_main_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 LIBRARY += liboph_notify.la
 liboph_notify_la_SOURCES = oph_notify.c
 liboph_notify_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CURL_CFLAGS) -Ioph_workflow $(MYCFLAGS_THREADS)
 liboph_notify_la_LDFLAGS = -shared
-liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -loph_workflow_engine
-
-LIBRARY += liboph_ssh_submit.la
-liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
-liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${SSH2_CFLAGS}
-liboph_ssh_submit_la_LDFLAGS = -shared
-liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${SSH2_LIBS}
-
-LIBRARY += liboph_task_parser_library.la
-liboph_task_parser_library_la_SOURCES = oph_task_parser_library.c
-liboph_task_parser_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${XML_CFLAGS}
-liboph_task_parser_library_la_LDFLAGS = -shared
-liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${XML_LIBS}
+liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_engine
 
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = oph_known_operators.c
 liboph_known_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_known_operators_la_LDFLAGS = -shared
-liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -loph_workflow_engine
+liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 if INTERFACE_TYPE_IS_GSI
 LIBRARY += libgsigsoap.la libgsigsoapthreads.la
@@ -284,17 +284,17 @@ lib_LTLIBRARIES = $(LIBRARY)
 oph_client_SOURCES= $(INTERFACE_TYPE)/oph_client.c
 oph_client_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYCFLAGS)
 oph_client_LDFLAGS= $(MYLDFLAGS)
-oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -ldebug -lstdsoap2
+oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -ldebug
 
 oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_json -loph_workflow -lsoapServer -lstdsoap2 -ldebug -lhashtbl -lthreads -loph_plugin -loph_job_list -loph_trash -loph_memory_job -loph_auth -loph_ophidiadb -loph_notify -loph_odb_job -loph_parser -loph_rmanager -loph_ssh_submit -loph_massive_operations -loph_task_parser_library -loph_filters -loph_subset_library -loph_ophidiadb_fs_library -loph_session_report -lutils -loph_known_operators -loph_execute_main
+oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -ldebug -lthreads -loph_plugin -loph_notify -loph_known_operators -loph_execute_main
 
 oph_manage_user_SOURCES= oph_manage_user.c
 oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)
 oph_manage_user_LDFLAGS= $(GLOBUS_BASIC)
-oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -lhashtbl -loph_parser -loph_auth -loph_ophidiadb
+oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -lhashtbl -loph_auth -loph_ophidiadb
 
 clean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~

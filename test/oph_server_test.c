@@ -16,12 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "oph_known_operators.h"
+#include "oph.nsmap"
 
-#include "hashtbl.h"
+#include "oph_known_operators.h"
+#include "oph_workflow_engine.h"
 #include "oph_rmanager.h"
-#include "oph_ophidiadb.h"
-#include "oph_auth.h"
+#include "oph_task_parser_library.h"
 
 #include <unistd.h>
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -71,8 +71,201 @@ int oph_service_status=1;
 oph_auth_user_bl* bl_head=0;
 ophidiadb *ophDB=0;
 
+void set_global_values(const char* configuration_file)
+{
+	if (!configuration_file) return;
+	pmesg(LOG_INFO, __FILE__,__LINE__,"Loading configuration from '%s'\n",configuration_file);
+
+	oph_server_params = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
+	if (!oph_server_params) return;
+
+	char tmp[OPH_MAX_STRING_SIZE];
+	char* value;
+	FILE* file = fopen(configuration_file,"r");
+	if (file)
+	{
+		char key[OPH_MAX_STRING_SIZE], value2[OPH_MAX_STRING_SIZE];
+		while (fgets(tmp,OPH_MAX_STRING_SIZE,file))
+		{
+			if (strlen(tmp))
+			{
+				tmp[strlen(tmp)-1]='\0';
+				if (tmp[0]==OPH_COMMENT_MARK) continue; // Skip possible commented lines
+				value=strchr(tmp,OPH_SEPARATOR_KV[0]);
+				if (value)
+				{
+					value++;
+					snprintf(key,value-tmp,"%s",tmp);
+					if (value[0])
+					{
+						if (value[0]==OPH_SUBSTITUTION_MARK && !strncasecmp(value+1,OPH_SERVER_LOCATION_STR,strlen(OPH_SERVER_LOCATION_STR)))
+						{
+							snprintf(value2,OPH_MAX_STRING_SIZE,"%s%s",oph_server_location,value+strlen(OPH_SERVER_LOCATION_STR)+1);
+							value = value2;
+						}
+						hashtbl_insert(oph_server_params, key, value);
+					}
+					else hashtbl_insert(oph_server_params, key, "");
+					pmesg(LOG_DEBUG, __FILE__,__LINE__,"Read %s=%s\n",key,value);
+				}
+			}
+		}
+		fclose(file);
+	}
+
+	// Pre-process
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_TIMEOUT))) oph_server_timeout=strtol(value,NULL,10);
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_INACTIVITY_TIMEOUT))) oph_server_inactivity_timeout=strtol(value,NULL,10);
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_WORKFLOW_TIMEOUT))) oph_server_workflow_timeout=strtol(value,NULL,10);
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_SERVER_FARM_SIZE))) oph_server_farm_size=(unsigned int)strtol(value,NULL,10);
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_QUEUE_SIZE))) oph_server_queue_size=(unsigned int)strtol(value,NULL,10);
+	if (!logfile && (value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE)))
+	{
+		pmesg(LOG_INFO, __FILE__,__LINE__,"Selected log file '%s'\n",value);
+		logfile = fopen(value,"a");
+		if (logfile) set_log_file(logfile);
+
+		// Redirect stdout and stderr to logfile
+		if (!freopen(value,"a",stdout)) pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in redirect stdout to logfile\n");
+		if (!freopen(value,"a",stderr)) pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in redirect stderr to logfile\n");
+	}
+
+	// Default values
+	if (!oph_server_protocol && !(oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL)))
+	{
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_PROTOCOL, OPH_DEFAULT_PROTOCOL);
+		oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL);
+	}
+	if (!oph_server_host && !(oph_server_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_HOST)))
+	{
+		if (!gethostname(tmp,OPH_MAX_STRING_SIZE)) hashtbl_insert(oph_server_params, OPH_SERVER_CONF_HOST, tmp);
+		else hashtbl_insert(oph_server_params, OPH_SERVER_CONF_HOST, OPH_DEFAULT_HOST);
+		oph_server_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_HOST);
+	}
+	if (!oph_server_port && !(oph_server_port = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PORT)))
+	{
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_PORT, OPH_DEFAULT_PORT);
+		oph_server_port = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PORT);
+	}
+	if (!(oph_server_cert = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CERT)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SERVER_CERT,oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_CERT, tmp);
+		oph_server_cert = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CERT);
+	}
+	if (!(oph_server_ca = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CA)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SERVER_CA,oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_CA, tmp);
+		oph_server_ca = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CA);
+	}
+	if (!(oph_server_password = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CERT_PASSWORD)))
+	{
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_CERT_PASSWORD, OPH_SERVER_PASSWORD);
+		oph_server_password = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CERT_PASSWORD);
+	}
+	if (!(oph_rmanager_conf_file = hashtbl_get(oph_server_params, OPH_SERVER_CONF_RMANAGER_CONF_FILE)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_RMANAGER_CONF_FILE,oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_RMANAGER_CONF_FILE, tmp);
+		oph_rmanager_conf_file = hashtbl_get(oph_server_params, OPH_SERVER_CONF_RMANAGER_CONF_FILE);
+	}
+	if (!(oph_auth_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SERVER_AUTHZ,oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR, tmp);
+		oph_auth_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR);
+	}
+	if (!(oph_txt_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TXT_DIR)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_TXT_LOCATION,oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_TXT_DIR, tmp);
+		oph_txt_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TXT_DIR);
+	}
+	if (!(oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_WEB_SERVER);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER, tmp);
+		oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER);
+	}
+	if (!(oph_web_server_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_WEB_SERVER_LOCATION);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION, tmp);
+		oph_web_server_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION);
+	}
+	if (!(oph_operator_client = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPERATOR_CLIENT)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_OPERATOR_CLIENT);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPERATOR_CLIENT, tmp);
+		oph_operator_client = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPERATOR_CLIENT);
+	}
+	if (!(oph_ip_target_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_IP_TARGET_HOST)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_IP_TARGET_HOST);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_IP_TARGET_HOST, tmp);
+		oph_ip_target_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_IP_TARGET_HOST);
+	}
+	if (!(oph_subm_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SUBM_USER);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_SUBM_USER, tmp);
+		oph_subm_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER);
+	}
+	if (!(oph_subm_user_publk = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PUBLK)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SUBM_USER_PUBLK);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PUBLK, tmp);
+		oph_subm_user_publk = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PUBLK);
+	}
+	if (!(oph_subm_user_privk = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PRIVK)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SUBM_USER_PRIVK);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PRIVK, tmp);
+		oph_subm_user_privk = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SUBM_USER_PRIVK);
+	}
+	if (!(oph_xml_operators = hashtbl_get(oph_server_params, OPH_SERVER_CONF_XML_URL)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_CLIENT_XML_URL);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_XML_URL, tmp);
+		oph_xml_operators = hashtbl_get(oph_server_params, OPH_SERVER_CONF_XML_URL);
+	}
+	if (!(oph_xml_operator_dir = hashtbl_get(oph_server_params, OPH_SERVER_CONF_XML_DIR)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_SERVER_XML_EXT_PATH);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_XML_DIR, tmp);
+		oph_xml_operator_dir = hashtbl_get(oph_server_params, OPH_SERVER_CONF_XML_DIR);
+	}
+	if (!(oph_user_notifier = hashtbl_get(oph_server_params, OPH_SERVER_CONF_NOTIFIER)))
+	{
+		snprintf(tmp,OPH_MAX_STRING_SIZE,OPH_USER_NOTIFIER);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_NOTIFIER, tmp);
+		oph_user_notifier = hashtbl_get(oph_server_params, OPH_SERVER_CONF_NOTIFIER);
+	}
+
+	oph_json_location = oph_web_server_location; // Position of JSON Response will be the same of web server
+}
+
+void cleanup(){
+  if (oph_server_params) hashtbl_destroy(oph_server_params);
+#ifdef OPH_SERVER_LOCATION
+  if (oph_server_location) free(oph_server_location);
+#endif
+  if (orm) free_oph_rmanager(orm);
+  if (ophDB) oph_odb_free_ophidiadb(ophDB);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+  pthread_mutex_destroy(&global_flag);
+  pthread_mutex_destroy(&libssh2_flag);
+  pthread_cond_destroy(&termination_flag);
+#endif
+  oph_tp_end_xml_parser();
+}
+
 int _check_oph_server(const char* operator, int option)
 {
+	char sessionid[OPH_MAX_STRING_SIZE];
+	snprintf(sessionid,OPH_MAX_STRING_SIZE,"%s/sessions/123/xperiment",oph_web_server);
+	
 	// Workflow
 	oph_workflow* wf = (oph_workflow*)calloc(1,sizeof(oph_workflow));
 	if (!wf) return 1;
@@ -87,10 +280,10 @@ int _check_oph_server(const char* operator, int option)
 	wf->name = strdup("test");
 	wf->author = strdup("test");
 	wf->abstract = strdup("-");
-	wf->sessionid = strdup("http://localhost/sessions/1/experiment");
+	wf->sessionid = strdup(sessionid);
 	wf->exec_mode = strdup("sync");
 	wf->ncores = 1;
-	wf->cwd = strdup("/1");
+	wf->cwd = strdup("/123/");
 	wf->run = 1;
 	wf->parallel_mode = 0;
 
@@ -877,7 +1070,7 @@ int _check_oph_server(const char* operator, int option)
 	{
 		// Tasks
 		wf->tasks_num = 3;
-		wf->residual_tasks_num = 3;
+		wf->residual_tasks_num = 1;
 		wf->tasks = (oph_workflow_task*)calloc(1+wf->tasks_num,sizeof(oph_workflow_task));
 		wf->vars = hashtbl_create(wf->tasks_num, NULL);
 
@@ -1191,46 +1384,226 @@ int _check_oph_server(const char* operator, int option)
 			break;
 		}
 	}
+	else if (!strcmp(operator,"oph_massive"))
+	{
+		char *filter[] = {
+			"[*]",
+			"[run=no]",
+			"[measure=measure]",
+			"[container=containername]",
+			"[cube_filter=2]",
+			"[cube_filter=2:4]",
+			"[cube_filter=2:3:10]",
+			"[cube_filter=2,3,10]",
+			"[metadata_key=key1|key2]",
+			"[metadata_value=value1|value2]",
+			"[metadata_key=key;metadata_value=value]",
+			"[metadata_key=key1|key2;metadata_value=value1|value2]",
+			"[level=2|3]",
+			"[path=/path/to/container]",
+			"[path=/path/to/container;recursive=yes]",
+			"[container=containername;metadata_key=key;metadata_value=value;level=2;path=/path/to/container;recursive=yes]",
+			"1|3|5"
+		};
+		char *equery[] = {
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND container.containername='containername' AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2)) AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,4)) AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,3,10)) AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2) OR mysql.oph_is_in_subset(datacube.iddatacube,3,1,3) OR mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0,metadatainstance AS metadatainstance0,metadatakey AS metadatakey1,metadatainstance AS metadatainstance1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0.idkey=metadatainstance0.idkey AND metadatainstance0.iddatacube=datacube.iddatacube AND metadatakey0.label='key1' AND metadatakey1.idkey=metadatainstance1.idkey AND metadatainstance1.iddatacube=datacube.iddatacube AND metadatakey1.label='key2' AND (container.idfolder='1')",
+			"No query expected",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0,metadatakey AS metadatakey0k1,metadatainstance AS metadatainstance0k1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key1' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value1%' AND metadatakey0k1.idkey=metadatainstance0k1.idkey AND metadatainstance0k1.iddatacube=datacube.iddatacube AND metadatakey0k1.label='key2' AND CONVERT(metadatainstance0k1.value USING latin1) LIKE '%value2%' AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2' OR datacube.level='3') AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1' OR container.idfolder='2')",
+			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
+			"No query expected"
+		};
+
+		// Tasks
+		wf->tasks_num = 1;
+		wf->residual_tasks_num = 1;
+		wf->tasks = (oph_workflow_task*)calloc(1+wf->tasks_num,sizeof(oph_workflow_task));
+
+		// MASSIVE
+		wf->tasks[0].idjob = 2;
+		wf->tasks[0].markerid = 2;
+		wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
+		wf->tasks[0].name = strdup("MASSIVE");
+		wf->tasks[0].operator = strdup("oph_massive");
+		wf->tasks[0].role = oph_code_role("read");
+		wf->tasks[0].ncores = wf->ncores;
+		wf->tasks[0].arguments_num = 2;
+		wf->tasks[0].arguments_keys = (char**)calloc(wf->tasks[0].arguments_num,sizeof(char*));
+			wf->tasks[0].arguments_keys[0] = strdup("cube");
+			wf->tasks[0].arguments_keys[1] = strdup("cwd");
+		wf->tasks[0].arguments_values = (char**)calloc(wf->tasks[0].arguments_num,sizeof(char*));
+			wf->tasks[0].arguments_values[0] = strdup(filter[option]);
+			wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
+		wf->tasks[0].run = 1;
+
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+
+		char** output_list = NULL, *query = NULL;
+		int j, output_list_dim = 0;
+
+		int res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+
+		switch (option)
+		{
+			case 1:
+				if (res != OPH_SERVER_NO_RESPONSE)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\n",res);
+					return 1;
+				}
+				if (!query)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Expected return query\n");
+					return 1;
+				}
+				if (strcasecmp(query,equery[option]))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Wrong return query: %s\n",query);
+					return 1;
+				}
+			break;
+
+			case 9:
+				if (res != OPH_SERVER_SYSTEM_ERROR)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\n",res);
+					return 1;
+				}
+				if (query)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "No query expected\n");
+					return 1;
+				}
+			break;
+
+			case 16:
+				if (res)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\n",res);
+					return 1;
+				}
+				if (query)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "No query expected\n");
+					return 1;
+				}
+			break;
+
+			default:
+				if (res)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\n",res);
+					return 1;
+				}
+				if (!query)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Expected return query\n");
+					return 1;
+				}
+				if (strcasecmp(query,equery[option]))
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Wrong return query: %s\n",query);
+					return 1;
+				}
+		}
+
+		switch (option)
+		{
+			case 1:
+				if (output_list_dim != 3)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Bad number of objects returned from the function: %d\n",output_list_dim);
+					return 1;
+				}
+				if (!output_list)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Bad object list returned from the function\n");
+					return 1;
+				}
+				char object_name[OPH_MAX_STRING_SIZE];
+				for (j=0;j<output_list_dim;++j)
+				{
+					snprintf(object_name,OPH_MAX_STRING_SIZE,"%s/1/%d",oph_web_server,j+1);
+					if (strcasecmp(output_list[j],object_name))
+					{
+						pmesg(LOG_ERROR, __FILE__,__LINE__, "Bad object '%s' returned from the function\n",output_list[j]);
+						return 1;
+					}
+				}
+			break;
+
+			default:
+				if (output_list || output_list_dim)
+				{
+					pmesg(LOG_ERROR, __FILE__,__LINE__, "Object list is not empty: it contains %d objects\n",output_list_dim);
+					return 1;
+				}
+		}
+
+		for (j=0;j<output_list_dim;++j) if (output_list[j]) free(output_list[j]);
+		if (output_list) free(output_list);
+		output_list = NULL;
+		if (query) free(query);
+		query = NULL;
+	}
 
 	//oph_workflow_free(wf);
 
 	return 0;
 }
 
-int check_oph_server(int* i, int n, const char* operator, int option)
+int check_oph_server(int* i, int* f, int n, const char* operator, int option, int abort_on_first_error)
 {
 	(*i)++;
 	printf("TEST %d/%d: operator '%s' option %d\n", *i, n, operator, option);
-	if (_check_oph_server(operator, option)) return 1;
-	printf("PASSED %d/%d\n\n",*i,n);
+	if (_check_oph_server(operator, option))
+	{
+		(*f)++;
+		printf("FAILED\n\n");
+		if (abort_on_first_error) return 1;
+	}
+	else printf("PASSED\n\n");
 	return 0;
 }
 
 int main(int argc, char* argv[])
 {
+	UNUSED(argc)
+	UNUSED(argv)
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_t tid;
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 #endif
 
-	UNUSED(argc)
-	UNUSED(argv)
-	UNUSED(tid)
-
-	int ch, msglevel = LOG_INFO;
-	static char *USAGE = "\nUSAGE:\noph_server_test [-d] [-v] [-w]\n";
+	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 0;
+	static char *USAGE = "\nUSAGE:\noph_server_test [-a] [-d] [-v] [-w]\n";
 
 	fprintf(stdout,"%s",OPH_VERSION);
 	fprintf(stdout,"%s",OPH_DISCLAIMER);
 
 	set_debug_level(msglevel+10);
 
-	while ((ch = getopt(argc, argv, "dvw"))!=-1)
+	while ((ch = getopt(argc, argv, "advw"))!=-1)
 	{
 		switch (ch)
 		{
+			case 'a':
+				abort_on_first_error = 1;
+			break;
 			case 'd':
 				msglevel = LOG_DEBUG;
 			break;
@@ -1247,15 +1620,39 @@ int main(int argc, char* argv[])
 	}
 
 	set_debug_level(msglevel+10);
+	pmesg(LOG_INFO, __FILE__,__LINE__,"Selected log level %d\n",msglevel);
 
-	int i = 0, j, n = 26;
+#ifdef OPH_SERVER_LOCATION
+	oph_server_location = strdup(OPH_SERVER_LOCATION);
+#else
+	oph_server_location = getenv(OPH_SERVER_LOCATION_STR);
+	if (!oph_server_location)
+	{
+		fprintf(stderr,"OPH_SERVER_LOCATION has to be set\n");
+		return 1;
+	}
+#endif
+	pmesg(LOG_DEBUG, __FILE__,__LINE__,"Server location '%s'\n",oph_server_location);
+
+	char configuration_file[OPH_MAX_STRING_SIZE];
+	snprintf(configuration_file,OPH_MAX_STRING_SIZE,OPH_CONFIGURATION_FILE,oph_server_location);
+	set_global_values(configuration_file);
+
+	int test_mode_num = 5;
+	int test_num[] = { 9, 2, 9, 6, 17 };
+	char* test_name[] = { "oph_if", "oph_else", "oph_for", "oph_endfor", "oph_massive" };
+	int i = 0, j, k, f = 0, n = 0;
+	for (j=0; j<test_mode_num; ++j) n += test_num[j];
+
 	printf("\n");
 
-	for (j=0; j<9; ++j) if (check_oph_server(&i,n,"oph_if", j)) return 1;
-	for (j=0; j<2; ++j) if (check_oph_server(&i,n,"oph_else", j)) return 1;
-	for (j=0; j<9; ++j) if (check_oph_server(&i,n,"oph_for", j)) return 1;
-	for (j=0; j<6; ++j) if (check_oph_server(&i,n,"oph_endfor", j)) return 1;
+	for (k=0; k<test_mode_num; ++k)
+		for (j=0; j<test_num[k]; ++j)
+			if (check_oph_server(&i,&f,n,test_name[k], j, abort_on_first_error)) return 1;
 
-	return 0;
+	if (f) printf("WARNING: %d TASK%s FAILED out of %d\n",f,f==1?"":"S",n);
+
+	cleanup();
+	return f;
 }
 

@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "oph.nsmap"
+
 #include "oph_plugin.h"
 #include "oph_utils.h"
 #include "hashtbl.h"
