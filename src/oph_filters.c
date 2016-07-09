@@ -236,7 +236,7 @@ int oph_filter_using_subset(char* value, char* tables, char* where_clause, pthre
 	return OPH_MF_OK;
 }
 
-int oph_filter_container(char* value, char* path, char* sessionid, ophidiadb* oDB, char* tables, char* where_clause, pthread_mutex_t* flag)
+int oph_filter_container(char* value, char* tables, char* where_clause, pthread_mutex_t* flag)
 {
 	UNUSED(tables)
 
@@ -244,27 +244,16 @@ int oph_filter_container(char* value, char* path, char* sessionid, ophidiadb* oD
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n",OPH_MF_ARG_CONTAINER,value);
 
 	char condition[OPH_MAX_STRING_SIZE];
-	int s, permission=0, folder_id=0;
-
-	if (oph_odb_fs_path_parsing("", path, &folder_id, NULL, oDB))
-	{
-		//Check if user can work on datacube
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Path '%s' does not exists\n", path);
-		return OPH_MF_ERROR;
-	}
-	if (oph_odb_fs_check_folder_session(folder_id, sessionid, oDB, &permission) || !permission) // Only the permission on specified folder is checked, subfolders will be accessed in case the specified one is accessible
-	{
-		//Check if user can work on datacube
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Access in folder %s is not allowed\n", value);
-		return OPH_MF_ERROR;
-	}
+	int s;
 
 	if (*where_clause)
 	{
 		if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 		strncat(where_clause," AND ",s);
 	}
-	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.containername='%s' AND %s.idfolder='%d'",OPH_MF_ARG_CONTAINER,value,OPH_MF_ARG_CONTAINER,folder_id);
+	
+	snprintf(condition,OPH_MAX_STRING_SIZE,"%s.containername='%s'",OPH_MF_ARG_CONTAINER,value);
+
 	if ((s=OPH_MAX_STRING_SIZE-strlen(where_clause)-1)<=0) return OPH_MF_ERROR;
 	strncat(where_clause,condition,s);
 
@@ -587,7 +576,7 @@ int _oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophi
 
 	char* container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
 	char* path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
-	if (!path || !strlen(path)) path = cwd;
+	if (!path || !strlen(path)) path = OPH_MF_ROOT_FOLDER;
 
 	// Basic tables and where_clause
 	snprintf(tables,OPH_MAX_STRING_SIZE,"%s,%s",OPH_MF_ARG_DATACUBE,OPH_MF_ARG_CONTAINER);
@@ -619,7 +608,7 @@ int _oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophi
 		if (oph_filter_using_subset(value=hashtbl_get(task_tbl, OPH_MF_ARG_DATACUBE_FILTER),tables,where_clause,flag)) return OPH_MF_ERROR;
 		if (container && strlen(container))
 		{
-			if (oph_filter_container(container,ext_path,sessionid,oDB,tables,where_clause,flag)) return OPH_MF_ERROR;
+			if (oph_filter_container(container,tables,where_clause,flag)) return OPH_MF_ERROR;
 		}
 		else
 		{

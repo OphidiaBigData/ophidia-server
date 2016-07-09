@@ -194,7 +194,7 @@ int _oph_mf_parse_KV(char*** datacube_inputs, char*** measure_name, unsigned int
 		}
 	}
 	
-	if(filter && oph_tp_task_params_parser(OPH_MASSIVE_OPERATOR, task_string, &task_tbl))
+	if(oph_tp_task_params_parser(OPH_MASSIVE_OPERATOR, filter ? task_string : "", &task_tbl))
 	{
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to process input parameters\n");
 		if (task_tbl) hashtbl_destroy(task_tbl);
@@ -434,7 +434,7 @@ int _oph_mf_parse_query(char*** datacube_inputs, char*** measure_name, unsigned 
 		}
 		snprintf(_task_string,end_task-task_string+2,"%s",task_string);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extract '%s'\n",_task_string);
-		if ((result = _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd, sessionid, &running_, is_src_path, oDB, flag)))
+		if ((result = _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, sessionid, &running_, is_src_path, oDB, flag)))
 		{
 			if (result != OPH_SERVER_NO_RESPONSE)
 			{
