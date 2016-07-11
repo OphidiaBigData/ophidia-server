@@ -205,7 +205,8 @@ int oph_odb_extract_datacube_ids(ophidiadb* oDB, char* query, cube** datacube, i
 {
 	if(!oDB || !query || !datacube || !counter) return OPH_ODB_NULL_PARAM;
 
-	*counter = 3;
+	if (!strcmp(query,"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')")) *counter = 0;
+	else *counter = 3;
 
 	if(!(*datacube = (cube*)malloc(*counter*sizeof(cube)))) return OPH_ODB_MEMORY_ERROR;
 

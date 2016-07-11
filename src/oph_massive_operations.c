@@ -191,6 +191,7 @@ int _oph_mf_parse_KV(char*** datacube_inputs, char*** measure_name, unsigned int
 		{
 			snprintf(tmp,OPH_MAX_STRING_SIZE,"%s=%s",is_src_path?OPH_MF_ARG_PATH:OPH_MF_ARG_DATACUBE_FILTER,task_string);
 			task_string=tmp;
+			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Add option '%s' to task string\n",tmp);
 		}
 	}
 	
@@ -244,8 +245,10 @@ int _oph_mf_parse_KV(char*** datacube_inputs, char*** measure_name, unsigned int
 			}
 		}
 
+		char real_path[PATH_MAX];
 		if (strchr(path,'*') || strchr(path,'~') || strchr(path,'{') || strchr(path,'}')) // Use glob
 		{
+			pmesg_safe(flag, LOG_DEBUG,__FILE__,__LINE__,"Use glob to parse expression '%s'\n",path);
 			if (recursive)
 			{
 				pmesg_safe(flag, LOG_ERROR,__FILE__,__LINE__,"Recursive option cannot be selected for '%s'\n",path);
@@ -276,25 +279,31 @@ int _oph_mf_parse_KV(char*** datacube_inputs, char*** measure_name, unsigned int
 					(*counter)--;
 					continue;
 				}
+				if (!realpath(globbuf.gl_pathv[i],real_path))
+				{
+					pmesg_safe(flag, LOG_ERROR,__FILE__,__LINE__,"Wrong path name '%s'\n",globbuf.gl_pathv[i]);
+					if (task_tbl) hashtbl_destroy(task_tbl);
+					return OPH_SERVER_SYSTEM_ERROR;
+				}
 				if (tbuffer)
 				{
 					pbuffer = tbuffer;
-					asprintf(&tbuffer,"%s%s%s",pbuffer,globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+					asprintf(&tbuffer,"%s%s%s",pbuffer,real_path,OPH_SEPARATOR_PARAM);
 					free(pbuffer);
 				}
-				else asprintf(&tbuffer,"%s%s",globbuf.gl_pathv[i],OPH_SEPARATOR_PARAM);
+				else asprintf(&tbuffer,"%s%s",real_path,OPH_SEPARATOR_PARAM);
 			}
 			globfree(&globbuf);
 		}
 		else
 		{
-			char real_path[PATH_MAX];
 			if (!realpath(path,real_path))
 			{
 				pmesg_safe(flag, LOG_ERROR,__FILE__,__LINE__,"Wrong path name '%s'\n",path);
 				if (task_tbl) hashtbl_destroy(task_tbl);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
+
 			char* arg_file = hashtbl_get(task_tbl,OPH_MF_ARG_FILE);
 			if (openDir(real_path,recursive,counter,&tbuffer,arg_file && strlen(arg_file) ? arg_file : 0, flag))
 			{
