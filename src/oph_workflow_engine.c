@@ -748,7 +748,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 // Thread unsafe
 int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim)
 {
-	if (!wf || !output_list || !output_list_dim)
+	if (!wf || !oDB || !output_list || !output_list_dim)
 	{
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n",ttype,jobid);
 		return OPH_SERVER_NULL_POINTER;
@@ -828,7 +828,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 			int j;
 			if (running)
 			{
-				pmesg(LOG_INFO, __FILE__,__LINE__, "%c%d: serving task '%s' as massive operation\n",ttype,jobid,task->name);
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: serving task '%s' as massive operation\n",ttype,jobid,task->name);
 				task->light_tasks_num = task->residual_light_tasks_num = number;
 				task->light_tasks = (oph_workflow_light_task*)malloc(number * sizeof(oph_workflow_light_task));
 				for (i=0; i<(int)number; ++i)
@@ -859,7 +859,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 			}
 			else
 			{
-				pmesg(LOG_INFO, __FILE__,__LINE__, "%c%d: serving task '%s' as massive operation without effective execution\n",ttype,jobid,task->name);
+				pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: serving task '%s' as massive operation without effective execution\n",ttype,jobid,task->name);
 				res = OPH_SERVER_NO_RESPONSE;
 				*output_list = datacube_inputs;
 				*output_list_dim = number;
