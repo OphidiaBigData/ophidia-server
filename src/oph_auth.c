@@ -386,38 +386,61 @@ int oph_load_user(const char* userid, oph_argument** args, int* save_in_odb)
 	snprintf(filename,OPH_MAX_STRING_SIZE,OPH_USER_FILE,oph_auth_location,userid);
 	if (stat(filename,&s) && (errno==ENOENT))
 	{
-		int n;
-
 		pmesg(LOG_DEBUG, __FILE__,__LINE__,"Automatic creation of configuration files\n");
 		oph_argument *tmp, *tail = *args = NULL;
 
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_OPENED_SESSIONS);
-		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_OPENED_SESSIONS);
+		if (asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_OPENED_SESSIONS) <= 0)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in creation of configuration files\n");
+			oph_cleanup_args(args);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_SESSIONS);
-		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_SESSIONS);
+		if (asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_SESSIONS) <= 0)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in creation of configuration files\n");
+			oph_cleanup_args(args);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_TIMEOUT_SESSION);
-		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_SESSION_TIMEOUT);
+		if (asprintf(&tmp->value,"%d",OPH_DEFAULT_SESSION_TIMEOUT) <= 0)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in creation of configuration files\n");
+			oph_cleanup_args(args);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_CORES);
-		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_CORES);
+		if (asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_CORES) <= 0)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in creation of configuration files\n");
+			oph_cleanup_args(args);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;
 		tmp = (oph_argument*)malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_HOSTS);
-		n = asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_HOSTS);
+		if (asprintf(&tmp->value,"%d",OPH_DEFAULT_USER_MAX_HOSTS) <= 0)
+		{
+			pmesg(LOG_ERROR, __FILE__,__LINE__,"Error in creation of configuration files\n");
+			oph_cleanup_args(args);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		tmp->next = NULL;
 		if (tail) tail->next = tmp; else *args = tmp;
 		tail = tmp;

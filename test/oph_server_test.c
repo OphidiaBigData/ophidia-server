@@ -2121,20 +2121,10 @@ int main(int argc, char* argv[])
 	set_debug_level(msglevel+10);
 	pmesg(LOG_INFO, __FILE__,__LINE__,"Selected log level %d\n",msglevel);
 
-#ifdef OPH_SERVER_LOCATION
-	oph_server_location = strdup(OPH_SERVER_LOCATION);
-#else
-	oph_server_location = getenv(OPH_SERVER_LOCATION_STR);
-	if (!oph_server_location)
-	{
-		fprintf(stderr,"OPH_SERVER_LOCATION has to be set\n");
-		return 1;
-	}
-#endif
-	pmesg(LOG_DEBUG, __FILE__,__LINE__,"Server location '%s'\n",oph_server_location);
+	oph_server_location = strdup("..");
 
 	char configuration_file[OPH_MAX_STRING_SIZE];
-	snprintf(configuration_file,OPH_MAX_STRING_SIZE,OPH_CONFIGURATION_FILE,oph_server_location);
+	snprintf(configuration_file,OPH_MAX_STRING_SIZE,OPH_CONFIGURATION_FILE,getenv("PWD"));
 	set_global_values(configuration_file);
 
 	int test_mode_num = 6;

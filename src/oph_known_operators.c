@@ -550,7 +550,7 @@ int oph_for_impl(oph_workflow* wf, int i, char* error_message, char is_for)
 {
 	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL, mode = 0;
 	int *ivalues = NULL; // If not allocated then it is equal to [1:values_num]
-	int j, kk, h, hh, svalues_num = 0, ivalues_num = 0;
+	int j, kk = 0, h, hh, svalues_num = 0, ivalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	long value;
 	char arg_value[OPH_WORKFLOW_MAX_STRING], *error_msg = NULL;
@@ -894,7 +894,7 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 			if (!strlen(error_message)) snprintf(error_message,OPH_MAX_STRING_SIZE,"Operator '%s' failed!",operator_name);
 			if (oph_json_add_text(oper_json,OPH_JSON_OBJKEY_STATUS,"ERROR",error_message))
 			{
-			    	pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+			    	pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
@@ -903,13 +903,14 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 		{
 			if (oph_json_add_text(oper_json,OPH_JSON_OBJKEY_STATUS,"SUCCESS",strlen(error_message) ? error_message : NULL))
 			{
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
 			else if (exit_code) *exit_code = OPH_ODB_STATUS_COMPLETED;
 		}
 		oph_json_free(oper_json);
+		if (return_code) pmesg_safe(&global_flag, LOG_WARNING, __FILE__,__LINE__,"error in generate JSON Response\n");
 	}
 	if (!jstring)
 	{

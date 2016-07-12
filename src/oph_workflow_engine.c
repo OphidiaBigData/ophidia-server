@@ -361,7 +361,7 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 
 	char *buffer = NULL, *pbuffer;
 
-	int n,j;
+	int j;
 	oph_workflow_task_out *tmp = wf->output;
 	while (tmp)
 	{
@@ -370,7 +370,7 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 			if (buffer)
 			{
 				pbuffer = buffer;
-				n = asprintf(&buffer,"%s%s",pbuffer,tmp->response);
+				if (asprintf(&buffer,"%s%s",pbuffer,tmp->response) <= 0) break;
 				free(pbuffer);
 			}
 			else buffer = strdup(tmp->response);
@@ -384,17 +384,21 @@ int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 					if (buffer)
 					{
 						pbuffer = buffer;
-						n = asprintf(&buffer,"%s%s",pbuffer,tmp->light_task_outs[j].response);
+						if (asprintf(&buffer,"%s%s",pbuffer,tmp->light_task_outs[j].response) <= 0) break;
 						free(pbuffer);
 					}
 					else buffer = strdup(tmp->light_task_outs[j].response);
 				}
 			}
-			if (j<tmp->light_tasks_num) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (j<tmp->light_tasks_num) break;
 		}
 		tmp = tmp->next;
 	}
-	if (tmp) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (tmp)
+	{
+		if (buffer) free(buffer);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
 
 	if (wf->response) free(wf->response);
 	wf->response = buffer;
