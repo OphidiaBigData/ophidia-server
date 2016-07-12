@@ -3192,7 +3192,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				else if (buffer)
 				{
 					char* pbuffer = buffer;
-					asprintf(&buffer,"%s%s",pbuffer,jstring);
+					n = asprintf(&buffer,"%s%s",pbuffer,jstring);
 					free(pbuffer);
 					if (jstring) free(jstring);
 				}

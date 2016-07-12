@@ -262,49 +262,20 @@ int oph_get_configuration(struct soap *soap, char* server, xsd__string key)
 	return response.error;
 }
 
-int get_status_code(const char* job_status, enum oph__oph_odb_job_status* status)
-{
-	if (!strncasecmp(job_status,OPH_ODB_STATUS_UNKNOWN_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_UNKNOWN;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_PENDING_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_PENDING;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_START_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_START;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_SET_ENV_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_SET_ENV;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_INIT_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_INIT;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_DISTRIBUTE_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_DISTRIBUTE;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_EXECUTE_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_EXECUTE;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_REDUCE_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_REDUCE;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_DESTROY_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_DESTROY;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_UNSET_ENV_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_UNSET_ENV;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_COMPLETED_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_COMPLETED;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_PENDING_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_PENDING_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_START_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_START_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_SET_ENV_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_SET_ENV_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_INIT_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_INIT_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_DISTRIBUTE_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_DISTRIBUTE_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_EXECUTE_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_EXECUTE_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_REDUCE_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_REDUCE_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_DESTROY_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_DESTROY_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_UNSET_ENV_ERROR_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_UNSET_ENV_ERROR;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_EXPIRED_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_EXPIRED;
-	else if (!strncasecmp(job_status,OPH_ODB_STATUS_CLOSED_STR,OPH_MAX_STRING_SIZE)) *status = OPH_ODB_STATUS_CLOSED;
-	else return 1;
-	return 0;
-}
-
 int main(int argc, char* argv[])
 {
 	struct soap soap;
 
 	char _query[OPH_MAX_PROGRAM_SIZE];
 	char server[OPH_MAX_STRING_SIZE];
-	int ch, msglevel = LOG_ERROR, nrproc = 1, job = 0, b64 = 0;
-	char *query = OPH_DEFAULT_QUERY, *host = OPH_DEFAULT_HOST, *port = OPH_DEFAULT_PORT, *username = CLIENT_USERID, *password = CLIENT_PASSWORD, *job_status = 0, *key = 0, *filename = 0;
+	int ch, msglevel = LOG_ERROR, job = 0, b64 = 0;
+	char *query = OPH_DEFAULT_QUERY, *host = OPH_DEFAULT_HOST, *port = OPH_DEFAULT_PORT, *username = CLIENT_USERID, *password = CLIENT_PASSWORD, *key = 0, *filename = 0;
 	enum oph__oph_odb_job_status status = OPH_ODB_STATUS_UNKNOWN;
 
 	fprintf(stdout,"%s",OPH_VERSION);
 	fprintf(stdout,"%s",OPH_DISCLAIMER2);
 
-	while ((ch = getopt(argc, argv, "bc:df:h:j:k:n:p:q:s:u:vwxz"))!=-1)
+	while ((ch = getopt(argc, argv, "bc:df:h:j:k:p:q:u:vwxz"))!=-1)
 	{
 		switch (ch)
 		{
@@ -329,17 +300,11 @@ int main(int argc, char* argv[])
 			case 'k':
 				password = optarg;
 			break;
-			case 'n':
-				nrproc = atoi(optarg);
-			break;
 			case 'p':
 				port = optarg;
 			break;
 			case 'q':
 				query = optarg;
-			break;
-			case 's':
-				job_status = optarg;
 			break;
 			case 'u':
 				username = optarg;
@@ -374,8 +339,14 @@ int main(int argc, char* argv[])
 		fseek(fp, 0, SEEK_END);
 		long size = ftell(fp);
 		rewind(fp);
-		fread(_query, size, 1, fp);
+		size_t r = fread(_query, size, 1, fp);
 		fclose(fp);
+		if (!r)
+		{
+			pmesg(LOG_ERROR,__FILE__,__LINE__,"JSON file cannot be read\n");
+			return 4;
+		}
+
 		pmesg(LOG_DEBUG,__FILE__,__LINE__,"Received file:\n%s\n",_query);
 
 		if (b64)
