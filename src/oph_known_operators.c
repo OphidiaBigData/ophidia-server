@@ -389,7 +389,7 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 			if (!strlen(error_message)) snprintf(error_message,OPH_MAX_STRING_SIZE,"Operator '%s' failed!",operator_name);
 			if (oph_json_add_text(oper_json,OPH_JSON_OBJKEY_STATUS,"ERROR",error_message))
 			{
-			    	pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+			    	pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
@@ -398,12 +398,13 @@ int oph_finalize_known_operator(int idjob, oph_json *oper_json, const char *oper
 		{
 			if (oph_json_add_text(oper_json,OPH_JSON_OBJKEY_STATUS,"SUCCESS",strlen(error_message) ? error_message : NULL))
 			{
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
 			}
 			else if (oph_write_and_get_json(oper_json, &jstring)) return_code = -1;
 		}
 		oph_json_free(oper_json);
+		if (return_code) pmesg_safe(&global_flag, LOG_WARNING, __FILE__,__LINE__,"error in generate JSON Response\n");
 	}
 	if (!jstring)
 	{
