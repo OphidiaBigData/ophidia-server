@@ -576,7 +576,7 @@ int _oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophi
 
 	char* container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
 	char* path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
-	if (!path || !strlen(path)) path = OPH_MF_ROOT_FOLDER;
+	if (!path || !strlen(path)) path = cwd;
 
 	// Basic tables and where_clause
 	snprintf(tables,OPH_MAX_STRING_SIZE,"%s,%s",OPH_MF_ARG_DATACUBE,OPH_MF_ARG_CONTAINER);
