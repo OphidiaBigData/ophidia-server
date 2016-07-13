@@ -1506,6 +1506,7 @@ int _check_oph_server(const char* operator, int option)
 		switch (option)
 		{
 			case 1:
+			case 17:
 				if (res != OPH_SERVER_NO_RESPONSE)
 				{
 					pmesg(LOG_ERROR, __FILE__,__LINE__, "Return code: %d\n",res);
