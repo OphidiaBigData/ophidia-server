@@ -35,13 +35,14 @@
 extern int msglevel;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
-int _oph_json_add_responseKey(oph_json *json, const char *responseKey, pthread_mutex_t* flag);
+int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_mutex_t * flag);
 #endif
 
 /***********OPH_JSON_OBJ_TREE INTERNAL FUNCTIONS***********/
 
 // Free a tree object contents
-int oph_json_free_tree(oph_json_obj_tree *obj) {
+int oph_json_free_tree(oph_json_obj_tree * obj)
+{
 	if (obj) {
 		if (obj->description) {
 			free(obj->description);
@@ -117,14 +118,15 @@ int oph_json_free_tree(oph_json_obj_tree *obj) {
 
 /***********OPH_JSON_OBJ_TREE FUNCTIONS***********/
 
-int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t* flag) {
-	if (!json || !objkey || !title || nodekeys_num<0) {
+int _oph_json_add_tree(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t * flag)
+{
+	if (!json || !objkey || !title || nodekeys_num < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
 		return OPH_JSON_BAD_PARAM_ERROR;
 	}
 
 	if (json->response_num == 0) {
-		json->response = (oph_json_response *)malloc(sizeof(oph_json_response));
+		json->response = (oph_json_response *) malloc(sizeof(oph_json_response));
 		if (!json->response) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "response");
 			return OPH_JSON_MEMORY_ERROR;
@@ -134,7 +136,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		json->response[0].objcontent_num = 0;
 		json->response[0].objkey = NULL;
 
-		json->response[0].objclass = (char *)strdup(OPH_JSON_TREE);
+		json->response[0].objclass = (char *) strdup(OPH_JSON_TREE);
 		if (!json->response[0].objclass) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objclass");
 			return OPH_JSON_MEMORY_ERROR;
@@ -142,12 +144,12 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 
 		json->response_num++;
 
-		json->response[0].objkey = (char *)strdup(objkey);
+		json->response[0].objkey = (char *) strdup(objkey);
 		if (!json->response[0].objkey) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 			return OPH_JSON_MEMORY_ERROR;
 		}
-		if (_oph_json_add_responseKey(json,objkey,flag)) {
+		if (_oph_json_add_responseKey(json, objkey, flag)) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 			return OPH_JSON_MEMORY_ERROR;
 		}
@@ -168,7 +170,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		((oph_json_obj_tree *) json->response[0].objcontent)[0].rootnode = NULL;
 		((oph_json_obj_tree *) json->response[0].objcontent)[0].title = NULL;
 
-		((oph_json_obj_tree *) json->response[0].objcontent)[0].title = (char *)strdup(title);
+		((oph_json_obj_tree *) json->response[0].objcontent)[0].title = (char *) strdup(title);
 		if (!((oph_json_obj_tree *) json->response[0].objcontent)[0].title) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 			return OPH_JSON_MEMORY_ERROR;
@@ -177,7 +179,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		json->response[0].objcontent_num++;
 
 		if (description) {
-			((oph_json_obj_tree *) json->response[0].objcontent)[0].description = (char *)strdup(description);
+			((oph_json_obj_tree *) json->response[0].objcontent)[0].description = (char *) strdup(description);
 			if (!((oph_json_obj_tree *) json->response[0].objcontent)[0].description) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "description");
 				return OPH_JSON_MEMORY_ERROR;
@@ -185,21 +187,21 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		}
 
 		if (nodekeys) {
-			int k,q;
+			int k, q;
 
-			((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys = (char **)malloc(sizeof(char *)*nodekeys_num);
+			((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys = (char **) malloc(sizeof(char *) * nodekeys_num);
 			if (!((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekeys");
 				return OPH_JSON_MEMORY_ERROR;
 			}
 			for (k = 0; k < nodekeys_num; k++) {
 				for (q = 0; q < k; q++) {
-					if (!strcmp(nodekeys[q],nodekeys[k])) {
+					if (!strcmp(nodekeys[q], nodekeys[k])) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "nodekey");
 						return OPH_JSON_BAD_PARAM_ERROR;
 					}
 				}
-				((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys[k] = (char *)strdup(nodekeys[k]);
+				((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys[k] = (char *) strdup(nodekeys[k]);
 				if (!((oph_json_obj_tree *) json->response[0].objcontent)[0].nodekeys[k]) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekey");
 					return OPH_JSON_MEMORY_ERROR;
@@ -213,8 +215,8 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		unsigned int i;
 		int add_frag = 0;
 		for (i = 0; i < json->response_num; i++) {
-			if (!strcmp(json->response[i].objkey,objkey)) {
-				if (!strcmp(json->response[i].objclass,OPH_JSON_TREE)) {
+			if (!strcmp(json->response[i].objkey, objkey)) {
+				if (!strcmp(json->response[i].objclass, OPH_JSON_TREE)) {
 					add_frag = 1;
 					break;
 				}
@@ -225,7 +227,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		if (add_frag) {
 			void *tmp = json->response[i].objcontent;
 			unsigned int index = json->response[i].objcontent_num;
-			json->response[i].objcontent = realloc(json->response[i].objcontent,sizeof(oph_json_obj_tree)*(json->response[i].objcontent_num + 1));
+			json->response[i].objcontent = realloc(json->response[i].objcontent, sizeof(oph_json_obj_tree) * (json->response[i].objcontent_num + 1));
 			if (!json->response[i].objcontent) {
 				json->response[i].objcontent = tmp;
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objcontent");
@@ -242,7 +244,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			((oph_json_obj_tree *) json->response[i].objcontent)[index].rootnode = NULL;
 			((oph_json_obj_tree *) json->response[i].objcontent)[index].title = NULL;
 
-			((oph_json_obj_tree *) json->response[i].objcontent)[index].title = (char *)strdup(title);
+			((oph_json_obj_tree *) json->response[i].objcontent)[index].title = (char *) strdup(title);
 			if (!((oph_json_obj_tree *) json->response[i].objcontent)[index].title) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 				return OPH_JSON_MEMORY_ERROR;
@@ -251,7 +253,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			json->response[i].objcontent_num++;
 
 			if (description) {
-				((oph_json_obj_tree *) json->response[i].objcontent)[index].description = (char *)strdup(description);
+				((oph_json_obj_tree *) json->response[i].objcontent)[index].description = (char *) strdup(description);
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[index].description) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "description");
 					return OPH_JSON_MEMORY_ERROR;
@@ -259,21 +261,21 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			}
 
 			if (nodekeys) {
-				int k,q;
+				int k, q;
 
-				((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys = (char **)malloc(sizeof(char *)*nodekeys_num);
+				((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys = (char **) malloc(sizeof(char *) * nodekeys_num);
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekeys");
 					return OPH_JSON_MEMORY_ERROR;
 				}
 				for (k = 0; k < nodekeys_num; k++) {
 					for (q = 0; q < k; q++) {
-						if (!strcmp(nodekeys[q],nodekeys[k])) {
+						if (!strcmp(nodekeys[q], nodekeys[k])) {
 							pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "nodekey");
 							return OPH_JSON_BAD_PARAM_ERROR;
 						}
 					}
-					((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys[k] = (char *)strdup(nodekeys[k]);
+					((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys[k] = (char *) strdup(nodekeys[k]);
 					if (!((oph_json_obj_tree *) json->response[i].objcontent)[index].nodekeys[k]) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekey");
 						return OPH_JSON_MEMORY_ERROR;
@@ -286,7 +288,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 		} else {
 			oph_json_response *tmp = json->response;
 			unsigned int index = json->response_num;
-			json->response = (oph_json_response *)realloc(json->response,sizeof(oph_json_response)*(json->response_num + 1));
+			json->response = (oph_json_response *) realloc(json->response, sizeof(oph_json_response) * (json->response_num + 1));
 			if (!json->response) {
 				json->response = tmp;
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "response");
@@ -297,7 +299,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			json->response[index].objcontent_num = 0;
 			json->response[index].objkey = NULL;
 
-			json->response[index].objclass = (char *)strdup(OPH_JSON_TREE);
+			json->response[index].objclass = (char *) strdup(OPH_JSON_TREE);
 			if (!json->response[index].objclass) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objclass");
 				return OPH_JSON_MEMORY_ERROR;
@@ -305,12 +307,12 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 
 			json->response_num++;
 
-			json->response[index].objkey = (char *)strdup(objkey);
+			json->response[index].objkey = (char *) strdup(objkey);
 			if (!json->response[index].objkey) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 				return OPH_JSON_MEMORY_ERROR;
 			}
-			if (_oph_json_add_responseKey(json,objkey,flag)) {
+			if (_oph_json_add_responseKey(json, objkey, flag)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 				return OPH_JSON_MEMORY_ERROR;
 			}
@@ -331,7 +333,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			((oph_json_obj_tree *) json->response[index].objcontent)[0].rootnode = NULL;
 			((oph_json_obj_tree *) json->response[index].objcontent)[0].title = NULL;
 
-			((oph_json_obj_tree *) json->response[index].objcontent)[0].title = (char *)strdup(title);
+			((oph_json_obj_tree *) json->response[index].objcontent)[0].title = (char *) strdup(title);
 			if (!((oph_json_obj_tree *) json->response[index].objcontent)[0].title) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 				return OPH_JSON_MEMORY_ERROR;
@@ -340,7 +342,7 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			json->response[index].objcontent_num++;
 
 			if (description) {
-				((oph_json_obj_tree *) json->response[index].objcontent)[0].description = (char *)strdup(description);
+				((oph_json_obj_tree *) json->response[index].objcontent)[0].description = (char *) strdup(description);
 				if (!((oph_json_obj_tree *) json->response[index].objcontent)[0].description) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "description");
 					return OPH_JSON_MEMORY_ERROR;
@@ -348,21 +350,21 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 			}
 
 			if (nodekeys) {
-				int k,q;
+				int k, q;
 
-				((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys = (char **)malloc(sizeof(char *)*nodekeys_num);
+				((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys = (char **) malloc(sizeof(char *) * nodekeys_num);
 				if (!((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekeys");
 					return OPH_JSON_MEMORY_ERROR;
 				}
 				for (k = 0; k < nodekeys_num; k++) {
 					for (q = 0; q < k; q++) {
-						if (!strcmp(nodekeys[q],nodekeys[k])) {
+						if (!strcmp(nodekeys[q], nodekeys[k])) {
 							pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "nodekey");
 							return OPH_JSON_BAD_PARAM_ERROR;
 						}
 					}
-					((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys[k] = (char *)strdup(nodekeys[k]);
+					((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys[k] = (char *) strdup(nodekeys[k]);
 					if (!((oph_json_obj_tree *) json->response[index].objcontent)[0].nodekeys[k]) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodekey");
 						return OPH_JSON_MEMORY_ERROR;
@@ -377,10 +379,19 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 
 	return OPH_JSON_SUCCESS;
 }
-int oph_json_add_tree(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num) { return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, &global_flag); }
-int oph_json_add_tree_unsafe(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num) { return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, NULL); }
 
-int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalues, pthread_mutex_t* flag) {
+int oph_json_add_tree(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+{
+	return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, &global_flag);
+}
+
+int oph_json_add_tree_unsafe(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+{
+	return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, NULL);
+}
+
+int _oph_json_add_tree_node(oph_json * json, const char *objkey, char **nodevalues, pthread_mutex_t * flag)
+{
 	if (!json || !objkey) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
 		return OPH_JSON_BAD_PARAM_ERROR;
@@ -394,8 +405,8 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 	unsigned int i;
 	int tree_present = 0;
 	for (i = 0; i < json->response_num; i++) {
-		if (!strcmp(json->response[i].objkey,objkey)) {
-			if (!strcmp(json->response[i].objclass,OPH_JSON_TREE)) {
+		if (!strcmp(json->response[i].objkey, objkey)) {
+			if (!strcmp(json->response[i].objclass, OPH_JSON_TREE)) {
 				tree_present = 1;
 				break;
 			}
@@ -415,7 +426,7 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 			}
 			unsigned int index = 0;
 			if (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num1 == 0) {
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues = (char ***)malloc(sizeof(char **));
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues = (char ***) malloc(sizeof(char **));
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodevalues");
 					return OPH_JSON_MEMORY_ERROR;
@@ -423,7 +434,9 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 				index = 0;
 			} else {
 				char ***tmp = ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues;
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues = (char ***)realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues,sizeof(char **)*(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num1 + 1));
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues =
+				    (char ***) realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues,
+						       sizeof(char **) * (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num1 + 1));
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues) {
 					((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues = tmp;
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodevalues");
@@ -434,7 +447,8 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 
 			unsigned int k;
 
-			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index] = (char **)malloc(sizeof(char *)*(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num2));
+			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index] =
+			    (char **) malloc(sizeof(char *) * (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num2));
 			if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index]) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodevalues row");
 				return OPH_JSON_MEMORY_ERROR;
@@ -445,7 +459,7 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index][k] = NULL;
 			}
 			for (k = 0; k < ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues_num2; k++) {
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index][k] = (char *)strdup(nodevalues[k]);
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index][k] = (char *) strdup(nodevalues[k]);
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodevalues[index][k]) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodevalue");
 					return OPH_JSON_MEMORY_ERROR;
@@ -460,7 +474,7 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 
 		unsigned int index = 0;
 		if (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num == 0) {
-			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks = (oph_json_links *)malloc(sizeof(oph_json_links));
+			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks = (oph_json_links *) malloc(sizeof(oph_json_links));
 			if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodelinks");
 				return OPH_JSON_MEMORY_ERROR;
@@ -468,7 +482,9 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 			index = 0;
 		} else {
 			oph_json_links *tmp = ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks;
-			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks = (oph_json_links *)realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks,sizeof(oph_json_links)*(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num + 1));
+			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks =
+			    (oph_json_links *) realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks,
+						       sizeof(oph_json_links) * (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num + 1));
 			if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks) {
 				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks = tmp;
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "nodelinks");
@@ -488,11 +504,20 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 
 	return OPH_JSON_SUCCESS;
 }
-int oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalues) { return _oph_json_add_tree_node(json, objkey, nodevalues, &global_flag); }
-int oph_json_add_tree_node_unsafe(oph_json *json, const char *objkey, char **nodevalues) { return _oph_json_add_tree_node(json, objkey, nodevalues, NULL); }
 
-int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pthread_mutex_t* flag) {
-	if (!json || !objkey || rootnode<0) {
+int oph_json_add_tree_node(oph_json * json, const char *objkey, char **nodevalues)
+{
+	return _oph_json_add_tree_node(json, objkey, nodevalues, &global_flag);
+}
+
+int oph_json_add_tree_node_unsafe(oph_json * json, const char *objkey, char **nodevalues)
+{
+	return _oph_json_add_tree_node(json, objkey, nodevalues, NULL);
+}
+
+int _oph_json_set_tree_root(oph_json * json, const char *objkey, int rootnode, pthread_mutex_t * flag)
+{
+	if (!json || !objkey || rootnode < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
 		return OPH_JSON_BAD_PARAM_ERROR;
 	}
@@ -505,8 +530,8 @@ int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pt
 	unsigned int i;
 	int tree_present = 0;
 	for (i = 0; i < json->response_num; i++) {
-		if (!strcmp(json->response[i].objkey,objkey)) {
-			if (!strcmp(json->response[i].objclass,OPH_JSON_TREE)) {
+		if (!strcmp(json->response[i].objkey, objkey)) {
+			if (!strcmp(json->response[i].objclass, OPH_JSON_TREE)) {
 				tree_present = 1;
 				break;
 			}
@@ -526,9 +551,9 @@ int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pt
 		}
 
 		char buf[20];
-		memset(buf,0,20);
-		snprintf(buf,20,"%d",rootnode);
-		((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].rootnode = (char *)strdup(buf);
+		memset(buf, 0, 20);
+		snprintf(buf, 20, "%d", rootnode);
+		((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].rootnode = (char *) strdup(buf);
 		if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].rootnode) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "rootnode");
 			return OPH_JSON_MEMORY_ERROR;
@@ -540,11 +565,20 @@ int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pt
 
 	return OPH_JSON_SUCCESS;
 }
-int oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode) { return _oph_json_set_tree_root(json, objkey, rootnode, &global_flag); }
-int oph_json_set_tree_root_unsafe(oph_json *json, const char *objkey, int rootnode) { return _oph_json_set_tree_root(json, objkey, rootnode, NULL); }
 
-int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description, pthread_mutex_t* flag) {
-	if (!json || !objkey || sourcenode<0 || targetnode<0) {
+int oph_json_set_tree_root(oph_json * json, const char *objkey, int rootnode)
+{
+	return _oph_json_set_tree_root(json, objkey, rootnode, &global_flag);
+}
+
+int oph_json_set_tree_root_unsafe(oph_json * json, const char *objkey, int rootnode)
+{
+	return _oph_json_set_tree_root(json, objkey, rootnode, NULL);
+}
+
+int _oph_json_add_tree_link(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description, pthread_mutex_t * flag)
+{
+	if (!json || !objkey || sourcenode < 0 || targetnode < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
 		return OPH_JSON_BAD_PARAM_ERROR;
 	}
@@ -557,8 +591,8 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 	unsigned int i;
 	int tree_present = 0;
 	for (i = 0; i < json->response_num; i++) {
-		if (!strcmp(json->response[i].objkey,objkey)) {
-			if (!strcmp(json->response[i].objclass,OPH_JSON_TREE)) {
+		if (!strcmp(json->response[i].objkey, objkey)) {
+			if (!strcmp(json->response[i].objclass, OPH_JSON_TREE)) {
 				tree_present = 1;
 				break;
 			}
@@ -571,10 +605,12 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "objcontent_num");
 			return OPH_JSON_BAD_PARAM_ERROR;
 		}
-		if (sourcenode != targetnode && (int)((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num >= (sourcenode + 1) && (int)((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num >= (targetnode + 1)) {
+		if (sourcenode != targetnode && (int) ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num >= (sourcenode + 1)
+		    && (int) ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks_num >= (targetnode + 1)) {
 			unsigned int index = 0;
 			if (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links_num == 0) {
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links = (oph_json_link *)malloc(sizeof(oph_json_link));
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links =
+				    (oph_json_link *) malloc(sizeof(oph_json_link));
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "links");
 					return OPH_JSON_MEMORY_ERROR;
@@ -582,17 +618,20 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 				index = 0;
 			} else {
 				char buf[20];
-				memset(buf,0,20);
-				snprintf(buf,20,"%d",targetnode);
+				memset(buf, 0, 20);
+				snprintf(buf, 20, "%d", targetnode);
 				unsigned int n;
 				for (n = 0; n < ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links_num; n++) {
-					if (!strcmp(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[n].node,buf)) {
+					if (!strcmp(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[n].node, buf)) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "targetnode");
 						return OPH_JSON_BAD_PARAM_ERROR;
 					}
 				}
 				oph_json_link *tmp = ((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links;
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links = (oph_json_link *)realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links,sizeof(oph_json_link)*(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links_num + 1));
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links =
+				    (oph_json_link *) realloc(((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links,
+							      sizeof(oph_json_link) *
+							      (((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links_num + 1));
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links) {
 					((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links = tmp;
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "links");
@@ -606,16 +645,17 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links_num++;
 
 			char buf[20];
-			memset(buf,0,20);
-			snprintf(buf,20,"%d",targetnode);
-			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].node = (char *)strdup(buf);
+			memset(buf, 0, 20);
+			snprintf(buf, 20, "%d", targetnode);
+			((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].node = (char *) strdup(buf);
 			if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].node) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "targetnode");
 				return OPH_JSON_MEMORY_ERROR;
 			}
 
 			if (description) {
-				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].description = (char *)strdup(description);
+				((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].description =
+				    (char *) strdup(description);
 				if (!((oph_json_obj_tree *) json->response[i].objcontent)[json->response[i].objcontent_num - 1].nodelinks[sourcenode].links[index].description) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "description");
 					return OPH_JSON_MEMORY_ERROR;
@@ -632,6 +672,13 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 
 	return OPH_JSON_SUCCESS;
 }
-int oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description) { return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, &global_flag); }
-int oph_json_add_tree_link_unsafe(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description) { return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, NULL); }
 
+int oph_json_add_tree_link(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description)
+{
+	return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, &global_flag);
+}
+
+int oph_json_add_tree_link_unsafe(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description)
+{
+	return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, NULL);
+}

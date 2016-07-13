@@ -47,48 +47,49 @@ typedef struct _workflow_s_nodes {
 	int nodes_num;
 } workflow_s_nodes;
 
-int workflow_s_add(workflow_s_nodes *s, workflow_node *node);
-int workflow_s_remove(workflow_s_nodes *s, workflow_node **node);
-int workflow_s_nodes_free(workflow_s_nodes *s);
-int workflow_node_free(workflow_node *node);
-int workflow_validate_fco(oph_workflow *wf);
-int oph_get_session_code(char* session_id, char* session_code);
+int workflow_s_add(workflow_s_nodes * s, workflow_node * node);
+int workflow_s_remove(workflow_s_nodes * s, workflow_node ** node);
+int workflow_s_nodes_free(workflow_s_nodes * s);
+int workflow_node_free(workflow_node * node);
+int workflow_validate_fco(oph_workflow * wf);
+int oph_get_session_code(char *session_id, char *session_code);
 
 // API functions
 
-int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num) {
+int oph_workflow_indexing(oph_workflow_task * tasks, int tasks_num)
+{
 	if (!tasks || tasks_num < 1) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	int i,j,k;
+	int i, j, k;
 	oph_workflow_task *curtask = NULL;
 
 	for (i = 0; i < tasks_num; i++) {
 		curtask = &(tasks[i]);
 		for (j = 0; j < curtask->deps_num; j++) {
-			if (!strcmp(curtask->deps[j].task_name,curtask->name)) {
-				pmesg(LOG_ERROR,__FILE__,__LINE__,"Loop edges not allowed!\n");
+			if (!strcmp(curtask->deps[j].task_name, curtask->name)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Loop edges not allowed!\n");
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 			for (k = 0; k < tasks_num; k++) {
-				if (!strcmp(curtask->deps[j].task_name,tasks[k].name)) {
+				if (!strcmp(curtask->deps[j].task_name, tasks[k].name)) {
 					curtask->deps[j].task_index = k;
 					if (tasks[k].dependents_indexes_num == 0) {
-						tasks[k].dependents_indexes = (int *) calloc(1,sizeof(int));
+						tasks[k].dependents_indexes = (int *) calloc(1, sizeof(int));
 						if (!(tasks[k].dependents_indexes)) {
-							pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating dependents indexes\n");
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating dependents indexes\n");
 							return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 						}
 						tasks[k].dependents_indexes[0] = i;
 						tasks[k].dependents_indexes_num++;
 					} else {
 						int *tmp = tasks[k].dependents_indexes;
-						tasks[k].dependents_indexes = (int *) realloc(tasks[k].dependents_indexes,(tasks[k].dependents_indexes_num + 1)*sizeof(int));
+						tasks[k].dependents_indexes = (int *) realloc(tasks[k].dependents_indexes, (tasks[k].dependents_indexes_num + 1) * sizeof(int));
 						if (!(tasks[k].dependents_indexes)) {
 							tasks[k].dependents_indexes = tmp;
-							pmesg(LOG_ERROR,__FILE__,__LINE__,"Error reallocating dependents indexes\n");
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Error reallocating dependents indexes\n");
 							return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 						}
 						tasks[k].dependents_indexes[tasks[k].dependents_indexes_num] = i;
@@ -98,7 +99,7 @@ int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num) {
 				}
 			}
 			if (k >= tasks_num) {
-				pmesg(LOG_ERROR,__FILE__,__LINE__,"Dependency task name not found!\n");
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Dependency task name not found!\n");
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 		}
@@ -107,85 +108,90 @@ int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num) {
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_validate(oph_workflow *workflow) {
+int oph_workflow_validate(oph_workflow * workflow)
+{
 	if (!workflow || !(workflow->tasks)) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
-
 	// Check for uniqueness of task name
-	int i,j,k;
+	int i, j, k;
 	for (i = 0; i < workflow->tasks_num; i++)
 		for (j = 0; j < workflow->tasks_num; j++)
-			if ((i!=j) && !strcmp(workflow->tasks[i].name,workflow->tasks[j].name))
+			if ((i != j) && !strcmp(workflow->tasks[i].name, workflow->tasks[j].name))
 				return OPH_WORKFLOW_EXIT_TASK_NAME_ERROR;
 
 	// Create graph from tasks
 	workflow_node *graph = NULL;
-	graph = (workflow_node *) calloc(workflow->tasks_num,sizeof(workflow_node));
+	graph = (workflow_node *) calloc(workflow->tasks_num, sizeof(workflow_node));
 	if (!graph) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating graph\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating graph\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
 	for (i = 0; i < workflow->tasks_num; i++) {
 		if (workflow->tasks[i].deps_num >= 1) {
-			graph[i].in_edges = (int *) calloc(workflow->tasks[i].deps_num,sizeof(int));
+			graph[i].in_edges = (int *) calloc(workflow->tasks[i].deps_num, sizeof(int));
 			if (!(graph[i].in_edges)) {
-				for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+				for (k = 0; k < workflow->tasks_num; k++)
+					workflow_node_free(&(graph[k]));
 				free(graph);
 				graph = NULL;
-				pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating in_edges\n");
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating in_edges\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 			graph[i].in_edges_size = workflow->tasks[i].deps_num;
 			graph[i].in_edges_num = workflow->tasks[i].deps_num;
-			for (j = 0; j < workflow->tasks[i].deps_num; j++) graph[i].in_edges[j] = workflow->tasks[i].deps[j].task_index;
+			for (j = 0; j < workflow->tasks[i].deps_num; j++)
+				graph[i].in_edges[j] = workflow->tasks[i].deps[j].task_index;
 		}
 		if (workflow->tasks[i].dependents_indexes_num >= 1) {
-			graph[i].out_edges = (int *) calloc(workflow->tasks[i].dependents_indexes_num,sizeof(int));
+			graph[i].out_edges = (int *) calloc(workflow->tasks[i].dependents_indexes_num, sizeof(int));
 			if (!(graph[i].out_edges)) {
-				for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+				for (k = 0; k < workflow->tasks_num; k++)
+					workflow_node_free(&(graph[k]));
 				free(graph);
 				graph = NULL;
-				pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating out_edges\n");
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating out_edges\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 			graph[i].out_edges_size = workflow->tasks[i].dependents_indexes_num;
 			graph[i].out_edges_num = workflow->tasks[i].dependents_indexes_num;
-			for (j = 0; j < workflow->tasks[i].dependents_indexes_num; j++) graph[i].out_edges[j] = workflow->tasks[i].dependents_indexes[j];
+			for (j = 0; j < workflow->tasks[i].dependents_indexes_num; j++)
+				graph[i].out_edges[j] = workflow->tasks[i].dependents_indexes[j];
 		}
 		graph[i].index = i;
 	}
 
 	/*  Test for DAG through Topological Sort
 	 *
-	 *	S ← Set of all nodes with no incoming edges
-	 *	while S is non-empty do
-	 *	    remove a node n from S
-	 *	    for each node m with an edge e from n to m do
-	 *	        remove edge e from the graph
-	 *	        if m has no other incoming edges then
-	 *	            insert m into S
-	 *	if graph has edges then
-	 *	    return error (graph has at least one cycle)
-	 *	else
-	 *	    return success (graph has no cycles)
+	 *      S ← Set of all nodes with no incoming edges
+	 *      while S is non-empty do
+	 *          remove a node n from S
+	 *          for each node m with an edge e from n to m do
+	 *              remove edge e from the graph
+	 *              if m has no other incoming edges then
+	 *                  insert m into S
+	 *      if graph has edges then
+	 *          return error (graph has at least one cycle)
+	 *      else
+	 *          return success (graph has no cycles)
 	 */
 
-	//	S ← Set of all nodes with no incoming edges
+	//      S ← Set of all nodes with no incoming edges
 	workflow_s_nodes S;
 	S.head = NULL;
 	S.tail = NULL;
 	S.nodes_num = 0;
 	for (i = 0; i < workflow->tasks_num; i++) {
 		if (graph[i].in_edges_num == 0) {
-			if (workflow_s_add(&S,&(graph[i]))) {
-				for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+			if (workflow_s_add(&S, &(graph[i]))) {
+				for (k = 0; k < workflow->tasks_num; k++)
+					workflow_node_free(&(graph[k]));
 				free(graph);
 				graph = NULL;
 				workflow_s_nodes_free(&S);
-				pmesg(LOG_ERROR,__FILE__,__LINE__,"Error setting S\n");
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Error setting S\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 		}
@@ -193,22 +199,22 @@ int oph_workflow_validate(oph_workflow *workflow) {
 
 	workflow_node *n = NULL;
 
-	//	while S is non-empty do
+	//      while S is non-empty do
 	while (S.nodes_num != 0) {
-		//	    remove a node n from S
-		if (workflow_s_remove(&S,&n)) {
-			for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+		//          remove a node n from S
+		if (workflow_s_remove(&S, &n)) {
+			for (k = 0; k < workflow->tasks_num; k++)
+				workflow_node_free(&(graph[k]));
 			free(graph);
 			graph = NULL;
 			workflow_s_nodes_free(&S);
-			pmesg(LOG_ERROR,__FILE__,__LINE__,"Error removing node from S\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error removing node from S\n");
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
-
-		//	    for each node m with an edge e from n to m do
+		//          for each node m with an edge e from n to m do
 		for (i = 0; i < n->out_edges_size; i++) {
 			if (n->out_edges[i] != -1) {
-				//	        remove edge e from the graph
+				//              remove edge e from the graph
 				int index = n->out_edges[i];
 				n->out_edges[i] = -1;
 				n->out_edges_num--;
@@ -216,15 +222,16 @@ int oph_workflow_validate(oph_workflow *workflow) {
 					if (graph[index].in_edges[j] == n->index) {
 						graph[index].in_edges[j] = -1;
 						graph[index].in_edges_num--;
-						//	        if m has no other incoming edges then
+						//              if m has no other incoming edges then
 						if (graph[index].in_edges_num == 0) {
-							//	            insert m into S
-							if (workflow_s_add(&S,&(graph[index]))) {
-								for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+							//                  insert m into S
+							if (workflow_s_add(&S, &(graph[index]))) {
+								for (k = 0; k < workflow->tasks_num; k++)
+									workflow_node_free(&(graph[k]));
 								free(graph);
 								graph = NULL;
 								workflow_s_nodes_free(&S);
-								pmesg(LOG_ERROR,__FILE__,__LINE__,"Error adding a node to S\n");
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Error adding a node to S\n");
 								return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 							}
 						}
@@ -236,33 +243,36 @@ int oph_workflow_validate(oph_workflow *workflow) {
 	}
 
 	for (i = 0; i < workflow->tasks_num; i++) {
-		//	if graph has edges then
+		//      if graph has edges then
 		if (graph[i].in_edges_num != 0 || graph[i].out_edges_num != 0) {
-			for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+			for (k = 0; k < workflow->tasks_num; k++)
+				workflow_node_free(&(graph[k]));
 			free(graph);
 			graph = NULL;
 			workflow_s_nodes_free(&S);
-			pmesg(LOG_ERROR,__FILE__,__LINE__,"Graph is not a DAG!\n");
-			//	    return error (graph has at least one cycle)
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Graph is not a DAG!\n");
+			//          return error (graph has at least one cycle)
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
 	}
 
-	for (k = 0; k < workflow->tasks_num; k++) workflow_node_free(&(graph[k]));
+	for (k = 0; k < workflow->tasks_num; k++)
+		workflow_node_free(&(graph[k]));
 	free(graph);
 	graph = NULL;
 	workflow_s_nodes_free(&S);
 
 	// Check for flow control operators
-	if (workflow_validate_fco(workflow)) return OPH_WORKFLOW_EXIT_FLOW_CONTROL_ERROR;
+	if (workflow_validate_fco(workflow))
+		return OPH_WORKFLOW_EXIT_FLOW_CONTROL_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num)
+int oph_workflow_init(oph_workflow_task * tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num)
 {
 	if (!tasks || tasks_num < 1 || !initial_tasks_indexes || !initial_tasks_indexes_num) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
@@ -270,58 +280,63 @@ int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tas
 	(*initial_tasks_indexes_num) = 0;
 
 	int i;
-	for (i = 0; i < tasks_num; i++) if (tasks[i].deps_num < 1) (*initial_tasks_indexes_num)++;
+	for (i = 0; i < tasks_num; i++)
+		if (tasks[i].deps_num < 1)
+			(*initial_tasks_indexes_num)++;
 
-	if ((*initial_tasks_indexes_num)==0) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"There must be at least 1 independent task!\n");
+	if ((*initial_tasks_indexes_num) == 0) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "There must be at least 1 independent task!\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	(*initial_tasks_indexes) = (int *) calloc((*initial_tasks_indexes_num),sizeof(int));
+	(*initial_tasks_indexes) = (int *) calloc((*initial_tasks_indexes_num), sizeof(int));
 	if (!(*initial_tasks_indexes)) {
 		(*initial_tasks_indexes_num) = 0;
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating initial tasks indexes\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating initial tasks indexes\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
-	int j=0;
+	int j = 0;
 	for (i = 0; i < tasks_num; i++) {
 		if (tasks[i].deps_num < 1) {
 			(*initial_tasks_indexes)[j] = i;
 			j++;
-			if (j == (*initial_tasks_indexes_num)) break;
+			if (j == (*initial_tasks_indexes_num))
+				break;
 		}
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_gparent_of(oph_workflow *wf, int k)
+int oph_gparent_of(oph_workflow * wf, int k)
 {
-	if (k<0) return -2;
+	if (k < 0)
+		return -2;
 	int p = wf->tasks[k].parent;
-	if (p<0) return -2;
-	do
-	{
+	if (p < 0)
+		return -2;
+	do {
 		k = p;
 		p = wf->tasks[k].parent;
 	}
-	while (p>=0);
+	while (p >= 0);
 	return k;
 }
 
 // Other internal functions
 
-int workflow_s_add(workflow_s_nodes *s, workflow_node *node) {
+int workflow_s_add(workflow_s_nodes * s, workflow_node * node)
+{
 	if (!s || !node) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	if (s->tail) {
-		workflow_s_node *s_node = (workflow_s_node *) calloc(1,sizeof(workflow_s_node));
+		workflow_s_node *s_node = (workflow_s_node *) calloc(1, sizeof(workflow_s_node));
 		if (!s_node) {
-			pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating s_node\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating s_node\n");
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		s_node->node = node;
@@ -330,9 +345,9 @@ int workflow_s_add(workflow_s_nodes *s, workflow_node *node) {
 		s->tail = s_node;
 		s->nodes_num++;
 	} else {
-		workflow_s_node *s_node = (workflow_s_node *) calloc(1,sizeof(workflow_s_node));
+		workflow_s_node *s_node = (workflow_s_node *) calloc(1, sizeof(workflow_s_node));
 		if (!s_node) {
-			pmesg(LOG_ERROR,__FILE__,__LINE__,"Error allocating s_node\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating s_node\n");
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		s_node->node = node;
@@ -345,9 +360,10 @@ int workflow_s_add(workflow_s_nodes *s, workflow_node *node) {
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_s_remove(workflow_s_nodes *s, workflow_node **node) {
+int workflow_s_remove(workflow_s_nodes * s, workflow_node ** node)
+{
 	if (!s || !node) {
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
@@ -355,21 +371,24 @@ int workflow_s_remove(workflow_s_nodes *s, workflow_node **node) {
 		*node = s->head->node;
 	} else {
 		*node = NULL;
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Empty list!\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Empty list!\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	workflow_s_node *tmp = s->head->next;
 	free(s->head);
 	s->head = tmp;
-	if (tmp==NULL) s->tail = NULL;
+	if (tmp == NULL)
+		s->tail = NULL;
 	s->nodes_num--;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_s_nodes_free(workflow_s_nodes *s) {
-	if (!s) return OPH_WORKFLOW_EXIT_SUCCESS;
+int workflow_s_nodes_free(workflow_s_nodes * s)
+{
+	if (!s)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	workflow_s_node *tmp = NULL;
 	workflow_s_node *ptr = s->head;
 	while (ptr) {
@@ -383,240 +402,273 @@ int workflow_s_nodes_free(workflow_s_nodes *s) {
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_node_free(workflow_node *node) {
-	if (!node) return OPH_WORKFLOW_EXIT_SUCCESS;
+int workflow_node_free(workflow_node * node)
+{
+	if (!node)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	if (node->in_edges) {
 		free(node->in_edges);
-		node->in_edges=NULL;
-		node->in_edges_num=0;
-		node->in_edges_size=0;
+		node->in_edges = NULL;
+		node->in_edges_num = 0;
+		node->in_edges_size = 0;
 	}
 	if (node->out_edges) {
 		free(node->out_edges);
-		node->out_edges=NULL;
-		node->out_edges_num=0;
-		node->out_edges_size=0;
+		node->out_edges = NULL;
+		node->out_edges_num = 0;
+		node->out_edges_size = 0;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_is_child_of(oph_workflow *wf, int p, int c)
+int oph_workflow_is_child_of(oph_workflow * wf, int p, int c)
 {
-	if (!wf || (p>=wf->tasks_num) || (c<0) || (c>=wf->tasks_num)) return 0;
-	if ((p<0) || (p==c)) return 1;
-	int i,j;
-	for (i=0;i<wf->tasks[p].dependents_indexes_num;++i)
-	{
+	if (!wf || (p >= wf->tasks_num) || (c < 0) || (c >= wf->tasks_num))
+		return 0;
+	if ((p < 0) || (p == c))
+		return 1;
+	int i, j;
+	for (i = 0; i < wf->tasks[p].dependents_indexes_num; ++i) {
 		j = wf->tasks[p].dependents_indexes[i];
-		if (oph_workflow_is_child_of(wf, j, c)) return 1;
+		if (oph_workflow_is_child_of(wf, j, c))
+			return 1;
 	}
 	return 0;
 }
 
-unsigned int workflow_number_of(oph_workflow *wf, int k, int p, int gp, const char* op, const char* nop, char* flag, int bracket_number, int* child)
+unsigned int workflow_number_of(oph_workflow * wf, int k, int p, int gp, const char *op, const char *nop, char *flag, int bracket_number, int *child)
 {
-	if (!wf || (k<0) || (k>=wf->tasks_num)) return 0;
-	int i,j,res=0,bn;
-	for (i=0;i<wf->tasks[k].dependents_indexes_num;++i)
-	{
+	if (!wf || (k < 0) || (k >= wf->tasks_num))
+		return 0;
+	int i, j, res = 0, bn;
+	for (i = 0; i < wf->tasks[k].dependents_indexes_num; ++i) {
 		j = wf->tasks[k].dependents_indexes[i];
-		if (!strncasecmp(wf->tasks[j].operator,op,OPH_WORKFLOW_MAX_STRING)) // Found an "end-task"
+		if (!strncasecmp(wf->tasks[j].operator, op, OPH_WORKFLOW_MAX_STRING))	// Found an "end-task"
 		{
-			if (bracket_number) res += workflow_number_of(wf, j, p, gp, op, nop, flag, bracket_number-1, child);
-			else if (flag[j])
-			{
+			if (bracket_number)
+				res += workflow_number_of(wf, j, p, gp, op, nop, flag, bracket_number - 1, child);
+			else if (flag[j]) {
 				res++;
-				flag[j]=0; // Mark this task in order to avoid to count it more times
-				if ((wf->tasks[j].parent < 0) || (wf->tasks[j].parent == p))
-				{
+				flag[j] = 0;	// Mark this task in order to avoid to count it more times
+				if ((wf->tasks[j].parent < 0) || (wf->tasks[j].parent == p)) {
 					wf->tasks[j].parent = p;
 					wf->tasks[p].child = j;
-					if (child) *child = j;
-				}
-				else if ((wf->tasks[j].parent != p) && (wf->tasks[j].parent != gp)) res++; // Performance improvement
+					if (child)
+						*child = j;
+				} else if ((wf->tasks[j].parent != p) && (wf->tasks[j].parent != gp))
+					res++;	// Performance improvement
 				wf->tasks[j].branch_num++;
 			}
-		}
-		else
-		{
+		} else {
 			bn = bracket_number;
-			char tmp[1+strlen(nop)], check=0;
-			strcpy(tmp,nop);
-			char *save_pointer = NULL, *pch = strtok_r(tmp,OPH_WORKFLOW_OP_SEPARATOR,&save_pointer);
-			while (pch)
-			{
-				if (!strncasecmp(wf->tasks[j].operator,pch,OPH_WORKFLOW_MAX_STRING)) { check=1; break; }
-				pch = strtok_r(NULL,OPH_WORKFLOW_OP_SEPARATOR,&save_pointer);
+			char tmp[1 + strlen(nop)], check = 0;
+			strcpy(tmp, nop);
+			char *save_pointer = NULL, *pch = strtok_r(tmp, OPH_WORKFLOW_OP_SEPARATOR, &save_pointer);
+			while (pch) {
+				if (!strncasecmp(wf->tasks[j].operator, pch, OPH_WORKFLOW_MAX_STRING)) {
+					check = 1;
+					break;
+				}
+				pch = strtok_r(NULL, OPH_WORKFLOW_OP_SEPARATOR, &save_pointer);
 			}
-			if (check)
-			{
+			if (check) {
 				bn++;
-				if (wf->tasks[p].nesting_level < bn) wf->tasks[p].nesting_level = bn;
+				if (wf->tasks[p].nesting_level < bn)
+					wf->tasks[p].nesting_level = bn;
 			}
 			res += workflow_number_of(wf, j, p, gp, op, nop, flag, bn, child);
 		}
-		if (res>1) break; // Performance improvement
+		if (res > 1)
+			break;	// Performance improvement
 	}
 	return res;
 }
 
-int workflow_validate_fco(oph_workflow *wf)
+int workflow_validate_fco(oph_workflow * wf)
 {
-	if (!wf)
-	{
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null pointer!\n");
+	if (!wf) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer!\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	int i,k,kk,child;
+	int i, k, kk, child;
 	char flag[wf->tasks_num];
 	unsigned int number;
 
-	for (k=0; k<wf->tasks_num; k++) wf->tasks[k].parent = wf->tasks[k].child = -1;
+	for (k = 0; k < wf->tasks_num; k++)
+		wf->tasks[k].parent = wf->tasks[k].child = -1;
 
-	for (k=0; k<wf->tasks_num; k++)
-	{
-		if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_FOR,OPH_WORKFLOW_MAX_STRING))
-		{
-			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ENDFOR,OPH_OPERATOR_FOR,flag,0,&child);
-			if ( !number || (number>1) ) break;
-			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDFOR,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-			if (i<wf->tasks_num) break;
-		}
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_IF,OPH_WORKFLOW_MAX_STRING))
-		{
-			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			child=-1;
-			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
-			if (number>1) break;
-			if (child>=0)
-			{
-				for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSEIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-				if (i<wf->tasks_num) break;
-			}
-			else
-			{
-				for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-				child=-1;
-				number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
-				if (number>1) break;
-				if (child>=0)
-				{
-					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-					if (i<wf->tasks_num) break;
+	for (k = 0; k < wf->tasks_num; k++) {
+		if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
+			for (i = 0; i < wf->tasks_num; ++i)
+				flag[i] = 1;
+			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ENDFOR, OPH_OPERATOR_FOR, flag, 0, &child);
+			if (!number || (number > 1))
+				break;
+			for (i = 0; i < wf->tasks_num; ++i)
+				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDFOR, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
+					break;
+			if (i < wf->tasks_num)
+				break;
+		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_IF, OPH_WORKFLOW_MAX_STRING)) {
+			for (i = 0; i < wf->tasks_num; ++i)
+				flag[i] = 1;
+			child = -1;
+			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, 0, &child);
+			if (number > 1)
+				break;
+			if (child >= 0) {
+				for (i = 0; i < wf->tasks_num; ++i)
+					if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
+						break;
+				if (i < wf->tasks_num)
+					break;
+			} else {
+				for (i = 0; i < wf->tasks_num; ++i)
+					flag[i] = 1;
+				child = -1;
+				number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ELSE, OPH_OPERATOR_IF, flag, 0, &child);
+				if (number > 1)
+					break;
+				if (child >= 0) {
+					for (i = 0; i < wf->tasks_num; ++i)
+						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)
+						    && !oph_workflow_is_child_of(wf, i, child))
+							break;
+					if (i < wf->tasks_num)
+						break;
 				}
 			}
-			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			number = workflow_number_of(wf,k,k,k,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
-			if ( !number && (number>1) ) break;
-			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-			if (i<wf->tasks_num) break;
-		}
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSEIF,OPH_WORKFLOW_MAX_STRING))
-		{
-			kk = oph_gparent_of(wf,k);
-			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			child=-1;
-			number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ELSEIF,OPH_OPERATOR_IF,flag,0,&child);
-			if (number>1) break;
-			if (child>=0)
-			{
-				for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSEIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-				if (i<wf->tasks_num) break;
-			}
-			else
-			{
-				for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-				child=-1;
-				number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ELSE,OPH_OPERATOR_IF,flag,0,&child);
-				if (number>1) break;
-				if (child>=0)
-				{
-					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-					if (i<wf->tasks_num) break;
+			for (i = 0; i < wf->tasks_num; ++i)
+				flag[i] = 1;
+			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
+			if (!number && (number > 1))
+				break;
+			for (i = 0; i < wf->tasks_num; ++i)
+				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
+					break;
+			if (i < wf->tasks_num)
+				break;
+		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING)) {
+			kk = oph_gparent_of(wf, k);
+			for (i = 0; i < wf->tasks_num; ++i)
+				flag[i] = 1;
+			child = -1;
+			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, 0, &child);
+			if (number > 1)
+				break;
+			if (child >= 0) {
+				for (i = 0; i < wf->tasks_num; ++i)
+					if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
+						break;
+				if (i < wf->tasks_num)
+					break;
+			} else {
+				for (i = 0; i < wf->tasks_num; ++i)
+					flag[i] = 1;
+				child = -1;
+				number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ELSE, OPH_OPERATOR_IF, flag, 0, &child);
+				if (number > 1)
+					break;
+				if (child >= 0) {
+					for (i = 0; i < wf->tasks_num; ++i)
+						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)
+						    && !oph_workflow_is_child_of(wf, i, child))
+							break;
+					if (i < wf->tasks_num)
+						break;
+				} else {
+					for (i = 0; i < wf->tasks_num; ++i)
+						flag[i] = 1;
+					number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
+					if (!number || (number > 1))
+						break;
+					for (i = 0; i < wf->tasks_num; ++i)
+						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING)
+						    && !oph_workflow_is_child_of(wf, i, child))
+							break;
+					if (i < wf->tasks_num)
+						break;
 				}
-				else
-				{
-					for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-					number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
-					if ( !number || (number>1) ) break;
-					for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-					if (i<wf->tasks_num) break;
-				}
 			}
-		}
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING))
-		{
-			kk = oph_gparent_of(wf,k);
-			for (i=0;i<wf->tasks_num;++i) flag[i]=1;
-			number = workflow_number_of(wf,k,k,kk,OPH_OPERATOR_ENDIF,OPH_OPERATOR_IF,flag,0,&child);
-			if ( !number || (number>1) ) break;
-			for (i=0;i<wf->tasks_num;++i) if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf,i,child)) break;
-			if (i<wf->tasks_num) break;
+		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)) {
+			kk = oph_gparent_of(wf, k);
+			for (i = 0; i < wf->tasks_num; ++i)
+				flag[i] = 1;
+			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
+			if (!number || (number > 1))
+				break;
+			for (i = 0; i < wf->tasks_num; ++i)
+				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
+					break;
+			if (i < wf->tasks_num)
+				break;
 		}
 	}
-	if (k<wf->tasks_num)
-	{
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
+	if (k < wf->tasks_num) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	for (k=0; k<wf->tasks_num; k++) if (wf->tasks[k].parent < 0)
-	{
-		if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDFOR,OPH_WORKFLOW_MAX_STRING)) break;
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSEIF,OPH_WORKFLOW_MAX_STRING)) break;
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ELSE,OPH_WORKFLOW_MAX_STRING)) break;
-		else if (!strncasecmp(wf->tasks[k].operator,OPH_OPERATOR_ENDIF,OPH_WORKFLOW_MAX_STRING)) break;
-	}
-	if (k<wf->tasks_num)
-	{
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
+	for (k = 0; k < wf->tasks_num; k++)
+		if (wf->tasks[k].parent < 0) {
+			if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDFOR, OPH_WORKFLOW_MAX_STRING))
+				break;
+			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING))
+				break;
+			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING))
+				break;
+			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING))
+				break;
+		}
+	if (k < wf->tasks_num) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_set_basic_var(oph_workflow *wf)
+int oph_workflow_set_basic_var(oph_workflow * wf)
 {
-	if (!wf)
-	{
-		pmesg(LOG_ERROR,__FILE__,__LINE__,"Null param\n");
+	if (!wf) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	oph_workflow_var var;
-	var.caller = -1; // Don't care
+	var.caller = -1;	// Don't care
 
 	int i;
-	char* key[OPH_WORKFLOW_MIN_STRING] = OPH_WORKFLOW_BVAR_KEYS;
-	for (i=0; i<OPH_WORKFLOW_BVAR_KEYS_SIZE; ++i)
-	{
+	char *key[OPH_WORKFLOW_MIN_STRING] = OPH_WORKFLOW_BVAR_KEYS;
+	for (i = 0; i < OPH_WORKFLOW_BVAR_KEYS_SIZE; ++i) {
 		*var.svalue = 0;
-		switch (i)
-		{
+		switch (i) {
 			case 0:
-				if (wf->sessionid) strcpy(var.svalue,wf->sessionid);
+				if (wf->sessionid)
+					strcpy(var.svalue, wf->sessionid);
 				break;
 			case 1:
-				if (wf->sessionid)
-				{
+				if (wf->sessionid) {
 					char session_code[OPH_WORKFLOW_MAX_STRING];
-					if (oph_get_session_code(wf->sessionid, session_code)) pmesg(LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
-					else strcpy(var.svalue,session_code);
+					if (oph_get_session_code(wf->sessionid, session_code))
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+					else
+						strcpy(var.svalue, session_code);
 				}
 				break;
 			case 2:
-				if (wf->sessionid) snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING,"%d",wf->workflowid);
+				if (wf->sessionid)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", wf->workflowid);
 				break;
 			default:
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n",i,wf->name);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n", i, wf->name);
 		}
-		if (hashtbl_insert_with_size(wf->vars, key[i], (void *)&var, sizeof(oph_workflow_var))) pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n",key[i],wf->name);
-		else pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n",key[i],var.svalue,wf->name);
+		if (hashtbl_insert_with_size(wf->vars, key[i], (void *) &var, sizeof(oph_workflow_var)))
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n", key[i], wf->name);
+		else
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", key[i], var.svalue, wf->name);
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
-

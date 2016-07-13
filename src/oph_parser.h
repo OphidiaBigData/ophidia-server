@@ -132,33 +132,30 @@
 typedef enum { OPH_MODE_UNKNOWN, OPH_MODE_ASYNC, OPH_MODE_SYNC } oph_mode_type;
 typedef enum { OPH_NO_OPERATOR, OPH_LOG_INFO_OPERATOR, OPH_GET_CONFIG_OPERATOR, OPH_RESUME_OPERATOR, OPH_SERVICE_OPERATOR, OPH_MANAGE_SESSION_OPERATOR, OPH_CANCEL_OPERATOR } oph_known_operators;
 
-typedef struct _oph_argument
-{
-	char* key;
-	char* value;
-	struct _oph_argument* next;
+typedef struct _oph_argument {
+	char *key;
+	char *value;
+	struct _oph_argument *next;
 } oph_argument;
 
-typedef struct _oph_arguments
-{
+typedef struct _oph_arguments {
 	int id;
-	oph_argument* item;
-	struct _oph_arguments* next;
+	oph_argument *item;
+	struct _oph_arguments *next;
 } oph_arguments;
 
-int oph_init_args(oph_argument** args);
-int oph_cleanup_args(oph_argument** args);
+int oph_init_args(oph_argument ** args);
+int oph_cleanup_args(oph_argument ** args);
 
-int oph_parse_program(oph_argument** args, unsigned int* counter, const char* program);
-int oph_parse_query(oph_argument** args, unsigned int* counter, const char* query);
-int oph_get_arg(oph_argument* args, const char* key, char* value);
-int oph_set_arg(oph_argument** args, const char* key, const char* value);
-int oph_arg_to_string(oph_argument* args, char* string, int add_datacube_input);
+int oph_parse_program(oph_argument ** args, unsigned int *counter, const char *program);
+int oph_parse_query(oph_argument ** args, unsigned int *counter, const char *query);
+int oph_get_arg(oph_argument * args, const char *key, char *value);
+int oph_set_arg(oph_argument ** args, const char *key, const char *value);
+int oph_arg_to_string(oph_argument * args, char *string, int add_datacube_input);
 
-int oph_init_args_list(oph_arguments** list);
-int oph_append_args_list(oph_arguments** list, oph_argument* item, int id);
-int oph_order_args_list(oph_arguments** list);
-int oph_cleanup_args_list(oph_arguments** list);
+int oph_init_args_list(oph_arguments ** list);
+int oph_append_args_list(oph_arguments ** list, oph_argument * item, int id);
+int oph_order_args_list(oph_arguments ** list);
+int oph_cleanup_args_list(oph_arguments ** list);
 
-#endif /* OPH_PARSER_H */
-
+#endif				/* OPH_PARSER_H */

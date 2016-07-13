@@ -27,27 +27,27 @@
  * \param workflow Output OPH_WORKFLOW
  * \return 0 if successful
  */
-int oph_workflow_load(char *json_string, const char *username, oph_workflow **workflow);
+int oph_workflow_load(char *json_string, const char *username, oph_workflow ** workflow);
 
 /* \brief Function for JSON parsing and global variables substitution (ncores,cwd and cube)
  * \param workflow Input OPH_WORKFLOW
  * \param json_string Output JSON string
  * \return 0 if successful
  */
-int oph_workflow_store(oph_workflow *workflow, char **json_string);
+int oph_workflow_store(oph_workflow * workflow, char **json_string);
 
 /* \brief Function to index task names in deps and init dependents_indexes
  * \param tasks Array of tasks
  * \param tasks_num Number of tasks
  * \return 0 if successful
  */
-int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num);
+int oph_workflow_indexing(oph_workflow_task * tasks, int tasks_num);
 
 /* \brief Function for cyclic dependencies check
  * \param workflow Input OPH_WORKFLOW to be validated
  * \return 0 if successful
  */
-int oph_workflow_validate(oph_workflow *workflow);
+int oph_workflow_validate(oph_workflow * workflow);
 
 /* \brief Function for the setup of the initial array of independent tasks
  * \param tasks Array of tasks
@@ -56,7 +56,7 @@ int oph_workflow_validate(oph_workflow *workflow);
  * \param initial_tasks_indexes_num Number of initial tasks
  * \return 0 if successful
  */
-int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num);
+int oph_workflow_init(oph_workflow_task * tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num);
 
 /* \brief Function for extracting the submission string
  * \param workflow Input OPH_WORKFLOW
@@ -67,7 +67,7 @@ int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tas
  * \param error Output string indicating a possible error; the string has to be freed; it can NULL
  * \return 0 if successful
  */
-int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, int light_task_index, char** long_submission_string, char** short_submission_string, char** error);
+int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, int light_task_index, char **long_submission_string, char **short_submission_string, char **error);
 
 /* \brief Function for extracting the string submitted by the user
  * \param workflow Input OPH_WORKFLOW
@@ -76,7 +76,7 @@ int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, i
  * \param submitted_string Command string equivalent to workflow; the string has to be freed
  * \return 0 if successful
  */
-int oph_workflow_get_submitted_string(oph_workflow *workflow, int task_index, int light_task_index, int show_callback, char** submitted_string);
+int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, int light_task_index, int show_callback, char **submitted_string);
 
 /* \brief Function for checking dependences
  * \param workflow Input OPH_WORKFLOW
@@ -84,7 +84,7 @@ int oph_workflow_get_submitted_string(oph_workflow *workflow, int task_index, in
  * \param c Index of child task
  * \return 1 if the task c depends on the task p
  */
-int oph_workflow_is_child_of(oph_workflow *wf, int p, int c);
+int oph_workflow_is_child_of(oph_workflow * wf, int p, int c);
 
 /* \brief Function for variable substitution
  * \param workflow Input OPH_WORKFLOW
@@ -93,19 +93,19 @@ int oph_workflow_is_child_of(oph_workflow *wf, int p, int c);
  * \param error Pointer to save a possible error message
  * \return 1 in case of errors
  */
-int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, char* submit_string, char** error);
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, char *submit_string, char **error);
 
 /* \brief Function to set basic variables
  * \param workflow Input OPH_WORKFLOW
  * \return 1 in case of errors
  */
-int oph_workflow_set_basic_var(oph_workflow *workflow);
+int oph_workflow_set_basic_var(oph_workflow * workflow);
 
 /* \brief Function to extract the grand parent of a task
  * \param workflow Input OPH_WORKFLOW
  * \param p Index of child task
  * \return The index of grand parent of task k
  */
-int oph_gparent_of(oph_workflow *wf, int k);
+int oph_gparent_of(oph_workflow * wf, int k);
 
-#endif //__OPH_WORKFLOW_FUNCTIONS_H
+#endif				//__OPH_WORKFLOW_FUNCTIONS_H

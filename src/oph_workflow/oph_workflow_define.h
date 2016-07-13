@@ -74,4 +74,4 @@
 #define OPH_OPERATOR_ELSE		"oph_else"
 #define OPH_OPERATOR_ENDIF		"oph_endif"
 
-#endif //__OPH_WORKFLOW_DEFINE_H
+#endif				//__OPH_WORKFLOW_DEFINE_H

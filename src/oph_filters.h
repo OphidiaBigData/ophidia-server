@@ -58,8 +58,7 @@
 #define OPH_MF_ARG_FILE "file"
 #define OPH_MF_ARG_CONVENTION "convention"
 
-int oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophidiadb* oDB);
-int oph_filter_unsafe(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophidiadb* oDB);
+int oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB);
+int oph_filter_unsafe(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB);
 
-#endif /* OPH_FILTERS_H */
-
+#endif				/* OPH_FILTERS_H */

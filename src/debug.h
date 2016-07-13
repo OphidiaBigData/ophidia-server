@@ -47,7 +47,7 @@
 #else
 void pmesg(int level, const char *source, long int line_number, const char *format, ...);
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-void pmesg_safe(pthread_mutex_t* flag, int level, const char *source, long int line_number, const char *format, ...);
+void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int line_number, const char *format, ...);
 #endif
 /* print a message, if it is considered significant enough.
       Adapted from [K&R2], p. 174 */
@@ -55,7 +55,6 @@ void pmesg_safe(pthread_mutex_t* flag, int level, const char *source, long int l
 
 int get_debug_level();
 void set_debug_level(int level);
-void set_log_file(FILE* file);
+void set_log_file(FILE * file);
 
-#endif /* DEBUG_H */
-
+#endif				/* DEBUG_H */

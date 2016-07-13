@@ -32,49 +32,45 @@
 #define OPH_JOB_NUMBER_UNLIMITED -1
 #define OPH_JOB_SEPARATOR "|"
 
-typedef struct _oph_child_job_info
-{
+typedef struct _oph_child_job_info {
 	int jobid;
 	int marker_id;
 	int status;
 
-	struct _oph_child_job_info* next;
+	struct _oph_child_job_info *next;
 } oph_child_job_info;
 
-typedef struct _oph_job_info
-{
+typedef struct _oph_job_info {
 	int timestamp;
-	oph_workflow* wf;
+	oph_workflow *wf;
 
-	struct _oph_job_info* next;
+	struct _oph_job_info *next;
 } oph_job_info;
 
-typedef struct
-{
-	oph_job_info* head;
-	oph_job_info* tail;
+typedef struct {
+	oph_job_info *head;
+	oph_job_info *tail;
 	unsigned int counter;
 } oph_job_list;
 
-int oph_create_job_list(oph_job_list** list);
+int oph_create_job_list(oph_job_list ** list);
 
-oph_job_info* oph_find_job_in_job_list(oph_job_list* list, int jobid, oph_job_info** prev);
-int oph_insert_into_job_list(oph_job_list* list, oph_job_info* item);
-int oph_drop_from_job_list(oph_job_list* list, oph_job_info* item, oph_job_info* prev);
-int oph_delete_from_job_list(oph_job_list* list, oph_job_info* item, oph_job_info* prev);
+oph_job_info *oph_find_job_in_job_list(oph_job_list * list, int jobid, oph_job_info ** prev);
+int oph_insert_into_job_list(oph_job_list * list, oph_job_info * item);
+int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
+int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
 
-int oph_free_job_list(oph_job_list* list);
+int oph_free_job_list(oph_job_list * list);
 
-int oph_destroy_job_list(oph_job_list* list);
+int oph_destroy_job_list(oph_job_list * list);
 
-int oph_free_children_list(oph_child_job_info* child);
+int oph_free_children_list(oph_child_job_info * child);
 
-oph_job_info* oph_find_job_in_children_job_lists(oph_job_list* list, int jobid, oph_job_info** prev);
+oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid, oph_job_info ** prev);
 
-oph_job_info* oph_find_workflow_in_job_list_to_drop(oph_job_list* list, const char* sessionid, int workflowid, oph_job_info** prev);
-oph_job_info* oph_find_workflow_in_job_list(oph_job_list* list, const char* sessionid, int workflowid);
-oph_job_info* oph_find_marker_in_job_list(oph_job_list* list, const char* sessionid, int markerid, int* task_index, int* light_task_index);
-oph_job_info* oph_find_unstarted_in_job_list(oph_job_list* list);
+oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const char *sessionid, int workflowid, oph_job_info ** prev);
+oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *sessionid, int workflowid);
+oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessionid, int markerid, int *task_index, int *light_task_index);
+oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list);
 
-#endif /* OPH_JOB_LIST_H */
-
+#endif				/* OPH_JOB_LIST_H */

@@ -23,12 +23,11 @@
 extern pthread_mutex_t global_flag;
 #endif
 
-int oph_wf_list_append(oph_job_list* job_info, oph_workflow* wf)
+int oph_wf_list_append(oph_job_list * job_info, oph_workflow * wf)
 {
 	int k;
-	oph_job_info* item = (oph_job_info*)malloc(sizeof(oph_job_info));
-	if (!item)
-	{
+	oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+	if (!item) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to alloc memory for '%s'\n", wf->name);
 		return OPH_SERVER_ERROR;
 	}
@@ -39,15 +38,14 @@ int oph_wf_list_append(oph_job_list* job_info, oph_workflow* wf)
 	k = oph_insert_into_job_list(job_info, item);
 	pthread_mutex_unlock(&global_flag);
 
-	if (k)
-	{
-		if (k == OPH_JOB_LIST_FARM_FULL)
-		{
+	if (k) {
+		if (k == OPH_JOB_LIST_FARM_FULL) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The workflow has been queued.\n");
-			return OPH_SERVER_NO_RESPONSE; // The workflow has been queued
-		}
-		else if (k == OPH_JOB_LIST_FULL) pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Reached the maximum number of pending workflows.\n");
-		else pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to store data for '%s' in server memory\n", wf->name);
+			return OPH_SERVER_NO_RESPONSE;	// The workflow has been queued
+		} else if (k == OPH_JOB_LIST_FULL)
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Reached the maximum number of pending workflows.\n");
+		else
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to store data for '%s' in server memory\n", wf->name);
 		free(item);
 		return OPH_SERVER_ERROR;
 	}
@@ -55,21 +53,20 @@ int oph_wf_list_append(oph_job_list* job_info, oph_workflow* wf)
 	return OPH_SERVER_OK;
 }
 
-int oph_wf_list_drop(oph_job_list* job_info, int jobid)
+int oph_wf_list_drop(oph_job_list * job_info, int jobid)
 {
 	int result;
 	oph_job_info *item, *prev;
 	pthread_mutex_lock(&global_flag);
 	item = oph_find_job_in_job_list(job_info, jobid, &prev);
-	if (!item)
-	{
+	if (!item) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in searching data related to job %d.\n", jobid);
 		pthread_mutex_unlock(&global_flag);
 		return OPH_SERVER_OK;
 	}
 	result = oph_delete_from_job_list(job_info, item, prev);
 	pthread_mutex_unlock(&global_flag);
-	if (result) return OPH_SERVER_ERROR;
+	if (result)
+		return OPH_SERVER_ERROR;
 	return OPH_SERVER_OK;
 }
-

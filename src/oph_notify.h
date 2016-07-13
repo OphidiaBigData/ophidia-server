@@ -21,5 +21,4 @@
 //gsoap oph  service method-action:     oph_notify ""
 //gsoap oph  service method-documentation: oph_notify Notify a job status update
 
-int oph__oph_notify(xsd__string oph_notify_data, xsd__string oph_notify_json, xsd__int *oph_notify_response);
-
+int oph__oph_notify(xsd__string oph_notify_data, xsd__string oph_notify_json, xsd__int * oph_notify_response);

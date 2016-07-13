@@ -61,8 +61,8 @@ typedef struct _oph_json_obj_grid {
  * \param fieldtypes_num Number of columns (required)
  * \return 0 if successfull, N otherwise
  */
-int oph_json_add_grid(oph_json *json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num);
-int oph_json_add_grid_unsafe(oph_json *json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num);
+int oph_json_add_grid(oph_json * json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num);
+int oph_json_add_grid_unsafe(oph_json * json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num);
 
 /**
  * \brief Function to add a row to a grid object in OPH_JSON
@@ -71,12 +71,12 @@ int oph_json_add_grid_unsafe(oph_json *json, const char *objkey, const char *tit
  * \param values The row to be inserted
  * \return 0 if successfull, N otherwise
  */
-int oph_json_add_grid_row(oph_json *json, const char *objkey, char **values);
-int oph_json_add_grid_row_unsafe(oph_json *json, const char *objkey, char **values);
+int oph_json_add_grid_row(oph_json * json, const char *objkey, char **values);
+int oph_json_add_grid_row_unsafe(oph_json * json, const char *objkey, char **values);
 
 /***********OPH_JSON_OBJ_GRID INTERNAL FUNCTIONS***********/
 
 // Free a grid object contents
-int oph_json_free_grid(oph_json_obj_grid *obj);
+int oph_json_free_grid(oph_json_obj_grid * obj);
 
 #endif

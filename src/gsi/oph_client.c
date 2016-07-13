@@ -29,43 +29,42 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime);
 
 #define PLUGIN_DEFAULT_QUERY "operator=oph_list;exec_mode=sync;"
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-	struct soap     soap;
-	int             rc;
+	struct soap soap;
+	int rc;
 	unsigned short int port = PLUGIN_DEFAULT_PORT;
-	char            *server = PLUGIN_DEFAULT_HOSTNAME, *query = PLUGIN_DEFAULT_QUERY;
-	char            connection[128];
-	int             c, result=1;
+	char *server = PLUGIN_DEFAULT_HOSTNAME, *query = PLUGIN_DEFAULT_QUERY;
+	char connection[128];
+	int c, result = 1;
 	static char *USAGE = "\nUSAGE:\noph_client -s hostname -p port- q query -v\n";
 
-	fprintf(stdout,"%s",OPH_VERSION);
-	fprintf(stdout,"%s",OPH_DISCLAIMER2);
+	fprintf(stdout, "%s", OPH_VERSION);
+	fprintf(stdout, "%s", OPH_DISCLAIMER2);
 
 	while ((c = getopt(argc, argv, "s:p:q:vxz")) != -1) {
 		switch (c) {
-		case 's':
-			server = optarg;
-			break;
-		case 'p':
-			port = (unsigned short int) atoi(optarg);
-			break;
-		case 'q':
-			query = optarg;
-			break;
-		case 'v':
-			fprintf(stdout,"%s",OPH_VERSION);
-			exit(0);
-		case 'x':
-			fprintf(stdout,"%s",OPH_WARRANTY);
-			exit(0);
-		case 'z':
-			fprintf(stdout,"%s",OPH_CONDITIONS);
-			exit(0);
-		default:
-			fprintf(stderr, "\n%s\n", USAGE);
-			exit(1);
+			case 's':
+				server = optarg;
+				break;
+			case 'p':
+				port = (unsigned short int) atoi(optarg);
+				break;
+			case 'q':
+				query = optarg;
+				break;
+			case 'v':
+				fprintf(stdout, "%s", OPH_VERSION);
+				exit(0);
+			case 'x':
+				fprintf(stdout, "%s", OPH_WARRANTY);
+				exit(0);
+			case 'z':
+				fprintf(stdout, "%s", OPH_CONDITIONS);
+				exit(0);
+			default:
+				fprintf(stderr, "\n%s\n", USAGE);
+				exit(1);
 		}
 	}
 
@@ -74,12 +73,12 @@ main(int argc, char **argv)
 	globus_module_activate(GLOBUS_GSI_GSSAPI_MODULE);
 
 	soap_init(&soap);
-    
+
 	/* now we register the GSI plugin */
 
 	if (soap_register_plugin(&soap, globus_gsi)) {
 		soap_print_fault(&soap, stderr);
-        	/* deallocate gsoap run-time environment */
+		/* deallocate gsoap run-time environment */
 		soap_destroy(&soap);
 		soap_end(&soap);
 		soap_done(&soap);
@@ -93,16 +92,16 @@ main(int argc, char **argv)
 
 	/* we begin acquiring our credential */
 	rc = gsi_acquire_credential(&soap);
-	if (rc < 0){
-        	/* deallocate gsoap run-time environment */
+	if (rc < 0) {
+		/* deallocate gsoap run-time environment */
 		soap_destroy(&soap);
 		soap_end(&soap);
 		soap_done(&soap);
 		/* deactivate globus module */
 		globus_module_deactivate(GLOBUS_GSI_GSSAPI_MODULE);
 		exit(EXIT_FAILURE);
-        }
- 
+	}
+
 	/* setup of GSI channel */
 	gsi_set_replay(&soap, GLOBUS_TRUE);
 	gsi_set_sequence(&soap, GLOBUS_TRUE);
@@ -117,14 +116,14 @@ main(int argc, char **argv)
 	soap.passwd = NULL;
 
 	struct oph__ophResponse response;
-	if (soap_call_oph__ophExecuteMain(&soap, connection, "", query, &response) == SOAP_OK)
-	{
-		printf("Return: %d\nJobID: %s\nResponse: %s\n",(int)response.error,response.error || !response.jobid?"":response.jobid,response.error || !response.response?"":response.response);
-		result=response.error;
-	}
-	else soap_print_fault(&soap, stderr);
+	if (soap_call_oph__ophExecuteMain(&soap, connection, "", query, &response) == SOAP_OK) {
+		printf("Return: %d\nJobID: %s\nResponse: %s\n", (int) response.error, response.error || !response.jobid ? "" : response.jobid, response.error
+		       || !response.response ? "" : response.response);
+		result = response.error;
+	} else
+		soap_print_fault(&soap, stderr);
 
-        /* deallocate gsoap run-time environment */
+	/* deallocate gsoap run-time environment */
 	soap_destroy(&soap);
 	soap_end(&soap);
 	soap_done(&soap);
@@ -156,26 +155,25 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
 	char grid_proxy_init_args[] = "-valid 2:0";
 	char *globus_location;
 	char init[] = "/bin/grid-proxy-init -pwstdin ";
-	char destroy[] = "/bin/grid-proxy-destroy"; 
+	char destroy[] = "/bin/grid-proxy-destroy";
 	int rc;
-	FILE        *fp;
-	char        *gpi, *gpd;
-	OM_uint32   major_status, minor_status;
+	FILE *fp;
+	char *gpi, *gpd;
+	OM_uint32 major_status, minor_status;
 
 	struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
 
-	if(lifetime < 120) /* our credential will expire in two minutes, so let's renew it */
-	{
+	if (lifetime < 120) {	/* our credential will expire in two minutes, so let's renew it */
 
 		/* get the Globus Toolkit path */
 		globus_location = strdup(getenv("GLOBUS_LOCATION"));
 
-		if(!globus_location)
+		if (!globus_location)
 			return 1;
 
 		/* setup the grid-proxy-init command */
-		gpi = (char *) calloc(strlen(globus_location)+strlen(init)+strlen(grid_proxy_init_args)+1, sizeof(char));
-		if(!gpi){
+		gpi = (char *) calloc(strlen(globus_location) + strlen(init) + strlen(grid_proxy_init_args) + 1, sizeof(char));
+		if (!gpi) {
 			free(globus_location);
 			return 1;
 		}
@@ -185,8 +183,8 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
 		strncat(gpi, grid_proxy_init_args, strlen(grid_proxy_init_args));
 
 		/* setup the grid-proxy-destroy command */
-		gpd = (char *) calloc(strlen(globus_location)+strlen(destroy)+1, sizeof(char));
-		if(!gpd){
+		gpd = (char *) calloc(strlen(globus_location) + strlen(destroy) + 1, sizeof(char));
+		if (!gpd) {
 			free(globus_location);
 			free(gpi);
 			return 1;
@@ -196,7 +194,7 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
 
 		/* destroy the current, expired proxy */
 		fp = popen(gpd, "r+");
-		if(!fp){
+		if (!fp) {
 			free(globus_location);
 			free(gpi);
 			free(gpd);
@@ -206,18 +204,18 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
 
 
 		/* release our previous, expired  credential */
-		if(data->credential != GSS_C_NO_CREDENTIAL){
+		if (data->credential != GSS_C_NO_CREDENTIAL) {
 			major_status = gss_release_cred(&minor_status, &data->credential);
-			if(major_status != GSS_S_COMPLETE){
+			if (major_status != GSS_S_COMPLETE) {
 				fprintf(stderr, "%s:  gss_release_cred() failed\n", GSI_PLUGIN_ID);
 			}
 			data->credential = GSS_C_NO_CREDENTIAL;
-		}  
+		}
 
 
 		/* create a new proxy, enter the password on behalf of the user */
 		fp = popen(gpi, "r+");
-		if(!fp){
+		if (!fp) {
 			free(globus_location);
 			free(gpi);
 			return 1;
@@ -233,8 +231,9 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
 		rc = gsi_acquire_credential(soap);
 		return rc;
 
-	} /* end if */
+	}
 
+	/* end if */
 	/* if we arrive here, then our credential is still valid for more than two minutes */
 	return 0;
 }
@@ -250,13 +249,12 @@ int gsi_plugin_credential_renew_callback(struct soap *soap, int lifetime)
  *
  */
 
-int
-gsi_authorization_callback(struct soap * soap, char *distinguished_name)
+int gsi_authorization_callback(struct soap *soap, char *distinguished_name)
 {
-	char           buf[256] = {'\0'};
-	char           *auth;
-	char           *auth_file;
-	FILE           *fd;
+	char buf[256] = { '\0' };
+	char *auth;
+	char *auth_file;
+	FILE *fd;
 
 	struct gsi_plugin_data *data;
 
@@ -299,4 +297,3 @@ gsi_authorization_callback(struct soap * soap, char *distinguished_name)
 	globus_libc_printf("Sorry, service %s is not authorized\n", distinguished_name);
 	return 1;
 }
-

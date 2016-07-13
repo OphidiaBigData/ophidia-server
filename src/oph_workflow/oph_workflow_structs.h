@@ -149,8 +149,8 @@ typedef struct _oph_workflow_task {
 	int parallel_mode;
 	char is_marked;
 	HASHTBL *vars;
-	char* on_error;
-	char* on_exit;
+	char *on_error;
+	char *on_exit;
 	int is_skipped;
 	int branch_num;
 } oph_workflow_task;
@@ -178,11 +178,11 @@ typedef struct _oph_workflow_light_task_out {
 typedef struct _oph_workflow_task_out {
 	int markerid;
 	int status;
-	char* name;
+	char *name;
 	oph_workflow_light_task_out *light_task_outs;
 	int light_tasks_num;
 	char *response;
-	struct _oph_workflow_task_out* next;
+	struct _oph_workflow_task_out *next;
 } oph_workflow_task_out;
 
 /* \brief Struct for task data in the stack of an OPH_WORKFLOW
@@ -285,22 +285,22 @@ typedef struct _oph_workflow {
 	int parallel_mode;
 	HASHTBL *vars;
 	oph_workflow_stack *stack;
-	char* on_error;
-	char* on_exit;
+	char *on_error;
+	char *on_exit;
 } oph_workflow;
 
 /* Functions for structs cleanup */
-int oph_workflow_free(oph_workflow *workflow);
-int oph_workflow_task_free(oph_workflow_task *task);
-int oph_workflow_dep_free(oph_workflow_dep *dep);
-int oph_workflow_light_task_free(oph_workflow_light_task *light_task);
-int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out);
-int oph_workflow_push(oph_workflow *workflow, int caller, char* name, char **svalues, int *ivalues, int values_num);
-int oph_workflow_pop(oph_workflow *workflow, oph_workflow_stack* prev);
-int oph_workflow_expand(oph_workflow *workflow, int tasks_num);
-int oph_workflow_copy_task(oph_workflow_task *stask, oph_workflow_task *dtask, int suffix);
+int oph_workflow_free(oph_workflow * workflow);
+int oph_workflow_task_free(oph_workflow_task * task);
+int oph_workflow_dep_free(oph_workflow_dep * dep);
+int oph_workflow_light_task_free(oph_workflow_light_task * light_task);
+int oph_workflow_save_task_output(oph_workflow_task * task, oph_workflow_task_out ** task_out);
+int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **svalues, int *ivalues, int values_num);
+int oph_workflow_pop(oph_workflow * workflow, oph_workflow_stack * prev);
+int oph_workflow_expand(oph_workflow * workflow, int tasks_num);
+int oph_workflow_copy_task(oph_workflow_task * stask, oph_workflow_task * dtask, int suffix);
 
 // Others
-int oph_output_data_free(char** output, int num);
+int oph_output_data_free(char **output, int num);
 
-#endif //__OPH_WORKFLOW_STRUCTS_H
+#endif				//__OPH_WORKFLOW_STRUCTS_H

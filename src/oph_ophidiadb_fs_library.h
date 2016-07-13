@@ -42,15 +42,15 @@
 #define MYSQL_QUERY_FS_RETRIEVE_PARENT_FOLDER "SELECT idparent, foldername FROM folder WHERE idfolder = %d;"
 #define MYSQL_QUERY_FS_CONTAINER_STATUS "UPDATE container SET container.hidden= %d WHERE idcontainer = %d;"
 #define MYSQL_QUERY_FS_MV "UPDATE container SET container.idfolder=%d, container.containername='%s' WHERE container.idcontainer=%d;"
-#define MYSQL_QUERY_FS_LIST_0 "SELECT foldername, idfolder FROM folder WHERE folder.idparent=%d;" 
-#define MYSQL_QUERY_FS_LIST_1 "SELECT foldername AS name, 1 AS type FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0;" 
-#define MYSQL_QUERY_FS_LIST_1_WC "SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0 AND containername = '%s';" 
-#define MYSQL_QUERY_FS_LIST_1_H "SELECT foldername AS name, 1 AS type FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0 UNION SELECT containername AS name, 3 AS type FROM container WHERE container.idfolder=%d AND hidden=1" 
-#define MYSQL_QUERY_FS_LIST_1_H_WC "SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND containername = '%s' AND hidden=0 UNION SELECT containername AS name, 3 AS type FROM container WHERE container.idfolder=%d AND hidden=1 AND containername = '%s';" 
-#define MYSQL_QUERY_FS_LIST_2  "SELECT foldername AS name, 1 AS type, NULL AS idcontainer, NULL AS iddatacube FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=0;" 
-#define MYSQL_QUERY_FS_LIST_2_WC  "SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=0 AND containername = '%s';" 
-#define MYSQL_QUERY_FS_LIST_2_H  "SELECT foldername AS name, 1 AS type, NULL AS idcontainer, NULL AS iddatacube FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube  FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden= 0 UNION SELECT containername AS name, 3 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=1;" 
-#define MYSQL_QUERY_FS_LIST_2_H_WC  "SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube  FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden= 0 AND containername = '%s' UNION SELECT containername AS name, 3 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=1 AND containername = '%s';" 
+#define MYSQL_QUERY_FS_LIST_0 "SELECT foldername, idfolder FROM folder WHERE folder.idparent=%d;"
+#define MYSQL_QUERY_FS_LIST_1 "SELECT foldername AS name, 1 AS type FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0;"
+#define MYSQL_QUERY_FS_LIST_1_WC "SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0 AND containername = '%s';"
+#define MYSQL_QUERY_FS_LIST_1_H "SELECT foldername AS name, 1 AS type FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND hidden=0 UNION SELECT containername AS name, 3 AS type FROM container WHERE container.idfolder=%d AND hidden=1"
+#define MYSQL_QUERY_FS_LIST_1_H_WC "SELECT containername AS name, 2 AS type FROM container WHERE container.idfolder=%d AND containername = '%s' AND hidden=0 UNION SELECT containername AS name, 3 AS type FROM container WHERE container.idfolder=%d AND hidden=1 AND containername = '%s';"
+#define MYSQL_QUERY_FS_LIST_2  "SELECT foldername AS name, 1 AS type, NULL AS idcontainer, NULL AS iddatacube FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=0;"
+#define MYSQL_QUERY_FS_LIST_2_WC  "SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=0 AND containername = '%s';"
+#define MYSQL_QUERY_FS_LIST_2_H  "SELECT foldername AS name, 1 AS type, NULL AS idcontainer, NULL AS iddatacube FROM folder WHERE folder.idparent=%d UNION SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube  FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden= 0 UNION SELECT containername AS name, 3 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=1;"
+#define MYSQL_QUERY_FS_LIST_2_H_WC  "SELECT containername AS name, 2 AS type, datacube.idcontainer, iddatacube  FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden= 0 AND containername = '%s' UNION SELECT containername AS name, 3 AS type, datacube.idcontainer, iddatacube FROM container LEFT OUTER JOIN datacube ON datacube.idcontainer=container.idcontainer WHERE container.idfolder=%d AND hidden=1 AND containername = '%s';"
 
 #define OPH_ODB_FS_ROOT "/"
 
@@ -63,7 +63,7 @@
  * \param oDB Pointer to the OphidiaDB
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_path_parsing(char *inpath,char *cwd,int *folder_id,char **output_path, ophidiadb *oDB);
+int oph_odb_fs_path_parsing(char *inpath, char *cwd, int *folder_id, char **output_path, ophidiadb * oDB);
 
 /**
  * \brief Function used to retreive session home ID
@@ -72,7 +72,7 @@ int oph_odb_fs_path_parsing(char *inpath,char *cwd,int *folder_id,char **output_
  * \param folder_id Pointer to session home ID
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb *oDB, int *folder_id);
+int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb * oDB, int *folder_id);
 
 /**
  * \brief Function used to check if a folder is within session tree
@@ -82,7 +82,7 @@ int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb *oDB, int *folder_
  * \param status If the folder is within session tree it will be set to 1, otherwise it will be 0.
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_check_folder_session(int folder_id,char *sessionid, ophidiadb *oDB, int *status);
+int oph_odb_fs_check_folder_session(int folder_id, char *sessionid, ophidiadb * oDB, int *status);
 
 /**
  * \brief Function used to retrieve the folder id of a container
@@ -92,7 +92,7 @@ int oph_odb_fs_check_folder_session(int folder_id,char *sessionid, ophidiadb *oD
  * \param folder_id Id of the folder related to the container
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_retrive_container_folder_id(ophidiadb *oDB, int container_id, int non_hidden, int *folder_id);
+int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int non_hidden, int *folder_id);
 
 /**
  * \brief Function used to build backward path given the id of the leaf folder
@@ -101,7 +101,7 @@ int oph_odb_fs_retrive_container_folder_id(ophidiadb *oDB, int container_id, int
  * \param out_path Path to be built
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_build_path(int folder_id, ophidiadb *oDB, char (*out_path)[MYSQL_BUFLEN]);
+int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL_BUFLEN]);
 
 /**
  * \brief Function used to split a generic path in dirname and basename (leaf folder/container)
@@ -120,7 +120,7 @@ int oph_odb_fs_str_last_token(const char *input, char **first_part, char **last_
  * \param answer 1 if visible, 0 otherwise
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb *oDB, int *answer);
+int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb * oDB, int *answer);
 
 /**
  * \brief Function used to check if name is a hidden container located in the folder related to folder_id
@@ -130,7 +130,7 @@ int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb *oDB, i
  * \param answer 1 if hidden, 0 otherwise
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb *oDB, int *answer); 
+int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb * oDB, int *answer);
 
 /**
  * \brief Function used to check if name is not used by any of the folders or visible containers located in the folder related to folder_id
@@ -140,7 +140,7 @@ int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb *oDB, in
  * \param answer 1 if unique, 0 otherwise
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_is_unique(int folderid, char *name, ophidiadb *oDB, int *answer);
+int oph_odb_fs_is_unique(int folderid, char *name, ophidiadb * oDB, int *answer);
 
 /**
  * \brief Function used to check if name is not used by any of the hidden containers located in the folder related to folder_id
@@ -150,7 +150,7 @@ int oph_odb_fs_is_unique(int folderid, char *name, ophidiadb *oDB, int *answer);
  * \param answer 1 if unique, 0 otherwise
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_is_unique_hidden(int folderid, char *name, ophidiadb *oDB, int *answer);
+int oph_odb_fs_is_unique_hidden(int folderid, char *name, ophidiadb * oDB, int *answer);
 
 /**
  * \brief Function used to check if the folder indicated by folder_id is empty (no subfolders and visible/hidden containers)
@@ -159,7 +159,7 @@ int oph_odb_fs_is_unique_hidden(int folderid, char *name, ophidiadb *oDB, int *a
  * \param answer 1 if empty, 0 otherwise
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_is_empty_folder(int folderid, ophidiadb *oDB, int *answer);
+int oph_odb_fs_is_empty_folder(int folderid, ophidiadb * oDB, int *answer);
 
 /**
  * \brief Function used to set hidden status of a container
@@ -168,7 +168,7 @@ int oph_odb_fs_is_empty_folder(int folderid, ophidiadb *oDB, int *answer);
  * \param oDB Pointer to the OphidiaDB
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidiadb *oDB);
+int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidiadb * oDB);
 
 /**
  * \brief Function used to update name and folder of a container
@@ -178,7 +178,7 @@ int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidia
  * \param oDB Pointer to the OphidiaDB
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_update_container_path_name(ophidiadb *oDB, int in_container_id, int out_folder_id, char *out_container_name);
+int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, int out_folder_id, char *out_container_name);
 
 /**
  * \brief Function used to retrieve filesystem objects (folders, containers and datacubes)
@@ -190,8 +190,8 @@ int oph_odb_fs_update_container_path_name(ophidiadb *oDB, int in_container_id, i
  * \param oDB Pointer to the OphidiaDB
  * \return 0 if successfull, -1 otherwise
  */
-int oph_odb_fs_find_fs_objects(ophidiadb *oDB, int level, int id_folder, int hidden, char *container_name, MYSQL_RES **information_list);
+int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hidden, char *container_name, MYSQL_RES ** information_list);
 
-int oph_odb_fs_get_subfolders(int folder_id, int** subfolder_id, int* num_subfolders, ophidiadb *oDB);
+int oph_odb_fs_get_subfolders(int folder_id, int **subfolder_id, int *num_subfolders, ophidiadb * oDB);
 
-#endif /* __OPH_OPHIDIADB_FS_H__ */
+#endif				/* __OPH_OPHIDIADB_FS_H__ */

@@ -35,13 +35,14 @@
 extern int msglevel;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
-int _oph_json_add_responseKey(oph_json *json, const char *responseKey, pthread_mutex_t* flag);
+int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_mutex_t * flag);
 #endif
 
 /***********OPH_JSON_OBJ_TEXT INTERNAL FUNCTIONS***********/
 
 // Free a text object contents
-int oph_json_free_text(oph_json_obj_text *obj) {
+int oph_json_free_text(oph_json_obj_text * obj)
+{
 	if (obj) {
 		if (obj->title) {
 			free(obj->title);
@@ -57,14 +58,15 @@ int oph_json_free_text(oph_json_obj_text *obj) {
 
 /***********OPH_JSON_OBJ_TEXT FUNCTIONS***********/
 
-int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, const char *message, pthread_mutex_t* flag) {
+int _oph_json_add_text(oph_json * json, const char *objkey, const char *title, const char *message, pthread_mutex_t * flag)
+{
 	if (!json || !objkey || !title) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
 		return OPH_JSON_BAD_PARAM_ERROR;
 	}
 
 	if (json->response_num == 0) {
-		json->response = (oph_json_response *)malloc(sizeof(oph_json_response));
+		json->response = (oph_json_response *) malloc(sizeof(oph_json_response));
 		if (!json->response) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "response");
 			return OPH_JSON_MEMORY_ERROR;
@@ -74,7 +76,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		json->response[0].objcontent_num = 0;
 		json->response[0].objkey = NULL;
 
-		json->response[0].objclass = (char *)strdup(OPH_JSON_TEXT);
+		json->response[0].objclass = (char *) strdup(OPH_JSON_TEXT);
 		if (!json->response[0].objclass) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objclass");
 			return OPH_JSON_MEMORY_ERROR;
@@ -82,12 +84,12 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 
 		json->response_num++;
 
-		json->response[0].objkey = (char *)strdup(objkey);
+		json->response[0].objkey = (char *) strdup(objkey);
 		if (!json->response[0].objkey) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 			return OPH_JSON_MEMORY_ERROR;
 		}
-		if (_oph_json_add_responseKey(json,objkey,flag)) {
+		if (_oph_json_add_responseKey(json, objkey, flag)) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 			return OPH_JSON_MEMORY_ERROR;
 		}
@@ -100,7 +102,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		((oph_json_obj_text *) json->response[0].objcontent)[0].title = NULL;
 		((oph_json_obj_text *) json->response[0].objcontent)[0].message = NULL;
 
-		((oph_json_obj_text *) json->response[0].objcontent)[0].title = (char *)strdup(title);
+		((oph_json_obj_text *) json->response[0].objcontent)[0].title = (char *) strdup(title);
 		if (!((oph_json_obj_text *) json->response[0].objcontent)[0].title) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 			return OPH_JSON_MEMORY_ERROR;
@@ -109,7 +111,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		json->response[0].objcontent_num++;
 
 		if (message) {
-			((oph_json_obj_text *) json->response[0].objcontent)[0].message = (char *)strdup(message);
+			((oph_json_obj_text *) json->response[0].objcontent)[0].message = (char *) strdup(message);
 			if (!((oph_json_obj_text *) json->response[0].objcontent)[0].message) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "message");
 				return OPH_JSON_MEMORY_ERROR;
@@ -119,8 +121,8 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		unsigned int i;
 		int add_frag = 0;
 		for (i = 0; i < json->response_num; i++) {
-			if (!strcmp(json->response[i].objkey,objkey)) {
-				if (!strcmp(json->response[i].objclass,OPH_JSON_TEXT)) {
+			if (!strcmp(json->response[i].objkey, objkey)) {
+				if (!strcmp(json->response[i].objclass, OPH_JSON_TEXT)) {
 					add_frag = 1;
 					break;
 				}
@@ -131,7 +133,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		if (add_frag) {
 			void *tmp = json->response[i].objcontent;
 			unsigned int index = json->response[i].objcontent_num;
-			json->response[i].objcontent = realloc(json->response[i].objcontent,sizeof(oph_json_obj_text)*(json->response[i].objcontent_num + 1));
+			json->response[i].objcontent = realloc(json->response[i].objcontent, sizeof(oph_json_obj_text) * (json->response[i].objcontent_num + 1));
 			if (!json->response[i].objcontent) {
 				json->response[i].objcontent = tmp;
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objcontent");
@@ -140,7 +142,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 			((oph_json_obj_text *) json->response[i].objcontent)[index].title = NULL;
 			((oph_json_obj_text *) json->response[i].objcontent)[index].message = NULL;
 
-			((oph_json_obj_text *) json->response[i].objcontent)[index].title = (char *)strdup(title);
+			((oph_json_obj_text *) json->response[i].objcontent)[index].title = (char *) strdup(title);
 			if (!((oph_json_obj_text *) json->response[i].objcontent)[index].title) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 				return OPH_JSON_MEMORY_ERROR;
@@ -149,7 +151,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 			json->response[i].objcontent_num++;
 
 			if (message) {
-				((oph_json_obj_text *) json->response[i].objcontent)[index].message = (char *)strdup(message);
+				((oph_json_obj_text *) json->response[i].objcontent)[index].message = (char *) strdup(message);
 				if (!((oph_json_obj_text *) json->response[i].objcontent)[index].message) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "message");
 					return OPH_JSON_MEMORY_ERROR;
@@ -158,7 +160,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 		} else {
 			oph_json_response *tmp = json->response;
 			unsigned int index = json->response_num;
-			json->response = (oph_json_response *)realloc(json->response,sizeof(oph_json_response)*(json->response_num + 1));
+			json->response = (oph_json_response *) realloc(json->response, sizeof(oph_json_response) * (json->response_num + 1));
 			if (!json->response) {
 				json->response = tmp;
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "response");
@@ -169,7 +171,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 			json->response[index].objcontent_num = 0;
 			json->response[index].objkey = NULL;
 
-			json->response[index].objclass = (char *)strdup(OPH_JSON_TEXT);
+			json->response[index].objclass = (char *) strdup(OPH_JSON_TEXT);
 			if (!json->response[index].objclass) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objclass");
 				return OPH_JSON_MEMORY_ERROR;
@@ -177,12 +179,12 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 
 			json->response_num++;
 
-			json->response[index].objkey = (char *)strdup(objkey);
+			json->response[index].objkey = (char *) strdup(objkey);
 			if (!json->response[index].objkey) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 				return OPH_JSON_MEMORY_ERROR;
 			}
-			if (_oph_json_add_responseKey(json,objkey,flag)) {
+			if (_oph_json_add_responseKey(json, objkey, flag)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "objkey");
 				return OPH_JSON_MEMORY_ERROR;
 			}
@@ -195,7 +197,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 			((oph_json_obj_text *) json->response[index].objcontent)[0].title = NULL;
 			((oph_json_obj_text *) json->response[index].objcontent)[0].message = NULL;
 
-			((oph_json_obj_text *) json->response[index].objcontent)[0].title = (char *)strdup(title);
+			((oph_json_obj_text *) json->response[index].objcontent)[0].title = (char *) strdup(title);
 			if (!((oph_json_obj_text *) json->response[index].objcontent)[0].title) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "title");
 				return OPH_JSON_MEMORY_ERROR;
@@ -204,7 +206,7 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 			json->response[index].objcontent_num++;
 
 			if (message) {
-				((oph_json_obj_text *) json->response[index].objcontent)[0].message = (char *)strdup(message);
+				((oph_json_obj_text *) json->response[index].objcontent)[0].message = (char *) strdup(message);
 				if (!((oph_json_obj_text *) json->response[index].objcontent)[0].message) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "message");
 					return OPH_JSON_MEMORY_ERROR;
@@ -215,6 +217,13 @@ int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, co
 
 	return OPH_JSON_SUCCESS;
 }
-int oph_json_add_text(oph_json *json, const char *objkey, const char *title, const char *message) { return _oph_json_add_text(json, objkey, title, message, &global_flag); }
-int oph_json_add_text_unsafe(oph_json *json, const char *objkey, const char *title, const char *message) { return _oph_json_add_text(json, objkey, title, message, NULL); }
 
+int oph_json_add_text(oph_json * json, const char *objkey, const char *title, const char *message)
+{
+	return _oph_json_add_text(json, objkey, title, message, &global_flag);
+}
+
+int oph_json_add_text_unsafe(oph_json * json, const char *objkey, const char *title, const char *message)
+{
+	return _oph_json_add_text(json, objkey, title, message, NULL);
+}

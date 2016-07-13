@@ -43,339 +43,354 @@
 #define OPH_TP_CONT_CUBE_SEPARATOR '.'
 #define OPH_TP_SKIP_SEPARATOR '\0'
 
-extern char* oph_server_location;
-extern char* oph_xml_operator_dir;
+extern char *oph_server_location;
+extern char *oph_xml_operator_dir;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
 
-int oph_tp_retrieve_function_xml_file(const char *function_name, const char *function_version, char (*xml_filename)[OPH_TP_BUFLEN], const char* folder)
+int oph_tp_retrieve_function_xml_file(const char *function_name, const char *function_version, char (*xml_filename)[OPH_TP_BUFLEN], const char *folder)
 {
-    DIR *dir;
-    struct dirent *ent, save_ent;
-    int found = 0;
-    char full_filename[OPH_TP_BUFLEN];
-    struct stat file_stat;
+	DIR *dir;
+	struct dirent *ent, save_ent;
+	int found = 0;
+	char full_filename[OPH_TP_BUFLEN];
+	struct stat file_stat;
 
-    if ((dir = opendir (folder)) != NULL) {
-        if (function_version == NULL) {
-            char format[OPH_TP_BUFLEN];
-            char buffer[OPH_TP_BUFLEN];
-            unsigned int maxlen=0;
-            int maxversionlen=0;
-            int versionlen=0;
-            int count=0;
-            char *ptr1,*ptr2,*ptr3;
+	if ((dir = opendir(folder)) != NULL) {
+		if (function_version == NULL) {
+			char format[OPH_TP_BUFLEN];
+			char buffer[OPH_TP_BUFLEN];
+			unsigned int maxlen = 0;
+			int maxversionlen = 0;
+			int versionlen = 0;
+			int count = 0;
+			char *ptr1, *ptr2, *ptr3;
 
-            snprintf(*xml_filename,OPH_TP_BUFLEN,"%s_"OPH_TP_XML_OPERATOR_TYPE"_",function_name);
+			snprintf(*xml_filename, OPH_TP_BUFLEN, "%s_" OPH_TP_XML_OPERATOR_TYPE "_", function_name);
 
-	    while (!readdir_r(dir,&save_ent,&ent) && ent)
-            {
-		snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
-	        lstat(full_filename, &file_stat);
+			while (!readdir_r(dir, &save_ent, &ent) && ent) {
+				snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+				lstat(full_filename, &file_stat);
 
-		if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
-                if (strcasestr(ent->d_name,*xml_filename)) {
-                    ptr1 = strrchr(ent->d_name,'_');
-                    ptr2 = strrchr(ent->d_name,'.');
-                    if (!ptr1 || !ptr2) {
-                        return OPH_TP_TASK_SYSTEM_ERROR;
-                    }
+				if (!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode))
+					continue;
+				if (strcasestr(ent->d_name, *xml_filename)) {
+					ptr1 = strrchr(ent->d_name, '_');
+					ptr2 = strrchr(ent->d_name, '.');
+					if (!ptr1 || !ptr2) {
+						return OPH_TP_TASK_SYSTEM_ERROR;
+					}
 
-                    strncpy(buffer,ent->d_name,strlen(ent->d_name)-strlen(ptr1)+1);
-                    buffer[strlen(ent->d_name)-strlen(ptr1)+1] = 0;
-                    if (strcasecmp(*xml_filename,buffer)) continue;
+					strncpy(buffer, ent->d_name, strlen(ent->d_name) - strlen(ptr1) + 1);
+					buffer[strlen(ent->d_name) - strlen(ptr1) + 1] = 0;
+					if (strcasecmp(*xml_filename, buffer))
+						continue;
 
-                    versionlen=0;
-                    ptr3 = strchr(ptr1+1,'.');
+					versionlen = 0;
+					ptr3 = strchr(ptr1 + 1, '.');
 
-                    if (strlen(ptr1)-strlen(ptr3)-1 > maxlen) {
-                        maxlen = strlen(ptr1)-strlen(ptr3)-1;
-                    }
-                    versionlen++;
-                    count++;
+					if (strlen(ptr1) - strlen(ptr3) - 1 > maxlen) {
+						maxlen = strlen(ptr1) - strlen(ptr3) - 1;
+					}
+					versionlen++;
+					count++;
 
-                    while (ptr2 != ptr3) {
-                        ptr1 = strchr(ptr1+1,'.');
-                        ptr3 = strchr(ptr1+1,'.');
-                        if (!ptr1 || !ptr3) {
-                            return OPH_TP_TASK_SYSTEM_ERROR;
-                        }
-                        if (strlen(ptr1)-strlen(ptr3)-1 > maxlen) {
-                            maxlen = strlen(ptr1)-strlen(ptr3)-1;
-                        }
-                        versionlen++;
-                    }
+					while (ptr2 != ptr3) {
+						ptr1 = strchr(ptr1 + 1, '.');
+						ptr3 = strchr(ptr1 + 1, '.');
+						if (!ptr1 || !ptr3) {
+							return OPH_TP_TASK_SYSTEM_ERROR;
+						}
+						if (strlen(ptr1) - strlen(ptr3) - 1 > maxlen) {
+							maxlen = strlen(ptr1) - strlen(ptr3) - 1;
+						}
+						versionlen++;
+					}
 
-                    snprintf(format,OPH_TP_BUFLEN,"%%0%dd",maxlen);
-                    if (versionlen > maxversionlen) {
-                        maxversionlen = versionlen;
-                    }
+					snprintf(format, OPH_TP_BUFLEN, "%%0%dd", maxlen);
+					if (versionlen > maxversionlen) {
+						maxversionlen = versionlen;
+					}
 
-                    if(strncasecmp(ptr2+1, OPH_TP_XML_FILE_EXTENSION, strlen(OPH_TP_XML_FILE_EXTENSION)) || strncasecmp(ptr2+1, OPH_TP_XML_FILE_EXTENSION, strlen(ptr2+1)) ) continue;
+					if (strncasecmp(ptr2 + 1, OPH_TP_XML_FILE_EXTENSION, strlen(OPH_TP_XML_FILE_EXTENSION)) || strncasecmp(ptr2 + 1, OPH_TP_XML_FILE_EXTENSION, strlen(ptr2 + 1)))
+						continue;
 
-                    found = 1;
-                    break;
-                }
-            }
-            closedir(dir);
+					found = 1;
+					break;
+				}
+			}
+			closedir(dir);
 
-            if (!found) {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
+			if (!found) {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
 
-            char *field = (char *)malloc((maxlen+1)*sizeof(char));
-            if (!field) {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
+			char *field = (char *) malloc((maxlen + 1) * sizeof(char));
+			if (!field) {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
 
-            char **versions = (char **)malloc(count*sizeof(char *));
-            if (!versions) {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
-            int i;
-            for (i = 0; i < count; i++) {
-                versions[i] = (char *)malloc((maxlen*maxversionlen +1)*sizeof(char));
-                if (!versions[i]) {
-	                return OPH_TP_TASK_SYSTEM_ERROR;
-                }
-            }
-            char **versions2 = (char **)malloc(count*sizeof(char *));
-            if (!versions2) {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
-            for (i = 0; i < count; i++) {
-                versions2[i] = (char *)malloc(OPH_TP_BUFLEN*sizeof(char));
-                if (!versions2[i]) {
-	                return OPH_TP_TASK_SYSTEM_ERROR;
-                }
-            }
+			char **versions = (char **) malloc(count * sizeof(char *));
+			if (!versions) {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
+			int i;
+			for (i = 0; i < count; i++) {
+				versions[i] = (char *) malloc((maxlen * maxversionlen + 1) * sizeof(char));
+				if (!versions[i]) {
+					return OPH_TP_TASK_SYSTEM_ERROR;
+				}
+			}
+			char **versions2 = (char **) malloc(count * sizeof(char *));
+			if (!versions2) {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
+			for (i = 0; i < count; i++) {
+				versions2[i] = (char *) malloc(OPH_TP_BUFLEN * sizeof(char));
+				if (!versions2[i]) {
+					return OPH_TP_TASK_SYSTEM_ERROR;
+				}
+			}
 
-            int j=0;
-            int val;
-            if ((dir = opendir (folder)) != NULL) {
-		while (!readdir_r(dir,&save_ent,&ent) && ent)
-		{
-                    snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
-                    lstat(full_filename, &file_stat);
+			int j = 0;
+			int val;
+			if ((dir = opendir(folder)) != NULL) {
+				while (!readdir_r(dir, &save_ent, &ent) && ent) {
+					snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+					lstat(full_filename, &file_stat);
 
-                    if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
-                    if (strcasestr(ent->d_name,*xml_filename)) {
-                        ptr1 = strrchr(ent->d_name,'_');
-                        ptr2 = strrchr(ent->d_name,'.');
-                        if (!ptr1 || !ptr2) {
-			                return OPH_TP_TASK_SYSTEM_ERROR;
-                        }
+					if (!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode))
+						continue;
+					if (strcasestr(ent->d_name, *xml_filename)) {
+						ptr1 = strrchr(ent->d_name, '_');
+						ptr2 = strrchr(ent->d_name, '.');
+						if (!ptr1 || !ptr2) {
+							return OPH_TP_TASK_SYSTEM_ERROR;
+						}
 
-                        strncpy(buffer,ent->d_name,strlen(ent->d_name)-strlen(ptr1)+1);
-                        buffer[strlen(ent->d_name)-strlen(ptr1)+1] = 0;
-                        if (strcasecmp(*xml_filename,buffer)) continue;
+						strncpy(buffer, ent->d_name, strlen(ent->d_name) - strlen(ptr1) + 1);
+						buffer[strlen(ent->d_name) - strlen(ptr1) + 1] = 0;
+						if (strcasecmp(*xml_filename, buffer))
+							continue;
 
-                        j++;
-                        i=0;
-                        ptr3 = strchr(ptr1+1,'.');
+						j++;
+						i = 0;
+						ptr3 = strchr(ptr1 + 1, '.');
 
-                        //copy real filename
-                        strncpy(versions2[j-1],ent->d_name,strlen(ent->d_name));
-                        versions2[j-1][strlen(ent->d_name)] = 0;
+						//copy real filename
+						strncpy(versions2[j - 1], ent->d_name, strlen(ent->d_name));
+						versions2[j - 1][strlen(ent->d_name)] = 0;
 
-                        //extract a single value from version
-                        strncpy(field,ptr1+1,strlen(ptr1)-strlen(ptr3)-1);
-                        field[strlen(ptr1)-strlen(ptr3)-1] = 0;
-                        val = strtol(field,NULL,10);
-                        snprintf(field,maxlen+1,format,val);
-                        strncpy(versions[j-1]+i*maxlen,field,maxlen);
+						//extract a single value from version
+						strncpy(field, ptr1 + 1, strlen(ptr1) - strlen(ptr3) - 1);
+						field[strlen(ptr1) - strlen(ptr3) - 1] = 0;
+						val = strtol(field, NULL, 10);
+						snprintf(field, maxlen + 1, format, val);
+						strncpy(versions[j - 1] + i * maxlen, field, maxlen);
 
-                        i++;
-                        while (i < maxversionlen) {
-                            if (ptr2 != ptr3) {
-                                ptr1 = strchr(ptr1+1,'.');
-                                ptr3 = strchr(ptr1+1,'.');
-                                if (!ptr1 || !ptr3) return OPH_TP_TASK_SYSTEM_ERROR;
+						i++;
+						while (i < maxversionlen) {
+							if (ptr2 != ptr3) {
+								ptr1 = strchr(ptr1 + 1, '.');
+								ptr3 = strchr(ptr1 + 1, '.');
+								if (!ptr1 || !ptr3)
+									return OPH_TP_TASK_SYSTEM_ERROR;
 
-                                //extract a single value from version
-                                strncpy(field,ptr1+1,strlen(ptr1)-strlen(ptr3)-1);
-                                field[strlen(ptr1)-strlen(ptr3)-1] = 0;
-                                val = strtol(field,NULL,10);
-                                snprintf(field,maxlen+1,format,val);
-                                strncpy(versions[j-1]+i*maxlen,field,maxlen);
+								//extract a single value from version
+								strncpy(field, ptr1 + 1, strlen(ptr1) - strlen(ptr3) - 1);
+								field[strlen(ptr1) - strlen(ptr3) - 1] = 0;
+								val = strtol(field, NULL, 10);
+								snprintf(field, maxlen + 1, format, val);
+								strncpy(versions[j - 1] + i * maxlen, field, maxlen);
 
-                            } else {
-                                //consider value=0
-                                val = 0;
-                                snprintf(field,maxlen+1,format,val);
-                                strncpy(versions[j-1]+i*maxlen,field,maxlen);
+							} else {
+								//consider value=0
+								val = 0;
+								snprintf(field, maxlen + 1, format, val);
+								strncpy(versions[j - 1] + i * maxlen, field, maxlen);
 
-                            }
-                            i++;
-                        }
+							}
+							i++;
+						}
 
-                        versions[j-1][maxlen*maxversionlen] = 0;
+						versions[j - 1][maxlen * maxversionlen] = 0;
 
-                        if (j==count) break;
-                    }
-                }
-                closedir(dir);
-            } else {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
+						if (j == count)
+							break;
+					}
+				}
+				closedir(dir);
+			} else {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
 
-            //find latest version
-            int latest_index = 0;
-            for (j = 1; j < count; j++) {
-                if (strcmp(versions[j],versions[latest_index]) > 0) {
-                    latest_index = j;
-                }
-            }
+			//find latest version
+			int latest_index = 0;
+			for (j = 1; j < count; j++) {
+				if (strcmp(versions[j], versions[latest_index]) > 0) {
+					latest_index = j;
+				}
+			}
 
-            snprintf(*xml_filename,OPH_TP_BUFLEN,"%s",versions2[latest_index]);
+			snprintf(*xml_filename, OPH_TP_BUFLEN, "%s", versions2[latest_index]);
 
-            free(field);
-            for (i = 0; i < count; i++) {
-                free(versions[i]);
-            }
-            free(versions);
-            for (i = 0; i < count; i++) {
-                free(versions2[i]);
-            }
-            free(versions2);
+			free(field);
+			for (i = 0; i < count; i++) {
+				free(versions[i]);
+			}
+			free(versions);
+			for (i = 0; i < count; i++) {
+				free(versions2[i]);
+			}
+			free(versions2);
 
-        } else {
-            snprintf(*xml_filename,OPH_TP_BUFLEN,"%s_"OPH_TP_XML_OPERATOR_TYPE"_%s.xml",function_name, function_version);
-	    while (!readdir_r(dir,&save_ent,&ent) && ent)
-            {
-                snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
-                lstat(full_filename, &file_stat);
+		} else {
+			snprintf(*xml_filename, OPH_TP_BUFLEN, "%s_" OPH_TP_XML_OPERATOR_TYPE "_%s.xml", function_name, function_version);
+			while (!readdir_r(dir, &save_ent, &ent) && ent) {
+				snprintf(full_filename, OPH_TP_BUFLEN, "%s/%s", folder, ent->d_name);
+				lstat(full_filename, &file_stat);
 
-                if(!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode)) continue;
-                if (!strcasecmp(*xml_filename,ent->d_name)) {
-                    found = 1;
-                    snprintf(*xml_filename,OPH_TP_BUFLEN,"%s",ent->d_name);
-                    break;
-                }
-            }
-            closedir (dir);
-            if (!found) {
-                return OPH_TP_TASK_SYSTEM_ERROR;
-            }
-        }
-    } else {
-	  return OPH_TP_TASK_SYSTEM_ERROR;
-    }
+				if (!S_ISLNK(file_stat.st_mode) && !S_ISREG(file_stat.st_mode))
+					continue;
+				if (!strcasecmp(*xml_filename, ent->d_name)) {
+					found = 1;
+					snprintf(*xml_filename, OPH_TP_BUFLEN, "%s", ent->d_name);
+					break;
+				}
+			}
+			closedir(dir);
+			if (!found) {
+				return OPH_TP_TASK_SYSTEM_ERROR;
+			}
+		}
+	} else {
+		return OPH_TP_TASK_SYSTEM_ERROR;
+	}
 
-    return OPH_TP_TASK_PARSER_SUCCESS;
+	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
 int oph_tp_validate_task_string(const char *task_string)
 {
-  if (!task_string)
-      return OPH_TP_TASK_SYSTEM_ERROR;
+	if (!task_string)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
-  char last_char = OPH_TP_PARAM_PARAM_SEPARATOR;
-  char previous_char = 0;
-  int first_flag = 1;
-  int i;
+	char last_char = OPH_TP_PARAM_PARAM_SEPARATOR;
+	char previous_char = 0;
+	int first_flag = 1;
+	int i;
 
-  int skip_flag=0,skip_check=0;
-  for (i = 0; task_string[i]; i++){
-	if (skip_flag)
-	{
-		if (task_string[i]==OPH_TP_SKIP_SEPARATOR) { skip_flag=0; skip_check=1; }
-		continue;
-	}
-	if (skip_check && task_string[i]!=OPH_TP_PARAM_PARAM_SEPARATOR) return OPH_TP_TASK_PARSER_ERROR;
-	switch(task_string[i]){
-		case OPH_TP_SKIP_SEPARATOR:{
-			if (previous_char != OPH_TP_PARAM_VALUE_SEPARATOR) return OPH_TP_TASK_PARSER_ERROR;
-			skip_flag=1;
-			break;
-		}
-		case OPH_TP_PARAM_VALUE_SEPARATOR:{ 
-			if( ((last_char != OPH_TP_PARAM_PARAM_SEPARATOR) && (last_char != OPH_TP_PARAM_VALUE_SEPARATOR)) || (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
-				return OPH_TP_TASK_PARSER_ERROR;
-			else{
-				last_char = OPH_TP_PARAM_VALUE_SEPARATOR;
-				first_flag = 0;
+	int skip_flag = 0, skip_check = 0;
+	for (i = 0; task_string[i]; i++) {
+		if (skip_flag) {
+			if (task_string[i] == OPH_TP_SKIP_SEPARATOR) {
+				skip_flag = 0;
+				skip_check = 1;
 			}
-			break;
+			continue;
 		}
-		case OPH_TP_PARAM_PARAM_SEPARATOR:{ 
-			if(first_flag)
-				return OPH_TP_TASK_PARSER_ERROR;			
-			if(last_char == OPH_TP_PARAM_PARAM_SEPARATOR|| (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
-				return OPH_TP_TASK_PARSER_ERROR;
-			else
-				last_char = OPH_TP_PARAM_PARAM_SEPARATOR;
-			break;
+		if (skip_check && task_string[i] != OPH_TP_PARAM_PARAM_SEPARATOR)
+			return OPH_TP_TASK_PARSER_ERROR;
+		switch (task_string[i]) {
+			case OPH_TP_SKIP_SEPARATOR:{
+					if (previous_char != OPH_TP_PARAM_VALUE_SEPARATOR)
+						return OPH_TP_TASK_PARSER_ERROR;
+					skip_flag = 1;
+					break;
+				}
+			case OPH_TP_PARAM_VALUE_SEPARATOR:{
+					if (((last_char != OPH_TP_PARAM_PARAM_SEPARATOR) && (last_char != OPH_TP_PARAM_VALUE_SEPARATOR))
+					    || (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
+						return OPH_TP_TASK_PARSER_ERROR;
+					else {
+						last_char = OPH_TP_PARAM_VALUE_SEPARATOR;
+						first_flag = 0;
+					}
+					break;
+				}
+			case OPH_TP_PARAM_PARAM_SEPARATOR:{
+					if (first_flag)
+						return OPH_TP_TASK_PARSER_ERROR;
+					if (last_char == OPH_TP_PARAM_PARAM_SEPARATOR
+					    || (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
+						return OPH_TP_TASK_PARSER_ERROR;
+					else
+						last_char = OPH_TP_PARAM_PARAM_SEPARATOR;
+					break;
+				}
+			case OPH_TP_MULTI_VALUE_SEPARATOR:{
+					if (first_flag)
+						return OPH_TP_TASK_PARSER_ERROR;
+					if (last_char == OPH_TP_PARAM_PARAM_SEPARATOR
+					    || (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
+						return OPH_TP_TASK_PARSER_ERROR;
+					else
+						last_char = OPH_TP_MULTI_VALUE_SEPARATOR;
+					break;
+				}
 		}
-		case OPH_TP_MULTI_VALUE_SEPARATOR:{
-			if(first_flag)
-				return OPH_TP_TASK_PARSER_ERROR;			
-			if(last_char == OPH_TP_PARAM_PARAM_SEPARATOR || (previous_char == OPH_TP_PARAM_VALUE_SEPARATOR || previous_char == OPH_TP_MULTI_VALUE_SEPARATOR || previous_char == OPH_TP_PARAM_PARAM_SEPARATOR))
-				return OPH_TP_TASK_PARSER_ERROR;
-			else
-				last_char = OPH_TP_MULTI_VALUE_SEPARATOR;
-			break;
-		}			
+		previous_char = task_string[i];
+		skip_check = 0;
 	}
-	previous_char = task_string[i];
-	skip_check=0;
-  }
-  if (skip_flag || skip_check) return OPH_TP_TASK_PARSER_ERROR;
-  return OPH_TP_TASK_PARSER_SUCCESS;
+	if (skip_flag || skip_check)
+		return OPH_TP_TASK_PARSER_ERROR;
+	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
 int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char (*value)[OPH_TP_TASKLEN])
 {
-  if (!task_string || !param || !value)
-      return OPH_TP_TASK_SYSTEM_ERROR;
+	if (!task_string || !param || !value)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
-  const char *ptr_begin, *ptr_equal, *ptr_end, *start_char, *stop_char;
+	const char *ptr_begin, *ptr_equal, *ptr_end, *start_char, *stop_char;
 
-  ptr_begin = task_string;
-  ptr_equal = strchr(task_string, OPH_TP_PARAM_VALUE_SEPARATOR);
-  ptr_end = strchr(task_string, OPH_TP_PARAM_PARAM_SEPARATOR);
-  while(ptr_end)
-  {
-    if(!ptr_begin || !ptr_equal || !ptr_end )  
-        return OPH_TP_TASK_SYSTEM_ERROR;
-     
-    if( !strncmp(ptr_begin, param, strlen(ptr_begin) - strlen(ptr_equal)) && !strncmp(ptr_begin, param, strlen(param)) )
-	{
-		start_char = ptr_equal + 1;
-		stop_char = ptr_end;
-		if (*start_char == OPH_TP_SKIP_SEPARATOR) { start_char++; stop_char--; }
-		strncpy(*value,start_char, strlen(start_char) - strlen(stop_char));
-		(*value)[strlen(start_char) - strlen(stop_char)] = 0;
-		return OPH_TP_TASK_PARSER_SUCCESS;
+	ptr_begin = task_string;
+	ptr_equal = strchr(task_string, OPH_TP_PARAM_VALUE_SEPARATOR);
+	ptr_end = strchr(task_string, OPH_TP_PARAM_PARAM_SEPARATOR);
+	while (ptr_end) {
+		if (!ptr_begin || !ptr_equal || !ptr_end)
+			return OPH_TP_TASK_SYSTEM_ERROR;
+
+		if (!strncmp(ptr_begin, param, strlen(ptr_begin) - strlen(ptr_equal)) && !strncmp(ptr_begin, param, strlen(param))) {
+			start_char = ptr_equal + 1;
+			stop_char = ptr_end;
+			if (*start_char == OPH_TP_SKIP_SEPARATOR) {
+				start_char++;
+				stop_char--;
+			}
+			strncpy(*value, start_char, strlen(start_char) - strlen(stop_char));
+			(*value)[strlen(start_char) - strlen(stop_char)] = 0;
+			return OPH_TP_TASK_PARSER_SUCCESS;
+		}
+		ptr_begin = ptr_end + 1;
+		ptr_equal = strchr(ptr_end + 1, OPH_TP_PARAM_VALUE_SEPARATOR);
+		ptr_end = strchr(ptr_end + 1, OPH_TP_PARAM_PARAM_SEPARATOR);
 	}
-    ptr_begin = ptr_end + 1;
-    ptr_equal = strchr(ptr_end + 1,OPH_TP_PARAM_VALUE_SEPARATOR);
-    ptr_end = strchr(ptr_end + 1,OPH_TP_PARAM_PARAM_SEPARATOR);
-  }
-  return OPH_TP_TASK_PARSER_ERROR;
+	return OPH_TP_TASK_PARSER_ERROR;
 }
 
 int oph_tp_validate_xml_document(xmlDocPtr document)
 {
 	if (!document)
-      return OPH_TP_TASK_SYSTEM_ERROR;
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Create validation context
-	xmlValidCtxtPtr ctxt; 
+	xmlValidCtxtPtr ctxt;
 	ctxt = xmlNewValidCtxt();
-	if (ctxt == NULL) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (ctxt == NULL)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Parse the DTD file
 	char tmp[OPH_TP_BUFLEN];
-	snprintf(tmp,OPH_TP_BUFLEN,OPH_SERVER_DTD_SCHEMA,oph_server_location);
-	xmlDtdPtr dtd = xmlParseDTD(NULL, (xmlChar *)tmp);
-	if (dtd == NULL ){
+	snprintf(tmp, OPH_TP_BUFLEN, OPH_SERVER_DTD_SCHEMA, oph_server_location);
+	xmlDtdPtr dtd = xmlParseDTD(NULL, (xmlChar *) tmp);
+	if (dtd == NULL) {
 		xmlFreeValidCtxt(ctxt);
 		return OPH_TP_TASK_SYSTEM_ERROR;
 	}
 	//Validate document
-	if (!xmlValidateDtd(ctxt, document, dtd)){
+	if (!xmlValidateDtd(ctxt, document, dtd)) {
 		xmlFreeValidCtxt(ctxt);
 		xmlFreeDtd(dtd);
 		return OPH_TP_TASK_SYSTEM_ERROR;
@@ -386,175 +401,158 @@ int oph_tp_validate_xml_document(xmlDocPtr document)
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_match_value_in_xml_value_list(const char* value, const xmlChar* values)
+int oph_tp_match_value_in_xml_value_list(const char *value, const xmlChar * values)
 {
-  if (!value || !values)
-      return OPH_TP_TASK_SYSTEM_ERROR;
+	if (!value || !values)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
-  char *ptr_begin, *ptr_end;
+	char *ptr_begin, *ptr_end;
 
-  ptr_begin = (char *)values;
-  ptr_end = strchr(ptr_begin, OPH_TP_MULTI_VALUE_SEPARATOR);
-  while(ptr_end)
-  {
-    if(!ptr_begin || !ptr_end )  
-        return OPH_TP_TASK_SYSTEM_ERROR;
-     
-    if( !strncmp(ptr_begin, value, strlen(ptr_begin) - strlen(ptr_end)) && !strncmp(ptr_begin, value, strlen(value)) )
+	ptr_begin = (char *) values;
+	ptr_end = strchr(ptr_begin, OPH_TP_MULTI_VALUE_SEPARATOR);
+	while (ptr_end) {
+		if (!ptr_begin || !ptr_end)
+			return OPH_TP_TASK_SYSTEM_ERROR;
+
+		if (!strncmp(ptr_begin, value, strlen(ptr_begin) - strlen(ptr_end)) && !strncmp(ptr_begin, value, strlen(value)))
+			return OPH_TP_TASK_PARSER_SUCCESS;
+
+		ptr_begin = ptr_end + 1;
+		ptr_end = strchr(ptr_end + 1, OPH_TP_MULTI_VALUE_SEPARATOR);
+	}
+	//Check last value
+	if (!strncmp(ptr_begin, value, strlen(ptr_begin)) && !strncmp(ptr_begin, value, strlen(value)))
 		return OPH_TP_TASK_PARSER_SUCCESS;
 
-    ptr_begin = ptr_end + 1;
-    ptr_end = strchr(ptr_end + 1,OPH_TP_MULTI_VALUE_SEPARATOR);
-  }
-  //Check last value
-   if( !strncmp(ptr_begin, value, strlen(ptr_begin)) && !strncmp(ptr_begin, value, strlen(value)) )	
-	return OPH_TP_TASK_PARSER_SUCCESS;
-
-  return OPH_TP_TASK_PARSER_ERROR;
+	return OPH_TP_TASK_PARSER_ERROR;
 }
 
 int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_node, const char *param, char (*value)[OPH_TP_TASKLEN])
 {
 	if (!task_string || !param || !value || !xml_node)
-      return OPH_TP_TASK_SYSTEM_ERROR;
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	xmlChar *attribute_type, *attribute_mandatory, *attribute_minvalue, *attribute_maxvalue, *attribute_default, *attribute_values;
 	char tmp_value[OPH_TP_TASKLEN];
 
 	//Find param in task string
-	if(oph_tp_find_param_in_task_string(task_string, param, &tmp_value )){
+	if (oph_tp_find_param_in_task_string(task_string, param, &tmp_value)) {
 
 		//Check if the parameter is mandatory
-		attribute_mandatory = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_MANDATORY);
-		if(attribute_mandatory != NULL && !xmlStrcmp((const xmlChar *)"no",attribute_mandatory)){
+		attribute_mandatory = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MANDATORY);
+		if (attribute_mandatory != NULL && !xmlStrcmp((const xmlChar *) "no", attribute_mandatory)) {
 			xmlFree(attribute_mandatory);
-			attribute_default = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_DEFAULT);
-			if(attribute_default != NULL){
-				strncpy(*value,(char *)attribute_default, xmlStrlen(attribute_default));
-				(*value)[xmlStrlen(attribute_default)] = 0;	
+			attribute_default = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_DEFAULT);
+			if (attribute_default != NULL) {
+				strncpy(*value, (char *) attribute_default, xmlStrlen(attribute_default));
+				(*value)[xmlStrlen(attribute_default)] = 0;
 				xmlFree(attribute_default);
-			}
-			else {
+			} else {
 				return OPH_TP_TASK_PARSER_ERROR;
 			}
-		}
-		else{
+		} else {
 			xmlFree(attribute_mandatory);
 			return OPH_TP_TASK_PARSER_ERROR;
 		}
-	}
-	else{
+	} else {
 
 		//Other checks
-		attribute_type = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_TYPE);
-		if(attribute_type != NULL){
-		
-			if( !xmlStrcmp(attribute_type, (const xmlChar *)OPH_TP_INT_TYPE) )
-			{
-				int numeric_value = (int)strtol(tmp_value, NULL, 10);
-				
-				attribute_minvalue = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_MINVALUE);
-				attribute_maxvalue = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_MAXVALUE);
+		attribute_type = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_TYPE);
+		if (attribute_type != NULL) {
+
+			if (!xmlStrcmp(attribute_type, (const xmlChar *) OPH_TP_INT_TYPE)) {
+				int numeric_value = (int) strtol(tmp_value, NULL, 10);
+
+				attribute_minvalue = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MINVALUE);
+				attribute_maxvalue = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MAXVALUE);
 				int min_value = 0, max_value = 0;
-				if(attribute_minvalue != NULL && attribute_maxvalue != NULL){
-					min_value = (int)strtol((char *)attribute_minvalue, NULL, 10);
-					max_value = (int)strtol((char *)attribute_maxvalue, NULL, 10);
+				if (attribute_minvalue != NULL && attribute_maxvalue != NULL) {
+					min_value = (int) strtol((char *) attribute_minvalue, NULL, 10);
+					max_value = (int) strtol((char *) attribute_maxvalue, NULL, 10);
 					xmlFree(attribute_minvalue);
 					xmlFree(attribute_maxvalue);
-					if(min_value == max_value)
-					{
-						sprintf(tmp_value, "%d", min_value);	
-					}
-					else
-					{
-						if(numeric_value < min_value){
-							xmlFree(attribute_type);		
+					if (min_value == max_value) {
+						sprintf(tmp_value, "%d", min_value);
+					} else {
+						if (numeric_value < min_value) {
+							xmlFree(attribute_type);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
-						if(numeric_value > max_value){
-							xmlFree(attribute_type);		
+						if (numeric_value > max_value) {
+							xmlFree(attribute_type);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 					}
-				}
-				else if(attribute_minvalue != NULL){
-					min_value = strtol((char *)attribute_minvalue, NULL, 10);
+				} else if (attribute_minvalue != NULL) {
+					min_value = strtol((char *) attribute_minvalue, NULL, 10);
 					xmlFree(attribute_minvalue);
-					if(numeric_value < min_value){
+					if (numeric_value < min_value) {
+						xmlFree(attribute_type);
+						return OPH_TP_TASK_PARSER_ERROR;
+					}
+				} else if (attribute_maxvalue != NULL) {
+					max_value = strtol((char *) attribute_maxvalue, NULL, 10);
+					xmlFree(attribute_maxvalue);
+					if (numeric_value > max_value) {
 						xmlFree(attribute_type);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				}
-				else if(attribute_maxvalue != NULL){
-					max_value = strtol((char *)attribute_maxvalue, NULL, 10);
-					xmlFree(attribute_maxvalue);
-					if(numeric_value > max_value){
-						xmlFree(attribute_type);
-						return OPH_TP_TASK_PARSER_ERROR;
-					}
-				}
-			}
-			else if( !xmlStrcmp(attribute_type, (const xmlChar *)OPH_TP_REAL_TYPE) )
-			{
-				double numeric_value = (int)strtod(tmp_value, NULL);
-				
-				attribute_minvalue = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_MINVALUE);
-				attribute_maxvalue = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_MAXVALUE);
+			} else if (!xmlStrcmp(attribute_type, (const xmlChar *) OPH_TP_REAL_TYPE)) {
+				double numeric_value = (int) strtod(tmp_value, NULL);
+
+				attribute_minvalue = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MINVALUE);
+				attribute_maxvalue = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MAXVALUE);
 				double min_value = 0, max_value = 0;
-				if(attribute_minvalue != NULL && attribute_maxvalue != NULL){
-					min_value = strtod((char *)attribute_minvalue, NULL);
-					max_value = strtod((char *)attribute_maxvalue, NULL);
+				if (attribute_minvalue != NULL && attribute_maxvalue != NULL) {
+					min_value = strtod((char *) attribute_minvalue, NULL);
+					max_value = strtod((char *) attribute_maxvalue, NULL);
 					xmlFree(attribute_minvalue);
 					xmlFree(attribute_maxvalue);
-					if(min_value == max_value)
-					{
+					if (min_value == max_value) {
 						sprintf(tmp_value, "%f", min_value);
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "Param '%s' is changed to the only possible value %f\n", param, min_value);		
-					}
-					else
-					{
-						if(numeric_value < min_value){
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "Param '%s' is changed to the only possible value %f\n", param, min_value);
+					} else {
+						if (numeric_value < min_value) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Param '%s' is lower than minvalue %f\n", param, min_value);
-							xmlFree(attribute_type);		
+							xmlFree(attribute_type);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
-						if(numeric_value > max_value){
+						if (numeric_value > max_value) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Param '%s' is higher than maxvalue %f\n", param, max_value);
-							xmlFree(attribute_type);		
+							xmlFree(attribute_type);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 					}
-				}
-				else if(attribute_minvalue != NULL){
-					min_value = strtod((char *)attribute_minvalue, NULL);
+				} else if (attribute_minvalue != NULL) {
+					min_value = strtod((char *) attribute_minvalue, NULL);
 					xmlFree(attribute_minvalue);
-					if(numeric_value < min_value){
+					if (numeric_value < min_value) {
 						xmlFree(attribute_type);
 						return OPH_TP_TASK_PARSER_ERROR;
-					}	
-				}
-				else if(attribute_maxvalue != NULL){
-					max_value = strtod((char *)attribute_maxvalue, NULL);
+					}
+				} else if (attribute_maxvalue != NULL) {
+					max_value = strtod((char *) attribute_maxvalue, NULL);
 					xmlFree(attribute_maxvalue);
-					if(numeric_value > max_value){
+					if (numeric_value > max_value) {
 						xmlFree(attribute_type);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				}
 			}
-	
-			attribute_values = xmlGetProp(xml_node, (const xmlChar *)OPH_TP_XML_ATTRIBUTE_VALUES);
-			if(attribute_values != NULL){
+
+			attribute_values = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_VALUES);
+			if (attribute_values != NULL) {
 				//Check if the value is in the set of specified values
-				if(oph_tp_match_value_in_xml_value_list(tmp_value, attribute_values)){
+				if (oph_tp_match_value_in_xml_value_list(tmp_value, attribute_values)) {
 					xmlFree(attribute_type);
-					xmlFree(attribute_values);		
+					xmlFree(attribute_values);
 					return OPH_TP_TASK_PARSER_ERROR;
 				}
-				xmlFree(attribute_values);						
+				xmlFree(attribute_values);
 			}
-	
-			strncpy(*value,tmp_value, strlen(tmp_value));
+
+			strncpy(*value, tmp_value, strlen(tmp_value));
 			(*value)[strlen(tmp_value)] = 0;
 			xmlFree(attribute_type);
 		}
@@ -562,100 +560,96 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_start_xml_parser(){
-    xmlInitParser();
-    LIBXML_TEST_VERSION
-	return 0;
+int oph_tp_start_xml_parser()
+{
+	xmlInitParser();
+	LIBXML_TEST_VERSION return 0;
 }
 
-int oph_tp_end_xml_parser(){
+int oph_tp_end_xml_parser()
+{
 	xmlCleanupParser();
 	return 0;
 }
 
-int oph_tp_task_params_parser(const char* operator, const char *task_string, HASHTBL **hashtbl)
+int oph_tp_task_params_parser(const char *operator, const char *task_string, HASHTBL ** hashtbl)
 {
-	if (!operator || !task_string || !hashtbl) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (!operator || ! task_string || !hashtbl)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Check if string has correct format
-	if(oph_tp_validate_task_string(task_string)) return OPH_TP_TASK_PARSER_ERROR;
+	if (oph_tp_validate_task_string(task_string))
+		return OPH_TP_TASK_PARSER_ERROR;
 
 	xmlDocPtr document;
 	xmlNodePtr root, node, subnode;
 
 	//Select the correct XML file
-	char path_file[OPH_TP_XML_PATH_LENGTH]= {'\0'};
-	char filename[OPH_TP_XML_PATH_LENGTH]= {'\0'};
-	char operator_name[OPH_TP_TASKLEN] = {'\0'};
+	char path_file[OPH_TP_XML_PATH_LENGTH] = { '\0' };
+	char filename[OPH_TP_XML_PATH_LENGTH] = { '\0' };
+	char operator_name[OPH_TP_TASKLEN] = { '\0' };
 	strncpy(operator_name, operator, OPH_TP_TASKLEN);
 	char *op = operator_name;
-	while(*op != '\0'){
-		*op = toupper((unsigned char)*op);
+	while (*op != '\0') {
+		*op = toupper((unsigned char) *op);
 		op++;
 	}
 
 	char folder[OPH_TP_BUFLEN];
 	snprintf(folder, OPH_TP_BUFLEN, OPH_SERVER_XML_PATH, oph_server_location);
 
-	if (oph_tp_retrieve_function_xml_file((const char *)operator_name, NULL, &filename, folder)) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (oph_tp_retrieve_function_xml_file((const char *) operator_name, NULL, &filename, folder))
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	snprintf(path_file, sizeof(path_file), OPH_SERVER_XML_FILE, oph_server_location, filename);
 
 	//Open document
 	document = xmlParseFile(path_file);
-	if (document == NULL ) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (document == NULL)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Validate XML document
-	if(oph_tp_validate_xml_document(document))
-	{
-		xmlFreeDoc(document);		
+	if (oph_tp_validate_xml_document(document)) {
+		xmlFreeDoc(document);
 		return OPH_TP_TASK_SYSTEM_ERROR;
-	} 
-
+	}
 	//Read root
 	root = xmlDocGetRootElement(document);
-	if(root == NULL)
-	{
+	if (root == NULL) {
 		xmlFreeDoc(document);
 		return OPH_TP_TASK_SYSTEM_ERROR;
 	}
 
 	xmlChar *content;
-	
+
 	//Parse till args section
 	long number_arguments = 0;
-	char value1[OPH_TP_TASKLEN] = {'\0'};
+	char value1[OPH_TP_TASKLEN] = { '\0' };
 	node = root->children;
-	while(node)
-	{
-		if(!xmlStrcmp(node->name, (const xmlChar *)OPH_TP_XML_ARGS))
-		{
+	while (node) {
+		if (!xmlStrcmp(node->name, (const xmlChar *) OPH_TP_XML_ARGS)) {
 			//Count number of elements
 			number_arguments = xmlChildElementCount(node);
-			
-			if( !(*hashtbl = hashtbl_create(number_arguments + 1, NULL)) ){
+
+			if (!(*hashtbl = hashtbl_create(number_arguments + 1, NULL))) {
 				xmlFreeDoc(document);
 				return OPH_TP_TASK_SYSTEM_ERROR;
 			}
-
 			//For each argument read content and attributes
 			subnode = node->xmlChildrenNode;
-			while (subnode != NULL)
-			{
-				if ((!xmlStrcmp(subnode->name, (const xmlChar *)OPH_TP_XML_ARGUMENT)))
-				{
+			while (subnode != NULL) {
+				if ((!xmlStrcmp(subnode->name, (const xmlChar *) OPH_TP_XML_ARGUMENT))) {
 					//Look for param names (xml content)
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
-					if(content != NULL){
+					if (content != NULL) {
 						memset(value1, 0, OPH_TP_TASKLEN);
 						//Get and check value for parameter
-						if(oph_tp_validate_task_string_param(task_string, subnode, (char*) content, &value1))
-						{
+						if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, &value1)) {
 							xmlFree(content);
 							xmlFreeDoc(document);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
-						hashtbl_insert(*hashtbl, (char *) content, value1);	
+						hashtbl_insert(*hashtbl, (char *) content, value1);
 					}
 					xmlFree(content);
 				}
@@ -663,89 +657,83 @@ int oph_tp_task_params_parser(const char* operator, const char *task_string, HAS
 			}
 			break;
 		}
-		node = node->next;		
+		node = node->next;
 	}
-    
+
 	// free up the parser context
 	xmlFreeDoc(document);
 
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_task_param_checker(const char* operator, const char *task_string, char* key, char* value)
+int oph_tp_task_param_checker(const char *operator, const char *task_string, char *key, char *value)
 {
 	return oph_tp_task_param_checker_and_role(operator, task_string, key, value, NULL);
 }
 
-int oph_tp_task_param_checker_and_role(const char* operator, const char *task_string, char* key, char* value, char* role)
+int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *role)
 {
-	if (!operator || !task_string || !key || !value) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (!operator || ! task_string || !key || !value)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Check if string has correct format
-	if(oph_tp_validate_task_string(task_string)) return OPH_TP_TASK_PARSER_ERROR;
+	if (oph_tp_validate_task_string(task_string))
+		return OPH_TP_TASK_PARSER_ERROR;
 
 	xmlDocPtr document;
 	xmlNodePtr root, node, subnode;
 
 	//Select the correct XML file
-	char path_file[OPH_TP_XML_PATH_LENGTH]= {'\0'};
-	char filename[OPH_TP_XML_PATH_LENGTH]= {'\0'};
-	char operator_name[OPH_TP_TASKLEN] = {'\0'};
+	char path_file[OPH_TP_XML_PATH_LENGTH] = { '\0' };
+	char filename[OPH_TP_XML_PATH_LENGTH] = { '\0' };
+	char operator_name[OPH_TP_TASKLEN] = { '\0' };
 	strncpy(operator_name, operator, OPH_TP_TASKLEN);
 	char *op = operator_name;
-	while(*op != '\0'){
-		*op = toupper((unsigned char)*op);
+	while (*op != '\0') {
+		*op = toupper((unsigned char) *op);
 		op++;
 	}
 
-	if (oph_tp_retrieve_function_xml_file((const char *)operator_name, NULL, &filename, oph_xml_operator_dir)) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (oph_tp_retrieve_function_xml_file((const char *) operator_name, NULL, &filename, oph_xml_operator_dir))
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	snprintf(path_file, sizeof(path_file), OPH_SERVER_XML_EXT_FILE, oph_xml_operator_dir, filename);
 
 	//Open document
 	document = xmlParseFile(path_file);
-	if (document == NULL ) return OPH_TP_TASK_SYSTEM_ERROR;
+	if (document == NULL)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	//Validate XML document
-	if(oph_tp_validate_xml_document(document))
-	{
+	if (oph_tp_validate_xml_document(document)) {
 		xmlFreeDoc(document);
 		return OPH_TP_TASK_SYSTEM_ERROR;
-	} 
-
+	}
 	//Read root
 	root = xmlDocGetRootElement(document);
-	if(root == NULL)
-	{
+	if (root == NULL) {
 		xmlFreeDoc(document);
 		return OPH_TP_TASK_SYSTEM_ERROR;
 	}
 
 	xmlChar *content;
-	
+
 	//Parse till args section
-	char value1[OPH_TP_TASKLEN] = {'\0'};
+	char value1[OPH_TP_TASKLEN] = { '\0' };
 	node = root->children;
-	while (node)
-	{
-		if(!xmlStrcmp(node->name, (const xmlChar *)OPH_TP_XML_ARGS))
-		{
+	while (node) {
+		if (!xmlStrcmp(node->name, (const xmlChar *) OPH_TP_XML_ARGS)) {
 			//For each argument read content and attributes
 			subnode = node->xmlChildrenNode;
-			while (subnode)
-			{
-				if ((!xmlStrcmp(subnode->name, (const xmlChar *)OPH_TP_XML_ARGUMENT)))
-				{
+			while (subnode) {
+				if ((!xmlStrcmp(subnode->name, (const xmlChar *) OPH_TP_XML_ARGUMENT))) {
 					//Look for param names (xml content)
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
-					if (content)
-					{
-						if (!strncmp((char*)content, key, OPH_TP_TASKLEN))
-						{
+					if (content) {
+						if (!strncmp((char *) content, key, OPH_TP_TASKLEN)) {
 							memset(value1, 0, OPH_TP_TASKLEN);
 							//Get and check value for parameter
-							if(oph_tp_validate_task_string_param(task_string, subnode, (char*) content, &value1))
-							{
+							if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, &value1)) {
 								xmlFree(content);
 								xmlFreeDoc(document);
 								return OPH_TP_TASK_PARSER_ERROR;
@@ -765,19 +753,14 @@ int oph_tp_task_param_checker_and_role(const char* operator, const char *task_st
 	}
 
 	node = root->children;
-	while (role && node)
-	{
-		if (!xmlStrcmp(node->name, (const xmlChar *)OPH_TP_XML_INFO))
-		{
+	while (role && node) {
+		if (!xmlStrcmp(node->name, (const xmlChar *) OPH_TP_XML_INFO)) {
 			subnode = node->xmlChildrenNode;
-			while (subnode)
-			{
-				if (!xmlStrcmp(subnode->name, (const xmlChar *)OPH_TP_XML_PERMISSION))
-				{
+			while (subnode) {
+				if (!xmlStrcmp(subnode->name, (const xmlChar *) OPH_TP_XML_PERMISSION)) {
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
-					if (content)
-					{
-						strcpy(role, (char*)content);
+					if (content) {
+						strcpy(role, (char *) content);
 						xmlFree(content);
 					}
 					break;
@@ -787,7 +770,7 @@ int oph_tp_task_param_checker_and_role(const char* operator, const char *task_st
 			break;
 		}
 		node = node->next;
-	}    
+	}
 
 	// free up the parser context
 	xmlFreeDoc(document);
@@ -795,61 +778,63 @@ int oph_tp_task_param_checker_and_role(const char* operator, const char *task_st
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_parse_multiple_value_param (char *values, char ***value_list, int *value_num){
-  if (!values || !value_list || !value_num)
-      return OPH_TP_TASK_SYSTEM_ERROR;
-  
-  int param_num = 1;
-  int j,i;
+int oph_tp_parse_multiple_value_param(char *values, char ***value_list, int *value_num)
+{
+	if (!values || !value_list || !value_num)
+		return OPH_TP_TASK_SYSTEM_ERROR;
 
-  *value_list = NULL;
+	int param_num = 1;
+	int j, i;
 
-  //Check if string is correct
-  for (i = 0; values[i]; i++){
-	if(values[i] == OPH_TP_PARAM_VALUE_SEPARATOR ||  values[i] == OPH_TP_PARAM_PARAM_SEPARATOR)
-		return OPH_TP_TASK_PARSER_ERROR;
-  }
+	*value_list = NULL;
 
-  //Count number of parameters
-  for (i = 0; values[i]; i++)
-	if(values[i] == OPH_TP_MULTI_VALUE_SEPARATOR) param_num++;
-
-  *value_list = (char **)malloc(param_num*sizeof(char*));
-  if(!(*value_list))
-	  return OPH_TP_TASK_SYSTEM_ERROR;
-  for(i = 0; i < param_num; i++)
-	(*value_list)[i] = (char *)malloc(OPH_TP_TASKLEN*sizeof(char));
-
-  char *ptr_begin, *ptr_end;
-
-  ptr_begin = values;
-  ptr_end = strchr(values,OPH_TP_MULTI_VALUE_SEPARATOR);
-  j = 0;
-  while(ptr_begin)
-  { 
-	if(ptr_end){
-		strncpy ((*value_list)[j],ptr_begin, strlen(ptr_begin) - strlen(ptr_end) );
-		(*value_list)[j][strlen(ptr_begin) - strlen(ptr_end) ] = 0;
-		ptr_begin = ptr_end + 1;
-		ptr_end = strchr(ptr_end + 1,OPH_TP_MULTI_VALUE_SEPARATOR);
+	//Check if string is correct
+	for (i = 0; values[i]; i++) {
+		if (values[i] == OPH_TP_PARAM_VALUE_SEPARATOR || values[i] == OPH_TP_PARAM_PARAM_SEPARATOR)
+			return OPH_TP_TASK_PARSER_ERROR;
 	}
-	else{
-		strncpy ((*value_list)[j],ptr_begin, strlen(ptr_begin) );
-		(*value_list)[j][strlen(ptr_begin)] = 0;
-		ptr_begin = NULL;
-	}
-	j++;
-  }
 
-  *value_num = param_num;
-  return OPH_TP_TASK_PARSER_SUCCESS;
+	//Count number of parameters
+	for (i = 0; values[i]; i++)
+		if (values[i] == OPH_TP_MULTI_VALUE_SEPARATOR)
+			param_num++;
+
+	*value_list = (char **) malloc(param_num * sizeof(char *));
+	if (!(*value_list))
+		return OPH_TP_TASK_SYSTEM_ERROR;
+	for (i = 0; i < param_num; i++)
+		(*value_list)[i] = (char *) malloc(OPH_TP_TASKLEN * sizeof(char));
+
+	char *ptr_begin, *ptr_end;
+
+	ptr_begin = values;
+	ptr_end = strchr(values, OPH_TP_MULTI_VALUE_SEPARATOR);
+	j = 0;
+	while (ptr_begin) {
+		if (ptr_end) {
+			strncpy((*value_list)[j], ptr_begin, strlen(ptr_begin) - strlen(ptr_end));
+			(*value_list)[j][strlen(ptr_begin) - strlen(ptr_end)] = 0;
+			ptr_begin = ptr_end + 1;
+			ptr_end = strchr(ptr_end + 1, OPH_TP_MULTI_VALUE_SEPARATOR);
+		} else {
+			strncpy((*value_list)[j], ptr_begin, strlen(ptr_begin));
+			(*value_list)[j][strlen(ptr_begin)] = 0;
+			ptr_begin = NULL;
+		}
+		j++;
+	}
+
+	*value_num = param_num;
+	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_free_multiple_value_param_list(char **value_list, int value_num){
-	int i;	
-	if(value_list){
-		for(i = 0; i < value_num; i++)
-			if(value_list[i]) free(value_list[i]);
+int oph_tp_free_multiple_value_param_list(char **value_list, int value_num)
+{
+	int i;
+	if (value_list) {
+		for (i = 0; i < value_num; i++)
+			if (value_list[i])
+				free(value_list[i]);
 		free(value_list);
 	}
 	return OPH_TP_TASK_PARSER_SUCCESS;

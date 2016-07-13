@@ -162,4 +162,3 @@
 #define OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY				"manage_session_summary"
 
 #endif
-

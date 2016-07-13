@@ -57,25 +57,25 @@
 #define OPH_TP_REAL_TYPE "double"
 
 //Retrieve the correct xml file version for operators or primitives
-int oph_tp_retrieve_function_xml_file(const char *function_name, const char *function_version, char (*xml_filename)[OPH_TP_BUFLEN], const char* folder);
+int oph_tp_retrieve_function_xml_file(const char *function_name, const char *function_version, char (*xml_filename)[OPH_TP_BUFLEN], const char *folder);
 
 //Look for value of param in task string
 int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char (*value)[OPH_TP_TASKLEN]);
 
 //Load the operator parameters from task_string and XML into the hash table
-int oph_tp_task_params_parser(const char* operator_name, const char *task_string, HASHTBL **hashtbl);
+int oph_tp_task_params_parser(const char *operator_name, const char *task_string, HASHTBL ** hashtbl);
 
 //Split multiple values params into a value_list of size value_num
-int oph_tp_parse_multiple_value_param (char *values, char ***value_list, int *value_num);
+int oph_tp_parse_multiple_value_param(char *values, char ***value_list, int *value_num);
 
 //Free the value_list of size value_num
 int oph_tp_free_multiple_value_param_list(char **value_list, int value_num);
 
 // Check the value of a key
-int oph_tp_task_param_checker(const char* operator, const char *task_string, char* key, char* value);
+int oph_tp_task_param_checker(const char *operator, const char *task_string, char *key, char *value);
 
 // Check the value of a key changed in order to extract the permission
-int oph_tp_task_param_checker_and_role(const char* operator, const char *task_string, char* key, char* value, char* op_role);
+int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *op_role);
 
 //Start xml parsing
 int oph_tp_start_xml_parser();
@@ -83,5 +83,4 @@ int oph_tp_start_xml_parser();
 //End xml parsing
 int oph_tp_end_xml_parser();
 
-#endif  //__OPH_TASK_PARSER_H
-
+#endif				//__OPH_TASK_PARSER_H

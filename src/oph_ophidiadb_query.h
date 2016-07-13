@@ -53,7 +53,7 @@
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_PARENT "INSERT INTO `job` (`iduser`, `idsession`, `markerid`, `status`, `submissionstring`, `nchildrentotal`, `nchildrencompleted`, `workflowid`) VALUES (%d, %d, '%s', '%s', '%s', %d, 0, '%s')"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILD "INSERT INTO `job` (`iduser`, `idsession`, `markerid`, `status`, `submissionstring`, `idparent`, `workflowid`) VALUES (%d, %d, '%s', '%s', '%s', '%s', '%s')"
 
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILDREN_NUMBER "UPDATE job SET nchildrentotal=%d WHERE idjob=%d" // Used in case of UNLIMITED
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILDREN_NUMBER "UPDATE job SET nchildrentotal=%d WHERE idjob=%d"	// Used in case of UNLIMITED
 
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1 "UPDATE job SET status='%s' WHERE idjob=%d"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=NOW() WHERE idjob=%d AND timestart IS NULL"
@@ -70,5 +70,4 @@
 // Not used
 #define OPHIDIADB_DATACUBE_LIST "SELECT iddatacube, datacubename FROM datacube"
 
-#endif /* OPH_OPHIDIADB_QUERY_H */
-
+#endif				/* OPH_OPHIDIADB_QUERY_H */

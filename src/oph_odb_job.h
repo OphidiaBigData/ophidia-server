@@ -25,14 +25,14 @@
 
 #include "oph_gather.h"
 
-const char* oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status);
+const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status);
 
-int oph_odb_update_session_label(ophidiadb* oDB, const char* sessionid, char* label);
-int oph_odb_update_session_label_unsafe(ophidiadb* oDB, const char* sessionid, char* label);
+int oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *label);
+int oph_odb_update_session_label_unsafe(ophidiadb * oDB, const char *sessionid, char *label);
 
-int oph_odb_update_job_table(ophidiadb* oDB, char* markerid, char* task_string, char* status, int id_user, int id_session, int nchildren, int* id_job, char* parentid, char* workflowid);
-int oph_odb_create_job(ophidiadb *oDB, char* task_string, HASHTBL *task_tbl, int nchildren, int* id_job);
-int oph_odb_create_job_unsafe(ophidiadb *oDB, char* task_string, HASHTBL *task_tbl, int nchildren, int* id_job);
+int oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid);
+int oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, int nchildren, int *id_job);
+int oph_odb_create_job_unsafe(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, int nchildren, int *id_job);
 
 int oph_odb_change_job_status(int idjob, enum oph__oph_odb_job_status status);
 int oph_odb_enque_job(int idjob);
@@ -41,26 +41,25 @@ int oph_odb_stop_job(int idjob);
 int oph_odb_abort_job(int idjob);
 int oph_odb_remove_job(int idjob);
 
-int oph_odb_set_job_status(int id_job, enum oph__oph_odb_job_status status, ophidiadb *oDB);
-int oph_odb_enque_job_fast(int idjob, ophidiadb *oDB);
-int oph_odb_start_job_fast(int idjob, ophidiadb *oDB);
-int oph_odb_stop_job_fast(int idjob, ophidiadb *oDB);
-int oph_odb_abort_job_fast(int idjob, ophidiadb *oDB);
-int oph_odb_remove_job_fast(int idjob, ophidiadb *oDB);
+int oph_odb_set_job_status(int id_job, enum oph__oph_odb_job_status status, ophidiadb * oDB);
+int oph_odb_enque_job_fast(int idjob, ophidiadb * oDB);
+int oph_odb_start_job_fast(int idjob, ophidiadb * oDB);
+int oph_odb_stop_job_fast(int idjob, ophidiadb * oDB);
+int oph_odb_abort_job_fast(int idjob, ophidiadb * oDB);
+int oph_odb_remove_job_fast(int idjob, ophidiadb * oDB);
 
-int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_job_status status, int nchildren, int force_nchildren_saving, ophidiadb *oDB);
+int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_job_status status, int nchildren, int force_nchildren_saving, ophidiadb * oDB);
 
-int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb *oDB);
-int oph_odb_get_uncompleted_job_number(int parent_idjob, int *n, ophidiadb *oDB);
+int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb * oDB);
+int oph_odb_get_uncompleted_job_number(int parent_idjob, int *n, ophidiadb * oDB);
 
-int oph_odb_retrieve_user_id(ophidiadb *oDB, char* username, int *id_user);
-int oph_odb_retrieve_user_id_unsafe(ophidiadb *oDB, char* username, int *id_user);
+int oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user);
+int oph_odb_retrieve_user_id_unsafe(ophidiadb * oDB, char *username, int *id_user);
 
-int oph_odb_update_session_table(ophidiadb* oDB, char* sessionid, int id_user, int* id_session);
-int oph_odb_update_session_table_unsafe(ophidiadb* oDB, char* sessionid, int id_user, int* id_session);
+int oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session);
+int oph_odb_update_session_table_unsafe(ophidiadb * oDB, char *sessionid, int id_user, int *id_session);
 
-int oph_odb_retrieve_session_id(ophidiadb *oDB, const char* sessionid, int *id_session);
-int oph_odb_retrieve_session_id_unsafe(ophidiadb *oDB, const char* sessionid, int *id_session);
+int oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id_session);
+int oph_odb_retrieve_session_id_unsafe(ophidiadb * oDB, const char *sessionid, int *id_session);
 
-#endif /* OPH_ODB_JOB_H */
-
+#endif				/* OPH_ODB_JOB_H */

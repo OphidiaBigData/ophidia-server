@@ -25,9 +25,8 @@
 #define OPH_SESSION_OUTPUT_CUBE "%d.cube"
 #define OPH_SESSION_OUTPUT_LINK "%d.html"
 
-int oph_session_report_init(const char* session_code);
-int oph_session_report_append_command(const char* session_code, const int workflowid, const int markerid, const char* username, const char* data);
-int oph_session_report_append_link(const char* session_code, const int workflowid, const char* anchor, const char* linkname, const char* link, const char type);
+int oph_session_report_init(const char *session_code);
+int oph_session_report_append_command(const char *session_code, const int workflowid, const int markerid, const char *username, const char *data);
+int oph_session_report_append_link(const char *session_code, const int workflowid, const char *anchor, const char *linkname, const char *link, const char type);
 
-#endif /* OPH_SESSION_REPORT_H */
-
+#endif				/* OPH_SESSION_REPORT_H */

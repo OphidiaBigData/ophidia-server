@@ -24,62 +24,64 @@
 #include "oph_workflow_structs.h"
 
 
-int oph_output_data_free(char** output, int num)
+int oph_output_data_free(char **output, int num)
 {
 	int i;
-	if (output)
-	{
-		for (i=0;i<num;i++) free(output[i]);
+	if (output) {
+		for (i = 0; i < num; i++)
+			free(output[i]);
 		free(output);
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_free(oph_workflow *workflow) {
-	if (!workflow) return OPH_WORKFLOW_EXIT_SUCCESS;
+int oph_workflow_free(oph_workflow * workflow)
+{
+	if (!workflow)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	int i;
 	if (workflow->abstract) {
 		free(workflow->abstract);
-		workflow->abstract=NULL;
+		workflow->abstract = NULL;
 	}
 	if (workflow->author) {
 		free(workflow->author);
-		workflow->author=NULL;
+		workflow->author = NULL;
 	}
 	if (workflow->callback_url) {
 		free(workflow->callback_url);
-		workflow->callback_url=NULL;
+		workflow->callback_url = NULL;
 	}
 	if (workflow->cube) {
 		free(workflow->cube);
-		workflow->cube=NULL;
+		workflow->cube = NULL;
 	}
 	if (workflow->cwd) {
 		free(workflow->cwd);
-		workflow->cwd=NULL;
+		workflow->cwd = NULL;
 	}
 	if (workflow->exec_mode) {
 		free(workflow->exec_mode);
-		workflow->exec_mode=NULL;
+		workflow->exec_mode = NULL;
 	}
 	if (workflow->name) {
 		free(workflow->name);
-		workflow->name=NULL;
+		workflow->name = NULL;
 	}
 	if (workflow->sessionid) {
 		free(workflow->sessionid);
-		workflow->sessionid=NULL;
+		workflow->sessionid = NULL;
 	}
 	if (workflow->username) {
 		free(workflow->username);
-		workflow->username=NULL;
+		workflow->username = NULL;
 	}
 	if (workflow->tasks_num) {
 		for (i = 0; i <= workflow->tasks_num; i++) {
 			oph_workflow_task_free(&(workflow->tasks[i]));
 		}
 		free(workflow->tasks);
-		workflow->tasks=NULL;
+		workflow->tasks = NULL;
 	}
 	if (workflow->response) {
 		free(workflow->response);
@@ -87,34 +89,33 @@ int oph_workflow_free(oph_workflow *workflow) {
 	}
 	if (workflow->command) {
 		free(workflow->command);
-		workflow->command=NULL;
+		workflow->command = NULL;
 	}
 	if (workflow->on_error) {
 		free(workflow->on_error);
-		workflow->on_error=NULL;
+		workflow->on_error = NULL;
 	}
 	if (workflow->on_exit) {
 		free(workflow->on_exit);
-		workflow->on_exit=NULL;
+		workflow->on_exit = NULL;
 	}
 	if (workflow->exit_values) {
 		free(workflow->exit_values);
-		workflow->exit_values=NULL;
+		workflow->exit_values = NULL;
 	}
-	oph_workflow_task_out* tmp = NULL;
-	while (workflow->output)
-	{
+	oph_workflow_task_out *tmp = NULL;
+	while (workflow->output) {
 		tmp = workflow->output->next;
 		if (workflow->output->name) {
 			free(workflow->output->name);
 			workflow->output->name = NULL;
 		}
-		if (workflow->output->light_task_outs)
-		{
-			for (i=0; i<workflow->output->light_tasks_num; i++) if (workflow->output->light_task_outs[i].response) {
-				free(workflow->output->light_task_outs[i].response);
-				workflow->output->light_task_outs[i].response = NULL;
-			}
+		if (workflow->output->light_task_outs) {
+			for (i = 0; i < workflow->output->light_tasks_num; i++)
+				if (workflow->output->light_task_outs[i].response) {
+					free(workflow->output->light_task_outs[i].response);
+					workflow->output->light_task_outs[i].response = NULL;
+				}
 			free(workflow->output->light_task_outs);
 			workflow->output->light_task_outs = NULL;
 		}
@@ -125,150 +126,153 @@ int oph_workflow_free(oph_workflow *workflow) {
 		free(workflow->output);
 		workflow->output = tmp;
 	}
-	if (workflow->vars)
-	{
+	if (workflow->vars) {
 		hashtbl_destroy(workflow->vars);
 		workflow->vars = NULL;
 	}
-	while (workflow->stack && !oph_workflow_pop(workflow,NULL));
+	while (workflow->stack && !oph_workflow_pop(workflow, NULL));
 	free(workflow);
-	workflow=NULL;
+	workflow = NULL;
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_task_free(oph_workflow_task *task)
+int oph_workflow_task_free(oph_workflow_task * task)
 {
-	if (!task) return OPH_WORKFLOW_EXIT_SUCCESS;
+	if (!task)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	int i;
 	if (task->arguments_num) {
 		for (i = 0; i < task->arguments_num; i++) {
 			if (task->arguments_keys[i]) {
 				free(task->arguments_keys[i]);
-				task->arguments_keys[i]=NULL;
+				task->arguments_keys[i] = NULL;
 			}
 			if (task->arguments_values[i]) {
 				free(task->arguments_values[i]);
-				task->arguments_values[i]=NULL;
+				task->arguments_values[i] = NULL;
 			}
 		}
 		free(task->arguments_keys);
-		task->arguments_keys=NULL;
+		task->arguments_keys = NULL;
 		free(task->arguments_values);
-		task->arguments_values=NULL;
+		task->arguments_values = NULL;
 	}
 	if (task->dependents_indexes_num) {
 		free(task->dependents_indexes);
-		task->dependents_indexes=NULL;
+		task->dependents_indexes = NULL;
 	}
 	if (task->deps_num) {
 		for (i = 0; i < task->deps_num; i++) {
 			oph_workflow_dep_free(&(task->deps[i]));
 		}
 		free(task->deps);
-		task->deps=NULL;
+		task->deps = NULL;
 	}
 	if (task->light_tasks_num) {
 		for (i = 0; i < task->light_tasks_num; i++) {
 			oph_workflow_light_task_free(&(task->light_tasks[i]));
 		}
 		free(task->light_tasks);
-		task->light_tasks=NULL;
+		task->light_tasks = NULL;
 	}
 	if (task->name) {
 		free(task->name);
-		task->name=NULL;
+		task->name = NULL;
 	}
 	if (task->operator) {
 		free(task->operator);
-		task->operator=NULL;
+		task->operator= NULL;
 	}
 	if (task->outputs_num) {
 		for (i = 0; i < task->outputs_num; i++) {
 			if (task->outputs_keys[i]) {
 				free(task->outputs_keys[i]);
-				task->outputs_keys[i]=NULL;
+				task->outputs_keys[i] = NULL;
 			}
 			if (task->outputs_values[i]) {
 				free(task->outputs_values[i]);
-				task->outputs_values[i]=NULL;
+				task->outputs_values[i] = NULL;
 			}
 		}
 		free(task->outputs_keys);
-		task->outputs_keys=NULL;
+		task->outputs_keys = NULL;
 		free(task->outputs_values);
-		task->outputs_values=NULL;
+		task->outputs_values = NULL;
 	}
 	if (task->response) {
 		free(task->response);
 		task->response = NULL;
 	}
-	if (task->vars)
-	{
+	if (task->vars) {
 		hashtbl_destroy(task->vars);
 		task->vars = NULL;
 	}
 	if (task->on_error) {
 		free(task->on_error);
-		task->on_error=NULL;
+		task->on_error = NULL;
 	}
 	if (task->on_exit) {
 		free(task->on_exit);
-		task->on_exit=NULL;
+		task->on_exit = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_dep_free(oph_workflow_dep *dep) {
-	if (!dep) return OPH_WORKFLOW_EXIT_SUCCESS;
+int oph_workflow_dep_free(oph_workflow_dep * dep)
+{
+	if (!dep)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	if (dep->argument) {
 		free(dep->argument);
-		dep->argument=NULL;
+		dep->argument = NULL;
 	}
 	if (dep->filter) {
 		free(dep->filter);
-		dep->filter=NULL;
+		dep->filter = NULL;
 	}
 	if (dep->order) {
 		free(dep->order);
-		dep->order=NULL;
+		dep->order = NULL;
 	}
 	if (dep->output_argument) {
 		free(dep->output_argument);
-		dep->output_argument=NULL;
+		dep->output_argument = NULL;
 	}
 	if (dep->output_order) {
 		free(dep->output_order);
-		dep->output_order=NULL;
+		dep->output_order = NULL;
 	}
 	if (dep->task_name) {
 		free(dep->task_name);
-		dep->task_name=NULL;
+		dep->task_name = NULL;
 	}
 	if (dep->type) {
 		free(dep->type);
-		dep->type=NULL;
+		dep->type = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_light_task_free(oph_workflow_light_task *light_task) {
-	if (!light_task) return OPH_WORKFLOW_EXIT_SUCCESS;
+int oph_workflow_light_task_free(oph_workflow_light_task * light_task)
+{
+	if (!light_task)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 	int i;
 	if (light_task->arguments_num) {
 		for (i = 0; i < light_task->arguments_num; i++) {
 			if (light_task->arguments_keys[i]) {
 				free(light_task->arguments_keys[i]);
-				light_task->arguments_keys[i]=NULL;
+				light_task->arguments_keys[i] = NULL;
 			}
 			if (light_task->arguments_values[i]) {
 				free(light_task->arguments_values[i]);
-				light_task->arguments_values[i]=NULL;
+				light_task->arguments_values[i] = NULL;
 			}
 		}
 		free(light_task->arguments_keys);
-		light_task->arguments_keys=NULL;
+		light_task->arguments_keys = NULL;
 		free(light_task->arguments_values);
-		light_task->arguments_values=NULL;
+		light_task->arguments_values = NULL;
 	}
 	if (light_task->response) {
 		free(light_task->response);
@@ -277,95 +281,92 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task) {
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
+int oph_workflow_save_task_output(oph_workflow_task * task, oph_workflow_task_out ** task_out)
 {
-	if (!task || !task_out) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!task || !task_out)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	*task_out = (oph_workflow_task_out *)malloc(sizeof(oph_workflow_task_out));
-	if (!(*task_out)) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	*task_out = (oph_workflow_task_out *) malloc(sizeof(oph_workflow_task_out));
+	if (!(*task_out))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	(*task_out)->name = strdup(task->name);
 	(*task_out)->markerid = task->markerid;
 	(*task_out)->status = task->status;
 	(*task_out)->light_tasks_num = task->light_tasks_num;
-	(*task_out)->response = task->response ? strdup(task->response) : NULL; // The copy is used for oph_set
+	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
 	(*task_out)->next = NULL;
 
-	if (task->light_tasks_num)
-	{
-		(*task_out)->light_task_outs = (oph_workflow_light_task_out*)malloc(task->light_tasks_num*sizeof(oph_workflow_light_task_out));
-		if (!((*task_out)->light_task_outs))
-		{
-			free(*task_out); *task_out = NULL;
+	if (task->light_tasks_num) {
+		(*task_out)->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));
+		if (!((*task_out)->light_task_outs)) {
+			free(*task_out);
+			*task_out = NULL;
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 
 		int i;
-		for (i=0;i<task->light_tasks_num;++i)
-		{
+		for (i = 0; i < task->light_tasks_num; ++i) {
 			(*task_out)->light_task_outs[i].markerid = task->light_tasks[i].markerid;
 			(*task_out)->light_task_outs[i].status = task->light_tasks[i].status;
-			(*task_out)->light_task_outs[i].response = task->light_tasks[i].response; // No copy for oph_set!!!
+			(*task_out)->light_task_outs[i].response = task->light_tasks[i].response;	// No copy for oph_set!!!
 			task->light_tasks[i].response = NULL;
 		}
-	}
-	else (*task_out)->light_task_outs = NULL;
+	} else
+		(*task_out)->light_task_outs = NULL;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_push(oph_workflow *workflow, int caller, char* name, char **svalues, int *ivalues, int values_num)
+int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **svalues, int *ivalues, int values_num)
 {
-	if (!workflow || !name || (values_num<=0)) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!workflow || !name || (values_num <= 0))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	oph_workflow_stack *tmp = (oph_workflow_stack *)malloc(sizeof(oph_workflow_stack));
-	if (!tmp) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	oph_workflow_stack *tmp = (oph_workflow_stack *) malloc(sizeof(oph_workflow_stack));
+	if (!tmp)
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	tmp->tasks_num = workflow->tasks_num;
-	if (workflow->tasks_num)
-	{
-		tmp->tasks = (oph_workflow_stack_task *)malloc(workflow->tasks_num * sizeof(oph_workflow_stack_task));
-		if (!tmp->tasks) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (workflow->tasks_num) {
+		tmp->tasks = (oph_workflow_stack_task *) malloc(workflow->tasks_num * sizeof(oph_workflow_stack_task));
+		if (!tmp->tasks)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 		int i, j;
-		for (i=0;i<workflow->tasks_num;++i)
-		{
+		for (i = 0; i < workflow->tasks_num; ++i) {
 			tmp->tasks[i].arguments_num = workflow->tasks[i].arguments_num;
-			if (workflow->tasks[i].arguments_num)
-			{
-				tmp->tasks[i].arguments_keys = (char**)malloc(workflow->tasks[i].arguments_num*sizeof(char*));
-				tmp->tasks[i].arguments_values = (char**)malloc(workflow->tasks[i].arguments_num*sizeof(char*));
-				for (j=0;j<workflow->tasks[i].arguments_num;++j)
-				{
+			if (workflow->tasks[i].arguments_num) {
+				tmp->tasks[i].arguments_keys = (char **) malloc(workflow->tasks[i].arguments_num * sizeof(char *));
+				tmp->tasks[i].arguments_values = (char **) malloc(workflow->tasks[i].arguments_num * sizeof(char *));
+				for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
 					tmp->tasks[i].arguments_keys[j] = strdup(workflow->tasks[i].arguments_keys[j]);
 					tmp->tasks[i].arguments_values[j] = strdup(workflow->tasks[i].arguments_values[j]);
 				}
-			}
-			else
-			{
+			} else {
 				tmp->tasks[i].arguments_keys = NULL;
 				tmp->tasks[i].arguments_values = NULL;
 			}
 			tmp->tasks[i].deps_num = workflow->tasks[i].deps_num;
-			if (workflow->tasks[i].deps_num)
-			{
-				tmp->tasks[i].deps_task_index = (int*)malloc(workflow->tasks[i].deps_num * sizeof(int));
-				for (j=0;j<workflow->tasks[i].deps_num;++j) tmp->tasks[i].deps_task_index[j] = workflow->tasks[i].deps[j].task_index;
-			}
-			else tmp->tasks[i].deps_task_index = NULL;
+			if (workflow->tasks[i].deps_num) {
+				tmp->tasks[i].deps_task_index = (int *) malloc(workflow->tasks[i].deps_num * sizeof(int));
+				for (j = 0; j < workflow->tasks[i].deps_num; ++j)
+					tmp->tasks[i].deps_task_index[j] = workflow->tasks[i].deps[j].task_index;
+			} else
+				tmp->tasks[i].deps_task_index = NULL;
 			tmp->tasks[i].residual_deps_num = workflow->tasks[i].residual_deps_num;
 			tmp->tasks[i].dependents_indexes_num = workflow->tasks[i].dependents_indexes_num;
-			if (workflow->tasks[i].dependents_indexes_num)
-			{
-				tmp->tasks[i].dependents_indexes = (int*)malloc(workflow->tasks[i].dependents_indexes_num * sizeof(int));
-				for (j=0;j<workflow->tasks[i].dependents_indexes_num;++j) tmp->tasks[i].dependents_indexes[j] = workflow->tasks[i].dependents_indexes[j];
-			}
-			else tmp->tasks[i].dependents_indexes = NULL;
+			if (workflow->tasks[i].dependents_indexes_num) {
+				tmp->tasks[i].dependents_indexes = (int *) malloc(workflow->tasks[i].dependents_indexes_num * sizeof(int));
+				for (j = 0; j < workflow->tasks[i].dependents_indexes_num; ++j)
+					tmp->tasks[i].dependents_indexes[j] = workflow->tasks[i].dependents_indexes[j];
+			} else
+				tmp->tasks[i].dependents_indexes = NULL;
 		}
 	}
 
 	tmp->caller = caller;
-	tmp->index = 0; // From 0 to values_num-1
+	tmp->index = 0;		// From 0 to values_num-1
 	tmp->name = strdup(name);
 	tmp->svalues = svalues;
 	tmp->ivalues = ivalues;
@@ -376,129 +377,149 @@ int oph_workflow_push(oph_workflow *workflow, int caller, char* name, char **sva
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_pop(oph_workflow *workflow, oph_workflow_stack* prev)
+int oph_workflow_pop(oph_workflow * workflow, oph_workflow_stack * prev)
 {
-	if (!workflow) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!workflow)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	oph_workflow_stack *tmp = prev ? prev->next : workflow->stack;
-	if (!tmp) return OPH_WORKFLOW_EXIT_SUCCESS;
+	if (!tmp)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
 
-	if (prev) prev->next = tmp->next;
-	else workflow->stack = tmp->next;
+	if (prev)
+		prev->next = tmp->next;
+	else
+		workflow->stack = tmp->next;
 
 	int i, j;
-	if (tmp->tasks)
-	{
-		for (i=0;i<tmp->tasks_num;++i)
-		{
-			for (j=0;j<tmp->tasks[i].arguments_num;++j)
-			{
-				if(tmp->tasks[i].arguments_keys[j]) free(tmp->tasks[i].arguments_keys[j]);
-				if(tmp->tasks[i].arguments_values[j]) free(tmp->tasks[i].arguments_values[j]);
+	if (tmp->tasks) {
+		for (i = 0; i < tmp->tasks_num; ++i) {
+			for (j = 0; j < tmp->tasks[i].arguments_num; ++j) {
+				if (tmp->tasks[i].arguments_keys[j])
+					free(tmp->tasks[i].arguments_keys[j]);
+				if (tmp->tasks[i].arguments_values[j])
+					free(tmp->tasks[i].arguments_values[j]);
 			}
-			if (tmp->tasks[i].arguments_keys) free(tmp->tasks[i].arguments_keys);
-			if (tmp->tasks[i].arguments_values) free(tmp->tasks[i].arguments_values);
-			if (tmp->tasks[i].deps_task_index) free(tmp->tasks[i].deps_task_index);
-			if (tmp->tasks[i].dependents_indexes) free(tmp->tasks[i].dependents_indexes);
+			if (tmp->tasks[i].arguments_keys)
+				free(tmp->tasks[i].arguments_keys);
+			if (tmp->tasks[i].arguments_values)
+				free(tmp->tasks[i].arguments_values);
+			if (tmp->tasks[i].deps_task_index)
+				free(tmp->tasks[i].deps_task_index);
+			if (tmp->tasks[i].dependents_indexes)
+				free(tmp->tasks[i].dependents_indexes);
 		}
 		free(tmp->tasks);
 	}
-	if (tmp->name) free(tmp->name);
-	if (tmp->svalues)
-	{
-		for (i=0;i<tmp->values_num;++i) if(tmp->svalues[i]) free(tmp->svalues[i]);
+	if (tmp->name)
+		free(tmp->name);
+	if (tmp->svalues) {
+		for (i = 0; i < tmp->values_num; ++i)
+			if (tmp->svalues[i])
+				free(tmp->svalues[i]);
 		free(tmp->svalues);
 	}
-	if (tmp->ivalues) free(tmp->ivalues);
+	if (tmp->ivalues)
+		free(tmp->ivalues);
 	free(tmp);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_expand(oph_workflow *wf, int tasks_num)
+int oph_workflow_expand(oph_workflow * wf, int tasks_num)
 {
-	if (!wf) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	if (tasks_num <= wf->tasks_num)	return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!wf)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (tasks_num <= wf->tasks_num)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	oph_workflow_task *old_tasks = wf->tasks;
 	int old_tasks_num = wf->tasks_num;
 
-	wf->tasks = (oph_workflow_task *)calloc(tasks_num+1,sizeof(oph_workflow_task)); // +1 is due to append an empty task at the end for a possible "Final task"
-	if (!wf->tasks)
-	{
+	wf->tasks = (oph_workflow_task *) calloc(tasks_num + 1, sizeof(oph_workflow_task));	// +1 is due to append an empty task at the end for a possible "Final task"
+	if (!wf->tasks) {
 		wf->tasks = old_tasks;
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 	wf->tasks_num = wf->residual_tasks_num = tasks_num;
 
-	memcpy(wf->tasks,old_tasks,old_tasks_num*sizeof(oph_workflow_task));
-	memcpy(wf->tasks+wf->tasks_num,old_tasks+old_tasks_num,sizeof(oph_workflow_task)); // Copy the final task
+	memcpy(wf->tasks, old_tasks, old_tasks_num * sizeof(oph_workflow_task));
+	memcpy(wf->tasks + wf->tasks_num, old_tasks + old_tasks_num, sizeof(oph_workflow_task));	// Copy the final task
 	free(old_tasks);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_copy_task(oph_workflow_task *s, oph_workflow_task *d, int suffix)
+int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suffix)
 {
-	if (!s || !d) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!s || !d)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	int i;
-	memcpy(d,s,sizeof(oph_workflow_task));
-	if (s->name)
-	{
-		if (suffix>=0)
-		{
-			size_t length = strlen(s->name)-1;
-			char tmp[length+OPH_WORKFLOW_MIN_STRING];
-			if (s->name[length]==OPH_WORKFLOW_NAME_EXPANSION_END)
-			{
-				char* tmp2 = strdup(s->name); // Don't change source task!
-				tmp2[length]=0;
-				sprintf(tmp,OPH_WORKFLOW_NAME_EXPANSION2,tmp2,suffix);
+	memcpy(d, s, sizeof(oph_workflow_task));
+	if (s->name) {
+		if (suffix >= 0) {
+			size_t length = strlen(s->name) - 1;
+			char tmp[length + OPH_WORKFLOW_MIN_STRING];
+			if (s->name[length] == OPH_WORKFLOW_NAME_EXPANSION_END) {
+				char *tmp2 = strdup(s->name);	// Don't change source task!
+				tmp2[length] = 0;
+				sprintf(tmp, OPH_WORKFLOW_NAME_EXPANSION2, tmp2, suffix);
 				free(tmp2);
-			}
-			else sprintf(tmp,OPH_WORKFLOW_NAME_EXPANSION1,s->name,suffix);
-			if (!((d->name = strdup(tmp)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		}
-		else if (!((d->name = strdup(s->name)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			} else
+				sprintf(tmp, OPH_WORKFLOW_NAME_EXPANSION1, s->name, suffix);
+			if (!((d->name = strdup(tmp))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		} else if (!((d->name = strdup(s->name))))
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-	if (s->operator && !((d->operator = strdup(s->operator)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	if (s->arguments_keys)
-	{
-		d->arguments_keys = (char**)calloc(s->arguments_num,sizeof(char*));
-		if (!d->arguments_keys) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		for (i=0;i<s->arguments_num;++i) if (s->arguments_keys[i] && !((d->arguments_keys[i] = strdup(s->arguments_keys[i])))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->operator && ! ((d->operator = strdup(s->operator))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->arguments_keys) {
+		d->arguments_keys = (char **) calloc(s->arguments_num, sizeof(char *));
+		if (!d->arguments_keys)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		for (i = 0; i < s->arguments_num; ++i)
+			if (s->arguments_keys[i] && !((d->arguments_keys[i] = strdup(s->arguments_keys[i]))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-	if (s->arguments_values)
-	{
-		d->arguments_values = (char**)calloc(s->arguments_num,sizeof(char*));
-		if (!d->arguments_values) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		for (i=0;i<s->arguments_num;++i) if (s->arguments_values[i] && !((d->arguments_values[i] = strdup(s->arguments_values[i])))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->arguments_values) {
+		d->arguments_values = (char **) calloc(s->arguments_num, sizeof(char *));
+		if (!d->arguments_values)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		for (i = 0; i < s->arguments_num; ++i)
+			if (s->arguments_values[i] && !((d->arguments_values[i] = strdup(s->arguments_values[i]))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-	if (s->deps)
-	{
-		d->deps = (oph_workflow_dep*)calloc(s->deps_num,sizeof(oph_workflow_dep));
-		if (!d->deps) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		memcpy(d->deps,s->deps,s->deps_num*sizeof(oph_workflow_dep));
-		for (i=0;i<s->deps_num;++i)
-		{
+	if (s->deps) {
+		d->deps = (oph_workflow_dep *) calloc(s->deps_num, sizeof(oph_workflow_dep));
+		if (!d->deps)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		memcpy(d->deps, s->deps, s->deps_num * sizeof(oph_workflow_dep));
+		for (i = 0; i < s->deps_num; ++i) {
 			d->deps[i].task_name = NULL;
-			if (s->deps[i].argument && !((d->deps[i].argument = strdup(s->deps[i].argument)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			if (s->deps[i].order && !((d->deps[i].order = strdup(s->deps[i].order)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			if (s->deps[i].type && !((d->deps[i].type = strdup(s->deps[i].type)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			if (s->deps[i].filter && !((d->deps[i].filter = strdup(s->deps[i].filter)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			if (s->deps[i].output_argument && !((d->deps[i].output_argument = strdup(s->deps[i].output_argument)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			if (s->deps[i].output_order && !((d->deps[i].output_order = strdup(s->deps[i].output_order)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].argument && !((d->deps[i].argument = strdup(s->deps[i].argument))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].order && !((d->deps[i].order = strdup(s->deps[i].order))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].type && !((d->deps[i].type = strdup(s->deps[i].type))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].filter && !((d->deps[i].filter = strdup(s->deps[i].filter))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].output_argument && !((d->deps[i].output_argument = strdup(s->deps[i].output_argument))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			if (s->deps[i].output_order && !((d->deps[i].output_order = strdup(s->deps[i].output_order))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
-	if (s->dependents_indexes)
-	{
-		d->dependents_indexes = (int*)calloc(s->dependents_indexes_num,sizeof(int));
-		if (!d->dependents_indexes) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		memcpy(d->dependents_indexes,s->dependents_indexes,s->dependents_indexes_num*sizeof(int));
+	if (s->dependents_indexes) {
+		d->dependents_indexes = (int *) calloc(s->dependents_indexes_num, sizeof(int));
+		if (!d->dependents_indexes)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		memcpy(d->dependents_indexes, s->dependents_indexes, s->dependents_indexes_num * sizeof(int));
 	}
-	if (s->vars && !((d->vars = hashtbl_duplicate(s->vars)))) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->vars && !((d->vars = hashtbl_duplicate(s->vars))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
-

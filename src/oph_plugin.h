@@ -25,19 +25,17 @@
 #include "oph_job_list.h"
 #include "oph_trash.h"
 
-struct oph_plugin_data
-{
+struct oph_plugin_data {
 	int max_proc;
 	int max_host;
 	int *jobid;
 	int is_copy;
 	char *serverid;
-	oph_job_list* job_info;
+	oph_job_list *job_info;
 	int authorization;
-	oph_trash* trash;
+	oph_trash *trash;
 };
 
 int oph_plugin(struct soap *soap, struct soap_plugin *plugin, void *arg);
 
-#endif /* OPH_PLUGIN_H */
-
+#endif				/* OPH_PLUGIN_H */

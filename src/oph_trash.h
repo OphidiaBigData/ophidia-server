@@ -22,29 +22,25 @@
 #define OPH_TRASH_OK 0
 #define OPH_TRASH_ERROR 1
 
-typedef struct _oph_trash_item
-{
+typedef struct _oph_trash_item {
 	int item;
-	struct _oph_trash_item* next;
+	struct _oph_trash_item *next;
 } oph_trash_item;
 
-typedef struct _oph_trash_node
-{
-	char* key;
-	oph_trash_item* head;
-	oph_trash_item* tail;
-	struct _oph_trash_node* next;
+typedef struct _oph_trash_node {
+	char *key;
+	oph_trash_item *head;
+	oph_trash_item *tail;
+	struct _oph_trash_node *next;
 } oph_trash_node;
 
-typedef struct _oph_trash
-{
-	oph_trash_node* trash;
+typedef struct _oph_trash {
+	oph_trash_node *trash;
 } oph_trash;
 
-int oph_trash_create(oph_trash** trash);
-int oph_trash_destroy(oph_trash* trash);
-int oph_trash_append(oph_trash* trash, const char* key, int item);
-int oph_trash_extract(oph_trash* trash, const char* key, int* item);
+int oph_trash_create(oph_trash ** trash);
+int oph_trash_destroy(oph_trash * trash);
+int oph_trash_append(oph_trash * trash, const char *key, int item);
+int oph_trash_extract(oph_trash * trash, const char *key, int *item);
 
-#endif /* OPH_TRASH_H */
-
+#endif				/* OPH_TRASH_H */

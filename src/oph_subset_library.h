@@ -37,23 +37,22 @@
 typedef enum { OPH_SUBSET_LIB_SINGLE, OPH_SUBSET_LIB_INTERVAL, OPH_SUBSET_LIB_STRIDE } oph_subset_type;
 
 typedef struct {
-	oph_subset_type* type;
-	long* start;
-	long* end;
-	unsigned long* stride;
-	unsigned long* count;
+	oph_subset_type *type;
+	long *start;
+	long *end;
+	unsigned long *stride;
+	unsigned long *count;
 	unsigned long total;
-	unsigned int number; // Number of intervals
-} oph_subset; // List of subsets in the form <start>:<stride>:<end>
+	unsigned int number;	// Number of intervals
+} oph_subset;			// List of subsets in the form <start>:<stride>:<end>
 
 // Initialization of struct oph_subset
-int oph_subset_init(oph_subset** subset);
+int oph_subset_init(oph_subset ** subset);
 
 // Translate non-null-terminated string into an oph_subset struct. Set 'max' to 0 to avoid truncation to 'max' elements
-int oph_subset_parse(const char* cond, unsigned long len, oph_subset* subset, long max);
+int oph_subset_parse(const char *cond, unsigned long len, oph_subset * subset, long max);
 
 // Freeing the struct oph_subset
-int oph_subset_free(oph_subset* subset);
+int oph_subset_free(oph_subset * subset);
 
-#endif /* __OPH_SUBSET_H__*/
-
+#endif				/* __OPH_SUBSET_H__ */

@@ -25,17 +25,17 @@
 
 #include "oph_workflow_library.h"
 
-int oph_workflow_reset_task(oph_workflow *wf, int* dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack* stack, int* tasks_num);
+int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack * stack, int *tasks_num);
 
-int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow* wf, int* initial_tasks_indexes, int initial_tasks_indexes_num, ophidiadb* oDB, char** jobid_response);
-int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char* data, char* json, int* response);
-int oph_workflow_command_to_json(const char* command, char** json);
+int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *initial_tasks_indexes, int initial_tasks_indexes_num, ophidiadb * oDB, char **jobid_response);
+int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *json, int *response);
+int oph_workflow_command_to_json(const char *command, char **json);
 
-int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim, char** query);
-int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow *wf, int* num_sessions, int max_sessions, int timeout_value, int* markerid, char* str_markerid, int* workflowid, char* str_workflowid, char* oph_jobid, int prev_markerid);
-int oph_realloc_vector(char*** vector, int* length);
+int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query);
+int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
+			   int *workflowid, char *str_workflowid, char *oph_jobid, int prev_markerid);
+int oph_realloc_vector(char ***vector, int *length);
 
-int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level);
+int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level);
 
-#endif /* OPH_WORKFLOW_ENGINE_H */
-
+#endif				/* OPH_WORKFLOW_ENGINE_H */

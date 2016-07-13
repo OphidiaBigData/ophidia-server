@@ -23,10 +23,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-extern char* oph_server_location;
-extern char* oph_server_protocol;
-extern char* oph_server_host;
-extern char* oph_server_port;
+extern char *oph_server_location;
+extern char *oph_server_protocol;
+extern char *oph_server_host;
+extern char *oph_server_port;
 
 #define OPH_SERVER_STD_HTTP_RESPONSE "<html>\
 <head><title>\
@@ -50,22 +50,19 @@ Ophidia WS-I\
 </html>"
 
 //Thread_unsafe
-int oph_mkdir(const char* name)
+int oph_mkdir(const char *name)
 {
 	struct stat st;
 	int res = stat(name, &st);
-	if (!res) pmesg(LOG_WARNING, __FILE__, __LINE__, "Session directory '%s' already exist\n",name);
-	else if (res == -1)
-	{
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session directory creation: '%s'\n",name);
-		if (mkdir(name, 0755))
-		{
+	if (!res)
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Session directory '%s' already exist\n", name);
+	else if (res == -1) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session directory creation: '%s'\n", name);
+		if (mkdir(name, 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Session directory cannot be created\n");
 			return OPH_SERVER_IO_ERROR;
 		}
-	}
-	else
-	{
+	} else {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Session directory cannot be created\n");
 		return OPH_SERVER_IO_ERROR;
 	}
@@ -77,30 +74,24 @@ int oph_mkdir(const char* name)
 int oph_http_get(struct soap *soap)
 {
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Received a HTTP GET Request\n");
-	if (!oph_server_protocol || !oph_server_host || !oph_server_port)
-	{
+	if (!oph_server_protocol || !oph_server_host || !oph_server_port) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Return SOAP Fault\n");
 		return SOAP_GET_METHOD;
 	}
 	FILE *fd = NULL;
 	char buffer[OPH_MAX_STRING_SIZE] = { '\0' }, *s = strchr(soap->path, '?');
-	if (!s)
-	{
-		snprintf(buffer,OPH_MAX_STRING_SIZE,OPH_SERVER_STD_HTTP_RESPONSE,oph_server_protocol,oph_server_host,oph_server_port,oph_server_protocol,oph_server_host,oph_server_port,oph_server_protocol,oph_server_host,oph_server_port);
+	if (!s) {
+		snprintf(buffer, OPH_MAX_STRING_SIZE, OPH_SERVER_STD_HTTP_RESPONSE, oph_server_protocol, oph_server_host, oph_server_port, oph_server_protocol, oph_server_host, oph_server_port,
+			 oph_server_protocol, oph_server_host, oph_server_port);
 		soap->http_content = "text/html";
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Return HTML description of web service\n");
-	}
-	else if (strcmp(s, "?wsdl"))
-	{
+	} else if (strcmp(s, "?wsdl")) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Return SOAP Fault\n");
 		return SOAP_GET_METHOD;
-	}
-	else
-	{
-		snprintf(buffer,OPH_MAX_STRING_SIZE,OPH_SERVER_WSDL,oph_server_location);
+	} else {
+		snprintf(buffer, OPH_MAX_STRING_SIZE, OPH_SERVER_WSDL, oph_server_location);
 		fd = fopen(buffer, "rb");
-		if (!fd)
-		{
+		if (!fd) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Return HTTP 'Not Found' error\n");
 			return 404;
 		}
@@ -109,22 +100,19 @@ int oph_http_get(struct soap *soap)
 	}
 	soap_response(soap, SOAP_FILE);
 	size_t r;
-	if (fd)
-	{
-		for (;;)
-		{
-			r = fread(soap->tmpbuf, 1, sizeof(soap->tmpbuf), fd); 
-			if (!r) break; 
-			if (soap_send_raw(soap, soap->tmpbuf, r)) break;
-		} 
+	if (fd) {
+		for (;;) {
+			r = fread(soap->tmpbuf, 1, sizeof(soap->tmpbuf), fd);
+			if (!r)
+				break;
+			if (soap_send_raw(soap, soap->tmpbuf, r))
+				break;
+		}
 		fclose(fd);
-	}
-	else
-	{
-		r = snprintf(soap->tmpbuf,1+sizeof(buffer),"%s",buffer);
+	} else {
+		r = snprintf(soap->tmpbuf, 1 + sizeof(buffer), "%s", buffer);
 		soap_send_raw(soap, soap->tmpbuf, r);
 	}
 	soap_end_send(soap);
 	return SOAP_OK;
 }
-

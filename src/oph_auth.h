@@ -96,11 +96,11 @@ typedef int oph_auth_user_role;
 #define OPH_DEFAULT_NO "no"
 #define OPH_DEFAULT_CORES 1
 #define OPH_DEFAULT_HOSTS 1
-#define OPH_DEFAULT_USER_OPENED_SESSIONS 0 // No session
-#define OPH_DEFAULT_USER_MAX_SESSIONS 0 // No limit
-#define OPH_DEFAULT_USER_MAX_CORES 0 // No limit
-#define OPH_DEFAULT_USER_MAX_HOSTS 0 // No limit
-#define OPH_DEFAULT_SESSION_TIMEOUT 0 // No limit [days]
+#define OPH_DEFAULT_USER_OPENED_SESSIONS 0	// No session
+#define OPH_DEFAULT_USER_MAX_SESSIONS 0	// No limit
+#define OPH_DEFAULT_USER_MAX_CORES 0	// No limit
+#define OPH_DEFAULT_USER_MAX_HOSTS 0	// No limit
+#define OPH_DEFAULT_SESSION_TIMEOUT 0	// No limit [days]
 #define OPH_DEFAULT_SESSION_ACTIVE OPH_DEFAULT_YES
 #define OPH_DEFAULT_SESSION_AUTOREMOVE OPH_DEFAULT_NO
 #define OPH_DEFAULT_SESSION_ROLE OPH_ROLE_READ
@@ -111,36 +111,34 @@ typedef int oph_auth_user_role;
 #define OPH_AUTH_READ_FORCE 3
 #define OPH_AUTH_WRITE 4
 
-typedef struct _oph_auth_user_bl
-{
-	char* userid;
-	char* host;
+typedef struct _oph_auth_user_bl {
+	char *userid;
+	char *host;
 	short count;
 	int timestamp;
-	struct _oph_auth_user_bl* next;
+	struct _oph_auth_user_bl *next;
 } oph_auth_user_bl;
 
-int oph_load_file(const char* filename, oph_argument** args);
-int oph_load_file2(const char* filename, oph_argument** args);
-int oph_auth_user(const char* userid, const char* passwd, const char* host);
-int oph_load_user(const char* userid, oph_argument** args, int* save_in_odb);
-int oph_save_user(const char* userid, oph_argument* args);
-int oph_auth_session(const char* userid, const char* sessionid, const char* serverid, oph_argument** args, int* active, oph_auth_user_role* role);
-int oph_save_session(const char* userid, const char* sessionid, oph_argument* args, int type);
-int oph_save_user_session(const char* userid, const char* sessionid, oph_argument* args);
-int oph_get_session_code(const char* sessionid, char* code);
+int oph_load_file(const char *filename, oph_argument ** args);
+int oph_load_file2(const char *filename, oph_argument ** args);
+int oph_auth_user(const char *userid, const char *passwd, const char *host);
+int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb);
+int oph_save_user(const char *userid, oph_argument * args);
+int oph_auth_session(const char *userid, const char *sessionid, const char *serverid, oph_argument ** args, int *active, oph_auth_user_role * role);
+int oph_save_session(const char *userid, const char *sessionid, oph_argument * args, int type);
+int oph_save_user_session(const char *userid, const char *sessionid, oph_argument * args);
+int oph_get_session_code(const char *sessionid, char *code);
 
-oph_auth_user_role oph_string_to_role(const char* role);
-oph_auth_user_role oph_code_role(const char* role);
-char* oph_role_to_string(oph_auth_user_role role); // The result has to be freed
-char* oph_code_role_string(const char* role); // The result has to be freed
-char* oph_expand_role_string(const char* role); // The result has to be freed
+oph_auth_user_role oph_string_to_role(const char *role);
+oph_auth_user_role oph_code_role(const char *role);
+char *oph_role_to_string(oph_auth_user_role role);	// The result has to be freed
+char *oph_code_role_string(const char *role);	// The result has to be freed
+char *oph_expand_role_string(const char *role);	// The result has to be freed
 
 int oph_auth_check_role(oph_auth_user_role role, oph_auth_user_role permission);
 
 #ifdef INTERFACE_TYPE_IS_SSL
-char* oph_sha(char* to, const char* passwd);
+char *oph_sha(char *to, const char *passwd);
 #endif
 
-#endif /* OPH_AUTH_H */
-
+#endif				/* OPH_AUTH_H */

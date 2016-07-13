@@ -24,9 +24,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-extern char* oph_web_server;
-extern char* oph_web_server_location;
-extern char* oph_server_location;
+extern char *oph_web_server;
+extern char *oph_web_server_location;
+extern char *oph_server_location;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -39,21 +39,18 @@ extern pthread_mutex_t global_flag;
 #define OPH_SESSION_REPORT_LINK2_WO_ANCHOR "\t\t\t<SCRIPT>if (document.getElementById(\"%cID%d\").innerHTML.length==0) document.getElementById(\"%cID%d\").innerHTML+='</BR>[%s]:&nbsp;'; document.getElementById(\"%cID%d\").innerHTML+='&nbsp;<A href=\"%s\">%s</A>';</SCRIPT>\n"
 
 // Thread_unsafe
-int oph_session_report_init(const char* session_code)
+int oph_session_report_init(const char *session_code)
 {
-	if (!session_code)
-	{
+	if (!session_code) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_SERVER_NULL_POINTER;
 	}
-
 	// Save the file
 	char name[OPH_MAX_STRING_SIZE];
-	snprintf(name,OPH_MAX_STRING_SIZE,OPH_SESSIONID_TEMPLATE,oph_web_server_location,session_code);
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report creation: '%s'\n",name);
-	FILE *file = fopen(name,"w");
-	if (!file)
-	{
+	snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSIONID_TEMPLATE, oph_web_server_location, session_code);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report creation: '%s'\n", name);
+	FILE *file = fopen(name, "w");
+	if (!file) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Session report cannot be created\n");
 		return OPH_SERVER_IO_ERROR;
 	}
@@ -63,40 +60,38 @@ int oph_session_report_init(const char* session_code)
 }
 
 // Thread_unsafe
-int oph_session_report_append_command(const char* session_code, const int workflowid, const int markerid, const char* username, const char* data)
+int oph_session_report_append_command(const char *session_code, const int workflowid, const int markerid, const char *username, const char *data)
 {
-	if (!session_code || !username || !data)
-	{
+	if (!session_code || !username || !data) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_SERVER_NULL_POINTER;
 	}
-	if (markerid<=0)
-	{
+	if (markerid <= 0) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong input parameter\n");
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
 
-	time_t t1=time(NULL);
-	char *now=ctime(&t1);
-	now[strlen(now)-1]=0;
+	time_t t1 = time(NULL);
+	char *now = ctime(&t1);
+	now[strlen(now) - 1] = 0;
 
 	// Update the file
 	char name[OPH_MAX_STRING_SIZE];
-	snprintf(name,OPH_MAX_STRING_SIZE,OPH_SESSIONID_TEMPLATE,oph_web_server_location,session_code);
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report update: '%s'\n",name);
-	FILE *file = fopen(name,"a");
-	if (!file)
-	{
+	snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSIONID_TEMPLATE, oph_web_server_location, session_code);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report update: '%s'\n", name);
+	FILE *file = fopen(name, "a");
+	if (!file) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Session report cannot be created\n");
 		return OPH_SERVER_IO_ERROR;
 	}
 
 	char request[OPH_MAX_STRING_SIZE];
-	snprintf(request,OPH_MAX_STRING_SIZE,OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE,oph_web_server,session_code);
+	snprintf(request, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE, oph_web_server, session_code);
 	char response[OPH_MAX_STRING_SIZE];
-	snprintf(response,OPH_MAX_STRING_SIZE,OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE,oph_web_server,session_code);
+	snprintf(response, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server, session_code);
 
-	fprintf(file,OPH_SESSION_REPORT_ITEM,markerid,markerid,workflowid,username,data,now,request,workflowid,workflowid,workflowid,response,markerid,markerid,workflowid,workflowid,workflowid);
+	fprintf(file, OPH_SESSION_REPORT_ITEM, markerid, markerid, workflowid, username, data, now, request, workflowid, workflowid, workflowid, response, markerid, markerid, workflowid, workflowid,
+		workflowid);
 
 	fclose(file);
 
@@ -104,43 +99,45 @@ int oph_session_report_append_command(const char* session_code, const int workfl
 }
 
 // Thread_unsafe
-int oph_session_report_append_link(const char* session_code, const int workflowid, const char* anchor, const char* linkname, const char* link, const char type)
+int oph_session_report_append_link(const char *session_code, const int workflowid, const char *anchor, const char *linkname, const char *link, const char type)
 {
-	if (!session_code || !linkname || !link)
-	{
+	if (!session_code || !linkname || !link) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_SERVER_NULL_POINTER;
 	}
 
-	if (type=='C') return OPH_SERVER_OK; // Link to data cubes will not be shown
+	if (type == 'C')
+		return OPH_SERVER_OK;	// Link to data cubes will not be shown
 
 	// Update the file
 	char name[OPH_MAX_STRING_SIZE];
-	snprintf(name,OPH_MAX_STRING_SIZE,OPH_SESSIONID_TEMPLATE,oph_web_server_location,session_code);
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report update: '%s'\n",name);
-	FILE *file = fopen(name,"a");
-	if (!file)
-	{
+	snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSIONID_TEMPLATE, oph_web_server_location, session_code);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session report update: '%s'\n", name);
+	FILE *file = fopen(name, "a");
+	if (!file) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Session report cannot be created\n");
 		return OPH_SERVER_IO_ERROR;
 	}
 
-	if ((type == 'W') || (type == 'R'))
-	{
-		if (anchor) fprintf(file,OPH_SESSION_REPORT_LINK1,type,workflowid,anchor,link,linkname);
-		else fprintf(file,OPH_SESSION_REPORT_LINK1_WO_ANCHOR,type,workflowid,link,linkname);
-	}
-	else
-	{
-		if (type=='L') snprintf(name,OPH_MAX_STRING_SIZE,"Links");
-		else if (type=='C') snprintf(name,OPH_MAX_STRING_SIZE,"Output cubes");
-		else snprintf(name,OPH_MAX_STRING_SIZE,"Other");
-		if (anchor) fprintf(file,OPH_SESSION_REPORT_LINK2,type,workflowid,type,workflowid,name,type,workflowid,anchor,link,linkname);
-		else fprintf(file,OPH_SESSION_REPORT_LINK2_WO_ANCHOR,type,workflowid,type,workflowid,name,type,workflowid,link,linkname);
+	if ((type == 'W') || (type == 'R')) {
+		if (anchor)
+			fprintf(file, OPH_SESSION_REPORT_LINK1, type, workflowid, anchor, link, linkname);
+		else
+			fprintf(file, OPH_SESSION_REPORT_LINK1_WO_ANCHOR, type, workflowid, link, linkname);
+	} else {
+		if (type == 'L')
+			snprintf(name, OPH_MAX_STRING_SIZE, "Links");
+		else if (type == 'C')
+			snprintf(name, OPH_MAX_STRING_SIZE, "Output cubes");
+		else
+			snprintf(name, OPH_MAX_STRING_SIZE, "Other");
+		if (anchor)
+			fprintf(file, OPH_SESSION_REPORT_LINK2, type, workflowid, type, workflowid, name, type, workflowid, anchor, link, linkname);
+		else
+			fprintf(file, OPH_SESSION_REPORT_LINK2_WO_ANCHOR, type, workflowid, type, workflowid, name, type, workflowid, link, linkname);
 	}
 
 	fclose(file);
 
 	return OPH_SERVER_OK;
 }
-

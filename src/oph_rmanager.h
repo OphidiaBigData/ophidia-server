@@ -32,8 +32,7 @@
 #define OPH_RMANAGER_PREFIX "oph"
 #define OPH_RMANAGER_MAX_INT_SIZE 32
 
-struct _oph_rmanager
-{
+struct _oph_rmanager {
 	char *name;
 	char *subm_cmd;
 	char *subm_args;
@@ -48,13 +47,13 @@ struct _oph_rmanager
 };
 typedef struct _oph_rmanager oph_rmanager;
 
-int oph_serve_request(const char* request, const int ncores, const char* sessionid, const char* markerid, const char* error, struct oph_plugin_data *state, int* odb_wf_id, int* task_id, int* light_task_id, int* odb_jobid, char** response, char** jobid, enum oph__oph_odb_job_status *exit_code, int* exit_output);
-int initialize_rmanager(oph_rmanager *orm);
-int oph_read_rmanager_conf(oph_rmanager *orm);
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager* orm, int jobid, char** cmd);
-int oph_get_result_from_file(char* filename, char **response);
-int free_oph_rmanager(oph_rmanager *orm);
+int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
+		      int *light_task_id, int *odb_jobid, char **response, char **jobid, enum oph__oph_odb_job_status *exit_code, int *exit_output);
+int initialize_rmanager(oph_rmanager * orm);
+int oph_read_rmanager_conf(oph_rmanager * orm);
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char **cmd);
+int oph_get_result_from_file(char *filename, char **response);
+int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid);
 
-#endif /* OPH_RMANAGER_H */
-
+#endif				/* OPH_RMANAGER_H */

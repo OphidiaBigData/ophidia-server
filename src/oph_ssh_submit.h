@@ -31,8 +31,7 @@
 #define OPH_LIBSSH_OK 0
 #define OPH_LIBSSH_ERROR 1
 
-static int waitsocket(int socket_fd, LIBSSH2_SESSION *session);
-int oph_ssh_submit(const char* cmd);
+static int waitsocket(int socket_fd, LIBSSH2_SESSION * session);
+int oph_ssh_submit(const char *cmd);
 
-#endif /* OPH_SSH_SUBMIT_H */
-
+#endif				/* OPH_SSH_SUBMIT_H */
