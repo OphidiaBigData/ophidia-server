@@ -25,6 +25,7 @@ stamp-h1
 *.so
 *.pem
 *~
+*.trs
 etc/oph_server
 etc/oph_server_logrotate
 etc/server.conf

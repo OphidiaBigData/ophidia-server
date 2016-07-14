@@ -292,7 +292,7 @@ void oph_signal_handler(int signal)
 
 void oph_child_signal_handler(int sig)
 {
-UNUSED(sig)
+	UNUSED(sig)
 }
 
 void *process_request(void *arg)

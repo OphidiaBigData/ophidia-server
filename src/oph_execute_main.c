@@ -3474,11 +3474,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									else {
 										success = 0;
 										while (!success) {
+											int tstatus = 0;
+											if (light_task_index >= 0)
+												tstatus = item->wf->tasks[task_index].light_tasks[light_task_index].status;
+											else
+												tstatus = item->wf->tasks[task_index].status;
 											if (oph_json_add_text
-											    (oper_json, OPH_JSON_OBJKEY_RESUME_STATUS, "Job Status",
-											     oph_odb_convert_status_to_str(light_task_index >=
-															   0 ? item->wf->tasks[task_index].light_tasks[light_task_index].status : item->
-															   wf->tasks[task_index].status))) {
+											    (oper_json, OPH_JSON_OBJKEY_RESUME_STATUS, "Job Status", oph_odb_convert_status_to_str(tstatus))) {
 												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
 												break;
 											}
