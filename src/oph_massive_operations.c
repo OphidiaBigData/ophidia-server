@@ -415,6 +415,7 @@ int _oph_mf_parse_query(char*** datacube_inputs, char*** measure_name, unsigned 
 		if (result || (datacube_input[i]!=OPH_SEPARATOR_NULL)) tmp[j++]=datacube_input[i];
 	}
 
+	result = OPH_SERVER_OK;
 	_datacube_input = tmp;
 	while (_datacube_input && ((task_string = strchr(_datacube_input, OPH_SEPARATOR_SUBPARAM_OPEN))))
 	{
@@ -500,7 +501,7 @@ int _oph_mf_parse_query(char*** datacube_inputs, char*** measure_name, unsigned 
 	}
 
 	// Check for pipes
-	if (!strchr(datacube_input, OPH_SEPARATOR_SUBPARAM)) return OPH_SERVER_OK;
+	if (!strchr(datacube_input, OPH_SEPARATOR_SUBPARAM)) return result;
 
 	// Copy while skipping spaces in parameter name
 	result=0;

@@ -576,7 +576,6 @@ int _oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophi
 
 	char* container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
 	char* path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
-	if (!path || !strlen(path)) path = OPH_MF_ROOT_FOLDER;
 
 	// Basic tables and where_clause
 	snprintf(tables,OPH_MAX_STRING_SIZE,"%s,%s",OPH_MF_ARG_DATACUBE,OPH_MF_ARG_CONTAINER);
@@ -584,15 +583,27 @@ int _oph_filter(HASHTBL *task_tbl, char* query, char* cwd, char* sessionid, ophi
 
 	// Filter on current session
 	char ext_path[OPH_MAX_STRING_SIZE];
-	*ext_path = OPH_ODB_FS_ROOT[0];
-	if (oph_get_session_code(sessionid, ext_path+1))
+	if (path && strlen(path))
 	{
-		pmesg_safe(flag, LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
-		return OPH_SERVER_SYSTEM_ERROR;
+		char* first_nospace = path;
+		while (first_nospace && *first_nospace && (*first_nospace == ' ')) first_nospace++;
+		if (!first_nospace || (*first_nospace != OPH_MF_ROOT_FOLDER[0])) strcpy(ext_path,cwd);
+		else
+		{
+			*ext_path = OPH_MF_ROOT_FOLDER[0];
+			if (oph_get_session_code(sessionid, ext_path+1))
+			{
+				pmesg_safe(flag, LOG_ERROR, __FILE__,__LINE__, "Unable to get session code\n");
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+		}
+		strncat(ext_path,path,OPH_MAX_STRING_SIZE-strlen(ext_path));
 	}
-	
-	// Extend path or cwd
-	if (path) strncat(ext_path,path,OPH_MAX_STRING_SIZE-strlen(ext_path));
+	else
+	{
+		strcpy(ext_path,cwd);
+		path = cwd;
+	}
 	pmesg_safe(flag, LOG_DEBUG, __FILE__,__LINE__, "Extended path to be explored is '%s'\n",ext_path);
 
 	if (task_tbl)
