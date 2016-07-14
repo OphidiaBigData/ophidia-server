@@ -593,24 +593,26 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 
 	// Filter on current session
 	char ext_path[OPH_MAX_STRING_SIZE];
+	*ext_path = OPH_MF_ROOT_FOLDER[0];
+	if (oph_get_session_code(sessionid, ext_path + 1)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 	if (path && strlen(path)) {
 		char *first_nospace = path;
 		while (first_nospace && *first_nospace && (*first_nospace == ' '))
 			first_nospace++;
-		if (!first_nospace || (*first_nospace != OPH_MF_ROOT_FOLDER[0]))
-			strcpy(ext_path, cwd);
-		else {
-			*ext_path = OPH_MF_ROOT_FOLDER[0];
-			if (oph_get_session_code(sessionid, ext_path + 1)) {
-				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
-				return OPH_SERVER_SYSTEM_ERROR;
-			}
+		if (!first_nospace || (*first_nospace != OPH_MF_ROOT_FOLDER[0])) {
+			strncat(ext_path, cwd, OPH_MAX_STRING_SIZE - strlen(ext_path));
+			first_nospace = ext_path + strlen(ext_path) - 1;
+			while (first_nospace && (*first_nospace == ' '))
+				first_nospace--;
+			if (first_nospace && (*first_nospace != OPH_MF_ROOT_FOLDER[0]))
+				strncat(ext_path, OPH_MF_ROOT_FOLDER, OPH_MAX_STRING_SIZE - strlen(ext_path));
 		}
 		strncat(ext_path, path, OPH_MAX_STRING_SIZE - strlen(ext_path));
-	} else {
-		strcpy(ext_path, cwd);
-		path = cwd;
-	}
+	} else
+		strncat(ext_path, cwd, OPH_MAX_STRING_SIZE - strlen(ext_path));
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extended path to be explored is '%s'\n", ext_path);
 
 	if (task_tbl) {
