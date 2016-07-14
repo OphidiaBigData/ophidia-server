@@ -251,7 +251,7 @@ void cleanup()
 	oph_tp_end_xml_parser();
 }
 
-int _check_oph_server(const char *operator, int option)
+int _check_oph_server(const char *function, int option)
 {
 	char sessionid[OPH_MAX_STRING_SIZE];
 	snprintf(sessionid, OPH_MAX_STRING_SIZE, "%s/sessions/123/xperiment", oph_web_server);
@@ -278,7 +278,7 @@ int _check_oph_server(const char *operator, int option)
 	wf->run = 1;
 	wf->parallel_mode = 0;
 
-	if (!strcmp(operator, "oph_if")) {
+	if (!strcmp(function, "oph_if")) {
 		char condition[OPH_MAX_STRING_SIZE];
 		sprintf(condition, "1");
 
@@ -557,7 +557,7 @@ int _check_oph_server(const char *operator, int option)
 
 			default:;
 		}
-	} else if (!strcmp(operator, "oph_else")) {
+	} else if (!strcmp(function, "oph_else_impl")) {
 		// Tasks
 		wf->tasks_num = 5;
 		wf->residual_tasks_num = 3;
@@ -739,7 +739,7 @@ int _check_oph_server(const char *operator, int option)
 
 			default:;
 		}
-	} else if (!strcmp(operator, "oph_for")) {
+	} else if (!strcmp(function, "oph_for_impl")) {
 		// Tasks
 		wf->tasks_num = 3;
 		wf->residual_tasks_num = 3;
@@ -1003,7 +1003,7 @@ int _check_oph_server(const char *operator, int option)
 				break;
 		}
 
-	} else if (!strcmp(operator, "oph_endfor")) {
+	} else if (!strcmp(function, "oph_endfor_impl")) {
 		// Tasks
 		wf->tasks_num = 3;
 		wf->residual_tasks_num = 1;
@@ -1301,640 +1301,646 @@ int _check_oph_server(const char *operator, int option)
 				}
 				break;
 		}
-	} else if (!strcmp(operator, "oph_massive")) {
-		int filter_num = 18;
-		char *filter[] = {
-			"[*]",
-			"[run=no]",
-			"[measure=measure]",
-			"[container=containername]",
-			"[cube_filter=2]",
-			"[cube_filter=2:4]",
-			"[cube_filter=2:3:10]",
-			"[cube_filter=2,3,10]",
-			"[metadata_key=key1|key2]",
-			"[metadata_value=value1|value2]",
-			"[metadata_key=key;metadata_value=value]",
-			"[metadata_key=key1|key2;metadata_value=value1|value2]",
-			"[level=2|3]",
-			"[path=/path/to/container]",
-			"[path=/path/to/container;recursive=yes]",
-			"[container=containername;metadata_key=key;metadata_value=value;level=2;path=/path/to/container;recursive=yes]",
-			"1|3|5",
-			"[10]"
-		};
-		char *equery[] = {
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND container.containername='containername' AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2)) AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,4)) AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,3,10)) AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2) OR mysql.oph_is_in_subset(datacube.iddatacube,3,1,3) OR mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0,metadatainstance AS metadatainstance0,metadatakey AS metadatakey1,metadatainstance AS metadatainstance1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0.idkey=metadatainstance0.idkey AND metadatainstance0.iddatacube=datacube.iddatacube AND metadatakey0.label='key1' AND metadatakey1.idkey=metadatainstance1.idkey AND metadatainstance1.iddatacube=datacube.iddatacube AND metadatakey1.label='key2' AND (container.idfolder='1')",
-			"No query expected",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0,metadatakey AS metadatakey0k1,metadatainstance AS metadatainstance0k1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key1' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value1%' AND metadatakey0k1.idkey=metadatainstance0k1.idkey AND metadatainstance0k1.iddatacube=datacube.iddatacube AND metadatakey0k1.label='key2' AND CONVERT(metadatainstance0k1.value USING latin1) LIKE '%value2%' AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2' OR datacube.level='3') AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1' OR container.idfolder='2')",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
-			"No query expected",
-			"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')"
-		};
+	} else if (!strcmp(function, "oph_check_for_massive_operation")) {
+		int test_on_data_num = 27;
 
-		// Tasks
-		wf->tasks_num = 1;
-		wf->residual_tasks_num = 1;
-		wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+		if (option < test_on_data_num) {
+			int filter_num = 18;
+			char *filter[] = {
+				"[*]",
+				"[run=no]",
+				"[measure=measure]",
+				"[container=containername]",
+				"[cube_filter=2]",
+				"[cube_filter=2:4]",
+				"[cube_filter=2:3:10]",
+				"[cube_filter=2,3,10]",
+				"[metadata_key=key1|key2]",
+				"[metadata_value=value1|value2]",
+				"[metadata_key=key;metadata_value=value]",
+				"[metadata_key=key1|key2;metadata_value=value1|value2]",
+				"[level=2|3]",
+				"[path=/path/to/container]",
+				"[path=/path/to/container;recursive=yes]",
+				"[container=containername;metadata_key=key;metadata_value=value;level=2;path=/path/to/container;recursive=yes]",
+				"1|3|5",
+				"[10]"
+			};
+			char *equery[] = {
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND container.containername='containername' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2)) AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,4)) AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,3,10)) AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2) OR mysql.oph_is_in_subset(datacube.iddatacube,3,1,3) OR mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0,metadatainstance AS metadatainstance0,metadatakey AS metadatakey1,metadatainstance AS metadatainstance1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0.idkey=metadatainstance0.idkey AND metadatainstance0.iddatacube=datacube.iddatacube AND metadatakey0.label='key1' AND metadatakey1.idkey=metadatainstance1.idkey AND metadatainstance1.iddatacube=datacube.iddatacube AND metadatakey1.label='key2' AND (container.idfolder='1')",
+				"No query expected",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0,metadatakey AS metadatakey0k1,metadatainstance AS metadatainstance0k1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key1' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value1%' AND metadatakey0k1.idkey=metadatainstance0k1.idkey AND metadatainstance0k1.iddatacube=datacube.iddatacube AND metadatakey0k1.label='key2' AND CONVERT(metadatainstance0k1.value USING latin1) LIKE '%value2%' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2' OR datacube.level='3') AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1' OR container.idfolder='2')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
+				"No query expected",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')"
+			};
 
-		// MASSIVE
-		wf->tasks[0].idjob = 2;
-		wf->tasks[0].markerid = 2;
-		wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
-		wf->tasks[0].name = strdup("MASSIVE");
-		wf->tasks[0].operator = strdup("oph_massive");
-		wf->tasks[0].role = oph_code_role("read");
-		wf->tasks[0].ncores = wf->ncores;
-		wf->tasks[0].arguments_num = 2;
-		wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_keys[0] = strdup("cube");
-		wf->tasks[0].arguments_keys[1] = strdup("cwd");
-		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_values[0] = strdup(filter[option < filter_num ? option : 0]);
-		wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
-		wf->tasks[0].run = 1;
+			// Tasks
+			wf->tasks_num = 1;
+			wf->residual_tasks_num = 1;
+			wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
 
-		ophidiadb oDB;
-		oph_odb_initialize_ophidiadb(&oDB);
+			// MASSIVE
+			wf->tasks[0].idjob = 2;
+			wf->tasks[0].markerid = 2;
+			wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
+			wf->tasks[0].name = strdup("MASSIVE");
+			wf->tasks[0].operator = strdup("oph_massive");
+			wf->tasks[0].role = oph_code_role("read");
+			wf->tasks[0].ncores = wf->ncores;
+			wf->tasks[0].arguments_num = 2;
+			wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+			wf->tasks[0].arguments_keys[0] = strdup("cube");
+			wf->tasks[0].arguments_keys[1] = strdup("cwd");
+			wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+			wf->tasks[0].arguments_values[0] = strdup(filter[option < filter_num ? option : 0]);
+			wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
+			wf->tasks[0].run = 1;
 
-		char **output_list = NULL, *query = NULL;
-		int res, j, output_list_dim = 0;
+			ophidiadb oDB;
+			oph_odb_initialize_ophidiadb(&oDB);
 
-		switch (option - filter_num) {
-			case 0:
-				res = oph_check_for_massive_operation('T', 0, NULL, 0, &oDB, &output_list, &output_list_dim, &query);
-				break;
+			char **output_list = NULL, *query = NULL;
+			int res, j, output_list_dim = 0;
 
-			case 1:
-				res = oph_check_for_massive_operation('T', 0, wf, 0, NULL, &output_list, &output_list_dim, &query);
-				break;
+			switch (option - filter_num) {
+				case 0:
+					res = oph_check_for_massive_operation('T', 0, NULL, 0, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-			case 2:
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, NULL, &output_list_dim, &query);
-				break;
+				case 1:
+					res = oph_check_for_massive_operation('T', 0, wf, 0, NULL, &output_list, &output_list_dim, &query);
+					break;
 
-			case 3:
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, NULL, &query);
-				break;
+				case 2:
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, NULL, &output_list_dim, &query);
+					break;
 
-			case 4:
-				res = oph_check_for_massive_operation('T', 0, wf, 2, &oDB, &output_list, &output_list_dim, &query);
-				break;
+				case 3:
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, NULL, &query);
+					break;
 
-			case 5:
-				res = oph_check_for_massive_operation('T', 0, wf, -1, &oDB, &output_list, &output_list_dim, &query);
-				break;
+				case 4:
+					res = oph_check_for_massive_operation('T', 0, wf, 2, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-			case 6:
-				wf->tasks[0].light_tasks_num = 1;
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
-				break;
+				case 5:
+					res = oph_check_for_massive_operation('T', 0, wf, -1, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-			case 7:
-				free(wf->tasks[0].arguments_values[0]);
-				wf->tasks[0].arguments_values[0] = strdup("[filter=@badvariable]");
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
-				break;
+				case 6:
+					wf->tasks[0].light_tasks_num = 1;
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-			case 8:
-				free(wf->tasks[0].arguments_keys[0]);
-				wf->tasks[0].arguments_keys[0] = strdup("cube2");
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
-				break;
+				case 7:
+					free(wf->tasks[0].arguments_values[0]);
+					wf->tasks[0].arguments_values[0] = strdup("[filter=@badvariable]");
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-			default:
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
-		}
+				case 8:
+					free(wf->tasks[0].arguments_keys[0]);
+					wf->tasks[0].arguments_keys[0] = strdup("cube2");
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					break;
 
-		switch (option) {
-			case 1:
-			case 17:
-				if (res != OPH_SERVER_NO_RESPONSE) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (!query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-					return 1;
-				}
-				if (strcasecmp(query, equery[option < filter_num ? option : 0])) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
-					return 1;
-				}
-				break;
+				default:
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+			}
 
-			case 9:
-				if (res != OPH_SERVER_SYSTEM_ERROR) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-					return 1;
-				}
-				break;
-
-			case 16:
-				if (res) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-					return 1;
-				}
-				break;
-
-			case 18:
-			case 19:
-			case 20:
-			case 21:
-				if (res != OPH_SERVER_NULL_POINTER) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-					return 1;
-				}
-				break;
-
-			case 22:
-			case 23:
-			case 25:
-				if (res != OPH_SERVER_SYSTEM_ERROR) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-					return 1;
-				}
-				break;
-
-			case 24:
-				if (res != OPH_SERVER_NO_RESPONSE) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-					return 1;
-				}
-				break;
-
-			case 26:
-				if (res) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-					return 1;
-				}
-				break;
-
-			default:
-				if (res) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
-				}
-				if (!query) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-					return 1;
-				}
-				if (strcasecmp(query, equery[option < filter_num ? option : 0])) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
-					return 1;
-				}
-		}
-
-		char object_name[OPH_MAX_STRING_SIZE];
-		if (option < filter_num)
 			switch (option) {
 				case 1:
-					if (output_list_dim != 3) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+				case 17:
+					if (res != OPH_SERVER_NO_RESPONSE) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						return 1;
 					}
-					if (!output_list) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+					if (!query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
 						return 1;
 					}
-					for (j = 0; j < output_list_dim; ++j) {
-						snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
-						if (strcasecmp(output_list[j], object_name)) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", output_list[j]);
-							return 1;
-						}
+					if (strcasecmp(query, equery[option < filter_num ? option : 0])) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
+						return 1;
 					}
 					break;
 
 				case 9:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+					if (res != OPH_SERVER_SYSTEM_ERROR) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+						return 1;
+					}
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
 						return 1;
 					}
 					break;
 
 				case 16:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+					if (res) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						return 1;
 					}
-					if (wf->tasks[0].light_tasks_num != 3) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
 						return 1;
-					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-						return 1;
-					}
-					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-							return 1;
-						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						snprintf(object_name, OPH_MAX_STRING_SIZE, "%d", 2 * j + 1);
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
-						}
 					}
 					break;
 
-				case 17:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+				case 18:
+				case 19:
+				case 20:
+				case 21:
+					if (res != OPH_SERVER_NULL_POINTER) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						return 1;
 					}
-					if (wf->tasks[0].light_tasks_num) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
 						return 1;
 					}
-					if (wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+					break;
+
+				case 22:
+				case 23:
+				case 25:
+					if (res != OPH_SERVER_SYSTEM_ERROR) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+						return 1;
+					}
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
+						return 1;
+					}
+					break;
+
+				case 24:
+					if (res != OPH_SERVER_NO_RESPONSE) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+						return 1;
+					}
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
+						return 1;
+					}
+					break;
+
+				case 26:
+					if (res) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+						return 1;
+					}
+					if (query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
 						return 1;
 					}
 					break;
 
 				default:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+					if (res) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						return 1;
 					}
-					if (wf->tasks[0].light_tasks_num != 3) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+					if (!query) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
 						return 1;
 					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+					if (strcasecmp(query, equery[option < filter_num ? option : 0])) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
 						return 1;
-					}
-					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
-							      wf->tasks[0].light_tasks[j].arguments_num);
-							return 1;
-						}
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-							return 1;
-						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
-						snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
-						}
 					}
 			}
 
-		for (j = 0; j < output_list_dim; ++j)
-			if (output_list[j])
-				free(output_list[j]);
-		if (output_list)
-			free(output_list);
-		output_list = NULL;
-		if (query)
-			free(query);
-		query = NULL;
-	} else if (!strcmp(operator, "oph_massive2")) {
-		int filter_num = 12;
-		char *filter[] = {
-			"[testdata/*]",
-			"[testdata/*.test]",
-			"[testdata/other/*]",
-			"[testdata/other/*.tst]",
-			"[path=testdata;recursive=no]",
-			"[path=testdata;recursive=yes]",
-			"[path=testdata/other;recursive=no]",
-			"[path=testdata/other;recursive=yes]",
-			"[path=testdata;file=*1*]",
-			"[path=testdata;file=*1*;recursive=yes]",
-			"[path=testdata;file=*12*;recursive=yes]",
-			"[path=testdata/other;file=*2*te*;recursive=yes]"
-		};
+			char object_name[OPH_MAX_STRING_SIZE];
+			if (option < filter_num)
+				switch (option) {
+					case 1:
+						if (output_list_dim != 3) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+							return 1;
+						}
+						if (!output_list) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < output_list_dim; ++j) {
+							snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
+							if (strcasecmp(output_list[j], object_name)) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", output_list[j]);
+								return 1;
+							}
+						}
+						break;
 
-		// Tasks
-		wf->tasks_num = 1;
-		wf->residual_tasks_num = 1;
-		wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+					case 9:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						break;
 
-		// MASSIVE
-		wf->tasks[0].idjob = 2;
-		wf->tasks[0].markerid = 2;
-		wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
-		wf->tasks[0].name = strdup("MASSIVE");
-		wf->tasks[0].operator = strdup("oph_massive");
-		wf->tasks[0].role = oph_code_role("read");
-		wf->tasks[0].ncores = wf->ncores;
-		wf->tasks[0].arguments_num = 2;
-		wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_keys[0] = strdup("src_path");
-		wf->tasks[0].arguments_keys[1] = strdup("cwd");
-		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_values[0] = strdup(filter[option < filter_num ? option : 0]);
-		wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
-		wf->tasks[0].run = 1;
+					case 16:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 3) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							snprintf(object_name, OPH_MAX_STRING_SIZE, "%d", 2 * j + 1);
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
+								return 1;
+							}
+						}
+						break;
 
-		ophidiadb oDB;
-		oph_odb_initialize_ophidiadb(&oDB);
+					case 17:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						break;
 
-		char **output_list = NULL;
-		int res, j, output_list_dim = 0;
-
-		switch (option) {
-
-			default:
-				res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
-		}
-
-		switch (option) {
-
-			default:
-				if (res) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-					return 1;
+					default:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 3) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								return 1;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+							snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
+								return 1;
+							}
+						}
 				}
-		}
 
-		if (option < filter_num)
+			for (j = 0; j < output_list_dim; ++j)
+				if (output_list[j])
+					free(output_list[j]);
+			if (output_list)
+				free(output_list);
+			output_list = NULL;
+			if (query)
+				free(query);
+			query = NULL;
+		} else {
+			option -= test_on_data_num;
+
+			int filter_num = 12;
+			char *filter[] = {
+				"[testdata/*]",
+				"[testdata/*.test]",
+				"[testdata/other/*]",
+				"[testdata/other/*.tst]",
+				"[path=testdata;recursive=no]",
+				"[path=testdata;recursive=yes]",
+				"[path=testdata/other;recursive=no]",
+				"[path=testdata/other;recursive=yes]",
+				"[path=testdata;file=*1*]",
+				"[path=testdata;file=*1*;recursive=yes]",
+				"[path=testdata;file=*12*;recursive=yes]",
+				"[path=testdata/other;file=*2*te*;recursive=yes]"
+			};
+
+			// Tasks
+			wf->tasks_num = 1;
+			wf->residual_tasks_num = 1;
+			wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+
+			// MASSIVE
+			wf->tasks[0].idjob = 2;
+			wf->tasks[0].markerid = 2;
+			wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
+			wf->tasks[0].name = strdup("MASSIVE");
+			wf->tasks[0].operator = strdup("oph_massive");
+			wf->tasks[0].role = oph_code_role("read");
+			wf->tasks[0].ncores = wf->ncores;
+			wf->tasks[0].arguments_num = 2;
+			wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+			wf->tasks[0].arguments_keys[0] = strdup("src_path");
+			wf->tasks[0].arguments_keys[1] = strdup("cwd");
+			wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+			wf->tasks[0].arguments_values[0] = strdup(filter[option < filter_num ? option : 0]);
+			wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
+			wf->tasks[0].run = 1;
+
+			ophidiadb oDB;
+			oph_odb_initialize_ophidiadb(&oDB);
+
+			char **output_list = NULL;
+			int res, j, output_list_dim = 0;
+
 			switch (option) {
+
+				default:
+					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
+			}
+
+			switch (option) {
+
+				default:
+					if (res) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+						return 1;
+					}
+			}
+
+			if (option < filter_num)
+				switch (option) {
+					case 2:
+					case 6:
+					case 7:
+					case 10:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 4) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								return 1;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+						}
+						break;
+
+					case 5:
+					case 9:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 6) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								return 1;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+						}
+						break;
+
+					case 11:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 1) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								return 1;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+						}
+						break;
+
+					default:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							return 1;
+						}
+						if (wf->tasks[0].light_tasks_num != 2) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							return 1;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							return 1;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								return 1;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								return 1;
+							}
+							if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								return 1;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+						}
+				}
+
+			switch (option) {
+
+				case 0:
+				case 1:
+					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
+							return 1;
+						}
+					}
+					break;
+
 				case 2:
 				case 6:
-				case 7:
-				case 10:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-						return 1;
-					}
-					if (wf->tasks[0].light_tasks_num != 4) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-						return 1;
-					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-						return 1;
-					}
 					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
-							      wf->tasks[0].light_tasks[j].arguments_num);
+						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
 							return 1;
 						}
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+					}
+					break;
+
+				case 3:
+				case 4:
+					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
 							return 1;
 						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 					}
 					break;
 
 				case 5:
-				case 9:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-						return 1;
-					}
-					if (wf->tasks[0].light_tasks_num != 6) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-						return 1;
-					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-						return 1;
-					}
 					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
-							      wf->tasks[0].light_tasks[j].arguments_num);
+						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
 							return 1;
 						}
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+					}
+
+				case 10:
+					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
 							return 1;
 						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 					}
 					break;
 
 				case 11:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-						return 1;
-					}
-					if (wf->tasks[0].light_tasks_num != 1) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-						return 1;
-					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-						return 1;
-					}
 					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
-							      wf->tasks[0].light_tasks[j].arguments_num);
+						if (strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
+						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
+						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
 							return 1;
 						}
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-							return 1;
-						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 					}
 					break;
 
-				default:
-					if (output_list || output_list_dim) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-						return 1;
-					}
-					if (wf->tasks[0].light_tasks_num != 2) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-						return 1;
-					}
-					if (!wf->tasks[0].light_tasks) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-						return 1;
-					}
-					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
-							      wf->tasks[0].light_tasks[j].arguments_num);
-							return 1;
-						}
-						if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-							return 1;
-						}
-						if (strcasecmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-							return 1;
-						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
-					}
+				default:;
 			}
 
-		switch (option) {
-
-			case 0:
-			case 1:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-				break;
-
-			case 2:
-			case 6:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-				break;
-
-			case 3:
-			case 4:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-				break;
-
-			case 5:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-
-			case 10:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-				break;
-
-			case 11:
-				for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-					if (strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_123.tst")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_13.test")
-					    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_1.tst")
-					    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/other/b_124.test")) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[j]);
-						return 1;
-					}
-				}
-				break;
-
-			default:;
+			for (j = 0; j < output_list_dim; ++j)
+				if (output_list[j])
+					free(output_list[j]);
+			if (output_list)
+				free(output_list);
+			output_list = NULL;
 		}
-
-		for (j = 0; j < output_list_dim; ++j)
-			if (output_list[j])
-				free(output_list[j]);
-		if (output_list)
-			free(output_list);
-		output_list = NULL;
 	}
 	//oph_workflow_free(wf);
 
 	return 0;
 }
 
-int check_oph_server(int *i, int *f, int n, const char *operator, int option, int abort_on_first_error)
+int check_oph_server(int *i, int *f, int n, const char *function, int option, int abort_on_first_error, FILE * file)
 {
 	(*i)++;
-	printf("TEST %d/%d: operator '%s' option %d\n", *i, n, operator, option);
-	if (_check_oph_server(operator, option)) {
+	fprintf(file, "TEST %d/%d: function '%s' input %d ... ", *i, n, function, 1 + option);
+	if (_check_oph_server(function, option)) {
 		(*f)++;
-		printf("FAILED\n\n");
+		fprintf(file, "FAILED\n");
 		if (abort_on_first_error)
 			return 1;
 	} else
-		printf("PASSED\n\n");
+		fprintf(file, "OK\n");
 	return 0;
 }
 
@@ -1949,20 +1955,24 @@ int main(int argc, char *argv[])
 #endif
 
 	int ch, msglevel = LOG_INFO, abort_on_first_error = 0;
-	static char *USAGE = "\nUSAGE:\noph_server_test [-a] [-d] [-v] [-w]\n";
+	static char *USAGE = "\nUSAGE:\noph_server_test [-a] [-d] [-o output_file] [-v] [-w]\n";
+	char *filename = "test_output.trs";
 
 	fprintf(stdout, "%s", OPH_VERSION);
 	fprintf(stdout, "%s", OPH_DISCLAIMER);
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "advw")) != -1) {
+	while ((ch = getopt(argc, argv, "ado:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				abort_on_first_error = 1;
 				break;
 			case 'd':
 				msglevel = LOG_DEBUG;
+				break;
+			case 'o':
+				filename = optarg;
 				break;
 			case 'v':
 				return 0;
@@ -1986,22 +1996,32 @@ int main(int argc, char *argv[])
 	snprintf(configuration_file, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, getenv("PWD"));
 	set_global_values(configuration_file);
 
-	int test_mode_num = 6;
-	int test_num[] = { 9, 2, 9, 6, 27, 12 };
-	char *test_name[] = { "oph_if", "oph_else", "oph_for", "oph_endfor", "oph_massive", "oph_massive2" };
+	FILE *file = fopen(filename, "w");
+	if (!file) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Output file cannot be created!\n");
+		return 1;
+	}
+
+	int test_mode_num = 5;
+	int test_num[] = { 9, 2, 9, 6, 39 };
+	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_check_for_massive_operation" };
 	int i = 0, j, k, f = 0, n = 0;
 	for (j = 0; j < test_mode_num; ++j)
 		n += test_num[j];
 
-	printf("\n");
-
 	for (k = 0; k < test_mode_num; ++k)
 		for (j = 0; j < test_num[k]; ++j)
-			if (check_oph_server(&i, &f, n, test_name[k], j, abort_on_first_error))
+			if (check_oph_server(&i, &f, n, test_name[k], j, abort_on_first_error, file)) {
+				fclose(file);
 				return 1;
+			}
 
 	if (f)
-		printf("WARNING: %d TASK%s FAILED out of %d\n", f, f == 1 ? "" : "S", n);
+		fprintf(file, "WARNING: %d TASK%s FAILED out of %d\n", f, f == 1 ? "" : "S", n);
+	else
+		fprintf(file, "SUCCESS: %d TASK%s PASSED out of %d\n", n, n == 1 ? "" : "S", n);
+
+	fclose(file);
 
 	cleanup();
 	return f;
