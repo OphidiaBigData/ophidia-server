@@ -58,6 +58,13 @@ To run unit tests type:
 $ make check
 ```
 
+To generate test coverage report type:
+
+```
+$ ./configure --prefix=prefix --enable-code-coverage
+$ make check-code-coverage
+```
+
 The server needs digital certificates enabling TLS/SSL protected communication. You can create and copy the certificates in *etc/cert* folder under the installation path.  Then, copy *authz* into the installation path and configure your users (you can use the tool *oph\_manage\_user*).
 
 If you want to use the program system-wide, remember to add its installation directory to your PATH.

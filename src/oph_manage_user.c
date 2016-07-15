@@ -526,7 +526,7 @@ int main(int argc, char *argv[])
 			fclose(file);
 		}
 #else
-		UNUSED(black_listed)
+		UNUSED(black_listed);
 #endif
 	} else if (!strcasecmp(action, "list"))
 		for (tmp = args; tmp; tmp = tmp->next)

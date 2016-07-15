@@ -263,11 +263,23 @@ liboph_notify_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(M
 liboph_notify_la_LDFLAGS = -shared
 liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_engine
 
+LIBRARY += liboph_flow_control_operators.la
+liboph_flow_control_operators_la_SOURCES = oph_flow_control_operators.c
+liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
+liboph_flow_control_operators_la_LDFLAGS = -shared
+liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+
+LIBRARY += liboph_management_operators.la
+liboph_management_operators_la_SOURCES = oph_management_operators.c
+liboph_management_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
+liboph_management_operators_la_LDFLAGS = -shared
+liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = oph_known_operators.c
 liboph_known_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_known_operators_la_LDFLAGS = -shared
-liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_flow_control_operators -loph_management_operators
 
 if INTERFACE_TYPE_IS_GSI
 LIBRARY += libgsigsoap.la libgsigsoapthreads.la

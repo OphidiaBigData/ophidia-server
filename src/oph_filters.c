@@ -85,9 +85,9 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 
 int oph_filter_measure(const char *value, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
-	UNUSED(tables)
+	UNUSED(tables);
 
-	    if (!value || !strlen(value))
+	if (!value || !strlen(value))
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_MEASURE, value);
 
@@ -173,9 +173,9 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 
 int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
-	UNUSED(tables)
+	UNUSED(tables);
 
-	    if (!value || !strlen(value))
+	if (!value || !strlen(value))
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, value);
 
@@ -238,9 +238,9 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 
 int oph_filter_container(char *value, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
-	UNUSED(tables)
+	UNUSED(tables);
 
-	    if (!value || !strlen(value))
+	if (!value || !strlen(value))
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_CONTAINER, value);
 
@@ -268,9 +268,9 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 
 int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
-	UNUSED(tables)
+	UNUSED(tables);
 
-	    if (!value || !strlen(value))
+	if (!value || !strlen(value))
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_CONTAINER_PID, value);
 
@@ -514,9 +514,9 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 
 int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
-	UNUSED(tables)
+	UNUSED(tables);
 
-	    if (!path || !strlen(path))
+	if (!path || !strlen(path))
 		return OPH_MF_OK;
 
 	int permission = 0, folder_id = 0, s, counter = 0, recursive_flag = recursive && !strcmp(recursive, OPH_MF_ARG_VALUE_YES);

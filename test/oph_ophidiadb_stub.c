@@ -241,13 +241,13 @@ int oph_odb_insert_user(ophidiadb * oDB, const char *username)
 
 int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
 {
-	UNUSED(password)
-	    UNUSED(name)
-	    UNUSED(surname)
-	    UNUSED(email)
-	    UNUSED(country)
+	UNUSED(password);
+	UNUSED(name);
+	UNUSED(surname);
+	UNUSED(email);
+	UNUSED(country);
 
-	    if (!oDB || !username)
+	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
 
 	return OPH_ODB_SUCCESS;
@@ -263,13 +263,13 @@ int oph_odb_delete_user(ophidiadb * oDB, const char *username)
 
 int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
 {
-	UNUSED(password)
-	    UNUSED(name)
-	    UNUSED(surname)
-	    UNUSED(email)
-	    UNUSED(country)
+	UNUSED(password);
+	UNUSED(name);
+	UNUSED(surname);
+	UNUSED(email);
+	UNUSED(country);
 
-	    if (!oDB || !username)
+	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
 
 	return OPH_ODB_SUCCESS;

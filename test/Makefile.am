@@ -229,14 +229,14 @@ liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${XML_LIBS}
 
 LIBRARY += liboph_filters.la
 liboph_filters_la_SOURCES = ../src/oph_filters.c
-liboph_filters_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
-liboph_filters_la_LDFLAGS = -shared
+liboph_filters_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+liboph_filters_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
 liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_task_parser_library -loph_ophidiadb_fs_library -loph_subset_library
 
 LIBRARY += liboph_massive_operations.la
 liboph_massive_operations_la_SOURCES = ../src/oph_massive_operations.c
-liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
-liboph_massive_operations_la_LDFLAGS = -shared
+liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+liboph_massive_operations_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
 liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters
 
 LIBRARY += liboph_odb_job.la
@@ -263,11 +263,23 @@ liboph_notify_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAG
 liboph_notify_la_LDFLAGS = -shared
 liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_engine
 
+LIBRARY += liboph_flow_control_operators.la
+liboph_flow_control_operators_la_SOURCES = ../src/oph_flow_control_operators.c
+liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(CODE_COVERAGE_CFLAGS)
+liboph_flow_control_operators_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
+liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+
+LIBRARY += liboph_management_operators.la
+liboph_management_operators_la_SOURCES = ../src/oph_management_operators.c
+liboph_management_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
+liboph_management_operators_la_LDFLAGS = -shared
+liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = ../src/oph_known_operators.c
 liboph_known_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
 liboph_known_operators_la_LDFLAGS = -shared
-liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_flow_control_operators -loph_management_operators
 
 if INTERFACE_TYPE_IS_GSI
 LIBRARY += libgsigsoap.la libgsigsoapthreads.la
@@ -282,13 +294,13 @@ endif
 check_LTLIBRARIES = $(LIBRARY)
 
 oph_server_test_SOURCES= oph_server_test.c
-oph_server_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
-oph_server_test_LDFLAGS= $(MYLDFLAGS_THREADS)
+oph_server_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS) $(CODE_COVERAGE_CFLAGS)
+oph_server_test_LDFLAGS= $(MYLDFLAGS_THREADS) $(CODE_COVERAGE_LDLAGS)
 oph_server_test_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_known_operators
 
 clean-local:
-	-rm -f *~
+	-rm -f *~ *.trs
 
 distclean-local:
-	-rm -f *~
+	-rm -f *~ *.trs
 

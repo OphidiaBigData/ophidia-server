@@ -206,9 +206,9 @@ int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL
 //It also checks if the container is not hidden
 int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int non_hidden, int *folder_id)
 {
-	UNUSED(non_hidden)
+	UNUSED(non_hidden);
 
-	    if (!oDB || !folder_id || !container_id) {
+	if (!oDB || !folder_id || !container_id) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*folder_id = 1;
@@ -350,10 +350,10 @@ int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, 
 
 int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hidden, char *container_name, MYSQL_RES ** information_list)
 {
-	UNUSED(hidden)
-	    UNUSED(container_name)
+	UNUSED(hidden);
+	UNUSED(container_name);
 
-	    (*information_list) = NULL;
+	(*information_list) = NULL;
 
 	if (!oDB || !id_folder) {
 		return OPH_ODB_NULL_PARAM;

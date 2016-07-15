@@ -26,6 +26,9 @@ stamp-h1
 *.pem
 *~
 *.trs
+*.gcda
+*.gcno
+*.info
 etc/oph_server
 etc/oph_server_logrotate
 etc/server.conf
@@ -34,4 +37,6 @@ src/oph_server
 src/oph_client
 src/oph_manage_user
 test/oph_server_test
+*-coverage
+test/*-coverage
 

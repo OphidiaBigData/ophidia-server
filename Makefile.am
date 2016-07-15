@@ -50,6 +50,9 @@ webdir = $(OPH_WEB_SERVER_LOCATION)/
 dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/style.css
 endif
 
+AM_DEFAULT_VERBOSITY = 1
+@CODE_COVERAGE_RULES@
+
 clean-local:
 	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/xml/*~
 
