@@ -96,7 +96,7 @@ libhashtbl_la_LDFLAGS = -shared
 libhashtbl_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_json.la
-liboph_json_la_SOURCES = ../src/oph_json/oph_json_common.c ../src/oph_json/oph_json_graph.c ../src/oph_json/oph_json_grid.c ../src/oph_json/oph_json_multigrid.c ../src/oph_json/oph_json_text.c ../src/oph_json/oph_json_tree.c
+liboph_json_la_SOURCES = oph_json_common_stub.c ../src/oph_json/oph_json_graph.c ../src/oph_json/oph_json_grid.c ../src/oph_json/oph_json_multigrid.c ../src/oph_json/oph_json_text.c ../src/oph_json/oph_json_tree.c
 liboph_json_la_CFLAGS= -prefer-pic -I../src/ -I../src/oph_json $(JANSSON_CFLAGS) ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_json_la_LDFLAGS = -shared -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
 liboph_json_la_LIBADD = $(ADDITIONAL_LIBS) $(JANSSON_LIBS)

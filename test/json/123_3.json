@@ -1,0 +1,37 @@
+{
+    "response": [
+        {
+            "objclass": "text",
+            "objkey": "status",
+            "objcontent": [
+                {
+                    "title": "SUCCESS"
+                }
+            ]
+        }
+    ],
+    "responseKeyset": [
+        "status"
+    ],
+    "source": {
+        "srckey": "oph",
+        "srcname": "Ophidia",
+        "producer": "oph-test",
+        "keys": [
+            "Session Code",
+            "Workflow",
+            "Marker",
+            "JobID"
+        ],
+        "description": "Ophidia Data Source",
+        "values": [
+            "123",
+            "1",
+            "3",
+            "http://localhost/sessions/123/experiment?1#3"
+        ]
+    },
+    "consumers": [
+        "oph-test"
+    ]
+}
