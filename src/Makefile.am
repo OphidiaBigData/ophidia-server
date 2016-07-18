@@ -296,17 +296,17 @@ lib_LTLIBRARIES = $(LIBRARY)
 oph_client_SOURCES= $(INTERFACE_TYPE)/oph_client.c
 oph_client_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYCFLAGS)
 oph_client_LDFLAGS= $(MYLDFLAGS)
-oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -ldebug
+oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -lstdsoap2 -ldebug
 
 oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -ldebug -lthreads -loph_plugin -loph_notify -loph_known_operators -loph_execute_main
+oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_rmanager -loph_task_parser_library -lhashtbl -loph_ophidiadb -ldebug -lthreads -loph_plugin -loph_notify -loph_known_operators -loph_execute_main
 
 oph_manage_user_SOURCES= oph_manage_user.c
 oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)
 oph_manage_user_LDFLAGS= $(GLOBUS_BASIC)
-oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -lhashtbl -loph_auth -loph_ophidiadb
+oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_parser -lhashtbl -loph_auth -loph_ophidiadb
 
 clean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~

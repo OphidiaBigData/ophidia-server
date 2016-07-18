@@ -1283,7 +1283,7 @@ int __oph_json_to_json_file(oph_json * json, char *filename, char **jstring, pth
 		fclose(fp);
 
 		if (strncmp(*jstring, response, strlen(*jstring))) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Response is not correct\n");
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Response is not compliant\n");
 			free(response);
 			free(*jstring);
 			*jstring = NULL;

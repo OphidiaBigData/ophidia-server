@@ -128,7 +128,7 @@ AC_ARG_ENABLE(webaccess,
            [ webaccess="no"]
 	   )
 if test "x$webaccess" = "xyes"; then
-	AC_MSG_WARN("Web Access activated")
+	AC_MSG_NOTICE("Web Access activated")
 fi
 AM_CONDITIONAL([OPH_WEB_ACCESS], [test "x${webaccess}" = "xyes"])
 
