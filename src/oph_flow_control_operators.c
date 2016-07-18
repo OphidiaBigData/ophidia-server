@@ -44,7 +44,7 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
-		int i, j, k, res, gparent;
+		int i, j, k, res, gparent, found;
 		for (k = 0; k < wf->tasks[task_index].dependents_indexes_num; ++k) {
 			if (nk < 0)
 				nk = k;
@@ -56,10 +56,14 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 				else if (wf->tasks[i].branch_num > 1) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
 					wf->tasks[parent].dependents_indexes[nk] = parent;
+					found = 0;
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
-						if (wf->tasks[i].deps[j].task_index == task_index)
+						if (wf->tasks[i].deps[j].task_index == task_index) {
 							wf->tasks[i].deps[j].task_index = i;
-					wf->tasks[i].residual_deps_num--;
+							found = 1;
+						}
+					if (found)
+						wf->tasks[i].residual_deps_num--;
 				} else {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Set dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
 					wf->tasks[parent].dependents_indexes[nk] = i;
@@ -75,10 +79,14 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 			if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE) && (wf->tasks[i].parent == gparent)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
 				wf->tasks[gparent].dependents_indexes[nk] = i;
+				found = 0;
 				for (j = 0; j < wf->tasks[i].deps_num; ++j)
-					if (wf->tasks[i].deps[j].task_index == task_index)
+					if (wf->tasks[i].deps[j].task_index == task_index) {
 						wf->tasks[i].deps[j].task_index = gparent;
-				wf->tasks[i].residual_deps_num--;
+						found = 1;
+					}
+				if (found)
+					wf->tasks[i].residual_deps_num--;
 			} else {
 				if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED) {
 					if (!wf->residual_tasks_num) {

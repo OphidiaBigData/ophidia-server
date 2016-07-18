@@ -2449,6 +2449,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 													free(fieldtypes);
 												break;
 											}
+											jjj++;
+											fieldtypes[jjj] = strdup(OPH_JSON_INT);
+											if (!fieldtypes[jjj]) {
+												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
+													   jobid);
+												for (iii = 0; iii < num_fields; iii++)
+													if (jsonkeys[iii])
+														free(jsonkeys[iii]);
+												if (jsonkeys)
+													free(jsonkeys);
+												for (iii = 0; iii < jjj; iii++)
+													if (fieldtypes[iii])
+														free(fieldtypes[iii]);
+												if (fieldtypes)
+													free(fieldtypes);
+												break;
+											}
 											if (oph_json_add_grid
 											    (oper_json, OPH_JSON_OBJKEY_WORKFLOW_PROGRESS, "Workflow Progress", NULL, jsonkeys, num_fields, fieldtypes,
 											     num_fields)) {
