@@ -1248,51 +1248,6 @@ int __oph_json_to_json_file(oph_json * json, char *filename, char **jstring, pth
 		return OPH_JSON_MEMORY_ERROR;
 	}
 
-	if (*jstring) {
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Opening '%s'\n", filename);
-		FILE *fp = fopen(filename, "r");
-		if (!fp) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_IO_ERROR, filename);
-			free(*jstring);
-			*jstring = NULL;
-			return OPH_JSON_IO_ERROR;
-		}
-
-		fseek(fp, 0L, SEEK_END);
-		long numbytes = ftell(fp);
-		fseek(fp, 0L, SEEK_SET);
-
-		char *response = (char *) malloc((1 + numbytes) * sizeof(char));
-		if (!response) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to alloc response\n");
-			fclose(fp);
-			free(*jstring);
-			*jstring = NULL;
-			return OPH_JSON_MEMORY_ERROR;
-		}
-
-		if (!fread(response, sizeof(char), numbytes, fp)) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to read response\n");
-			free(response);
-			fclose(fp);
-			free(*jstring);
-			*jstring = NULL;
-			return OPH_JSON_IO_ERROR;
-		}
-
-		fclose(fp);
-
-		if (strncmp(*jstring, response, strlen(*jstring))) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Response is not compliant\n");
-			free(response);
-			free(*jstring);
-			*jstring = NULL;
-			return OPH_JSON_GENERIC_ERROR;
-		}
-
-		free(response);
-	}
-
 	return OPH_JSON_SUCCESS;
 }
 
