@@ -594,6 +594,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	// Filter on current session
 	char ext_path[OPH_MAX_STRING_SIZE];
 	*ext_path = OPH_MF_ROOT_FOLDER[0];
+
 	if (oph_get_session_code(sessionid, ext_path + 1)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 		return OPH_SERVER_SYSTEM_ERROR;

@@ -38,6 +38,7 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 	char *jstring = NULL;
 	if (oper_json) {
 		int return_code = 0;
+
 		if (!success) {
 			if (!strlen(error_message))
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Operator '%s' failed!", operator_name);
@@ -56,6 +57,7 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 				*exit_code = OPH_ODB_STATUS_COMPLETED;
 		}
 		oph_json_free(oper_json);
+
 		if (return_code)
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "error in generate JSON Response\n");
 	}

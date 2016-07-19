@@ -1367,6 +1367,10 @@ int oph_json_is_measuretype_correct(const char *measuretype)
 		res = 1;
 	else if (!strcmp(measuretype, OPH_JSON_DOUBLE))
 		res = 1;
+	else if (!strcmp(measuretype, OPH_JSON_STRING))
+		res = 1;
+	else if (!strcmp(measuretype, OPH_JSON_BLOB))
+		res = 1;
 	else
 		res = 0;
 	return res;

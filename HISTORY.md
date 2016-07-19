@@ -1,4 +1,34 @@
 
+## v0.10.2 - 2016-07-19
+
+### Fixed:
+
+- Bug in handling filter 'path' in massive operations
+- Bug in massive operation handler
+- fread errors
+- A number of warnings
+
+### Added:
+
+- Code coverage check
+- Code style
+- Unit tests
+
+### Changed:
+
+- Improved support for selection statement
+- Operators oph_for and oph_if for unit tests
+
+## v0.10.1 - 2016-06-27
+
+### Fixed:
+
+- Bug in handling nested selection blocks
+
+### Added:
+
+- Initial support for selection statement
+
 ## v0.10.0 - 2016-06-23
 
 ### Fixed:
