@@ -5,29 +5,25 @@
 
 - Bug in handling filter 'path' in massive operations
 - Bug in massive operation handler
-- fread errors
-- A number of warnings
+- Several warnings when building
 
 ### Added:
 
 - Code coverage check
-- Code style
+- Support for data type 'string' in multigrids of JSON Responses
 - Unit tests
+- Support for selection statement
 
 ### Changed:
 
-- Improved support for selection statement
-- Operators oph_for and oph_if for unit tests
+- Code indentation style
+- Library 'known operators' to improve modularity
 
 ## v0.10.1 - 2016-06-27
 
 ### Fixed:
 
-- Bug in handling nested selection blocks
-
-### Added:
-
-- Initial support for selection statement
+- Version number in files
 
 ## v0.10.0 - 2016-06-23
 
