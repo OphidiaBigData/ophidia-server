@@ -22,7 +22,7 @@ In order to compile and run the Ophidia Server, make sure you have the following
 10. globus-gsi-proxy-core-devel (only for GSI support)
 11. globus-gssapi-gsi-devel (only for GSI support)
 12. voms-devel (only for GSI support)
-13. GNU libmatheval (a patched version from 1.1.11)
+13. GNU libmatheval (only for selection statement)
 
 **Note**:
 
