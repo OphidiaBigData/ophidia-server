@@ -129,6 +129,7 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 			free(error_msg);
 			return OPH_SERVER_ERROR;
 		}
+#ifdef MATHEVAL_SUPPORT
 		if (condition && strlen(condition)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Evaluate expression '%s'.\n", condition);
 
@@ -156,6 +157,7 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 			if (!return_value)
 				wf->tasks[i].is_skipped = 1;
 		}
+#endif
 		check = 1;
 	}
 	if (wf->tasks[i].is_skipped) {
@@ -888,6 +890,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 	UNUSED(ncores);
 	UNUSED(request);
 	UNUSED(jobid_response);
+	UNUSED(exit_output);
 
 	int error = OPH_SERVER_UNKNOWN;
 
@@ -1096,7 +1099,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 #ifndef MATHEVAL_SUPPORT
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
 		return OPH_SERVER_SYSTEM_ERROR;
-#endif
+#else
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -1190,12 +1193,13 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
+#endif
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))	// oph_else, oph_endif
 	{
 #ifndef MATHEVAL_SUPPORT
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
 		return OPH_SERVER_SYSTEM_ERROR;
-#endif
+#else
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -1289,6 +1293,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
+#endif
 	}
 
 	return error;
