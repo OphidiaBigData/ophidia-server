@@ -1652,8 +1652,8 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 				{
 					snprintf(markerid, OPH_SHORT_STRING_SIZE, "3");
-					task_id = 0;
-					odb_jobid = 2;
+					task_id = 1;
+					odb_jobid = 3;
 					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_if");
 					wf->residual_tasks_num = 6;
 					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
@@ -1663,8 +1663,8 @@ int _check_oph_server(const char *function, int option)
 			case 3:
 				{
 					snprintf(markerid, OPH_SHORT_STRING_SIZE, "5");
-					task_id = 2;
-					odb_jobid = 4;
+					task_id = 3;
+					odb_jobid = 5;
 					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_else");
 					wf->residual_tasks_num = 4;
 					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
