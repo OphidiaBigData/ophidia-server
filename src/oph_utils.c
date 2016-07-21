@@ -121,7 +121,7 @@ int oph_http_get(struct soap *soap)
 	}
 	else
 	{
-		r = snprintf(soap->tmpbuf,1+sizeof(buffer),"%s",buffer);
+		r = snprintf(soap->tmpbuf,sizeof(soap->tmpbuf),"%s",buffer);
 		soap_send_raw(soap, soap->tmpbuf, r);
 	}
 	soap_end_send(soap);

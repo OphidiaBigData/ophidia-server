@@ -245,7 +245,7 @@ int oph_odb_retrieve_ids(ophidiadb *oDB, const char* command, int** id, char*** 
 
 	char query[MYSQL_BUFLEN];
 
-	int n = snprintf(query, MYSQL_BUFLEN, command);
+	int n = snprintf(query, MYSQL_BUFLEN, "%s", command);
 	if(n >= MYSQL_BUFLEN) return OPH_ODB_STR_BUFF_OVERFLOW;
 
 	if(mysql_select_db(oDB->conn, oDB->name)) return OPH_ODB_MYSQL_ERROR;
@@ -292,7 +292,7 @@ int oph_odb_retrieve_list(ophidiadb *oDB, const char* command, ophidiadb_list *l
 	
 	char query[MYSQL_BUFLEN];
 
-	int n = snprintf(query, MYSQL_BUFLEN, command);
+	int n = snprintf(query, MYSQL_BUFLEN, "%s", command);
 	if(n >= MYSQL_BUFLEN) return OPH_ODB_STR_BUFF_OVERFLOW;
 
 	if(mysql_select_db(oDB->conn, oDB->name)) return OPH_ODB_MYSQL_ERROR;

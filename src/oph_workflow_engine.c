@@ -965,8 +965,8 @@ int oph_save_basic_json(char ttype, int jobid, oph_workflow* wf, int task_index,
 
 	if (success)
 	{
-		snprintf(error_type,OPH_MAX_STRING_SIZE,message_type);
-		snprintf(error_message,OPH_MAX_STRING_SIZE,message);
+		snprintf(error_type,OPH_MAX_STRING_SIZE,"%s",message_type);
+		snprintf(error_message,OPH_MAX_STRING_SIZE,"%s",message);
 	}
 	else
 	{
