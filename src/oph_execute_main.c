@@ -4077,7 +4077,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		free(initial_tasks_indexes);
 		if (jobid_response)	// Update oph_jobid according to specific command. Used only for oph_manage_session
 		{
-			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, jobid_response);
+			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s", jobid_response);
 			free(jobid_response);
 		}
 	}
