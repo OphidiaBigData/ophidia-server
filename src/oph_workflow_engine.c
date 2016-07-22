@@ -3204,8 +3204,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						}
 					}
 
-				if (wf->tasks[task_index].retry_num < 0)
+				if (wf->tasks[task_index].retry_num < 0) {
 					status = OPH_ODB_STATUS_COMPLETED;	// Skip possible errors
+					if ((wf->tasks[task_index].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ABORTED))
+						wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
+				}
 
 				if (status == OPH_ODB_STATUS_COMPLETED) {
 					if (wf->tasks[task_index].is_skipped && (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_COMPLETED))
