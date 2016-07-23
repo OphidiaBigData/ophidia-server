@@ -2436,6 +2436,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		case OPH_ODB_STATUS_UNSET_ENV:
 			status = OPH_ODB_STATUS_RUNNING;
 			break;
+		case OPH_ODB_STATUS_UNSELECTED:
 		case OPH_ODB_STATUS_CLOSED:
 			status = OPH_ODB_STATUS_COMPLETED;
 			break;
@@ -2449,8 +2450,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		case OPH_ODB_STATUS_REDUCE_ERROR:
 		case OPH_ODB_STATUS_DESTROY_ERROR:
 		case OPH_ODB_STATUS_UNSET_ENV_ERROR:
-		case OPH_ODB_STATUS_ABORTED:
 		case OPH_ODB_STATUS_SKIPPED:
+		case OPH_ODB_STATUS_ABORTED:
 		case OPH_ODB_STATUS_EXPIRED:
 			status = OPH_ODB_STATUS_ERROR;
 			break;
@@ -3206,13 +3207,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 				if (wf->tasks[task_index].retry_num < 0) {
 					status = OPH_ODB_STATUS_COMPLETED;	// Skip possible errors
-					if ((wf->tasks[task_index].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ABORTED))
+					if ((wf->tasks[task_index].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_SKIPPED))
 						wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
 				}
 
 				if (status == OPH_ODB_STATUS_COMPLETED) {
 					if (wf->tasks[task_index].is_skipped && (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_COMPLETED))
-						wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
+						wf->tasks[task_index].status = OPH_ODB_STATUS_UNSELECTED;
 
 					wf->residual_tasks_num--;
 
@@ -3868,7 +3869,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 
 				for (iii = skipped_num = 0; iii < wf->tasks_num; iii++)
-					if (wf->tasks[iii].status >= (int) OPH_ODB_STATUS_ABORTED)
+					if ((wf->tasks[iii].status == (int) OPH_ODB_STATUS_SKIPPED) || (wf->tasks[iii].status == (int) OPH_ODB_STATUS_UNSELECTED))
 						skipped_num++;
 
 				jjj = 0;

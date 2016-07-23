@@ -395,7 +395,7 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 			case 7:
 				{
-					if (wf->tasks[1].status != OPH_ODB_STATUS_SKIPPED) {
+					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
 						return 1;
 					}
@@ -412,7 +412,7 @@ int _check_oph_server(const char *function, int option)
 
 			case 3:
 				{
-					if (wf->tasks[1].status != OPH_ODB_STATUS_SKIPPED) {
+					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
 						return 1;
 					}
@@ -470,7 +470,7 @@ int _check_oph_server(const char *function, int option)
 		// Operator for true
 		wf->tasks[1].idjob = 3;
 		wf->tasks[1].markerid = 3;
-		wf->tasks[1].status = OPH_ODB_STATUS_SKIPPED;
+		wf->tasks[1].status = OPH_ODB_STATUS_UNSELECTED;
 		wf->tasks[1].name = strdup("Operator for true");
 		wf->tasks[1].operator = strdup("oph_operator");
 		wf->tasks[1].role = oph_code_role("read");
@@ -590,7 +590,7 @@ int _check_oph_server(const char *function, int option)
 		switch (option) {
 			case 0:
 				{
-					if (wf->tasks[1].status != OPH_ODB_STATUS_SKIPPED) {
+					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
 						return 1;
 					}
@@ -607,7 +607,7 @@ int _check_oph_server(const char *function, int option)
 
 			case 1:
 				{
-					if ((wf->tasks[1].status == OPH_ODB_STATUS_SKIPPED) || (wf->tasks[3].status != OPH_ODB_STATUS_SKIPPED)) {
+					if ((wf->tasks[1].status == OPH_ODB_STATUS_UNSELECTED) || (wf->tasks[3].status != OPH_ODB_STATUS_UNSELECTED)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
 						return 1;
 					}
@@ -1643,8 +1643,8 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
 					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
 					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
-					wf->tasks[3].status = OPH_ODB_STATUS_SKIPPED;
-					wf->tasks[4].status = OPH_ODB_STATUS_SKIPPED;
+					wf->tasks[3].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[4].status = OPH_ODB_STATUS_UNSELECTED;
 					wf->tasks[5].status = OPH_ODB_STATUS_COMPLETED;
 				}
 				break;
@@ -1669,7 +1669,7 @@ int _check_oph_server(const char *function, int option)
 					wf->residual_tasks_num = 4;
 					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
 					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
-					wf->tasks[2].status = OPH_ODB_STATUS_SKIPPED;
+					wf->tasks[2].status = OPH_ODB_STATUS_UNSELECTED;
 					free(wf->tasks[1].arguments_values[0]);
 					wf->tasks[1].arguments_values[0] = strdup("0");
 				}

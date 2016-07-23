@@ -164,7 +164,7 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Skip the selection block associated with task '%s'.\n", wf->tasks[i].name);
 
 		// Skip this sub-block
-		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, !check, exit_output)) {
+		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_UNSELECTED, i, -1, !check, exit_output)) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Error in updating the status of dependents of '%s'.", wf->tasks[i].name);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
 		}
@@ -190,7 +190,7 @@ int oph_else_impl(oph_workflow * wf, int i, char *error_message, int *exit_outpu
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Skip the selection block associated with task '%s'.\n", wf->tasks[i].name);
 
 		// Skip this sub-block
-		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_SKIPPED, i, -1, 0, exit_output)) {
+		if (oph_set_status_of_selection_block(wf, i, OPH_ODB_STATUS_UNSELECTED, i, -1, 0, exit_output)) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Error in updating the status of dependents of '%s'.", wf->tasks[i].name);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
 		}
