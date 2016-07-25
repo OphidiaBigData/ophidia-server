@@ -1630,7 +1630,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								success = 1;
 						}
 					} else {
-						int num_fields = 6, iii, jjj = 0;
+						int num_fields = wf->output_format ? 2 : 6, iii, jjj = 0;
 						char **jsonkeys = NULL;
 						char **fieldtypes = NULL;
 
@@ -1642,44 +1642,174 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								break;
 							}
 							// Header
+
+							if (wf->output_format) {
+
+								int num_fields = 3;
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									break;
+								}
+								jsonkeys[jjj] = strdup("OPH JOB ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("WORKFLOW ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("PARENT MARKER ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								if (oph_json_add_grid_unsafe
+								    (oper_json, OPH_JSON_OBJKEY_MASSIVE_INFO, "Massive Operation Information", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+							}
+
 							jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 							if (!jsonkeys) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 								break;
 							}
-							jsonkeys[jjj] = strdup("OPH JOB ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
+							jjj = 0;
+							if (!wf->output_format) {
+								jsonkeys[jjj] = strdup("OPH JOB ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("SESSION CODE");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("WORKFLOW ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							jsonkeys[jjj] = strdup("SESSION CODE");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
-							}
-							jjj++;
-							jsonkeys[jjj] = strdup("WORKFLOW ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
-							}
-							jjj++;
 							jsonkeys[jjj] = strdup("MARKER ID");
 							if (!jsonkeys[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -1691,17 +1821,19 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								break;
 							}
 							jjj++;
-							jsonkeys[jjj] = strdup("PARENT MARKER ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
+							if (!wf->output_format) {
+								jsonkeys[jjj] = strdup("PARENT MARKER ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
 							jsonkeys[jjj] = strdup("EXIT STATUS");
 							if (!jsonkeys[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -1712,7 +1844,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									free(jsonkeys);
 								break;
 							}
-							jjj = 0;
 							fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
 							if (!fieldtypes) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -1723,38 +1854,57 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									free(jsonkeys);
 								break;
 							}
-							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
+							jjj = 0;
+							if (!wf->output_format) {
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
-							}
-							jjj++;
 							fieldtypes[jjj] = strdup(OPH_JSON_INT);
 							if (!fieldtypes[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -1771,38 +1921,24 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								break;
 							}
 							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_INT);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
+							if (!wf->output_format) {
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_INT);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
-							}
-							jjj++;
 							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 							if (!fieldtypes[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2701,7 +2837,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (!success)
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
 					else {
-						int num_fields = 6, iii, jjj = 0;
+						int num_fields = wf->output_format ? 2 : 6, iii, jjj = 0;
 
 						char **jsonkeys = NULL;
 						char **fieldtypes = NULL;
@@ -2715,45 +2851,233 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
 								break;
 							}
+
+							if (wf->output_format) {
+
+								int num_fields = 3;
+								// Header
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									break;
+								}
+								jsonkeys[jjj] = strdup("OPH JOB ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("WORKFLOW ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("PARENT MARKER ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								if (oph_json_add_grid_unsafe
+								    (oper_json, OPH_JSON_OBJKEY_MASSIVE_INFO, "Massive Operation Information", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonvalues) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									break;
+								}
+								jjj = 0;
+								snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid,
+									 OPH_SESSION_MARKER_DELIMITER, wf->tasks[task_index].markerid);
+								jsonvalues[jjj] = strdup(jsontmp);
+								if (!jsonvalues[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+								jsonvalues[jjj] = strdup(jsontmp);
+								if (!jsonvalues[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+								jsonvalues[jjj] = strdup(jsontmp);
+								if (!jsonvalues[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_INFO, jsonvalues)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: ADD GRID ROW error\n", jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+							}
 							// Header
 							jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 							if (!jsonkeys) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 								break;
 							}
-							jsonkeys[jjj] = strdup("OPH JOB ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
+							jjj = 0;
+							if (!wf->output_format) {
+								jsonkeys[jjj] = strdup("OPH JOB ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("SESSION CODE");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("WORKFLOW ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							jsonkeys[jjj] = strdup("SESSION CODE");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
-							}
-							jjj++;
-							jsonkeys[jjj] = strdup("WORKFLOW ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
-							}
-							jjj++;
 							jsonkeys[jjj] = strdup("MARKER ID");
 							if (!jsonkeys[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2765,17 +3089,19 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								break;
 							}
 							jjj++;
-							jsonkeys[jjj] = strdup("PARENT MARKER ID");
-							if (!jsonkeys[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < jjj; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								break;
+							if (!wf->output_format) {
+								jsonkeys[jjj] = strdup("PARENT MARKER ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
 							jsonkeys[jjj] = strdup("EXIT STATUS");
 							if (!jsonkeys[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2786,7 +3112,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									free(jsonkeys);
 								break;
 							}
-							jjj = 0;
 							fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
 							if (!fieldtypes) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2797,38 +3122,57 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									free(jsonkeys);
 								break;
 							}
-							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
+							jjj = 0;
+							if (!wf->output_format) {
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
-							}
-							jjj++;
 							fieldtypes[jjj] = strdup(OPH_JSON_INT);
 							if (!fieldtypes[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2845,38 +3189,24 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								break;
 							}
 							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_INT);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
+							if (!wf->output_format) {
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
 							}
-							jjj++;
-							fieldtypes[jjj] = strdup(OPH_JSON_INT);
-							if (!fieldtypes[jjj]) {
-								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-								for (iii = 0; iii < num_fields; iii++)
-									if (jsonkeys[iii])
-										free(jsonkeys[iii]);
-								if (jsonkeys)
-									free(jsonkeys);
-								for (iii = 0; iii < jjj; iii++)
-									if (fieldtypes[iii])
-										free(fieldtypes[iii]);
-								if (fieldtypes)
-									free(fieldtypes);
-								break;
-							}
-							jjj++;
 							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 							if (!fieldtypes[jjj]) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2928,42 +3258,44 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										break;
 									}
 									jjj = 0;
-									snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid,
-										 OPH_SESSION_MARKER_DELIMITER, wf->tasks[task_index].light_tasks[i].markerid);
-									jsonvalues[jjj] = strdup(jsontmp);
-									if (!jsonvalues[jjj]) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
-										for (iii = 0; iii < jjj; iii++)
-											if (jsonvalues[iii])
-												free(jsonvalues[iii]);
-										if (jsonvalues)
-											free(jsonvalues);
-										break;
+									if (!wf->output_format) {
+										snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid,
+											 OPH_SESSION_MARKER_DELIMITER, wf->tasks[task_index].light_tasks[i].markerid);
+										jsonvalues[jjj] = strdup(jsontmp);
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
+										jjj++;
+										jsonvalues[jjj] = strdup(session_code);
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
+										jjj++;
+										snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+										jsonvalues[jjj] = strdup(jsontmp);
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
+										jjj++;
 									}
-									jjj++;
-									jsonvalues[jjj] = strdup(session_code);
-									if (!jsonvalues[jjj]) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
-										for (iii = 0; iii < jjj; iii++)
-											if (jsonvalues[iii])
-												free(jsonvalues[iii]);
-										if (jsonvalues)
-											free(jsonvalues);
-										break;
-									}
-									jjj++;
-									snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
-									jsonvalues[jjj] = strdup(jsontmp);
-									if (!jsonvalues[jjj]) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
-										for (iii = 0; iii < jjj; iii++)
-											if (jsonvalues[iii])
-												free(jsonvalues[iii]);
-										if (jsonvalues)
-											free(jsonvalues);
-										break;
-									}
-									jjj++;
 									snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].light_tasks[i].markerid);
 									jsonvalues[jjj] = strdup(jsontmp);
 									if (!jsonvalues[jjj]) {
@@ -2976,18 +3308,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										break;
 									}
 									jjj++;
-									snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
-									jsonvalues[jjj] = strdup(jsontmp);
-									if (!jsonvalues[jjj]) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
-										for (iii = 0; iii < jjj; iii++)
-											if (jsonvalues[iii])
-												free(jsonvalues[iii]);
-										if (jsonvalues)
-											free(jsonvalues);
-										break;
+									if (!wf->output_format) {
+										snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+										jsonvalues[jjj] = strdup(jsontmp);
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
+										jjj++;
 									}
-									jjj++;
 									jsonvalues[jjj] = strdup(oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[i].status));
 									if (!jsonvalues[jjj]) {
 										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
@@ -3924,46 +4258,231 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					free(jsonvalues);
 
 				// Header
-				num_fields = 8;
-				jjj = 0;
+				if (wf->output_format) {
+
+					num_fields = 3;
+					jjj = 0;
+					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+					if (!jsonkeys) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						break;
+					}
+					jsonkeys[jjj] = strdup("OPH JOB ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("WORKFLOW ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("PARENT MARKER ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj = 0;
+					fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+					if (!fieldtypes) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_INT);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_INT);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_WORKFLOW_INFO, "Workflow Basic Information", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < num_fields; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonkeys[iii])
+							free(jsonkeys[iii]);
+					if (jsonkeys)
+						free(jsonkeys);
+					for (iii = 0; iii < num_fields; iii++)
+						if (fieldtypes[iii])
+							free(fieldtypes[iii]);
+					if (fieldtypes)
+						free(fieldtypes);
+
+					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+					if (!jsonvalues) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						break;
+					}
+					jjj = 0;
+					snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid, OPH_SESSION_MARKER_DELIMITER, wf->markerid);
+					jsonvalues[jjj] = strdup(jsontmp);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					jjj++;
+					snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+					jsonvalues[jjj] = strdup(jsontmp);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					jjj++;
+					snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->markerid);
+					jsonvalues[jjj] = strdup(jsontmp);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					jjj++;
+
+					if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_WORKFLOW_INFO, jsonvalues)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+				}
+
+				num_fields = wf->output_format ? 4 : 8;
 				jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 				if (!jsonkeys) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 					break;
 				}
-				jsonkeys[jjj] = strdup("OPH JOB ID");
-				if (!jsonkeys[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < jjj; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					break;
+				jjj = 0;
+				if (!wf->output_format) {
+					jsonkeys[jjj] = strdup("OPH JOB ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("SESSION CODE");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("WORKFLOW ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
 				}
-				jjj++;
-				jsonkeys[jjj] = strdup("SESSION CODE");
-				if (!jsonkeys[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < jjj; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					break;
-				}
-				jjj++;
-				jsonkeys[jjj] = strdup("WORKFLOW ID");
-				if (!jsonkeys[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < jjj; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					break;
-				}
-				jjj++;
 				jsonkeys[jjj] = strdup("MARKER ID");
 				if (!jsonkeys[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -3975,17 +4494,19 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					break;
 				}
 				jjj++;
-				jsonkeys[jjj] = strdup("PARENT MARKER ID");
-				if (!jsonkeys[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < jjj; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					break;
+				if (!wf->output_format) {
+					jsonkeys[jjj] = strdup("PARENT MARKER ID");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
 				}
-				jjj++;
 				jsonkeys[jjj] = strdup("TASK NAME");
 				if (!jsonkeys[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -4018,7 +4539,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						free(jsonkeys);
 					break;
 				}
-				jjj = 0;
 				fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
 				if (!fieldtypes) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -4029,38 +4549,57 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						free(jsonkeys);
 					break;
 				}
-				fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-				if (!fieldtypes[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < num_fields; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					for (iii = 0; iii < jjj; iii++)
-						if (fieldtypes[iii])
-							free(fieldtypes[iii]);
-					if (fieldtypes)
-						free(fieldtypes);
-					break;
+				jjj = 0;
+				if (!wf->output_format) {
+					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_INT);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
 				}
-				jjj++;
-				fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-				if (!fieldtypes[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < num_fields; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					for (iii = 0; iii < jjj; iii++)
-						if (fieldtypes[iii])
-							free(fieldtypes[iii]);
-					if (fieldtypes)
-						free(fieldtypes);
-					break;
-				}
-				jjj++;
 				fieldtypes[jjj] = strdup(OPH_JSON_INT);
 				if (!fieldtypes[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -4077,38 +4616,24 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					break;
 				}
 				jjj++;
-				fieldtypes[jjj] = strdup(OPH_JSON_INT);
-				if (!fieldtypes[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < num_fields; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					for (iii = 0; iii < jjj; iii++)
-						if (fieldtypes[iii])
-							free(fieldtypes[iii]);
-					if (fieldtypes)
-						free(fieldtypes);
-					break;
+				if (!wf->output_format) {
+					fieldtypes[jjj] = strdup(OPH_JSON_INT);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
 				}
-				jjj++;
-				fieldtypes[jjj] = strdup(OPH_JSON_INT);
-				if (!fieldtypes[jjj]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-					for (iii = 0; iii < num_fields; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					for (iii = 0; iii < jjj; iii++)
-						if (fieldtypes[iii])
-							free(fieldtypes[iii]);
-					if (fieldtypes)
-						free(fieldtypes);
-					break;
-				}
-				jjj++;
 				fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 				if (!fieldtypes[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -4193,42 +4718,44 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							break;
 						}
 						jjj = 0;
-						snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid, OPH_SESSION_MARKER_DELIMITER,
-							 wtmp->markerid);
-						jsonvalues[jjj] = strdup(jsontmp);
-						if (!jsonvalues[jjj]) {
-							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-							for (iii = 0; iii < jjj; iii++)
-								if (jsonvalues[iii])
-									free(jsonvalues[iii]);
-							if (jsonvalues)
-								free(jsonvalues);
-							break;
+						if (!wf->output_format) {
+							snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid,
+								 OPH_SESSION_MARKER_DELIMITER, wtmp->markerid);
+							jsonvalues[jjj] = strdup(jsontmp);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
+							jsonvalues[jjj] = strdup(session_code);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
+							snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+							jsonvalues[jjj] = strdup(jsontmp);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
 						}
-						jjj++;
-						jsonvalues[jjj] = strdup(session_code);
-						if (!jsonvalues[jjj]) {
-							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-							for (iii = 0; iii < jjj; iii++)
-								if (jsonvalues[iii])
-									free(jsonvalues[iii]);
-							if (jsonvalues)
-								free(jsonvalues);
-							break;
-						}
-						jjj++;
-						snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
-						jsonvalues[jjj] = strdup(jsontmp);
-						if (!jsonvalues[jjj]) {
-							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-							for (iii = 0; iii < jjj; iii++)
-								if (jsonvalues[iii])
-									free(jsonvalues[iii]);
-							if (jsonvalues)
-								free(jsonvalues);
-							break;
-						}
-						jjj++;
 						snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wtmp->markerid);
 						jsonvalues[jjj] = strdup(jsontmp);
 						if (!jsonvalues[jjj]) {
@@ -4241,18 +4768,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							break;
 						}
 						jjj++;
-						snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->markerid);
-						jsonvalues[jjj] = strdup(jsontmp);
-						if (!jsonvalues[jjj]) {
-							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
-							for (iii = 0; iii < jjj; iii++)
-								if (jsonvalues[iii])
-									free(jsonvalues[iii]);
-							if (jsonvalues)
-								free(jsonvalues);
-							break;
+						if (!wf->output_format) {
+							snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->markerid);
+							jsonvalues[jjj] = strdup(jsontmp);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
 						}
-						jjj++;
 						jsonvalues[jjj] = strdup(wtmp->name);
 						if (!jsonvalues[jjj]) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);

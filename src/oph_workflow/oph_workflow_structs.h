@@ -257,6 +257,7 @@ typedef struct _oph_workflow_stack {
  * \param stack Stack of the workflow
  * \param on_error Action to be executed in case of error
  * \param on_exit Action to be taken at the end of workflow execution
+ * \param output_format Format to code workflow output
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -287,6 +288,7 @@ typedef struct _oph_workflow {
 	oph_workflow_stack *stack;
 	char *on_error;
 	char *on_exit;
+	int output_format;
 } oph_workflow;
 
 /* Functions for structs cleanup */

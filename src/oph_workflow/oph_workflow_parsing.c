@@ -66,9 +66,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 	}
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cube = NULL, *callback_url = NULL, *on_error = NULL, *command =
-	    NULL, *on_exit = NULL, *run = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode", &exec_mode,
-		    "ncores", &ncores, "cwd", &cwd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run);
+	    NULL, *on_exit = NULL, *run = NULL, *output_format = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode", &exec_mode,
+		    "ncores", &ncores, "cwd", &cwd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run, "output_format",
+		    &output_format);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -193,6 +194,18 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			if (jansson)
 				json_decref(jansson);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'run'\n");
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+	} else
+		(*workflow)->run = 1;	// Default value (yes)
+	if (output_format && strlen(output_format)) {
+		if (!strcmp(output_format, OPH_WORKFLOW_COMPACT))
+			(*workflow)->output_format = 1;
+		else if (strcmp(output_format, OPH_WORKFLOW_CLASSIC)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'output_format'\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
 	}

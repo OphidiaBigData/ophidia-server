@@ -61,6 +61,9 @@
 #define OPH_WORKFLOW_REPEAT		"repeat"
 #define OPH_WORKFLOW_DELETE		"oph_delete"
 
+#define OPH_WORKFLOW_CLASSIC		"classic"
+#define OPH_WORKFLOW_COMPACT		"compact"
+
 #define OPH_WORKFLOW_FINAL_TASK		"Final task"
 
 #define OPH_WORKFLOW_BVAR_KEYS		{"OPH_SESSION_ID","OPH_SESSION_CODE","OPH_WORKFLOW_ID"}

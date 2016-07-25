@@ -72,6 +72,11 @@
 			"type": "string",
 			"description": "callback URL for the entire workflow"
 		},
+		"output_format":
+		{
+			"type": "string",
+			"description": "mode to code workflow output. Possible values are: classic or compact (common fields such as session code and workfow id are shown separately)"
+		},
 		"tasks":
 		{
 			"type": "array",

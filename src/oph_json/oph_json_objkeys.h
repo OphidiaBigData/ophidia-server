@@ -140,12 +140,14 @@
 #define OPH_JSON_OBJKEY_MASSIVE_LIST					"massive_list"
 #define OPH_JSON_OBJKEY_MASSIVE_SUMMARY					"massive_summary"
 #define OPH_JSON_OBJKEY_MASSIVE_STATUS					"massive_status"
+#define OPH_JSON_OBJKEY_MASSIVE_INFO					"massive_info"
 
 // OPH_WORKFLOW
 #define OPH_JSON_OBJKEY_WORKFLOW_LIST					"workflow_list"
 #define OPH_JSON_OBJKEY_WORKFLOW_SUMMARY				"workflow_summary"
 #define OPH_JSON_OBJKEY_WORKFLOW_STATUS					"workflow_status"
 #define OPH_JSON_OBJKEY_WORKFLOW_PROGRESS				"workflow_progress"
+#define OPH_JSON_OBJKEY_WORKFLOW_INFO					"workflow_info"
 
 // OPH_RESUME
 #define OPH_JSON_OBJKEY_RESUME						"resume"
