@@ -53,7 +53,11 @@ void* _oph_system(oph_command_data* data)
 	{
 		if (data->command)
 		{
+#ifdef LOCAL_FRAMEWORK
 			if (system(data->command))
+#else
+			if (oph_ssh_submit(data->command))
+#endif
 			{
 				int jobid;
 				pthread_mutex_lock(&global_flag);
@@ -549,8 +553,14 @@ int oph_serve_request(const char* request, const int ncores, const char* session
 {
 	pmesg_safe(&global_flag,LOG_DEBUG, __FILE__,__LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
+	int _ncores = ncores;
+	if (ncores < 1) {
+		pmesg_safe(&global_flag,LOG_DEBUG, __FILE__,__LINE__, "The job will be executed with 1!\n");
+		_ncores = 1;
+	}
+
 	int result;
-	if ((result = oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response)) != OPH_SERVER_UNKNOWN) return result;
+	if ((result = oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response)) != OPH_SERVER_UNKNOWN) return result;
 
 	char *cmd = NULL;
 
@@ -581,10 +591,10 @@ int oph_serve_request(const char* request, const int ncores, const char* session
 #ifdef LOCAL_FRAMEWORK
 	char command[OPH_MAX_STRING_SIZE];
 #ifdef USE_MPI
-	snprintf(command,OPH_MAX_STRING_SIZE,"rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s",outfile,ncores,oph_operator_client,request,outfile,outfile);
+	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s", outfile, _ncores, oph_operator_client, request, outfile, outfile);
 #else
-	snprintf(command,OPH_MAX_STRING_SIZE,"rm -f %s; %s \"%s\" >> %s 2>> %s",outfile,oph_operator_client,request,outfile,outfile);
-	if (ncores > 1) pmesg_safe(&global_flag,LOG_WARNING, __FILE__,__LINE__, "MPI is disabled. Only one core will be used\n");
+	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; %s \"%s\" >> %s 2>> %s", outfile, oph_operator_client, request, outfile, outfile);
+	if (_ncores > 1) pmesg_safe(&global_flag,LOG_WARNING, __FILE__,__LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag,LOG_INFO, __FILE__,__LINE__, "Execute command: %s\n",command);
 	if (oph_system(command,error,state))
@@ -597,7 +607,7 @@ int oph_serve_request(const char* request, const int ncores, const char* session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if(oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, &cmd))
+	if(oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, &cmd))
 	{
 		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Error on forming submission string\n");
 		if(cmd){
@@ -607,7 +617,7 @@ int oph_serve_request(const char* request, const int ncores, const char* session
 		return OPH_SERVER_ERROR;
 	}
 
-	if(oph_ssh_submit(cmd))
+	if(oph_system(cmd,error,state))
 	{
 		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Error during remote submission\n");
 		if(cmd){
