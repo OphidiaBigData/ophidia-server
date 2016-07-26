@@ -1,4 +1,20 @@
 
+## v0.10.3 - 2016-07-26
+
+### Fixed:
+
+- Some warnings when building
+- Bug in building function 'oph_if_impl' when MathEval library is disabled
+
+### Added:
+
+- Add compact output format for JSON Responses associated with workflows and massive operations
+- Add task type OPH_STATUS_UNSELECTED for unselected branches of selection statement
+
+### Changed:
+
+- Change status of skipped tasks to OPH_STATUS_SKIPPED in case of errors
+
 ## v0.10.2 - 2016-07-19
 
 ### Fixed:

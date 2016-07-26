@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [0.10.2], [ophidia-info@lists.cmcc.it])
+AC_INIT([ophidia-server], [0.10.3], [ophidia-info@lists.cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -61,7 +61,7 @@ CXXFLAGS="-DWITH_DOM"
 
 AX_CODE_COVERAGE
 
-AX_LIB_MYSQL([5.4])
+AX_LIB_MYSQL([5.6])
 if test -n $HAVE_MYSQL; then
   AC_MSG_NOTICE([MySQL libraries available])
 else
