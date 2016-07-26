@@ -1333,7 +1333,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level)
 			{
 				if (j<old_tasks_num) k=0; else k=1+(j-old_tasks_num)/replied_num;
 				var.caller = i;
-				if (ivalues) var.ivalue = ivalues[k]; else var.ivalue=1; // Non C-like indexing
+				if (ivalues) var.ivalue = ivalues[k]; else var.ivalue = 1 + k; // Non C-like indexing
 				if (svalues) strcpy(var.svalue,svalues[k]); else snprintf(var.svalue,OPH_WORKFLOW_MAX_STRING,"%d",var.ivalue);
 				if (hashtbl_insert_with_size(wf->tasks[j].vars, name, (void *)&var, sizeof(oph_workflow_var)))
 				{
