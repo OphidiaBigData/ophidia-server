@@ -34,7 +34,6 @@ extern oph_rmanager* orm;
 
 extern int oph_ssh_submit(const char* cmd);
 
-#ifdef LOCAL_FRAMEWORK
 extern int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char* data, char* json, int* response);
 
 typedef struct _oph_command_data
@@ -129,7 +128,6 @@ int oph_system(const char* command, const char* error, struct oph_plugin_data *s
 	return system(fg_command);
 #endif
 }
-#endif
 
 int oph_read_rmanager_conf(oph_rmanager *orm)
 {
