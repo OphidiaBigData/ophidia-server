@@ -892,12 +892,12 @@ int oph_save_basic_json(char ttype, int jobid, oph_workflow* wf, int task_index,
 	}
 	if ((task_index<0) || (task_index>=wf->tasks_num))
 	{
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: wrong task index\n",ttype,jobid);
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: wrong task index %d\n",ttype,jobid,task_index);
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
 	if (light_task_index >= wf->tasks[task_index].light_tasks_num)
 	{
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: wrong light task index\n",ttype,jobid);
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: wrong light task index %d\n",ttype,jobid,light_task_index);
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
 	if (output_json) *output_json = NULL;
@@ -2480,7 +2480,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		{
 			wf->tasks[task_index].light_tasks[light_task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
-			if (odb_status == OPH_ODB_STATUS_START_ERROR)
+			if ((task_index < wf->tasks_num) && (odb_status == OPH_ODB_STATUS_START_ERROR))
 			{
 				struct stat s;
 				char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
