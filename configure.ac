@@ -83,7 +83,7 @@ AC_ARG_WITH(matheval_path,
            [
                 matheval_path="$withval"
                                 matheval_support=yes
-                                MATHEVAL_CONFIG="${withval}/lib/pkgconfig/libmatheval.pc"
+                                MATHEVAL_CONFIG="${withval}/pkgconfig/libmatheval.pc"
            ],
            [
                         MATHEVAL_CONFIG="/usr/local/lib/pkgconfig/libmatheval.pc"
