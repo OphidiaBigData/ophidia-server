@@ -34,8 +34,7 @@ extern oph_rmanager *orm;
 
 extern int oph_ssh_submit(const char *cmd);
 
-#ifdef LOCAL_FRAMEWORK
-extern int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *json, int *response);
+extern int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char* data, char* json, int* response);
 
 typedef struct _oph_command_data {
 	char *command;
@@ -48,9 +47,16 @@ void *_oph_system(oph_command_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 #endif
-	if (data) {
-		if (data->command) {
-			if (system(data->command)) {
+	if (data)
+	{
+		if (data->command)
+		{
+#ifdef LOCAL_FRAMEWORK
+			if (system(data->command))
+#else
+			if (oph_ssh_submit(data->command))
+#endif
+			{
 				int jobid;
 				pthread_mutex_lock(&global_flag);
 				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
@@ -125,7 +131,6 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	return system(fg_command);
 #endif
 }
-#endif
 
 int oph_read_rmanager_conf(oph_rmanager * orm)
 {
@@ -531,6 +536,12 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	if (exit_output)
 		*exit_output = 1;
 
+	int _ncores = ncores;
+	if (ncores < 1) {
+		pmesg_safe(&global_flag,LOG_DEBUG, __FILE__,__LINE__, "The job will be executed with 1!\n");
+		_ncores = 1;
+	}
+
 	int result;
 	if ((result =
 	     oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
@@ -587,9 +598,9 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 
-	if (oph_ssh_submit(cmd)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
-		if (cmd) {
+	if(oph_system(cmd, error, state)) {
+		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Error during remote submission\n");
+		if(cmd) {
 			free(cmd);
 			cmd = NULL;
 		}
