@@ -396,7 +396,7 @@ int _check_oph_server(const char *function, int option)
 			case 7:
 				{
 					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Task status is wrong: %s\n", oph_odb_convert_status_to_str(wf->tasks[1].status));
 						return 1;
 					}
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
