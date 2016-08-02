@@ -58,9 +58,9 @@ void *_oph_system(oph_command_data * data)
 				int jobid;
 				pthread_mutex_lock(&global_flag);
 				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "C%d: critical error\n", jobid);
 				pthread_mutex_unlock(&global_flag);
 
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "C%d: critical error\n", jobid);
 				if (data->error) {
 					int response = 0;
 					oph_workflow_notify(data->state, 'C', jobid, data->error, NULL, &response);

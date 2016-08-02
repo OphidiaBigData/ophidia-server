@@ -75,6 +75,8 @@
 		"output_format":
 		{
 			"type": "string",
+			"enum": ["classic", "compact"],
+			"default": "classic",
 			"description": "mode to code workflow output. Possible values are: classic or compact (common fields such as session code and workfow id are shown separately)"
 		},
 		"tasks":
