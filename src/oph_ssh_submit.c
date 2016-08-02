@@ -83,25 +83,14 @@ int oph_ssh_submit(const char* cmd)
     char *exitsignal=(char *)"none";
     int bytecount = 0;
 
-    pthread_mutex_lock(&libssh2_flag); // Lock the SSH2 library
-
-    rc = libssh2_init (0);
-    if (rc != 0) {
-	pthread_mutex_unlock(&libssh2_flag);
-	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "libssh2 initialization failed (%d)\n", rc);
-        return OPH_LIBSSH_ERROR;
-    }
-
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = 0;
     hints.ai_protocol = 0;
     result = NULL;
-
     rc = getaddrinfo(oph_ip_target_host, NULL, &hints, &result);
     if (rc != 0) {
-	pthread_mutex_unlock(&libssh2_flag);
 	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Unable to resolve address from target hostname: %s\n", gai_strerror(rc));
 	return OPH_LIBSSH_ERROR;
     }
@@ -111,18 +100,25 @@ int oph_ssh_submit(const char* cmd)
     sin.sin_port = htons(22);
     sin.sin_addr.s_addr = ((struct sockaddr_in *)result->ai_addr)->sin_addr.s_addr;
     freeaddrinfo(result);
-
     if (connect(sock, (struct sockaddr*)(&sin), sizeof(struct sockaddr_in)) != 0) {
-	pthread_mutex_unlock(&libssh2_flag);
 	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Failed to connect to submission host\n");
         return OPH_LIBSSH_ERROR;
+    }
+
+    pthread_mutex_lock(&libssh2_flag); // Lock the SSH2 library
+
+    rc = libssh2_init (0);
+    if (rc != 0) {
+	pthread_mutex_unlock(&libssh2_flag);
+	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "libssh2 initialization failed (%d)\n", rc);
+	return OPH_LIBSSH_ERROR;
     }
 
     session = libssh2_session_init();
     if (!session){
 	pthread_mutex_unlock(&libssh2_flag);
-	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Failed to init ssh sessione\n");
-        return OPH_LIBSSH_ERROR;
+	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Failed to init ssh session\n");
+	return OPH_LIBSSH_ERROR;
     }
 
     libssh2_session_set_blocking(session, 0);
@@ -134,7 +130,7 @@ int oph_ssh_submit(const char* cmd)
         return OPH_LIBSSH_ERROR;
     }
 
-        while ((rc = libssh2_userauth_publickey_fromfile(session, oph_subm_user, oph_subm_user_publk, oph_subm_user_privk,"")) == LIBSSH2_ERROR_EAGAIN);
+        while ((rc = libssh2_userauth_publickey_fromfile(session, oph_subm_user, oph_subm_user_publk, oph_subm_user_privk, "")) == LIBSSH2_ERROR_EAGAIN);
         if (rc) {
 		libssh2_session_disconnect(session, "Session disconnected");
     		libssh2_session_free(session);
@@ -145,7 +141,7 @@ int oph_ssh_submit(const char* cmd)
 		#endif
     		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-        	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Authentication by public key failed\n");
+		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Authentication by public key failed\n");
     		return OPH_LIBSSH_ERROR;
         }
 
@@ -169,6 +165,9 @@ int oph_ssh_submit(const char* cmd)
 	pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Error during opening session channel\n");
         return OPH_LIBSSH_ERROR;
     }
+
+    pthread_mutex_unlock(&libssh2_flag); // Unlock SSH2 library
+
     int flag = 0;
     for( ;; )
     {
@@ -227,9 +226,9 @@ int oph_ssh_submit(const char* cmd)
 #endif
     pmesg_safe(&global_flag,LOG_INFO, __FILE__,__LINE__, "Session ended normally\n");
 
+    pthread_mutex_lock(&libssh2_flag);
     libssh2_exit();
-
-    pthread_mutex_unlock(&libssh2_flag); // Unlock SSH2 library
+    pthread_mutex_unlock(&libssh2_flag);
 
     return OPH_LIBSSH_OK;
 }
