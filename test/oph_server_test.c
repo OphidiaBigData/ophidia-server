@@ -1249,7 +1249,7 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, svalues[wf->stack->index]);
+					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
 					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var)))
 						return 1;
 				}
@@ -1272,7 +1272,7 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, svalues[wf->stack->index]);
+					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
 					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var)))
 						return 1;
 				}

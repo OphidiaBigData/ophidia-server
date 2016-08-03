@@ -106,6 +106,7 @@ int oph_ssh_submit(const char *cmd)
 	}
 
 	pthread_mutex_lock(&libssh2_flag);	// Lock the access to SSH library
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "SSH2 library locked\n");
 
 	rc = libssh2_init(0);
 	if (rc != 0) {
@@ -162,8 +163,6 @@ int oph_ssh_submit(const char *cmd)
 		return OPH_LIBSSH_ERROR;
 	}
 
-	pthread_mutex_unlock(&libssh2_flag);	// Release the lock for SSH library
-
 	int flag = 0;
 	for (;;) {
 		int rc;
@@ -216,9 +215,10 @@ int oph_ssh_submit(const char *cmd)
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Session ended normally\n");
 
-	pthread_mutex_lock(&libssh2_flag);
 	libssh2_exit();
-	pthread_mutex_unlock(&libssh2_flag);
+
+	pthread_mutex_unlock(&libssh2_flag);	// Release the lock for SSH library
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "SSH2 library unlocked\n");
 
 	return OPH_LIBSSH_OK;
 }
