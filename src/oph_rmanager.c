@@ -123,9 +123,13 @@ int oph_system(const char* command, const char* error, struct oph_plugin_data *s
 	pthread_create(&tid, NULL, (void*(*)(void*))&_oph_system, data);
 	return RMANAGER_SUCCESS;
 #else
+#ifdef LOCAL_FRAMEWORK
 	char fg_command[OPH_MAX_STRING_SIZE];
 	snprintf(fg_command,OPH_MAX_STRING_SIZE,"%s &",command);
 	return system(fg_command);
+#else
+	return system(command);
+#endif
 #endif
 }
 
@@ -428,16 +432,16 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 
 	if( !strcasecmp(orm->name, "lsf")){
 		if(interactive_subm)
-			sprintf(*cmd, "%s %s %s %d %s mpirun.lsf \"%s %s\" > %s 2>&1", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm, oph_operator_client, request, outfile);
+			sprintf(*cmd, "%s %s %s %d %s mpirun.lsf \"%s %s\" > %s 2>&1 &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm, oph_operator_client, request, outfile);
 		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d mpirun.lsf \"%s %s\" %s", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d mpirun.lsf \"%s %s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
 	}
 	else //Default, SLURM
 	{
 		if(interactive_subm)
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm,  orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm,  orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
 	}
 	pmesg_safe(&global_flag,LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
