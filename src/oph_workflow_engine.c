@@ -766,7 +766,20 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
+	int i;
 	oph_workflow_task* task = &(wf->tasks[task_index]);
+
+	if ((oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1)) || (task->retry_num > 1))
+	{
+		for (i=0; i<(int)task->light_tasks_num; ++i) if (task->light_tasks[i].status > (int)OPH_ODB_STATUS_COMPLETED)
+		{
+			task->light_tasks[i].idjob = 0;
+			task->light_tasks[i].markerid = 0;
+			task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+		}
+		return OPH_SERVER_OK;
+	}
+	
 	if (task->light_tasks_num)
 	{
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: found %d massive operation children already set\n",ttype,jobid,task->light_tasks_num);
@@ -778,7 +791,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
-	int i, res=OPH_SERVER_OK;
+	int res = OPH_SERVER_OK;
 	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
 	for (i=0; i<task->arguments_num;++i)
 	{
@@ -812,7 +825,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 		strcpy(target_base,datacube_input);
 		datacube_input = target_base;
 	}
-
+	
 	if (datacube_input || src_path)
 	{
 		if (oph_workflow_var_substitute(wf, task_index, target_base, NULL))
@@ -1905,20 +1918,20 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 			hashtbl_remove(task_tbl, OPH_ARG_PARENTID);
 			hashtbl_insert(task_tbl, OPH_ARG_PARENTID, str_parent);
 
+			char retry = (oph_auto_retry && wf->tasks[i].residual_auto_retry_num && (wf->tasks[i].retry_num == 1)) || (wf->tasks[i].retry_num > 1);
 			for (j=0; j<wf->tasks[i].light_tasks_num; ++j)
 			{
 				if (wf->tasks[i].light_tasks[j].status)
 				{
-					pmesg(LOG_WARNING, __FILE__,__LINE__,"%c%d: unexpected task with an active state '%s'\n", ttype,jobid,oph_odb_convert_status_to_str(wf->tasks[i].light_tasks[j].status));
-					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
+					if (!retry)
+					{
+						pmesg(LOG_WARNING, __FILE__,__LINE__,"%c%d: unexpected task with an active state '%s'\n", ttype,jobid,oph_odb_convert_status_to_str(wf->tasks[i].light_tasks[j].status));
+						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
+					}
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
@@ -1930,12 +1943,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status);
 					
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
@@ -1955,14 +1964,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (submission_string) free(submission_string);
 					if (sss) free(sss);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
-					request_data[k]->markerid = strdup(str_markerid);
-					request_data[k]->error = errore;
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
+					request_data[k][j].markerid = strdup(str_markerid);
+					request_data[k][j].error = errore;
 
 					continue;
 				}
@@ -1977,12 +1982,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (submission_string) free(submission_string);
 					if (sss) free(sss);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
@@ -2485,11 +2486,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
 			if (odb_status == OPH_ODB_STATUS_START_ERROR)
 			{
-				char save = 1;
-				if (oph_auto_retry && !wf->tasks[task_index].retry_num && (wf->tasks[task_index].residual_auto_retry_num != 1)) // Setting for auto-retry
+				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1) && (wf->tasks[task_index].residual_auto_retry_num != 1)) // Setting for auto-retry
 				{
 					wf->tasks[task_index].is_marked_for_auto_retry = 1;
-					save = 0;
 					pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' has been marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 				}
 				if (wf->tasks[task_index].status < (int)OPH_ODB_STATUS_RUNNING)
@@ -2502,7 +2501,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					wf->status = OPH_ODB_STATUS_RUNNING;
 					update_wf_data=1;
 				}
-				if (save && (task_index < wf->tasks_num))
+				if (task_index < wf->tasks_num)
 				{
 					struct stat s;
 					char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
@@ -2963,7 +2962,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (wf->tasks[task_index].is_marked_for_auto_retry) pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 
 				char save = 0;
-				if (oph_auto_retry && !wf->tasks[task_index].retry_num) // Setting for auto-retry
+				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1)) // Setting for auto-retry
 				{
 					if (!wf->tasks[task_index].residual_auto_retry_num) wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
 					else if (wf->tasks[task_index].residual_auto_retry_num > 1) wf->tasks[task_index].residual_auto_retry_num--;
@@ -3370,40 +3369,29 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				{
 					if (!wf->tasks[task_index].retry_num)
 					{
-						if (oph_auto_retry && (wf->tasks[task_index].residual_auto_retry_num > 1))
+						wf->residual_tasks_num--;
+						pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' has been aborted\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+						// Set the depending tasks as ABORTED
+						if (oph_workflow_set_status(ttype,jobid,wf,wf->tasks[task_index].dependents_indexes, wf->tasks[task_index].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 						{
-							update_wf_data=0;
-							status = OPH_ODB_STATUS_RUNNING;
-							wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
-							retry_task_execution = 1;
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+							pmesg(LOG_ERROR, __FILE__,__LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[task_index].name);
+							pthread_mutex_unlock(&global_flag);
+							*response = OPH_SERVER_SYSTEM_ERROR;
+							return SOAP_OK;
 						}
-						else
+						if (!wf->residual_tasks_num) // Check for workflow termination
 						{
-							wf->residual_tasks_num--;
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' has been aborted\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
-							// Set the depending tasks as ABORTED
-							if (oph_workflow_set_status(ttype,jobid,wf,wf->tasks[task_index].dependents_indexes, wf->tasks[task_index].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
+							status = OPH_ODB_STATUS_COMPLETED;
+							if (wf->status < (int)status) wf->status = status;
+							final=1;
+						}
+						else if (wf->status == OPH_ODB_STATUS_ERROR)
+						{
+							for (i=0; i<wf->tasks_num; ++i) if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)) break;
+							if (i == wf->tasks_num)
 							{
-								pmesg(LOG_ERROR, __FILE__,__LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[task_index].name);
-								pthread_mutex_unlock(&global_flag);
-								*response = OPH_SERVER_SYSTEM_ERROR;
-								return SOAP_OK;
-							}
-							if (!wf->residual_tasks_num) // Check for workflow termination
-							{
-								status = OPH_ODB_STATUS_COMPLETED;
-								if (wf->status < (int)status) wf->status = status;
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
 								final=1;
-							}
-							else if (wf->status == OPH_ODB_STATUS_ERROR)
-							{
-								for (i=0; i<wf->tasks_num; ++i) if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)) break;
-								if (i == wf->tasks_num)
-								{
-									pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
-									final=1;
-								}
 							}
 						}
 					}
@@ -3416,25 +3404,46 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 					else
 					{
-						wf->tasks[task_index].residual_retry_num--;
-						if (wf->tasks[task_index].residual_retry_num) // Try to restart the task
+						char reduce_residual_retry_num = 1;
+						if (oph_auto_retry && wf->tasks[task_index].is_marked_for_auto_retry && (wf->tasks[task_index].retry_num == 1))
 						{
-							update_wf_data=0;
-							status = OPH_ODB_STATUS_RUNNING;
-							wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
-							retry_task_execution = 1;
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
-						}
-						else // Task is definitely considered as "failed"
-						{
-							wf->residual_tasks_num--;
-							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be considered as 'failed'\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
-							wf->status = status;
-							for (i=0; i<wf->tasks_num; ++i) if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)) break;
-							if (i == wf->tasks_num)
+							pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+							char save = 0;
+							if (!wf->tasks[task_index].residual_auto_retry_num) wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
+							else if (wf->tasks[task_index].residual_auto_retry_num > 1) wf->tasks[task_index].residual_auto_retry_num--;
+							else save = 1;
+							if (!save)
 							{
-								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
-								final=1;
+								update_wf_data = 0;
+								status = OPH_ODB_STATUS_RUNNING;
+								wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
+								retry_task_execution = 1;
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+								reduce_residual_retry_num = 0;
+							}
+						}
+						if (reduce_residual_retry_num)
+						{
+							wf->tasks[task_index].residual_retry_num--;
+							if (wf->tasks[task_index].residual_retry_num) // Try to restart the task
+							{
+								update_wf_data=0;
+								status = OPH_ODB_STATUS_RUNNING;
+								wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
+								retry_task_execution = 1;
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+							}
+							else // Task is definitely considered as "failed"
+							{
+								wf->residual_tasks_num--;
+								pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: task '%s' of '%s' will be considered as 'failed'\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+								wf->status = status;
+								for (i=0; i<wf->tasks_num; ++i) if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)) break;
+								if (i == wf->tasks_num)
+								{
+									pmesg(LOG_DEBUG, __FILE__,__LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
+									final=1;
+								}
 							}
 						}
 					}
