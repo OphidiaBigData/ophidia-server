@@ -1985,6 +1985,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k][j].serve_request = 0;
 					request_data[k][j].error_notification = strdup(submission_string_ext);
+					request_data[k][j].markerid = strdup(str_markerid);
 
 					continue;
 				}
@@ -2030,7 +2031,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 			request_data[k]->light_task_id = -1;
 			request_data[k]->run = wf->tasks[i].run;
 
-			snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
+			snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
 			request_data[k]->error_notification = strdup(submission_string_ext);
 		}
 		wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
