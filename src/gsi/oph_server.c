@@ -75,6 +75,7 @@ char* oph_xml_operator_dir=0;
 char* oph_user_notifier=0;
 unsigned int oph_server_farm_size=0;
 unsigned int oph_server_queue_size=0;
+unsigned int oph_auto_retry=0;
 oph_rmanager* orm=0;
 int oph_service_status=1;
 oph_auth_user_bl* bl_head=0;
@@ -128,6 +129,7 @@ void set_global_values(const char* configuration_file)
 	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_WORKFLOW_TIMEOUT))) oph_server_workflow_timeout=strtol(value,NULL,10);
 	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_SERVER_FARM_SIZE))) oph_server_farm_size=(unsigned int)strtol(value,NULL,10);
 	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_QUEUE_SIZE))) oph_server_queue_size=(unsigned int)strtol(value,NULL,10);
+	if ((value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTO_RETRY))) oph_auto_retry=(unsigned int)strtol(value,NULL,10);
 	if (!logfile && (value=hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE)))
 	{
 		pmesg(LOG_INFO, __FILE__,__LINE__,"Selected log file '%s'\n",value);
