@@ -965,7 +965,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char* request,
 
 					oph_odb_remove_job(wf->tasks[i].idjob); // Drop line of oph_endfor from OphDB
 
-					if (oph_trash_append(state->trash, sessionid, wf->tasks[i].markerid)) pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid.\n");
+					if (oph_trash_append(state->trash, sessionid, wf->tasks[i].markerid)) pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid '%d'.\n", wf->tasks[i].markerid);
 					else pmesg(LOG_DEBUG, __FILE__,__LINE__,"Release markerid '%d'.\n", wf->tasks[i].markerid);
 
 					if (oph_workflow_reset_task(wf, wf->tasks[p].dependents_indexes, wf->tasks[p].dependents_indexes_num, i, tmp, &tasks_num))

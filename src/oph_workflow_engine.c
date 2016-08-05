@@ -753,7 +753,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim)
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow* wf, int task_index, ophidiadb* oDB, char*** output_list, int* output_list_dim)
 {
 	if (!wf || !oDB || !output_list || !output_list_dim)
 	{
@@ -773,6 +773,10 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 	{
 		for (i=0; i<(int)task->light_tasks_num; ++i) if (task->light_tasks[i].status > (int)OPH_ODB_STATUS_COMPLETED)
 		{
+			if (oph_trash_append(state->trash, wf->sessionid, task->light_tasks[i].markerid))
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid '%d'.\n", task->light_tasks[i].markerid);
+			else
+				pmesg(LOG_DEBUG, __FILE__,__LINE__,"Release markerid '%d'.\n", task->light_tasks[i].markerid);
 			task->light_tasks[i].idjob = 0;
 			task->light_tasks[i].markerid = 0;
 			task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
@@ -1494,7 +1498,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 		char **output_list = NULL;
 		int output_list_dim = 0;
-		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(ttype, jobid, wf, i, oDB, &output_list, &output_list_dim))))
+		if ((wf->tasks[i].parent<0) && ((res = oph_check_for_massive_operation(state, ttype, jobid, wf, i, oDB, &output_list, &output_list_dim))))
 		{
 			odb_jobid = 0;
 			// Create the child job in OphidiaDB
