@@ -2004,7 +2004,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k][j].light_task_id = j;
 				request_data[k][j].run = wf->tasks[i].run;
 
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id, wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR);
+				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR);
 				request_data[k][j].error_notification = strdup(submission_string_ext);
 
 				wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
