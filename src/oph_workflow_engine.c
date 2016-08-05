@@ -777,6 +777,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow* wf, int
 			task->light_tasks[i].markerid = 0;
 			task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
 		}
+		task->residual_light_tasks_num = task->light_tasks_num;
 		return OPH_SERVER_OK;
 	}
 	
@@ -1942,7 +1943,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					pmesg(LOG_WARNING, __FILE__,__LINE__,"%c%d: anew markerid cannot be created... aborting\n", ttype,jobid);
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status);
-					
+
 					request_data[k][j].serve_request = 0;
 					request_data[k][j].error_notification = strdup(submission_string_ext);
 
