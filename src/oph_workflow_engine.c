@@ -1910,12 +1910,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
@@ -1926,13 +1922,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					pmesg(LOG_WARNING, __FILE__,__LINE__,"%c%d: anew markerid cannot be created... aborting\n", ttype,jobid);
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status);
-					
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
 
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
@@ -1952,14 +1944,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (submission_string) free(submission_string);
 					if (sss) free(sss);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
-					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
-					request_data[k]->markerid = strdup(str_markerid);
-					request_data[k]->error = errore;
+					request_data[k][j].serve_request = 0;
+					request_data[k][j].error_notification = strdup(submission_string_ext);
+					request_data[k][j].markerid = strdup(str_markerid);
+					request_data[k][j].error = errore;
 
 					continue;
 				}
@@ -1974,12 +1962,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (submission_string) free(submission_string);
 					if (sss) free(sss);
 
-					request_data_dim[k] = 1;
-					request_data[k] = (oph_request_data*)malloc(sizeof(oph_request_data));
-					oph_request_data_init(request_data[k]);
-
 					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					continue;
 				}
