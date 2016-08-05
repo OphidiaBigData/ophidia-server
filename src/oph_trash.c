@@ -97,6 +97,8 @@ int oph_trash_extract(oph_trash* trash, const char* key, int* item)
 	if (!tmp || !tmp->head) return OPH_TRASH_ERROR;
 
 	*item = tmp->head->item;
+	oph_trash_item *next = tmp->head->next;
+
 	free(tmp->head); // Item
 
 	if (tmp->head == tmp->tail) // Only one item
@@ -106,7 +108,7 @@ int oph_trash_extract(oph_trash* trash, const char* key, int* item)
 		else trash->trash = tmp->next;
 		free(tmp); // Node
 	}
-	else tmp->head = tmp->head->next; // More items
+	else tmp->head = next; // More items
 
 	return OPH_TRASH_OK;
 }
