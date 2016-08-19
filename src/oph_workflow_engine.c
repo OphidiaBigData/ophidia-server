@@ -4473,7 +4473,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 #endif
 	if (data)
 	{
-		int t, i, j, jobid, *list = NULL, *nlist = NULL, response;
+		int i, j, jobid, *list = NULL, *nlist = NULL, response;
 		unsigned int k, n, nn;
 		oph_job_list *job_list = data->state->job_info;
 		oph_job_info *temp;
@@ -4501,7 +4501,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 			n = nn = 0;
 
 			// Wait for next check
-			for (t = 0; t < data->poll_time; ++t);
+			for (k = 0; k < data->poll_time; ++k);
 			{
 				sleep(1);
 				if (!oph_server_is_running) break;

@@ -30,6 +30,7 @@ extern char* oph_rmanager_conf_file;
 extern char* oph_txt_location;
 extern char* oph_operator_client;
 extern char* oph_json_location;
+extern char* oph_server_port;
 extern oph_rmanager* orm;
 
 extern int oph_ssh_submit(const char* cmd);
@@ -432,9 +433,9 @@ int oph_cancel_request(int jobid)
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag,LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n");
 #else
-		size_t len = 2+strlen(orm->subm_cancel)+strlen(OPH_RMANAGER_PREFIX)+OPH_RMANAGER_MAX_INT_SIZE;
+		size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
 		char cmd[len];
-		snprintf(cmd, len, "%s %s%d", orm->subm_cancel, OPH_RMANAGER_PREFIX, jobid);
+		snprintf(cmd, len, "%s %s%s%d", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 		if (oph_ssh_submit(cmd))
 		{
 			pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Error during remote submission\n");
@@ -473,6 +474,10 @@ int oph_read_job_queue(int** list, unsigned int* n)
 		}
 		if (!response) return RMANAGER_SUCCESS;
 
+		len = strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX);
+		char prefix[1+len];
+		sprintf(prefix, "%s%s", oph_server_port, OPH_RMANAGER_PREFIX);
+
 		char *tmp = strdup(response);
 		if (!tmp) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__,__LINE__, "Error during job queue scanning\n");
@@ -480,15 +485,13 @@ int oph_read_job_queue(int** list, unsigned int* n)
 			return RMANAGER_ERROR;
 		}
 		char *pch, *save_pointer = NULL;
-		for (pch = strtok_r(tmp, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer)) (*n)++;
+		for (pch = strtok_r(tmp, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer)) if (!strncmp(pch,prefix,len)) (*n)++;
 		free(tmp);
-		
-		len = strlen(OPH_RMANAGER_PREFIX);
 
 		*list = (int*)calloc(*n,sizeof(int));
 		unsigned int i = 0;
 		save_pointer = NULL;
-		for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer), ++i) (*list)[i] = (int)strtol(pch+len,NULL,10);
+		for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer)) if (!strncmp(pch,prefix,len)) (*list)[i++] = (int)strtol(pch+len,NULL,10);
 		free(response);
 	}
 #endif
@@ -514,7 +517,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		if(interactive_subm)
 			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_interact,  orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
 	} else {
 		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__, "Resource manager not found\n");
 		return RMANAGER_ERROR;
