@@ -36,5 +36,7 @@ int oph_realloc_vector(char*** vector, int* length);
 
 int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level);
 
+int oph_workflow_check_job_queue(struct oph_plugin_data *state);
+
 #endif /* OPH_WORKFLOW_ENGINE_H */
 

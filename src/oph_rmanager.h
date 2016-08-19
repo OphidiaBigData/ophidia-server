@@ -38,13 +38,14 @@ struct _oph_rmanager
 	char *subm_cmd;
 	char *subm_args;
 	char *subm_ncores;
-	char *interact_subm;
-	char *batch_subm;
+	char *subm_interact;
+	char *subm_batch;
 	char *subm_stdoutput;
 	char *subm_stderror;
 	char *subm_postfix;
 	char *subm_jobname;
-	char *cancel;
+	char *subm_cancel;
+	char *subm_jobcheck;
 };
 typedef struct _oph_rmanager oph_rmanager;
 
@@ -55,6 +56,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 int oph_get_result_from_file(char* filename, char **response);
 int free_oph_rmanager(oph_rmanager *orm);
 int oph_cancel_request(int jobid);
+int oph_read_job_queue(int **list, unsigned int *n);
 
 #endif /* OPH_RMANAGER_H */
 

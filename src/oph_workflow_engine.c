@@ -40,6 +40,8 @@ extern char* oph_web_server;
 extern char* oph_web_server_location;
 extern char* oph_json_location;
 extern unsigned int oph_auto_retry;
+extern unsigned int oph_server_poll_time;
+extern char oph_server_is_running;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -61,6 +63,12 @@ typedef struct _oph_request_data
 	char* error;
 	char run;
 } oph_request_data;
+
+typedef struct _oph_monitor_data
+{
+	unsigned int poll_time;
+	struct oph_plugin_data *state;
+} oph_monitor_data;
 
 int oph_request_data_init(oph_request_data* item)
 {
@@ -4455,6 +4463,200 @@ int oph_workflow_command_to_json(const char* command, char** json)
 
 	*json = strdup(_json);
 
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+void *_oph_workflow_check_job_queue(oph_monitor_data* data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+	if (data)
+	{
+		int t, i, j, jobid, *list = NULL, *nlist = NULL, response;
+		unsigned int k, n, nn;
+		oph_job_list *job_list = data->state->job_info;
+		oph_job_info *temp;
+		char submission_string_ext[OPH_MAX_STRING_SIZE];
+		char **error_notification = NULL;
+
+		while (oph_server_is_running)
+		{
+			if (list)
+			{
+				free(list);
+				list = NULL;
+			}
+			if (nlist)
+			{
+				free(nlist);
+				nlist = NULL;
+			}
+			if (error_notification)
+			{
+				for (k = 0; k < nn; ++k) if (error_notification[k]) free(error_notification[k]);
+				free(error_notification);
+				error_notification = NULL;
+			}
+			n = nn = 0;
+
+			// Wait for next check
+			for (t = 0; t < data->poll_time; ++t);
+			{
+				sleep(1);
+				if (!oph_server_is_running) break;
+			}
+			if (!oph_server_is_running) break;
+
+			// Load task list in resource manager queue
+			if (oph_read_job_queue(&list, &n) || !n) continue;
+
+			nlist = (int*)calloc(n,sizeof(int));
+			if (!nlist)
+			{
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+				continue;
+			}
+			error_notification = (char**)calloc(n,sizeof(char*));
+			if (!error_notification)
+			{
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+				continue;
+			}
+
+			pthread_mutex_lock(&global_flag);
+
+			// Flush expired tasks
+			if (oph_find_marker_in_job_list(job_list, NULL, -1, NULL, NULL))
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Found a task with markerid set to -1!\n");
+
+			// Look for tasks aborted without sending error notification
+			for (temp = job_list->head; temp; temp = temp->next) if ( temp->wf && ( temp->wf->status == (int)OPH_ODB_STATUS_RUNNING )) 
+			{
+				for (i = 0; i < temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].status == (int)OPH_ODB_STATUS_RUNNING )
+				{
+					if (temp->wf->tasks[i].light_tasks_num)
+					{
+						for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j) if ( temp->wf->tasks[i].light_tasks[j].status == (int)OPH_ODB_STATUS_RUNNING )
+						{
+							for (k = 0; k < n; ++k) if ( temp->wf->tasks[i].light_tasks[j].idjob == list[k] )
+							{
+								list[k] = 0;
+								break;
+							}
+							if (k >= n)
+							{
+								nlist[nn] = temp->wf->tasks[i].light_tasks[j].idjob;
+								snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j, nlist[nn], OPH_ODB_STATUS_ABORTED);
+								error_notification[nn] = strdup(submission_string_ext);
+								nn++;
+							}
+						}
+					}
+					else
+					{
+						for (k = 0; k < n; ++k) if ( temp->wf->tasks[i].idjob == list[k] )
+						{
+							list[k] = 0;
+							break;
+						}
+						if (k >= n)
+						{
+							nlist[nn] = temp->wf->tasks[i].idjob;
+							snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1, nlist[nn], OPH_ODB_STATUS_ABORTED);
+							error_notification[nn] = strdup(submission_string_ext);
+							nn++;
+						}
+					}
+				}
+			}
+
+			// Look for starved tasks
+			for (temp = job_list->head; temp; temp = temp->next) if ( temp->wf ) 
+			{
+				for (i = 0; i < temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].status >= (int)OPH_ODB_STATUS_COMPLETED )
+				{
+					if (temp->wf->tasks[i].light_tasks_num)
+					{
+						for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j) if ( temp->wf->tasks[i].light_tasks[j].status >= (int)OPH_ODB_STATUS_COMPLETED )
+						{
+							for (k = 0; k < n; ++k) if ( temp->wf->tasks[i].light_tasks[j].idjob == list[k] )
+							{
+								list[k] = -list[k];
+								break;
+							}
+						}
+					}
+					else
+					{
+						for (k = 0; k < n; ++k) if ( temp->wf->tasks[i].idjob == list[k] )
+						{
+							list[k] = -list[k];
+							break;
+						}
+					}
+				}
+			}
+
+			pthread_mutex_unlock(&global_flag);
+
+			for (k = 0; k < nn; ++k)
+			{
+				pthread_mutex_lock(&global_flag);
+				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
+				pthread_mutex_unlock(&global_flag);
+
+				if (error_notification && error_notification[k])
+				{
+					response = 0;
+					oph_workflow_notify(data->state, 'M', jobid, error_notification[k], NULL, &response);
+					if (response) pmesg_safe(&global_flag, LOG_WARNING, __FILE__,__LINE__, "M%d: error %d in notify\n", jobid, response);
+				}
+			}
+
+			// Kill starved tasks
+			for (k = 0; k < n; ++k) if (list[k] < 0) oph_cancel_request(-list[k]);
+		}
+
+		if (data->state) free(data->state);
+		free(data);
+	}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+	return NULL;
+}
+
+int oph_workflow_check_job_queue(struct oph_plugin_data *state)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (!oph_server_poll_time) return OPH_WORKFLOW_EXIT_SUCCESS;
+
+	if (!state) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	oph_monitor_data* data = (oph_monitor_data*)malloc(sizeof(oph_monitor_data));
+	if (!data) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
+	data->poll_time = oph_server_poll_time;
+
+	data->state = (struct oph_plugin_data *) malloc (sizeof (struct oph_plugin_data));
+	if (!data->state)
+	{
+		free(data);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	memcpy(data->state, (struct oph_plugin_data*)state, sizeof (struct oph_plugin_data));
+	data->state->serverid = NULL;
+	data->state->is_copy = 1;
+	data->state->job_info = state->job_info;
+
+	pthread_t tid;
+	pthread_create(&tid, NULL, (void*(*)(void*))&_oph_workflow_check_job_queue, data);
+
+	oph_server_poll_time = 0;
+#endif
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
