@@ -468,11 +468,7 @@ int oph_read_job_queue(int** list, unsigned int* n)
 		}
 
 		char *response = NULL;
-		if (oph_get_result_from_file(outfile, &response)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__,__LINE__, "Error during job queue scanning\n");
-			return RMANAGER_ERROR;
-		}
-		if (!response) return RMANAGER_SUCCESS;
+		if (oph_get_result_from_file(outfile, &response) || !response) return RMANAGER_SUCCESS;
 
 		len = strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX);
 		char prefix[1+len];
@@ -614,18 +610,15 @@ int oph_get_result_from_file(char* filename, char **response)
 
 	/* memory error */
 	if(*response == NULL){
+		fclose(infile);
    		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__,"Unable to alloc response\n");
 		return RMANAGER_FILE_ERROR;
 	}
 
 	/* copy all the text into the buffer */
 	size_t n = fread(*response, sizeof(char), numbytes, infile);
-	if (!n) {
-		pmesg_safe(&global_flag,LOG_ERROR, __FILE__,__LINE__,"Unable to read response\n");
-		return RMANAGER_FILE_ERROR;
-	}
 
-	(*response)[numbytes] = '\0';
+	(*response)[n] = '\0';
 	fclose(infile);
 
 	/* confirm we have read the file by outputing it to the console */

@@ -4501,12 +4501,14 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 			n = nn = 0;
 
 			// Wait for next check
-			for (k = 0; k < data->poll_time; ++k);
+			for (k = 0; k < data->poll_time; ++k)
 			{
 				sleep(1);
 				if (!oph_server_is_running) break;
 			}
 			if (!oph_server_is_running) break;
+
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check for aborted or starved tasks\n");
 
 			// Load task list in resource manager queue
 			if (oph_read_job_queue(&list, &n) || !n) continue;
@@ -4604,7 +4606,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 			{
 				pthread_mutex_lock(&global_flag);
 				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
 				pthread_mutex_unlock(&global_flag);
 
 				if (error_notification && error_notification[k])
@@ -4619,6 +4621,13 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 			for (k = 0; k < n; ++k) if (list[k] < 0) oph_cancel_request(-list[k]);
 		}
 
+		if (list) free(list);
+		if (nlist) free(nlist);
+		if (error_notification)
+		{
+			for (k = 0; k < nn; ++k) if (error_notification[k]) free(error_notification[k]);
+			free(error_notification);
+		}
 		if (data->state) free(data->state);
 		free(data);
 	}
@@ -4631,14 +4640,18 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (!oph_server_poll_time) return OPH_WORKFLOW_EXIT_SUCCESS;
+	int poll_time = 0;
+
+	pthread_mutex_lock(&global_flag);
+	poll_time = oph_server_poll_time;
+	pthread_mutex_unlock(&global_flag);
+
+	if (!poll_time) return OPH_WORKFLOW_EXIT_SUCCESS;
 
 	if (!state) return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	oph_monitor_data* data = (oph_monitor_data*)malloc(sizeof(oph_monitor_data));
 	if (!data) return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-
-	data->poll_time = oph_server_poll_time;
 
 	data->state = (struct oph_plugin_data *) malloc (sizeof (struct oph_plugin_data));
 	if (!data->state)
@@ -4652,10 +4665,14 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 	data->state->is_copy = 1;
 	data->state->job_info = state->job_info;
 
+	data->poll_time = poll_time;
+
+	pthread_mutex_lock(&global_flag);
+	oph_server_poll_time = 0;
+	pthread_mutex_unlock(&global_flag);
+
 	pthread_t tid;
 	pthread_create(&tid, NULL, (void*(*)(void*))&_oph_workflow_check_job_queue, data);
-
-	oph_server_poll_time = 0;
 #endif
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
