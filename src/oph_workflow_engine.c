@@ -4533,9 +4533,9 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "Found a task with markerid set to -1!\n");
 
 			// Look for tasks aborted without sending error notification
-			for (temp = job_list->head; temp; temp = temp->next) if ( temp->wf && ( temp->wf->status == (int)OPH_ODB_STATUS_RUNNING )) 
+			for (temp = job_list->head; temp; temp = temp->next) if ( temp->wf ) 
 			{
-				for (i = 0; i < temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].status == (int)OPH_ODB_STATUS_RUNNING )
+				for (i = 0; i <= temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].name && ( temp->wf->tasks[i].status == (int)OPH_ODB_STATUS_RUNNING ) )
 				{
 					if (temp->wf->tasks[i].light_tasks_num)
 					{
@@ -4576,7 +4576,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data* data)
 			// Look for starved tasks
 			for (temp = job_list->head; temp; temp = temp->next) if ( temp->wf ) 
 			{
-				for (i = 0; i < temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].status >= (int)OPH_ODB_STATUS_COMPLETED )
+				for (i = 0; i <= temp->wf->tasks_num; ++i) if ( temp->wf->tasks[i].name && ( temp->wf->tasks[i].status >= (int)OPH_ODB_STATUS_COMPLETED ) )
 				{
 					if (temp->wf->tasks[i].light_tasks_num)
 					{
