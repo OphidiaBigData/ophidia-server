@@ -258,9 +258,12 @@ oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *ses
 
 oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessionid, int markerid, int *task_index, int *light_task_index)
 {
-	if (!list || !task_index || !light_task_index)
+	if (!list)
 		return 0;
-	*task_index = *light_task_index = -1;
+	if (task_index)
+		*task_index = -1;
+	if (light_task_index)
+		*light_task_index = -1;
 
 	oph_job_info *temp, *temp_prev = 0, *next;
 	struct timeval tv;
@@ -291,13 +294,16 @@ oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessi
 		else
 			for (i = 0; i < temp->wf->tasks_num; ++i) {
 				if ((temp->wf->tasks[i].markerid == markerid) && (!sessionid || !strcmp(temp->wf->sessionid, sessionid))) {
-					*task_index = i;
+					if (task_index)
+						*task_index = i;
 					return temp;
 				} else
 					for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
 						if ((temp->wf->tasks[i].light_tasks[j].markerid == markerid) && (!sessionid || !strcmp(temp->wf->sessionid, sessionid))) {
-							*task_index = i;
-							*light_task_index = j;
+							if (task_index)
+								*task_index = i;
+							if (light_task_index)
+								*light_task_index = j;
 							return temp;
 						}
 			}

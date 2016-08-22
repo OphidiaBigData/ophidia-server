@@ -39,6 +39,9 @@ extern char *oph_user_admin;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_json_location;
+extern unsigned int oph_auto_retry;
+extern unsigned int oph_server_poll_time;
+extern char oph_server_is_running;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -59,6 +62,11 @@ typedef struct _oph_request_data {
 	char *error;
 	char run;
 } oph_request_data;
+
+typedef struct _oph_monitor_data {
+	unsigned int poll_time;
+	struct oph_plugin_data *state;
+} oph_monitor_data;
 
 int oph_request_data_init(oph_request_data * item)
 {
@@ -264,6 +272,8 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			wf->tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
 			wf->tasks[i].is_skipped = 0;
 			wf->tasks[i].residual_retry_num = wf->tasks[i].retry_num;
+			wf->tasks[i].residual_auto_retry_num = 0;
+			wf->tasks[i].is_marked_for_auto_retry = 0;
 			if (wf->tasks[i].arguments_keys) {
 				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
 					if (wf->tasks[i].arguments_keys[j]) {
@@ -709,7 +719,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query)
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query)
 {
 	if (!wf || !oDB || !output_list || !output_list_dim) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
@@ -720,7 +730,24 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow * wf, in
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
+	int i;
 	oph_workflow_task *task = &(wf->tasks[task_index]);
+
+	if ((oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1)) || (task->retry_num > 1)) {
+		for (i = 0; i < task->light_tasks_num; ++i)
+			if (task->light_tasks[i].status > (int) OPH_ODB_STATUS_COMPLETED) {
+				if (oph_trash_append(state->trash, wf->sessionid, task->light_tasks[i].markerid))
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid '%d'.\n", task->light_tasks[i].markerid);
+				else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Release markerid '%d'.\n", task->light_tasks[i].markerid);
+				task->light_tasks[i].idjob = 0;
+				task->light_tasks[i].markerid = 0;
+				task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+			}
+		task->residual_light_tasks_num = task->light_tasks_num;
+		return OPH_SERVER_OK;
+	}
+
 	if (task->light_tasks_num) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: found %d massive operation children already set\n", ttype, jobid, task->light_tasks_num);
 		return OPH_SERVER_NO_RESPONSE;
@@ -730,7 +757,7 @@ int oph_check_for_massive_operation(char ttype, int jobid, oph_workflow * wf, in
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
-	int i, res = OPH_SERVER_OK;
+	int res = OPH_SERVER_OK;
 	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
 	for (i = 0; i < task->arguments_num; ++i) {
 		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
@@ -1443,7 +1470,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			char **output_list = NULL;
 			int output_list_dim = 0;
-			if ((wf->tasks[i].parent < 0) && ((res = oph_check_for_massive_operation(ttype, jobid, wf, i, oDB, &output_list, &output_list_dim, NULL)))) {
+			if ((wf->tasks[i].parent < 0) && ((res = oph_check_for_massive_operation(state, ttype, jobid, wf, i, oDB, &output_list, &output_list_dim, NULL)))) {
 				odb_jobid = 0;
 				// Create the child job in OphidiaDB
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: create the entry for '%s' in OphidiaDB.\n", ttype, jobid, wf->tasks[i].name);
@@ -1642,7 +1669,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								break;
 							}
 							// Header
-
 							if (wf->output_format) {
 
 								int num_fields = 3;
@@ -2098,11 +2124,14 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				hashtbl_remove(task_tbl, OPH_ARG_PARENTID);
 				hashtbl_insert(task_tbl, OPH_ARG_PARENTID, str_parent);
 
+				char retry = (oph_auto_retry && wf->tasks[i].residual_auto_retry_num && (wf->tasks[i].retry_num == 1)) || (wf->tasks[i].retry_num > 1);
 				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
 					if (wf->tasks[i].light_tasks[j].status) {
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unexpected task with an active state '%s'\n", ttype, jobid,
-						      oph_odb_convert_status_to_str(wf->tasks[i].light_tasks[j].status));
-						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
+						if (!retry) {
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unexpected task with an active state '%s'\n", ttype, jobid,
+							      oph_odb_convert_status_to_str(wf->tasks[i].light_tasks[j].status));
+							wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
+						}
 						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
 							 wf->tasks[i].light_tasks[j].status);
 
@@ -2180,6 +2209,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k]->serve_request = 0;
 						request_data[k]->error_notification = strdup(submission_string_ext);
+						request_data[k]->markerid = strdup(str_markerid);
 
 						continue;
 					}
@@ -2234,7 +2264,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->error_notification = strdup(submission_string_ext);
 			}
 			wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
-
 			nn++;
 		}
 	if (task_tbl) {
@@ -2677,6 +2706,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
 			if (odb_status == OPH_ODB_STATUS_START_ERROR) {
+				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1) && (wf->tasks[task_index].residual_auto_retry_num != 1)) {
+					wf->tasks[task_index].is_marked_for_auto_retry = 1;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' has been marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+				}
 				if (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_RUNNING) {
 					wf->tasks[task_index].status = OPH_ODB_STATUS_RUNNING;
 					update_task_data = 1;
@@ -3413,27 +3446,44 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			wf->tasks[task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been updated to %s in memory\n", ttype, jobid, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].status));
-			if (odb_status == OPH_ODB_STATUS_START_ERROR) {
-				struct stat s;
-				char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
-				snprintf(str_markerid, OPH_MAX_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
-				snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
-				if (stat(filename, &s) && (errno == ENOENT)) {
-					char error_message[OPH_MAX_STRING_SIZE];
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing task '%s'!", wf->tasks[task_index].name);
+			if (odb_status == OPH_ODB_STATUS_START_ERROR || wf->tasks[task_index].is_marked_for_auto_retry) {
+				if (wf->tasks[task_index].is_marked_for_auto_retry)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 
-					update_task_data = 1;
-					if (oph_save_basic_json(ttype, jobid, wf, task_index, -1, "ERROR", error_message, &my_output_json)) {
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name,
-						      wf->name);
-						pthread_mutex_unlock(&global_flag);
-						*response = OPH_SERVER_IO_ERROR;
-						oph_output_data_free(outputs_keys, outputs_num);
-						oph_output_data_free(outputs_values, outputs_num);
-						return SOAP_OK;
+				char save = 0;
+				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1))	// Setting for auto-retry
+				{
+					if (!wf->tasks[task_index].residual_auto_retry_num)
+						wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
+					else if (wf->tasks[task_index].residual_auto_retry_num > 1)
+						wf->tasks[task_index].residual_auto_retry_num--;
+					else
+						save = 1;
+				} else
+					save = 1;
+				if (save && (task_index < wf->tasks_num)) {
+					struct stat s;
+					char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
+					snprintf(str_markerid, OPH_MAX_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+					snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
+					if (stat(filename, &s) && (errno == ENOENT)) {
+						char error_message[OPH_MAX_STRING_SIZE];
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing task '%s'!", wf->tasks[task_index].name);
+
+						update_task_data = 1;
+						if (oph_save_basic_json(ttype, jobid, wf, task_index, -1, "ERROR", error_message, &my_output_json)) {
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name,
+							      wf->name);
+							pthread_mutex_unlock(&global_flag);
+							*response = OPH_SERVER_IO_ERROR;
+							oph_output_data_free(outputs_keys, outputs_num);
+							oph_output_data_free(outputs_values, outputs_num);
+							return SOAP_OK;
+						}
 					}
 				}
-			}
+			} else
+				wf->tasks[task_index].residual_auto_retry_num = 0;
 		}
 
 		int check_status;
@@ -3840,27 +3890,50 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						*response = OPH_SERVER_SYSTEM_ERROR;
 						return SOAP_OK;
 					} else {
-						wf->tasks[task_index].residual_retry_num--;
-						if (wf->tasks[task_index].residual_retry_num)	// Try to restart the task
-						{
-							update_wf_data = 0;
-							status = OPH_ODB_STATUS_RUNNING;
-							wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
-							retry_task_execution = 1;
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
-						} else	// Task is definitely considered as "failed"
-						{
-							wf->residual_tasks_num--;
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' of '%s' will be considered as 'failed'\n", ttype, jobid, wf->tasks[task_index].name,
-							      wf->name);
-							wf->status = status;
-							for (i = 0; i < wf->tasks_num; ++i)
-								if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED))
-									break;
-							if (i == wf->tasks_num) {
-								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name,
-								      oph_odb_convert_status_to_str(wf->status));
-								final = 1;
+						char reduce_residual_retry_num = 1;
+						if (oph_auto_retry && wf->tasks[task_index].is_marked_for_auto_retry && (wf->tasks[task_index].retry_num == 1)) {
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+							char save = 0;
+							if (!wf->tasks[task_index].residual_auto_retry_num)
+								wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
+							else if (wf->tasks[task_index].residual_auto_retry_num > 1)
+								wf->tasks[task_index].residual_auto_retry_num--;
+							else
+								save = 1;
+							if (!save) {
+								update_wf_data = 0;
+								status = OPH_ODB_STATUS_RUNNING;
+								wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
+								retry_task_execution = 1;
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name,
+								      wf->name);
+								reduce_residual_retry_num = 0;
+							}
+						}
+						if (reduce_residual_retry_num) {
+							wf->tasks[task_index].residual_retry_num--;
+							if (wf->tasks[task_index].residual_retry_num)	// Try to restart the task
+							{
+								update_wf_data = 0;
+								status = OPH_ODB_STATUS_RUNNING;
+								wf->tasks[task_index].status = OPH_ODB_STATUS_UNKNOWN;
+								retry_task_execution = 1;
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' of '%s' will be re-executed\n", ttype, jobid, wf->tasks[task_index].name,
+								      wf->name);
+							} else	// Task is definitely considered as "failed"
+							{
+								wf->residual_tasks_num--;
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' of '%s' will be considered as 'failed'\n", ttype, jobid,
+								      wf->tasks[task_index].name, wf->name);
+								wf->status = status;
+								for (i = 0; i < wf->tasks_num; ++i)
+									if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED))
+										break;
+								if (i == wf->tasks_num) {
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: completed the last task of '%s', current state %s\n", ttype, jobid, wf->name,
+									      oph_odb_convert_status_to_str(wf->status));
+									final = 1;
+								}
 							}
 						}
 					}
@@ -5225,5 +5298,213 @@ int oph_workflow_command_to_json(const char *command, char **json)
 
 	*json = strdup(_json);
 
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+void *_oph_workflow_check_job_queue(oph_monitor_data * data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+	if (data) {
+		int i, j, jobid, *list = NULL, *nlist = NULL, response;
+		unsigned int k, n, nn;
+		oph_job_list *job_list = data->state->job_info;
+		oph_job_info *temp;
+		char submission_string_ext[OPH_MAX_STRING_SIZE];
+		char **error_notification = NULL;
+
+		while (oph_server_is_running) {
+			if (list) {
+				free(list);
+				list = NULL;
+			}
+			if (nlist) {
+				free(nlist);
+				nlist = NULL;
+			}
+			if (error_notification) {
+				for (k = 0; k < nn; ++k)
+					if (error_notification[k])
+						free(error_notification[k]);
+				free(error_notification);
+				error_notification = NULL;
+			}
+			n = nn = 0;
+
+			// Wait for next check
+			for (k = 0; k < data->poll_time; ++k) {
+				sleep(1);
+				if (!oph_server_is_running)
+					break;
+			}
+			if (!oph_server_is_running)
+				break;
+
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check for aborted or starved tasks\n");
+
+			// Load task list in resource manager queue
+			if (oph_read_job_queue(&list, &n) || !n)
+				continue;
+
+			nlist = (int *) calloc(n, sizeof(int));
+			if (!nlist) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+				continue;
+			}
+			error_notification = (char **) calloc(n, sizeof(char *));
+			if (!error_notification) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+				continue;
+			}
+
+			pthread_mutex_lock(&global_flag);
+
+			// Flush expired tasks
+			if (oph_find_marker_in_job_list(job_list, NULL, -1, NULL, NULL))
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Found a task with markerid set to -1!\n");
+
+			// Look for tasks aborted without sending error notification
+			for (temp = job_list->head; temp; temp = temp->next)
+				if (temp->wf) {
+					for (i = 0; i <= temp->wf->tasks_num; ++i)
+						if (temp->wf->tasks[i].name && (temp->wf->tasks[i].status == (int) OPH_ODB_STATUS_RUNNING)) {
+							if (temp->wf->tasks[i].light_tasks_num) {
+								for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
+									if (temp->wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_RUNNING) {
+										for (k = 0; k < n; ++k)
+											if (temp->wf->tasks[i].light_tasks[j].idjob == list[k]) {
+												list[k] = 0;
+												break;
+											}
+										if (k >= n) {
+											nlist[nn] = temp->wf->tasks[i].light_tasks[j].idjob;
+											snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j,
+												 nlist[nn], OPH_ODB_STATUS_ABORTED);
+											error_notification[nn] = strdup(submission_string_ext);
+											nn++;
+										}
+									}
+							} else {
+								for (k = 0; k < n; ++k)
+									if (temp->wf->tasks[i].idjob == list[k]) {
+										list[k] = 0;
+										break;
+									}
+								if (k >= n) {
+									nlist[nn] = temp->wf->tasks[i].idjob;
+									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1, nlist[nn],
+										 OPH_ODB_STATUS_ABORTED);
+									error_notification[nn] = strdup(submission_string_ext);
+									nn++;
+								}
+							}
+						}
+				}
+			// Look for starved tasks
+			for (temp = job_list->head; temp; temp = temp->next)
+				if (temp->wf) {
+					for (i = 0; i <= temp->wf->tasks_num; ++i)
+						if (temp->wf->tasks[i].name && (temp->wf->tasks[i].status >= (int) OPH_ODB_STATUS_COMPLETED)) {
+							if (temp->wf->tasks[i].light_tasks_num) {
+								for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
+									if (temp->wf->tasks[i].light_tasks[j].status >= (int) OPH_ODB_STATUS_COMPLETED) {
+										for (k = 0; k < n; ++k)
+											if (temp->wf->tasks[i].light_tasks[j].idjob == list[k]) {
+												list[k] = -list[k];
+												break;
+											}
+									}
+							} else {
+								for (k = 0; k < n; ++k)
+									if (temp->wf->tasks[i].idjob == list[k]) {
+										list[k] = -list[k];
+										break;
+									}
+							}
+						}
+				}
+
+			pthread_mutex_unlock(&global_flag);
+
+			for (k = 0; k < nn; ++k) {
+				pthread_mutex_lock(&global_flag);
+				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
+				pthread_mutex_unlock(&global_flag);
+
+				if (error_notification && error_notification[k]) {
+					response = 0;
+					oph_workflow_notify(data->state, 'M', jobid, error_notification[k], NULL, &response);
+					if (response)
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "M%d: error %d in notify\n", jobid, response);
+				}
+			}
+
+			// Kill starved tasks
+			for (k = 0; k < n; ++k)
+				if (list[k] < 0)
+					oph_cancel_request(-list[k]);
+		}
+
+		if (list)
+			free(list);
+		if (nlist)
+			free(nlist);
+		if (error_notification) {
+			for (k = 0; k < nn; ++k)
+				if (error_notification[k])
+					free(error_notification[k]);
+			free(error_notification);
+		}
+		if (data->state)
+			free(data->state);
+		free(data);
+	}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+	return NULL;
+}
+
+int oph_workflow_check_job_queue(struct oph_plugin_data *state)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	int poll_time = 0;
+
+	pthread_mutex_lock(&global_flag);
+	poll_time = oph_server_poll_time;
+	pthread_mutex_unlock(&global_flag);
+
+	if (!poll_time)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+
+	if (!state)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	oph_monitor_data *data = (oph_monitor_data *) malloc(sizeof(oph_monitor_data));
+	if (!data)
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
+	data->state = (struct oph_plugin_data *) malloc(sizeof(struct oph_plugin_data));
+	if (!data->state) {
+		free(data);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	memcpy(data->state, (struct oph_plugin_data *) state, sizeof(struct oph_plugin_data));
+	data->state->serverid = NULL;
+	data->state->is_copy = 1;
+	data->state->job_info = state->job_info;
+
+	data->poll_time = poll_time;
+
+	pthread_mutex_lock(&global_flag);
+	oph_server_poll_time = 0;
+	pthread_mutex_unlock(&global_flag);
+
+	pthread_t tid;
+	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_workflow_check_job_queue, data);
+#endif
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

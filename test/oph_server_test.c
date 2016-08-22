@@ -61,8 +61,11 @@ char *oph_subm_user_privk = 0;
 char *oph_xml_operator_dir = 0;
 unsigned int oph_server_farm_size = 0;
 unsigned int oph_server_queue_size = 0;
+unsigned int oph_auto_retry = 0;
+unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 oph_auth_user_bl *bl_head = 0;
+char oph_server_is_running = 1;
 
 void set_global_values(const char *configuration_file)
 {
@@ -1776,48 +1779,48 @@ int _check_oph_server(const char *function, int option)
 
 			switch (option - filter_num) {
 				case 0:
-					res = oph_check_for_massive_operation('T', 0, NULL, 0, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, NULL, 0, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				case 1:
-					res = oph_check_for_massive_operation('T', 0, wf, 0, NULL, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, NULL, &output_list, &output_list_dim, &query);
 					break;
 
 				case 2:
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, NULL, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, NULL, &output_list_dim, &query);
 					break;
 
 				case 3:
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, NULL, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, NULL, &query);
 					break;
 
 				case 4:
-					res = oph_check_for_massive_operation('T', 0, wf, 2, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 2, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				case 5:
-					res = oph_check_for_massive_operation('T', 0, wf, -1, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, -1, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				case 6:
 					wf->tasks[0].light_tasks_num = 1;
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				case 7:
 					free(wf->tasks[0].arguments_values[0]);
 					wf->tasks[0].arguments_values[0] = strdup("[filter=@badvariable]");
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				case 8:
 					free(wf->tasks[0].arguments_keys[0]);
 					wf->tasks[0].arguments_keys[0] = strdup("cube2");
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
 					break;
 
 				default:
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
 			}
 
 			switch (option) {
@@ -2139,7 +2142,7 @@ int _check_oph_server(const char *function, int option)
 			switch (option) {
 
 				default:
-					res = oph_check_for_massive_operation('T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
+					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
 			}
 
 			switch (option) {

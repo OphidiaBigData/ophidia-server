@@ -4080,6 +4080,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s", jobid_response);
 			free(jobid_response);
 		}
+		oph_workflow_check_job_queue(state);
 	}
 	// Close the OphidiaDB
 	oph_odb_disconnect_from_ophidiadb(&oDB);

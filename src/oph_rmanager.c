@@ -30,6 +30,7 @@ extern char *oph_rmanager_conf_file;
 extern char *oph_txt_location;
 extern char *oph_operator_client;
 extern char *oph_json_location;
+extern char *oph_server_port;
 extern oph_rmanager *orm;
 
 extern int oph_ssh_submit(const char *cmd);
@@ -104,14 +105,22 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 
 	if (error) {
 		data->error = strndup(error, OPH_MAX_STRING_SIZE);
-		if (!data->error)
+		if (!data->error) {
+			free(data->command);
+			free(data);
 			return RMANAGER_ERROR;
+		}
 	} else
 		data->error = NULL;
 
 	data->state = (struct oph_plugin_data *) malloc(sizeof(struct oph_plugin_data));
-	if (!data->state)
+	if (!data->state) {
+		free(data->command);
+		if (data->error)
+			free(data->error);
+		free(data);
 		return RMANAGER_ERROR;
+	}
 	memcpy(data->state, (struct oph_plugin_data *) state, sizeof(struct oph_plugin_data));
 	if (state->serverid)
 		data->state->serverid = strndup(state->serverid, OPH_MAX_STRING_SIZE);
@@ -222,13 +231,13 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
-			if (!(orm->interact_subm = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+			if (!(orm->subm_interact = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
 				return RMANAGER_MEMORY_ERROR;
 			}
-			strncpy(orm->interact_subm, position + 1, strlen(position + 1) + 1);
-			orm->interact_subm[strlen(position + 1)] = '\0';
+			strncpy(orm->subm_interact, position + 1, strlen(position + 1) + 1);
+			orm->subm_interact[strlen(position + 1)] = '\0';
 		}
 
 		fgetc(file);
@@ -239,13 +248,13 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
-			if (!(orm->batch_subm = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+			if (!(orm->subm_batch = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
 				return RMANAGER_MEMORY_ERROR;
 			}
-			strncpy(orm->batch_subm, position + 1, strlen(position + 1) + 1);
-			orm->batch_subm[strlen(position + 1)] = '\0';
+			strncpy(orm->subm_batch, position + 1, strlen(position + 1) + 1);
+			orm->subm_batch[strlen(position + 1)] = '\0';
 		}
 
 		fgetc(file);
@@ -324,13 +333,30 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
-			if (!(orm->cancel = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+			if (!(orm->subm_cancel = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
 				return RMANAGER_MEMORY_ERROR;
 			}
-			strncpy(orm->cancel, position + 1, strlen(position + 1) + 1);
-			orm->cancel[strlen(position + 1)] = '\0';
+			strncpy(orm->subm_cancel, position + 1, strlen(position + 1) + 1);
+			orm->subm_cancel[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
+			if (!(orm->subm_jobcheck = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_jobcheck, position + 1, strlen(position + 1) + 1);
+			orm->subm_jobcheck[strlen(position + 1)] = '\0';
 		}
 	}
 
@@ -351,13 +377,14 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_cmd = NULL;
 	orm->subm_args = NULL;
 	orm->subm_ncores = NULL;
-	orm->interact_subm = NULL;
-	orm->batch_subm = NULL;
+	orm->subm_interact = NULL;
+	orm->subm_batch = NULL;
 	orm->subm_stdoutput = NULL;
 	orm->subm_stderror = NULL;
 	orm->subm_postfix = NULL;
 	orm->subm_jobname = NULL;
-	orm->cancel = NULL;
+	orm->subm_cancel = NULL;
+	orm->subm_jobcheck = NULL;
 
 	return RMANAGER_SUCCESS;
 }
@@ -366,13 +393,13 @@ int oph_cancel_request(int jobid)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
-	if (orm && orm->cancel) {
+	if (orm && orm->subm_cancel) {
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n");
 #else
-		size_t len = 1 + strlen(orm->cancel) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
+		size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
 		char cmd[len];
-		snprintf(cmd, len, "%s %s%d", orm->cancel, OPH_RMANAGER_PREFIX, jobid);
+		snprintf(cmd, len, "%s %s%s%d", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 		if (oph_ssh_submit(cmd)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
@@ -380,6 +407,58 @@ int oph_cancel_request(int jobid)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n");
 #endif
 	}
+	return RMANAGER_SUCCESS;
+}
+
+int oph_read_job_queue(int **list, unsigned int *n)
+{
+	if (!list || !n) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null parameter\n");
+		return RMANAGER_NULL_PARAM;
+	}
+	*list = NULL;
+	*n = 0;
+#ifndef LOCAL_FRAMEWORK
+	if (orm && orm->subm_jobcheck) {
+		char outfile[OPH_MAX_STRING_SIZE];
+		snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, "job", "queue");
+		size_t len = 4 + strlen(orm->subm_jobcheck) + strlen(outfile);
+		char cmd[len];
+		snprintf(cmd, len, "%s > %s", orm->subm_jobcheck, outfile);
+		if (oph_ssh_submit(cmd)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+			return RMANAGER_ERROR;
+		}
+
+		char *response = NULL;
+		if (oph_get_result_from_file(outfile, &response) || !response)
+			return RMANAGER_SUCCESS;
+
+		len = strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX);
+		char prefix[1 + len];
+		sprintf(prefix, "%s%s", oph_server_port, OPH_RMANAGER_PREFIX);
+
+		char *tmp = strdup(response);
+		if (!tmp) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during job queue scanning\n");
+			free(response);
+			return RMANAGER_ERROR;
+		}
+		char *pch, *save_pointer = NULL;
+		for (pch = strtok_r(tmp, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer))
+			if (!strncmp(pch, prefix, len))
+				(*n)++;
+		free(tmp);
+
+		*list = (int *) calloc(*n, sizeof(int));
+		unsigned int i = 0;
+		save_pointer = NULL;
+		for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer))
+			if (!strncmp(pch, prefix, len))
+				(*list)[i++] = (int) strtol(pch + len, NULL, 10);
+		free(response);
+	}
+#endif
 	return RMANAGER_SUCCESS;
 }
 
@@ -391,28 +470,23 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	}
 
 	int len = 0;
-	len = strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->interact_subm) + 1 + strlen(orm->batch_subm) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request) + 128;	// 128 is a very big number to include the number of cores and the name of the ophidia application client
+	len = strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request) + 128;	// 128 is a very big number to include the number of cores and the name of the ophidia application client
 
 	if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 		return RMANAGER_MEMORY_ERROR;
 	}
 
-	if (!strcasecmp(orm->name, "lsf")) {
+	if (!strcasecmp(orm->name, "slurm")) {
 		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %d %s mpirun.lsf \"%s %s\" > %s 2>&1 &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm, oph_operator_client, request,
-				outfile);
-		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d mpirun.lsf \"%s %s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput,
-				outfile, orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
-	} else			//Default, SLURM
-	{
-		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->interact_subm, orm->subm_stdoutput, outfile,
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile,
 				orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->batch_subm, orm->subm_stdoutput, outfile,
-				orm->subm_stderror, outfile, orm->subm_jobname, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile,
+				orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+	} else {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
+		return RMANAGER_ERROR;
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
@@ -441,13 +515,13 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_ncores);
 		orm->subm_ncores = NULL;
 	}
-	if (orm->interact_subm) {
-		free(orm->interact_subm);
-		orm->interact_subm = NULL;
+	if (orm->subm_interact) {
+		free(orm->subm_interact);
+		orm->subm_interact = NULL;
 	}
-	if (orm->batch_subm) {
-		free(orm->batch_subm);
-		orm->batch_subm = NULL;
+	if (orm->subm_batch) {
+		free(orm->subm_batch);
+		orm->subm_batch = NULL;
 	}
 	if (orm->subm_stdoutput) {
 		free(orm->subm_stdoutput);
@@ -465,9 +539,13 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_jobname);
 		orm->subm_jobname = NULL;
 	}
-	if (orm->cancel) {
-		free(orm->cancel);
-		orm->cancel = NULL;
+	if (orm->subm_cancel) {
+		free(orm->subm_cancel);
+		orm->subm_cancel = NULL;
+	}
+	if (orm->subm_jobcheck) {
+		free(orm->subm_jobcheck);
+		orm->subm_jobcheck = NULL;
 	}
 	free(orm);
 	return RMANAGER_SUCCESS;
@@ -502,18 +580,14 @@ int oph_get_result_from_file(char *filename, char **response)
 
 	/* memory error */
 	if (*response == NULL) {
+		fclose(infile);
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to alloc response\n");
 		return RMANAGER_FILE_ERROR;
 	}
 
 	/* copy all the text into the buffer */
 	size_t n = fread(*response, sizeof(char), numbytes, infile);
-	if (!n) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to read response\n");
-		return RMANAGER_FILE_ERROR;
-	}
-
-	(*response)[numbytes] = '\0';
+	(*response)[n] = '\0';
 	fclose(infile);
 
 	/* confirm we have read the file by outputing it to the console */

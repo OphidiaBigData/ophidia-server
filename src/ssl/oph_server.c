@@ -90,10 +90,13 @@ char *oph_xml_operator_dir = 0;
 char *oph_user_notifier = 0;
 unsigned int oph_server_farm_size = 0;
 unsigned int oph_server_queue_size = 0;
+unsigned int oph_auto_retry = 0;
+unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 int oph_service_status = 1;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
+char oph_server_is_running = 1;
 
 void set_global_values(const char *configuration_file)
 {
@@ -144,12 +147,15 @@ void set_global_values(const char *configuration_file)
 		oph_server_farm_size = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_QUEUE_SIZE)))
 		oph_server_queue_size = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTO_RETRY)))
+		oph_auto_retry = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_POLL_TIME)))
+		oph_server_poll_time = (unsigned int) strtol(value, NULL, 10);
 	if (!logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE))) {
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 		logfile = fopen(value, "a");
 		if (logfile)
 			set_log_file(logfile);
-
 		// Redirect stdout and stderr to logfile
 		if (!freopen(value, "a", stdout))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdout to logfile\n");
@@ -263,12 +269,14 @@ void set_global_values(const char *configuration_file)
 
 void cleanup()
 {
+	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
+	oph_server_is_running = 0;
+	sleep(1);
 	mysql_library_end();
 	soap_destroy(psoap);
 	soap_end(psoap);
 	soap_done(psoap);
 	CRYPTO_thread_cleanup();
-	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	if (logfile) {
 		fclose(logfile);
 		fclose(stdout);

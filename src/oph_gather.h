@@ -60,6 +60,8 @@
 #define OPH_SERVER_CONF_NOTIFIER "NOTIFIER"
 #define OPH_SERVER_CONF_SERVER_FARM_SIZE "SERVER_FARM_SIZE"
 #define OPH_SERVER_CONF_QUEUE_SIZE "QUEUE_SIZE"
+#define OPH_SERVER_CONF_AUTO_RETRY "AUTO_RETRY"
+#define OPH_SERVER_CONF_POLL_TIME "POLL_TIME"
 
 // Security
 #define OPH_SERVER_CERT "%s/etc/cert/myserver.pem"
@@ -86,6 +88,7 @@
 #define OPH_SERVER_WORKFLOW_TIMEOUT 2592000	// sec
 #define OPH_USER_ADMIN "admin"
 #define OPH_USER_NOTIFIER "framework"
+#define OPH_SERVER_POLL_TIME 60	// sec
 
 // RMS info
 #define OPH_RMANAGER_CONF_FILE "%s/etc/rmanager.conf"

@@ -102,6 +102,7 @@ typedef struct _oph_workflow_dep {
  * \param residual_light_tasks_num Number of residual light tasks
  * \param retry_num Number of attempts in case of error 
  * \param residual_retry_num Number of residual attempts in case of error
+ * \param residual_auto_retry_num Number of residual attempts in case of start-error; used for auto-retry
  * \param response Output of the execution
  * \param exit_action Code of the operation to be executed on the end of workflow
  * \param run Flag used to enable/disable execution
@@ -140,6 +141,8 @@ typedef struct _oph_workflow_task {
 	int residual_light_tasks_num;
 	int retry_num;
 	int residual_retry_num;
+	int residual_auto_retry_num;
+	char is_marked_for_auto_retry;
 	char *response;
 	int exit_action;
 	int run;
