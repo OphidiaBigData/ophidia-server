@@ -1,4 +1,24 @@
 
+## v0.10.4 - 2016-08-22
+
+### Fixed:
+
+- Handler of SSH library used for task submission, locking, sessions, etc.
+- Bug in setting basic notification message for massive operations
+- Skip 'lib' in referring to libmatheval
+- Job status when OPH_START_ERROR occurs
+- Operation to be executed when OPH_START_ERROR occurs in case of the final task
+- Counter update of OPH_FOR when default values are used
+- Some minor bugs
+
+### Added:
+
+- Add check for return values of SSH-submitted commands
+
+### Changed:
+
+- Code indentation style
+
 ## v0.10.3 - 2016-07-26
 
 ### Fixed:
