@@ -1,59 +1,36 @@
 
-## v0.10.4 - 2016-08-22
+## v0.10.5 - 2016-08-24
 
 ### Fixed:
 
 - Handler of SSH library used for task submission, locking, sessions, etc.
-- Bug in setting basic notification message for massive operations
+- Bug in setting basic notification message for massive operations (INDIGO-DataCloud Project)
 - Skip 'lib' in referring to libmatheval
 - Job status when OPH_START_ERROR occurs
 - Operation to be executed when OPH_START_ERROR occurs in case of the final task
-- Counter update of OPH_FOR when default values are used
-- Some minor bugs
-
-### Added:
-
-- Add check for return values of SSH-submitted commands
-
-### Changed:
-
-- Code indentation style
-
-## v0.10.3 - 2016-07-26
-
-### Fixed:
-
-- Some warnings when building
-- Bug in building function 'oph_if_impl' when MathEval library is disabled
-
-### Added:
-
-- Add compact output format for JSON Responses associated with workflows and massive operations
-- Add task type OPH_STATUS_UNSELECTED for unselected branches of selection statement
-
-### Changed:
-
-- Change status of skipped tasks to OPH_STATUS_SKIPPED in case of errors
-
-## v0.10.2 - 2016-07-19
-
-### Fixed:
-
-- Bug in handling filter 'path' in massive operations
-- Bug in massive operation handler
+- Counter update of OPH_FOR when default values are used (INDIGO-DataCloud Project)
+- Bug in building function 'oph_if_impl' when MathEval library is disabled (INDIGO-DataCloud Project)
+- Bug in handling filter 'path' in massive operations (INDIGO-DataCloud Project)
+- Bug in massive operation handler (INDIGO-DataCloud Project)
 - Several warnings when building
 
 ### Added:
 
-- Code coverage check
+- Monitor of the submitted jobs
+- Support for auto-retry in case of resource manager errors
+- Check for return values of SSH-submitted commands
+- Compact output format for JSON Responses associated with workflows and massive operations (INDIGO-DataCloud Project)
+- Task type OPH_STATUS_UNSELECTED for unselected branches of selection statement (INDIGO-DataCloud Project)
+- Code coverage check (INDIGO-DataCloud Project)
 - Support for data type 'string' in multigrids of JSON Responses
-- Unit tests
-- Support for selection statement
+- Unit tests (INDIGO-DataCloud Project)
+- Support for selection statement (INDIGO-DataCloud Project)
 
 ### Changed:
 
-- Code indentation style
-- Library 'known operators' to improve modularity
+- Status of skipped tasks to OPH_STATUS_SKIPPED in case of errors (INDIGO-DataCloud Project)
+- Code indentation style (INDIGO-DataCloud Project)
+- Library 'known operators' to improve modularity (INDIGO-DataCloud Project)
 
 ## v0.10.1 - 2016-06-27
 
