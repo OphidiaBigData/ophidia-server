@@ -219,10 +219,13 @@ oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const c
 		return 0;
 	if (prev)
 		*prev = NULL;
-	oph_job_info *temp, *temp_prev = NULL, *next;
+	oph_job_info *temp, *temp_prev = NULL, *next, *result = NULL;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	int remote_deadline = tv.tv_sec - oph_server_workflow_timeout;
+#ifdef PRINT_RAW_SHARED_MEMORY
+	int i, j;
+#endif
 	for (temp = list->head; temp; temp_prev = temp, temp = next) {
 		next = temp->next;
 		if (temp->timestamp < remote_deadline) {
@@ -244,11 +247,30 @@ oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const c
 
 			free(temp);
 		} else if ((temp->wf->workflowid == workflowid) && (!sessionid || !strcmp(temp->wf->sessionid, sessionid)))
+#ifdef PRINT_RAW_SHARED_MEMORY
+			if (!result)
+				result = temp;
+
+		if (get_debug_level() == LOG_DEBUG) {
+			printf("Workflow '%s': ID %d STATUS %d\n", temp->wf->name, temp->wf->workflowid, temp->wf->status);
+			for (i = 0; i < temp->wf->tasks_num; ++i) {
+				printf("\tTask %d '%s': ID %d#%d STATUS %d OPERATOR %s\n", i, temp->wf->tasks[i].name, temp->wf->workflowid, temp->wf->tasks[i].markerid, temp->wf->tasks[i].status,
+				       temp->wf->tasks[i].operator);
+				for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
+					printf("\t\tLight task %d: ID %d#%d STATUS %d\n", j, temp->wf->workflowid, temp->wf->tasks[i].light_tasks[j].markerid,
+					       temp->wf->tasks[i].light_tasks[j].status);
+			}
+		}
+
+		if (prev && !result)
+			*prev = temp;
+#else
 			return temp;
 		if (prev)
 			*prev = temp;
+#endif
 	}
-	return NULL;
+	return result;
 }
 
 oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *sessionid, int workflowid)

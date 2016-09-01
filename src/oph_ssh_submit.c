@@ -215,13 +215,13 @@ int oph_ssh_submit(const char *cmd)
 				int i;
 				bytecount += rc;
 				if (!flag) {
-					pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "ssh submission returned:\n");
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "ssh submission returned:\n");
 					flag = 1;
 				}
 				for (i = 0; i < rc; ++i)
-					pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c\n", buffer[i]);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c\n", buffer[i]);
 			} else if (rc != LIBSSH2_ERROR_EAGAIN)
-				pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "ssh channel read returned %d\n", rc);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "ssh channel read returned %d\n", rc);
 		}
 		while (rc > 0);
 
@@ -240,9 +240,9 @@ int oph_ssh_submit(const char *cmd)
 	}
 
 	if (exitsignal)
-		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "ssh got signal %s\n", exitsignal);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "ssh got signal %s\n", exitsignal);
 	else
-		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "ssh exit code %d with: bytecount %d\n", exitcode, bytecount);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "ssh exit code %d with: bytecount %d\n", exitcode, bytecount);
 
 	libssh2_channel_free(channel);
 	channel = NULL;
@@ -254,7 +254,7 @@ int oph_ssh_submit(const char *cmd)
 #else
 	close(sock);
 #endif
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Session ended normally\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Session ended normally\n");
 
 	libssh2_exit();
 

@@ -784,7 +784,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	}
 
 	if (datacube_input || src_path) {
-		if (oph_workflow_var_substitute(wf, task_index, target_base, NULL)) {
+		if (oph_workflow_var_substitute(wf, task_index, -1, target_base, NULL)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n", ttype, jobid, task->name);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -1039,7 +1039,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 
 			// Extract the other arguments
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_NAME) && !name)
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY) && !name)
 					name = wf->tasks[i].arguments_values[j];
 				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					char *pch1;
@@ -1116,7 +1116,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				break;
 			}
 			if (!name) {
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_NAME, wf->tasks[i].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
 				break;
 			}
 			if (svalues_num) {
@@ -2584,6 +2584,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		case OPH_ODB_STATUS_REDUCE:
 		case OPH_ODB_STATUS_DESTROY:
 		case OPH_ODB_STATUS_UNSET_ENV:
+		case OPH_ODB_STATUS_WAIT:
 			status = OPH_ODB_STATUS_RUNNING;
 			break;
 		case OPH_ODB_STATUS_UNSELECTED:

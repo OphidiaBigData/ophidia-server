@@ -16,21 +16,61 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <ctype.h>
 
 #include "oph_workflow_library.h"
 #include "debug.h"
 #include "oph_auth.h"
 
-int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, char *submit_string, char **error)
+int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index)
+{
+	if (!value || !index)
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	*value = NULL;
+	*index = -1;
+
+	char arg[OPH_WORKFLOW_MAX_STRING];
+	int i, is_task = light_task_index < 0, arguments_num = is_task ? workflow->tasks[task_index].arguments_num : workflow->tasks[task_index].light_tasks[light_task_index].arguments_num;
+	size_t j, len;
+
+	// Check on known parameters
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, OPH_WORKFLOW_BVAR_KEY_MARKERID, workflow->name);
+	if (!strcmp(key, OPH_WORKFLOW_BVAR_KEY_MARKERID)) {
+		if (asprintf(value, "%d", is_task ? workflow->tasks[task_index].markerid : workflow->tasks[task_index].light_tasks[light_task_index].markerid) <= 0)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+	}
+	// Loop on the arguments
+	for (i = 0; i < arguments_num; ++i) {
+		len =
+		    snprintf(arg, OPH_WORKFLOW_MAX_STRING, "%s", is_task ? workflow->tasks[task_index].arguments_keys[i] : workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[i]);
+		for (j = 0; j < len; ++j)
+			arg[j] = toupper(arg[j]);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, arg, workflow->name);
+		if (!strcmp(key, arg)) {
+			*value = strdup(is_task ? workflow->tasks[task_index].arguments_values[i] : workflow->tasks[task_index].light_tasks[light_task_index].arguments_values[i]);
+			if (!*value)
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			*index = i;
+			return OPH_WORKFLOW_EXIT_SUCCESS;
+		}
+	}
+
+	return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+}
+
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error)
 {
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset;
-	char *p, *ep, firstc, lastc, lastcc, return_error;
+	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL;
 	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
 	oph_workflow_var *var;
+	int index;
 
 	while (((p = strchr(submit_string, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 		firstc = 1;
@@ -62,31 +102,39 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, char *s
 		if (lastcc)
 			ep++;
 
+		key = target_value + 1 + lastc;
 		if (lastc != lastcc)
 			return_error = 1;
-		else if (workflow->tasks[task_index].vars && ((var = hashtbl_get(workflow->tasks[task_index].vars, target_value + 1 + lastc))))
+		else if (workflow->tasks[task_index].vars && ((var = hashtbl_get(workflow->tasks[task_index].vars, key))))
 			return_error = 0;
-		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, target_value + 1 + lastc))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
+		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
 			return_error = 0;
+		else if (!oph_workflow_check_args(workflow, task_index, light_task_index, key, &value, &index))
+			return_error = -1;
 		else
 			return_error = 1;
-		if (return_error) {
+		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
+		if ((return_error > 0) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];
 			snprintf(_error, OPH_WORKFLOW_MAX_STRING, "Bad variable '%s' in task '%s'", target_value, workflow->tasks[task_index].name);
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "%s of workflow '%s'\n", _error, workflow->name);
 			if (error)
 				*error = strdup(_error);
+			if (value)
+				free(value);
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
 		offset = p - submit_string;
 		*replaced_value = 0;
 		strncpy(replaced_value, submit_string, offset);
 		replaced_value[offset] = 0;
-		if (*target_value == OPH_WORKFLOW_INDEX_PREFIX)
-			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%d%s", var->ivalue, ep);
+		if (prefix)
+			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%d%s", return_error ? index : var->ivalue, ep);
 		else
-			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", var->svalue, ep);
+			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : var->svalue, ep);
 		strcpy(submit_string, replaced_value);
+		if (value)
+			free(value);
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -172,7 +220,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	}
 
 	// Variable substitution
-	if (oph_workflow_var_substitute(workflow, task_index, long_submit_string, error))
+	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, long_submit_string, error))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, long_submit_string);
 
@@ -186,7 +234,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 
 	if (short_submission_string) {
 		// Variable substitution
-		if (oph_workflow_var_substitute(workflow, task_index, short_submit_string, error))
+		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, short_submit_string, error))
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		*short_submission_string = strdup(short_submit_string);
 		if (!(*short_submission_string)) {

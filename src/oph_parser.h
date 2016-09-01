@@ -89,7 +89,7 @@
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 
 // Known parameters
-#define OPH_OPERATOR_PARAMETER_NAME "name"
+#define OPH_OPERATOR_PARAMETER_KEY "key"
 #define OPH_OPERATOR_PARAMETER_VALUE "value"
 #define OPH_OPERATOR_PARAMETER_VALUES "values"
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"

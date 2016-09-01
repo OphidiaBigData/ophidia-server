@@ -89,11 +89,12 @@ int oph_workflow_is_child_of(oph_workflow * wf, int p, int c);
 /* \brief Function for variable substitution
  * \param workflow Input OPH_WORKFLOW
  * \param task_index Input index of the target task
+ * \param light_task_index Possible input index of the light target task
  * \param submit_string String to be parsed
  * \param error Pointer to save a possible error message
  * \return 1 in case of errors
  */
-int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, char *submit_string, char **error);
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error);
 
 /* \brief Function to set basic variables
  * \param workflow Input OPH_WORKFLOW

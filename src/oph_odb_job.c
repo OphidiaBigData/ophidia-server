@@ -484,6 +484,8 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 			return OPH_ODB_STATUS_DESTROY_STR;
 		case OPH_ODB_STATUS_UNSET_ENV:
 			return OPH_ODB_STATUS_UNSET_ENV_STR;
+		case OPH_ODB_STATUS_WAIT:
+			return OPH_ODB_STATUS_WAIT_STR;
 		case OPH_ODB_STATUS_COMPLETED:
 			return OPH_ODB_STATUS_COMPLETED_STR;
 		case OPH_ODB_STATUS_ERROR:
@@ -560,6 +562,7 @@ int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_
 		case OPH_ODB_STATUS_REDUCE:
 		case OPH_ODB_STATUS_DESTROY:
 		case OPH_ODB_STATUS_UNSET_ENV:
+		case OPH_ODB_STATUS_WAIT:
 			if (nchildren < 0)
 				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1, oph_odb_convert_status_to_str(status), id_job);
 			else

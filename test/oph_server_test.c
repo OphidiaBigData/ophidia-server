@@ -758,7 +758,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].ncores = wf->ncores;
 		wf->tasks[1].arguments_num = 4;
 		wf->tasks[1].arguments_keys = (char **) calloc(wf->tasks[1].arguments_num, sizeof(char *));
-		wf->tasks[1].arguments_keys[0] = strdup("name");
+		wf->tasks[1].arguments_keys[0] = strdup("key");
 		wf->tasks[1].arguments_keys[1] = strdup("values");
 		wf->tasks[1].arguments_keys[2] = strdup("counter");
 		wf->tasks[1].arguments_keys[3] = strdup("parallel");
@@ -842,7 +842,7 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 				{
 					free(wf->tasks[1].arguments_keys[0]);
-					wf->tasks[1].arguments_keys[0] = strdup("no-name");
+					wf->tasks[1].arguments_keys[0] = strdup("no-key");
 				}
 				break;
 
@@ -960,7 +960,7 @@ int _check_oph_server(const char *function, int option)
 
 		switch (option) {
 			case 2:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'name'.")) {
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					return 1;
 				}
@@ -1135,7 +1135,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].ncores = wf->ncores;
 		wf->tasks[0].arguments_num = 4;
 		wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_keys[0] = strdup("name");
+		wf->tasks[0].arguments_keys[0] = strdup("key");
 		wf->tasks[0].arguments_keys[1] = strdup("values");
 		wf->tasks[0].arguments_keys[2] = strdup("counter");
 		wf->tasks[0].arguments_keys[3] = strdup("parallel");
@@ -1465,7 +1465,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].ncores = wf->ncores;
 		wf->tasks[0].arguments_num = 4;
 		wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
-		wf->tasks[0].arguments_keys[0] = strdup("name");
+		wf->tasks[0].arguments_keys[0] = strdup("key");
 		wf->tasks[0].arguments_keys[1] = strdup("values");
 		wf->tasks[0].arguments_keys[2] = strdup("counter");
 		wf->tasks[0].arguments_keys[3] = strdup("parallel");

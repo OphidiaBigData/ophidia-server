@@ -68,7 +68,9 @@
 
 #define OPH_WORKFLOW_BVAR_KEYS		{"OPH_SESSION_ID","OPH_SESSION_CODE","OPH_WORKFLOW_ID"}
 #define OPH_WORKFLOW_BVAR_KEYS_SIZE	3
+#define OPH_WORKFLOW_BVAR_KEY_MARKERID	"OPH_MARKER_ID"
 
+// Additional known operators
 #define OPH_OPERATOR_SET		"oph_set"
 #define OPH_OPERATOR_FOR		"oph_for"
 #define OPH_OPERATOR_ENDFOR		"oph_endfor"
@@ -76,5 +78,7 @@
 #define OPH_OPERATOR_ELSEIF		"oph_elseif"
 #define OPH_OPERATOR_ELSE		"oph_else"
 #define OPH_OPERATOR_ENDIF		"oph_endif"
+#define OPH_OPERATOR_WAIT		"oph_wait"
+#define OPH_OPERATOR_INPUT		"oph_input"
 
 #endif				//__OPH_WORKFLOW_DEFINE_H
