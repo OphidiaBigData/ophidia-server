@@ -907,21 +907,25 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			break;
 		}
 		if (has_action) {
-			if (!taskname) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Missed task name!");
+			if (!taskname)
+				taskname = strdup("Task 0");
+			int implicit_target = -1;
+			for (tt = 0; tt < twf->tasks_num; ++tt)
+				if (!strcmp(twf->tasks[tt].operator, OPH_OPERATOR_WAIT)) {
+					if (!strcmp(twf->tasks[tt].name, taskname))
+						break;
+					if (implicit_target < 0)
+						implicit_target = tt;
+					else
+						implicit_target = twf->tasks_num;
+				}
+			if ((tt >= twf->tasks_num) && (implicit_target >= 0))
+				tt = implicit_target;
+			if (tt >= twf->tasks_num) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Invalid task name, task not found or ambiguous!");
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
-			} else {
-				for (tt = 0; tt < twf->tasks_num; ++tt)
-					if (!strcmp(twf->tasks[tt].name, taskname) && !strcmp(twf->tasks[tt].operator, OPH_OPERATOR_WAIT))
-						break;
-				if (tt >= twf->tasks_num) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Invalid task '%s' or not found!", taskname);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-					ret = OPH_SERVER_ERROR;
-					break;
-				}
 			}
 		}
 
