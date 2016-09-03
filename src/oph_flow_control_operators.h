@@ -22,6 +22,15 @@
 #include "oph_gather.h"
 #include "oph_plugin.h"
 
+typedef struct _oph_notify_data {
+	oph_workflow *wf;
+	int task_index;
+	char *json_output;
+	struct oph_plugin_data *state;
+	char *add_to_notify;
+	void *data;
+} oph_notify_data;
+
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
 				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name);
 
@@ -29,7 +38,7 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 int oph_else_impl(oph_workflow * wf, int i, char *error_message, int *exit_output);
 int oph_for_impl(oph_workflow * wf, int i, char *error_message);
 int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * trash, int *task_id, int *odb_jobid);
-int oph_set_impl(oph_workflow * wf, int i, char *error_message);
-int oph_wait_impl(oph_workflow * wf, int i, char *error_message);
+int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugin_data *state, char has_action);
+int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message, oph_notify_data * data);
 
 #endif				/* OPH_FLOW_OPERATORS_H */

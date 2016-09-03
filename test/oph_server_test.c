@@ -956,7 +956,7 @@ int _check_oph_server(const char *function, int option)
 			default:;
 		}
 
-		int res = oph_for_impl(wf, for_index, error_message, 1);
+		int res = oph_for_impl(wf, for_index, error_message);
 
 		switch (option) {
 			case 2:

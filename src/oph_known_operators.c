@@ -32,9 +32,6 @@ extern pthread_mutex_t global_flag;
 
 int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB, enum oph__oph_odb_job_status *exit_code)
 {
-	if (exit_code)
-		*exit_code = OPH_ODB_STATUS_ERROR;
-
 	char *jstring = NULL;
 	if (oper_json) {
 		int return_code = 0;
@@ -45,24 +42,32 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 			if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
-			} else if (oph_write_and_get_json(oper_json, &jstring))
+			} else if (oph_write_and_get_json(oper_json, &jstring)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "JSON file creation error\n");
 				return_code = -1;
+			}
 		} else {
 			if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_STATUS, "SUCCESS", strlen(error_message) ? error_message : NULL)) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
-			} else if (oph_write_and_get_json(oper_json, &jstring))
+			} else if (oph_write_and_get_json(oper_json, &jstring)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "JSON file creation error\n");
 				return_code = -1;
-			else if (exit_code)
+			} else if (exit_code && (*exit_code != OPH_ODB_STATUS_WAIT))
 				*exit_code = OPH_ODB_STATUS_COMPLETED;
 		}
 		oph_json_free(oper_json);
 
-		if (return_code)
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "error in generate JSON Response\n");
-	}
+		if (return_code && exit_code)
+			*exit_code = OPH_ODB_STATUS_ERROR;
+
+	} else if (exit_code)
+		*exit_code = OPH_ODB_STATUS_ERROR;
+
 	if (!jstring) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "unable to convert JSON Response into a string\n");
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to convert JSON Response into a string\n");
+		if (exit_code)
+			*exit_code = OPH_ODB_STATUS_ERROR;
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
@@ -72,7 +77,11 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 		free(jstring);
 
 	// Set ODB_STATUS to COMPLETED
-	oph_odb_stop_job_fast(idjob, oDB);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize OphDB status\n");
+	if (exit_code && (*exit_code == OPH_ODB_STATUS_WAIT))
+		oph_odb_set_job_status(idjob, OPH_ODB_STATUS_WAIT, oDB);
+	else
+		oph_odb_stop_job_fast(idjob, oDB);
 	oph_odb_disconnect_from_ophidiadb(oDB);
 
 	return OPH_SERVER_OK;

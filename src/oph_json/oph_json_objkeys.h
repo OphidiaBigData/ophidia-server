@@ -26,6 +26,7 @@
 
 // ALL OPERATORS
 #define OPH_JSON_OBJKEY_STATUS 						"status"
+#define OPH_JSON_OBJKEY_SUMMARY						"summary"
 
 // OPH_LOGGINGBK
 #define OPH_JSON_OBJKEY_LOGGINGBK					"loggingbk"
