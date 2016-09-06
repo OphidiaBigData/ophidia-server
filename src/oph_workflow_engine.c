@@ -2697,7 +2697,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			if (odb_status == OPH_ODB_STATUS_START_ERROR) {
 				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1) && (wf->tasks[task_index].residual_auto_retry_num != 1)) {
 					wf->tasks[task_index].is_marked_for_auto_retry = 1;
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' has been marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 				}
 				if (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_RUNNING) {
 					wf->tasks[task_index].status = OPH_ODB_STATUS_RUNNING;
@@ -3435,16 +3435,18 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			wf->tasks[task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been updated to %s in memory\n", ttype, jobid, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].status));
-			if (odb_status == OPH_ODB_STATUS_START_ERROR || wf->tasks[task_index].is_marked_for_auto_retry) {
+			if (wf->tasks[task_index].is_marked_for_auto_retry || (odb_status == OPH_ODB_STATUS_START_ERROR)) {
 				if (wf->tasks[task_index].is_marked_for_auto_retry)
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' has been marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 
 				char save = 0;
 				if (oph_auto_retry && (wf->tasks[task_index].retry_num == 1))	// Setting for auto-retry
 				{
-					if (!wf->tasks[task_index].residual_auto_retry_num)
+					if (!wf->tasks[task_index].residual_auto_retry_num) {
 						wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
-					else if (wf->tasks[task_index].residual_auto_retry_num > 1)
+						wf->tasks[task_index].is_marked_for_auto_retry = 1;
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+					} else if (wf->tasks[task_index].residual_auto_retry_num > 1)
 						wf->tasks[task_index].residual_auto_retry_num--;
 					else
 						save = 1;
@@ -3881,7 +3883,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					} else {
 						char reduce_residual_retry_num = 1;
 						if (oph_auto_retry && wf->tasks[task_index].is_marked_for_auto_retry && (wf->tasks[task_index].retry_num == 1)) {
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' has been marked for auto-retry\n", ttype, jobid, wf->tasks[task_index].name);
 							char save = 0;
 							if (!wf->tasks[task_index].residual_auto_retry_num)
 								wf->tasks[task_index].residual_auto_retry_num = 1 + oph_auto_retry;
