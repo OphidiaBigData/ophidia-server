@@ -28,6 +28,7 @@
 #include <math.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <curl/curl.h>
 
 #ifdef MATHEVAL_SUPPORT
 #include <matheval.h>
@@ -36,9 +37,12 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
+extern char *oph_base_src_path;
+extern char *oph_web_server_location;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
+extern size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream);
 
 typedef struct _oph_wait_data {
 	char type;
@@ -61,11 +65,33 @@ void *_oph_wait(oph_notify_data * data)
 	struct oph_plugin_data *state = data->state;
 	char *json_output = data->json_output;
 	oph_wait_data *wd = (oph_wait_data *) data->data;
+	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
+	CURL *curl = NULL;
 
 	switch (wd->type) {
+		case 'f':
+			if (strstr(wd->filename, "http")) {
+				curl = curl_easy_init();
+				if (!curl) {
+					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to check remote objects\n");
+					success = 0;
+					break;
+				}
+				curl_easy_setopt(curl, CURLOPT_URL, wd->filename);
+				curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+				curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "CURL options set\n");
+				strcpy(_filename, wd->filename);
+			} else if (oph_base_src_path && strlen(oph_base_src_path))
+				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_base_src_path, wd->filename);
+			else if (!oph_get_session_code(wf->sessionid, tmp))
+				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "/%s", oph_web_server_location, tmp, wd->filename);
+			else {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
+				success = 0;
+			}
 		case 'c':
 		case 'i':
-		case 'f':
 			break;
 		default:
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in parsing input data\n");
@@ -83,7 +109,25 @@ void *_oph_wait(oph_notify_data * data)
 		pthread_mutex_unlock(&global_flag);
 
 		do {
+			if ((wd->type == 'f') && (status == (int) OPH_ODB_STATUS_WAIT)) {
+				if (curl) {
+					if (curl_easy_perform(curl) == CURLE_OK)
+						success = 0;
+				} else if (!stat(_filename, &s))
+					success = 0;
+				if (!success) {
+					success = 1;
+					pthread_mutex_lock(&global_flag);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "File '%s' already exists\n", _filename);
+					status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
+					pthread_mutex_unlock(&global_flag);
+					break;
+				}
+			}
+
 			counter = 0;
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Wait for %d steps before checking existance of file '%s'\n", wd->timeout, _filename);
+
 			while ((status == (int) OPH_ODB_STATUS_WAIT) && ((wd->timeout < 0) || (counter < wd->timeout))) {
 
 				sleep(1);
@@ -98,24 +142,29 @@ void *_oph_wait(oph_notify_data * data)
 			}
 
 			if (status == (int) OPH_ODB_STATUS_WAIT) {
-				pthread_mutex_lock(&global_flag);
 				switch (wd->type) {
 					case 'f':
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if file '%s' exists\n", wd->filename);
-						if (stat(wd->filename, &s)) {
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", wd->filename);
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check if file '%s' exists\n", _filename);
+						if (curl) {
+							if (curl_easy_perform(curl) != CURLE_OK) {
+								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", _filename);
+								break;
+							}
+						} else if (stat(_filename, &s)) {
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", _filename);
 							break;
 						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "File '%s' exists\n", wd->filename);
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' exists\n", _filename);
 					case 'c':
 					case 'i':
+						pthread_mutex_lock(&global_flag);
 						status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
+						pthread_mutex_unlock(&global_flag);
 						break;
 					default:
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Processing error\n");
 						success = 0;
 				}
-				pthread_mutex_unlock(&global_flag);
 			}
 
 		} while (status == (int) OPH_ODB_STATUS_WAIT);
@@ -169,6 +218,8 @@ void *_oph_wait(oph_notify_data * data)
 		oph_odb_disconnect_from_ophidiadb(&oDB);
 
 	// Free
+	if (curl)
+		curl_easy_cleanup(curl);
 	if (json_output)
 		free(json_output);
 	if (state) {
@@ -1510,15 +1561,16 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 					ret = OPH_SERVER_ERROR;
 					break;
 				}
-				struct timeval tv;
-				gettimeofday(&tv, NULL);
-				wd->timeout = epoch - tv.tv_sec + 1;	// Ceiling
+				time_t now;
+				time(&now);
+				wd->timeout = epoch - now;	// Ceiling
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Date %s has been converted into %d steps (until epoch %d since now %d)\n", timeout, wd->timeout, epoch, now);
 			} else
 				wd->timeout = (int) strtol(timeout, NULL, 10);
 		}
 		if (wd->timeout < 0) {
-			if (wd->type == 'c') {
-				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Timeout value cannot be negative for type 'clock'!");
+			if (wd->type != 'i') {
+				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Timeout can be infinity only for type 'input'. Use a non-negative value!");
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
