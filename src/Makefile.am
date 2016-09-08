@@ -265,8 +265,8 @@ liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_eng
 
 LIBRARY += liboph_flow_control_operators.la
 liboph_flow_control_operators_la_SOURCES = oph_flow_control_operators.c
-liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
-liboph_flow_control_operators_la_LDFLAGS = -shared
+liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
+liboph_flow_control_operators_la_LDFLAGS = -shared ${LIBCURL_LIB}
 liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 LIBRARY += liboph_management_operators.la
