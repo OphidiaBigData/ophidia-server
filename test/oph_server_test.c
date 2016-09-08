@@ -67,6 +67,7 @@ oph_rmanager *orm = 0;
 oph_auth_user_bl *bl_head = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
+unsigned int oph_base_backoff = 0;
 
 void set_global_values(const char *configuration_file)
 {

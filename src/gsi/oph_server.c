@@ -85,6 +85,7 @@ oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
+unsigned int oph_base_backoff = 0;
 
 void set_global_values(const char *configuration_file)
 {
@@ -139,6 +140,8 @@ void set_global_values(const char *configuration_file)
 		oph_auto_retry = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_POLL_TIME)))
 		oph_server_poll_time = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_BACKOFF)))
+		oph_base_backoff = (unsigned int) strtol(value, NULL, 10);
 	if (!logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE))) {
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 		logfile = fopen(value, "a");
