@@ -41,6 +41,7 @@ typedef struct _oph_command_data {
 	char *command;
 	char *error;
 	struct oph_plugin_data *state;
+	int delay;
 } oph_command_data;
 
 void *_oph_system(oph_command_data * data)
@@ -50,6 +51,8 @@ void *_oph_system(oph_command_data * data)
 #endif
 	if (data) {
 		if (data->command) {
+			if (data->delay)
+				sleep(data->delay);
 #ifdef LOCAL_FRAMEWORK
 			if (system(data->command))
 #else
@@ -88,7 +91,7 @@ void *_oph_system(oph_command_data * data)
 	return NULL;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -128,6 +131,7 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 		data->state->serverid = NULL;
 	data->state->is_copy = 1;
 	data->state->job_info = state->job_info;
+	data->delay = delay;
 
 	pthread_t tid;
 	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_system, data);
@@ -597,7 +601,7 @@ int oph_get_result_from_file(char *filename, char **response)
 }
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
-		      int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output)
+		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
@@ -650,7 +654,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Execute command: %s\n", command);
-	if (oph_system(command, error, state)) {
+	if (oph_system(command, error, state, delay)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on executing the command\n");
 		if (cmd) {
 			free(cmd);
@@ -668,7 +672,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 
-	if (oph_system(cmd, error, state)) {
+	if (oph_system(cmd, error, state, delay)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {
 			free(cmd);

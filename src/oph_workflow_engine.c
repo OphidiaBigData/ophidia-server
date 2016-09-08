@@ -61,6 +61,7 @@ typedef struct _oph_request_data {
 	int light_task_id;
 	char *error;
 	char run;
+	int delay;
 } oph_request_data;
 
 typedef struct _oph_monitor_data {
@@ -2215,6 +2216,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].task_id = i;
 					request_data[k][j].light_task_id = j;
 					request_data[k][j].run = wf->tasks[i].run;
+					request_data[k][j].delay = 0;
 
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
 						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR);
@@ -2243,6 +2245,14 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->task_id = i;
 				request_data[k]->light_task_id = -1;
 				request_data[k]->run = wf->tasks[i].run;
+				int minimum_retry = wf->tasks[i].residual_retry_num;
+				if (minimum_retry > wf->tasks[i].residual_auto_retry_num)
+					minimum_retry = wf->tasks[i].residual_auto_retry_num;
+				minimum_retry = wf->tasks[i].retry_num - minimum_retry;
+				int backoff = 1;
+				for (; minimum_retry > 0; minimum_retry--)
+					backoff >>= 1;
+				request_data[k]->delay = rand() % backoff;
 
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
 					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
@@ -2295,7 +2305,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				    if ((response =
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
-							   &request_data[k][j].jobid, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK) {
+							   &request_data[k][j].jobid, request_data[k][i].delay, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							char *success_notification =
