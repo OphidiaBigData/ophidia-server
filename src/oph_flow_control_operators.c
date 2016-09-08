@@ -42,7 +42,6 @@ extern char *oph_web_server_location;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
-extern size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream);
 
 typedef struct _oph_wait_data {
 	char type;
