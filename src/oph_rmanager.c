@@ -51,8 +51,10 @@ void *_oph_system(oph_command_data * data)
 #endif
 	if (data) {
 		if (data->command) {
-			if (data->delay)
+			if (data->delay) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Back off for %d seconds\n", data->delay);
 				sleep(data->delay);
+			}
 #ifdef LOCAL_FRAMEWORK
 			if (system(data->command))
 #else

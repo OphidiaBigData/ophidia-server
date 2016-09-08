@@ -2251,7 +2251,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				minimum_retry = wf->tasks[i].retry_num - minimum_retry;
 				int backoff = 1;
 				for (; minimum_retry > 0; minimum_retry--)
-					backoff >>= 1;
+					backoff <<= 1;
 				request_data[k]->delay = rand() % backoff;
 
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
