@@ -91,6 +91,7 @@
 #define OPH_USER_ADMIN "admin"
 #define OPH_USER_NOTIFIER "framework"
 #define OPH_SERVER_POLL_TIME 60	// sec
+#define OPH_SERVER_POLL_ITEMS 128	// tasks
 #define OPH_BASE_SRC_PATH ""
 
 // RMS info

@@ -2255,6 +2255,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					for (; minimum_retry > 0; minimum_retry--)
 						backoff <<= 1;
 					request_data[k]->delay = rand() % backoff;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Backoff size %d; chosen %d seconds\n", ttype, jobid, backoff, request_data[k]->delay);
 				} else
 					request_data[k]->delay = 0;
 
@@ -5312,29 +5313,25 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 	pthread_detach(pthread_self());
 #endif
 	if (data) {
-		int i, j, jobid, *list = NULL, *nlist = NULL, response;
+		int i, j, jobid, *list = NULL, response;
 		unsigned int k, n, nn;
 		oph_job_list *job_list = data->state->job_info;
 		oph_job_info *temp;
-		char submission_string_ext[OPH_MAX_STRING_SIZE];
-		char **error_notification = NULL;
+		char submission_string_ext[OPH_MAX_STRING_SIZE], *error_notification[OPH_SERVER_POLL_ITEMS];
+
+		for (k = 0; k < OPH_SERVER_POLL_ITEMS; ++k)
+			error_notification[k] = NULL;
 
 		while (oph_server_is_running) {
 			if (list) {
 				free(list);
 				list = NULL;
 			}
-			if (nlist) {
-				free(nlist);
-				nlist = NULL;
-			}
-			if (error_notification) {
-				for (k = 0; k < nn; ++k)
-					if (error_notification[k])
-						free(error_notification[k]);
-				free(error_notification);
-				error_notification = NULL;
-			}
+			for (k = 0; k < nn; ++k)
+				if (error_notification[k]) {
+					free(error_notification[k]);
+					error_notification[k] = NULL;
+				}
 			n = nn = 0;
 
 			// Wait for next check
@@ -5349,19 +5346,8 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check for aborted or starved tasks\n");
 
 			// Load task list in resource manager queue
-			if (oph_read_job_queue(&list, &n) || !n)
+			if (oph_read_job_queue(&list, &n))
 				continue;
-
-			nlist = (int *) calloc(n, sizeof(int));
-			if (!nlist) {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
-				continue;
-			}
-			error_notification = (char **) calloc(n, sizeof(char *));
-			if (!error_notification) {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
-				continue;
-			}
 
 			pthread_mutex_lock(&global_flag);
 
@@ -5383,13 +5369,16 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 												break;
 											}
 										if (k >= n) {
-											nlist[nn] = temp->wf->tasks[i].light_tasks[j].idjob;
 											snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j,
-												 nlist[nn], OPH_ODB_STATUS_ABORTED);
+												 temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED);
 											error_notification[nn] = strdup(submission_string_ext);
 											nn++;
+											if (nn >= OPH_SERVER_POLL_ITEMS)
+												break;
 										}
 									}
+								if (nn >= OPH_SERVER_POLL_ITEMS)
+									break;
 							} else {
 								for (k = 0; k < n; ++k)
 									if (temp->wf->tasks[i].idjob == list[k]) {
@@ -5397,15 +5386,22 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 										break;
 									}
 								if (k >= n) {
-									nlist[nn] = temp->wf->tasks[i].idjob;
-									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1, nlist[nn],
-										 OPH_ODB_STATUS_ABORTED);
+									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
+										 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED);
 									error_notification[nn] = strdup(submission_string_ext);
 									nn++;
+									if (nn >= OPH_SERVER_POLL_ITEMS)
+										break;
 								}
 							}
 						}
+					if (nn >= OPH_SERVER_POLL_ITEMS)
+						break;
 				}
+
+			if (nn >= OPH_SERVER_POLL_ITEMS)
+				nn = OPH_SERVER_POLL_ITEMS;
+
 			// Look for starved tasks
 			for (temp = job_list->head; temp; temp = temp->next)
 				if (temp->wf) {
@@ -5438,7 +5434,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
 				pthread_mutex_unlock(&global_flag);
 
-				if (error_notification && error_notification[k]) {
+				if (error_notification[k]) {
 					response = 0;
 					oph_workflow_notify(data->state, 'M', jobid, error_notification[k], NULL, &response);
 					if (response)
@@ -5454,14 +5450,9 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 
 		if (list)
 			free(list);
-		if (nlist)
-			free(nlist);
-		if (error_notification) {
-			for (k = 0; k < nn; ++k)
-				if (error_notification[k])
-					free(error_notification[k]);
-			free(error_notification);
-		}
+		for (k = 0; k < nn; ++k)
+			if (error_notification[k])
+				free(error_notification[k]);
 		if (data->state)
 			free(data->state);
 		free(data);
