@@ -2246,18 +2246,24 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->task_id = i;
 				request_data[k]->light_task_id = -1;
 				request_data[k]->run = wf->tasks[i].run;
+				request_data[k]->delay = 0;
 				if (oph_base_backoff) {
-					int minimum_retry = wf->tasks[i].residual_retry_num;
-					if (minimum_retry > wf->tasks[i].residual_auto_retry_num)
-						minimum_retry = wf->tasks[i].residual_auto_retry_num;
-					minimum_retry = wf->tasks[i].retry_num - minimum_retry;
-					int backoff = oph_base_backoff;
-					for (; minimum_retry > 0; minimum_retry--)
-						backoff <<= 1;
-					request_data[k]->delay = rand() % backoff;
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Backoff size %d; chosen %d seconds\n", ttype, jobid, backoff, request_data[k]->delay);
-				} else
-					request_data[k]->delay = 0;
+					int retry_num = 0;
+					if (wf->tasks[i].retry_num)
+						retry_num = wf->tasks[i].retry_num - wf->tasks[i].residual_retry_num;
+					if (oph_auto_retry && wf->tasks[i].residual_auto_retry_num) {
+						int retry_num2 = 1 + oph_auto_retry - wf->tasks[i].residual_auto_retry_num;
+						if (retry_num < retry_num2)
+							retry_num = retry_num2;
+					}
+					if (retry_num > 0) {
+						int backoff = oph_base_backoff;
+						while (--retry_num)
+							backoff <<= 1;
+						request_data[k]->delay = rand() % backoff;
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: backoff size %d; chosen %d seconds\n", ttype, jobid, backoff, request_data[k]->delay);
+					}
+				}
 
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
 					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
@@ -5314,7 +5320,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 #endif
 	if (data) {
 		int i, j, jobid, *list = NULL, response;
-		unsigned int k, n, nn;
+		unsigned int k, n, nn = 0;
 		oph_job_list *job_list = data->state->job_info;
 		oph_job_info *temp;
 		char submission_string_ext[OPH_MAX_STRING_SIZE], *error_notification[OPH_SERVER_POLL_ITEMS];

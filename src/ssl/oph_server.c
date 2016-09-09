@@ -703,12 +703,12 @@ int oph_handle_signals(void)
 
 void oph_signal_handler(int sig)
 {
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, sys_siglist[sig]);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, sys_siglist[sig] ? sys_siglist[sig] : "");
 	cleanup();
 	exit(1);
 }
 
 void oph_child_signal_handler(int sig)
 {
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, sys_siglist[sig]);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, sys_siglist[sig] ? sys_siglist[sig] : "");
 }
