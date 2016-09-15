@@ -37,8 +37,11 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 		int return_code = 0;
 
 		if (!success) {
-			if (!strlen(error_message))
+			if (!strlen(error_message)) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Operator '%s' failed!", operator_name);
+				if (exit_code)
+					*exit_code = OPH_ODB_STATUS_ERROR;
+			}
 			if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "ADD TEXT error\n");
 				return_code = -1;
@@ -92,7 +95,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char *request,
 {
 	int error = OPH_SERVER_UNKNOWN;
 	if (exit_code)
-		*exit_code = OPH_ODB_STATUS_COMPLETED;
+		*exit_code = OPH_ODB_STATUS_ERROR;
 	if (exit_output)
 		*exit_output = 1;
 

@@ -2023,10 +2023,6 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ELSEIF, OPH_MAX_STRING_SIZE))	// oph_if, oph_elseif
 	{
-#ifndef MATHEVAL_SUPPORT
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
-		return OPH_SERVER_SYSTEM_ERROR;
-#else
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2094,10 +2090,15 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			success = 1;
 		}
 
+#ifdef MATHEVAL_SUPPORT
 		if (success) {
 			if (oph_if_impl(wf, i, error_message, exit_output))
 				success = 0;
 		}
+#else
+		snprintf(error_message, OPH_MAX_STRING_SIZE, "Math expression parser is not enabled!");
+		success = 0;
+#endif
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -2118,13 +2119,8 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
-#endif
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))	// oph_else, oph_endif
 	{
-#ifndef MATHEVAL_SUPPORT
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to execute %s. Matheval is not available\n", operator_name);
-		return OPH_SERVER_SYSTEM_ERROR;
-#else
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2216,7 +2212,6 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
-#endif
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_WAIT, OPH_MAX_STRING_SIZE)) {
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);

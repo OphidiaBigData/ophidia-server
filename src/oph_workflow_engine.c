@@ -2292,7 +2292,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	// Submit the commands
 	int response, nnn = 0, nnnn = 0, exit_output;
 	char *json_response = NULL;
-	enum oph__oph_odb_job_status exit_code;
+	enum oph__oph_odb_job_status exit_code = OPH_ODB_STATUS_PENDING;
 	nn = 0;
 	for (k = 0; k < tasks_indexes_num; ++k) {
 		if (!request_data[k])
