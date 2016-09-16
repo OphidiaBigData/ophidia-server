@@ -2698,15 +2698,31 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		pthread_mutex_unlock(&global_flag);
 
 		// Kill queued tasks
-		for (i = 0; i < wf->tasks_num; ++i)
-			if ((wf->tasks[i].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)) {
-				if (wf->tasks[i].light_tasks_num) {
-					for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
-						if ((wf->tasks[i].light_tasks[j].status > OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].light_tasks[j].status < OPH_ODB_STATUS_COMPLETED))
-							oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
-				} else
-					oph_cancel_request(wf->tasks[i].idjob);
+		if (wf->cancel_type != 's') {
+			if (wf->cancel_type != 'a') {
+				for (i = 0; i < wf->tasks_num; ++i)
+					if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
+						if (wf->tasks[i].light_tasks_num) {
+							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
+								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
+								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+						} else
+							oph_cancel_request(wf->tasks[i].idjob);
+					}
+			} else {
+				for (i = 0; i < wf->tasks_num; ++i)
+					if ((wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)) {
+						if (wf->tasks[i].light_tasks_num) {
+							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
+								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
+								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+						} else
+							oph_cancel_request(wf->tasks[i].idjob);
+					}
 			}
+		}
 	}
 
 	if (!final) {

@@ -58,7 +58,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
-		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE];
+		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], type[OPH_MAX_STRING_SIZE];
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
@@ -79,10 +79,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
+		*type = 0;
+		oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_TYPE, &type);
 
 		int wid, success = 0, success2 = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE];
+		char error_message[OPH_MAX_STRING_SIZE], btype = 'k';
 
 		while (!success) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ID);
@@ -92,6 +94,14 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			wid = (int) strtol(str_id, NULL, 10);
 			if (wid <= 0)
+				break;
+
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_TYPE);
+			if (!strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_ABORT))
+				btype = 'a';
+			else if (!strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_STOP))
+				btype = 's';
+			else if (*type && strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_KILL))
 				break;
 
 			success = 1;
@@ -110,6 +120,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				success = 0;
 			else if (item->wf->status < (int) OPH_ODB_STATUS_ABORTED) {
 				item->wf->status = OPH_ODB_STATUS_ABORTED;
+				item->wf->cancel_type = btype;
 				snprintf(error_notification, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, item->wf->idjob, 0, -1, item->wf->idjob, OPH_ODB_STATUS_ABORTED);
 				jobid = *(state->jobid) = *(state->jobid) + 1;
 			}
@@ -798,15 +809,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			else
 				max_sessions = strtol(tmp, NULL, 10);
 			if (max_sessions && (num_sessions > max_sessions)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Number of sessions '%d' is higher than the maximum number '%d'!", num_sessions, max_sessions);
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "the number of sessions '%d' is higher than the maximum number '%d'\n", num_sessions, max_sessions);
-				oph_cleanup_args(&args);
-				oph_cleanup_args(&user_args);
-				if (task_tbl)
-					hashtbl_destroy(task_tbl);
-				oph_cleanup_args_list(&session_args_list);
-				oph_json_free(oper_json);
-				oph_odb_disconnect_from_ophidiadb(&oDB);
-				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			// Order by last_access_time
 			if (oph_order_args_list(&session_args_list)) {
