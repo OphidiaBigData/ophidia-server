@@ -1509,8 +1509,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_WORKFLOW, session, wid);
 					else
 						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_SESSION, session);
-				} else
-					snprintf(query, OPH_MAX_STRING_SIZE, id_type ? MYSQL_RETRIEVE_JOBS_OF_SESSION : MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session);
+				} else if (id_type)
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_JOBS_OF_SESSION, session);
+				else
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session, session);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: execute query '%s'\n", jobid, query);
 				if (oph_odb_retrieve_list(&oDB, query, &list)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to execute '%s'\n", jobid, query);
 					oph_json_free(oper_json);
@@ -1697,7 +1700,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								}
 							}
 							jjj++;
-							jsonvalues[jjj] = strdup(list.name[i]);
+							if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_RUNNING_STR) && !strcmp(list.max_status[i], OPH_ODB_STATUS_WAIT_STR))
+								jsonvalues[jjj] = strdup(list.max_status[i]);
+							else
+								jsonvalues[jjj] = strdup(list.name[i]);
 							if (!jsonvalues[jjj]) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 								for (iii = 0; iii < jjj; iii++)

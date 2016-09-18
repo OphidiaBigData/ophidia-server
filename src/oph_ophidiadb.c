@@ -301,7 +301,7 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	MYSQL_ROW row;
 	res = mysql_store_result(oDB->conn);
 
-	if ((mysql_field_count(oDB->conn) < 4) || (mysql_field_count(oDB->conn) > 5)) {
+	if ((mysql_field_count(oDB->conn) < 4) || (mysql_field_count(oDB->conn) > 6)) {
 		mysql_free_result(res);
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
@@ -313,7 +313,9 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	list->pid = (int *) malloc(list->size * sizeof(int));
 	list->wid = (int *) malloc(list->size * sizeof(int));
 	list->ctime = (char **) malloc(list->size * sizeof(char *));
-	if (!list->name || !list->id || !list->wid || !list->pid || !list->ctime) {
+	list->max_status = (char **) malloc(list->size * sizeof(char *));
+
+	if (!list->name || !list->id || !list->wid || !list->pid || !list->ctime || !list->max_status) {
 		mysql_free_result(res);
 		return OPH_ODB_MEMORY_ERROR;
 	}
@@ -328,6 +330,10 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 			list->pid[j] = row[4] ? (int) strtol(row[4], NULL, 10) : 0;
 		else
 			list->pid[j] = 0;
+		if (mysql_field_count(oDB->conn) > 5)
+			list->max_status[j] = row[5] ? strndup(row[5], OPH_MAX_STRING_SIZE) : NULL;
+		else
+			list->max_status[j] = NULL;
 		j++;
 	}
 	mysql_free_result(res);
@@ -345,6 +351,7 @@ int oph_odb_initialize_ophidiadb_list(ophidiadb_list * list)
 	list->pid = NULL;
 	list->wid = NULL;
 	list->ctime = NULL;
+	list->max_status = NULL;
 
 	list->size = 0;
 	return OPH_ODB_SUCCESS;
@@ -385,6 +392,15 @@ int oph_odb_free_ophidiadb_list(ophidiadb_list * list)
 			}
 		free(list->ctime);
 		list->ctime = NULL;
+	}
+	if (list->max_status) {
+		for (j = 0; j < list->size; ++j)
+			if (list->max_status[j]) {
+				free(list->max_status[j]);
+				list->max_status[j] = NULL;
+			}
+		free(list->max_status);
+		list->max_status = NULL;
 	}
 
 	list->size = 0;

@@ -60,6 +60,7 @@ typedef struct {
 	int *pid;
 	int *wid;
 	char **ctime;
+	char **max_status;
 	int size;
 } ophidiadb_list;
 
