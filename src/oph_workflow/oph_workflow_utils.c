@@ -133,8 +133,10 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		else
 			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : var->svalue, ep);
 		strcpy(submit_string, replaced_value);
-		if (value)
+		if (value) {
 			free(value);
+			value = NULL;
+		}
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;

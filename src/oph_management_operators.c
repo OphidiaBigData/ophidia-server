@@ -112,17 +112,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			char error_notification[OPH_MAX_STRING_SIZE];
 			*error_notification = 0;
 
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%d' not found!", wid);
+			oph_job_info *item = NULL;
+
 			pthread_mutex_lock(&global_flag);
 
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%d' not found!", wid);
-			oph_job_info *item = NULL, *prev = NULL;
-			if (!(item = oph_find_workflow_in_job_list_to_drop(state->job_info, sessionid, wid, &prev)))
+			if (!(item = oph_find_workflow_in_job_list(state->job_info, sessionid, wid)))
 				success = 0;
 			else if (item->wf->status < (int) OPH_ODB_STATUS_ABORTED) {
 				item->wf->status = OPH_ODB_STATUS_ABORTED;
 				item->wf->cancel_type = btype;
 				snprintf(error_notification, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, item->wf->idjob, 0, -1, item->wf->idjob, OPH_ODB_STATUS_ABORTED);
-				jobid = *(state->jobid) = *(state->jobid) + 1;
+				jobid = ++*state->jobid;
 			}
 
 			pthread_mutex_unlock(&global_flag);

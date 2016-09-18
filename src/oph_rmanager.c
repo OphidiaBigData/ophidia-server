@@ -63,7 +63,7 @@ void *_oph_system(oph_command_data * data)
 			{
 				int jobid;
 				pthread_mutex_lock(&global_flag);
-				jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
+				jobid = ++*data->state->jobid;
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "C%d: critical error in task submission\n", jobid);
 				pthread_mutex_unlock(&global_flag);
 
@@ -558,19 +558,19 @@ int free_oph_rmanager(oph_rmanager * orm)
 
 }
 
-int oph_get_result_from_file(char *filename, char **response)
+int _oph_get_result_from_file(char *filename, char **response, pthread_mutex_t * flag)
 {
 	/* declare a file pointer */
 	FILE *infile;
 	long numbytes;
 
 	/* open an existing file for reading */
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Opening file %s\n", filename);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Opening file %s\n", filename);
 	infile = fopen(filename, "r");
 
 	/* quit if the file does not exist */
 	if (infile == NULL) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to open output file: %s\n", filename);
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to open output file: %s\n", filename);
 		return RMANAGER_FILE_ERROR;
 	}
 
@@ -587,7 +587,7 @@ int oph_get_result_from_file(char *filename, char **response)
 	/* memory error */
 	if (*response == NULL) {
 		fclose(infile);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to alloc response\n");
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to alloc response\n");
 		return RMANAGER_FILE_ERROR;
 	}
 
@@ -597,9 +597,19 @@ int oph_get_result_from_file(char *filename, char **response)
 	fclose(infile);
 
 	/* confirm we have read the file by outputing it to the console */
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The file called %s contains this text\n\n%s\n\n%d chars\n", filename, *response, n);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "The file called %s contains this text\n\n%s\n\n%d chars\n", filename, *response, n);
 
 	return RMANAGER_SUCCESS;
+}
+
+int oph_get_result_from_file(char *filename, char **response)
+{
+	return _oph_get_result_from_file(filename, response, &global_flag);
+}
+
+int oph_get_result_from_file_unsafe(char *filename, char **response)
+{
+	return _oph_get_result_from_file(filename, response, NULL);
 }
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,

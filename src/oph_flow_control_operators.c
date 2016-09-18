@@ -125,8 +125,6 @@ void *_oph_wait(oph_notify_data * data)
 			}
 
 			counter = 0;
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Wait for %d steps before checking existance of file '%s'\n", wd->timeout, _filename);
-
 			while ((status == (int) OPH_ODB_STATUS_WAIT) && ((wd->timeout < 0) || (counter < wd->timeout))) {
 
 				sleep(1);
@@ -199,7 +197,7 @@ void *_oph_wait(oph_notify_data * data)
 
 		int jobid;
 		pthread_mutex_lock(&global_flag);
-		jobid = *(data->state->jobid) = *(data->state->jobid) + 1;
+		jobid = ++*data->state->jobid;
 		pthread_mutex_unlock(&global_flag);
 
 		int response = 0;
@@ -981,12 +979,12 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 
 		for (j = 0; j < names_num; ++j) {
 
-			// Drop the previous value in case of oph_set
+			// Drop the previous value
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop variable '%s'\n", names[j]);
 			hashtbl_remove(twf->vars, names[j]);
 
 			oph_workflow_var var;
-			var.caller = i;
+			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
 			if (svalues)
 				strcpy(var.svalue, svalues[j]);
@@ -1655,29 +1653,31 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			break;
 		}
 
+		oph_workflow_var var;
 		for (j = 0; j < names_num; ++j) {
 
-			// Drop the previous value in case of oph_set
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop variable '%s'\n", names[j]);
-			hashtbl_remove(wf->vars, names[j]);
+			// Add the variable only in case it does not exist
+			// otherwise do not drop the previous value;
+			// this enables non-blocking input
+			if (!hashtbl_get(wf->vars, names[j])) {
 
-			oph_workflow_var var;
-			var.caller = i;
-			var.ivalue = 1 + j;	// Non C-like indexing
-			if (svalues)
-				strcpy(var.svalue, svalues[j]);
-			else
-				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
+				var.caller = i;
+				var.ivalue = 1 + j;	// Non C-like indexing
+				if (svalues)
+					strcpy(var.svalue, svalues[j]);
+				else
+					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 
-			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, wf->name);
-			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, wf->name);
-			if (hashtbl_insert_with_size(wf->vars, names[j], (void *) &var, sizeof(oph_workflow_var))) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
-				ret = OPH_SERVER_ERROR;
-				break;
+				if (svalues)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, wf->name);
+				else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, wf->name);
+				if (hashtbl_insert_with_size(wf->vars, names[j], (void *) &var, sizeof(oph_workflow_var))) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					break;
+				}
 			}
 		}
 

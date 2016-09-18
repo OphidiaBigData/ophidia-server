@@ -121,7 +121,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	int jobid, result, i, j;
 	pthread_mutex_lock(&global_flag);
-	jobid = *(state->jobid) = *(state->jobid) + 1;
+	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
 	oph_argument *args = NULL;
@@ -2272,16 +2272,21 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						int task_index = -1, light_task_index = -1;
 
 						pthread_mutex_lock(&global_flag);
-						item =
-						    id_type ? oph_find_marker_in_job_list(state->job_info, session, marker, &task_index,
-											  &light_task_index) : oph_find_workflow_in_job_list(state->job_info, session, workflow);
+
+						if (!document_type)
+							item =
+							    id_type ? oph_find_marker_in_job_list(state->job_info, session, marker, &task_index,
+												  &light_task_index) : oph_find_workflow_in_job_list(state->job_info, session, workflow);
 
 						if (item)	// Found a workflow in memory
 						{
-							if (document_type)
-								item = NULL;	// Load the virtual JSON Request
-							else	// Build the virtual JSON Response
-							{
+							snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
+								 session_code, marker);
+							if (oph_get_result_from_file_unsafe(filename, &jstring) || !jstring) {
+
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: no JSON Response found: build the virtual response\n", jobid, marker);
+
+								// Build the virtual JSON Response
 								char ttype = 'R', session_code[OPH_MAX_STRING_SIZE];
 								int make_swap, swap, max_swap = 1;
 
@@ -3527,8 +3532,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									}
 									oph_json_free_unsafe(oper_json);
 								}
-							}
+							} else
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: JSON Response found\n", jobid, marker);
 						}
+
 						pthread_mutex_unlock(&global_flag);
 
 						if (!item)	// Check for the file

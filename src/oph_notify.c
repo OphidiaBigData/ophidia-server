@@ -85,7 +85,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 
 	int jobid;
 	pthread_mutex_lock(&global_flag);
-	jobid = *(state->jobid) = *(state->jobid) + 1;
+	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
 	return oph_workflow_notify(state, 'N', jobid, data, output_json, (int *) response);
