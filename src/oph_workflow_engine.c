@@ -735,16 +735,20 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	int i;
 	oph_workflow_task *task = &(wf->tasks[task_index]);
 
-	if ((oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1)) || (task->retry_num > 1)) {
+	char auto_retry = oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1);
+	char manual_retry = task->residual_retry_num && (task->retry_num > 1);
+	if (auto_retry || manual_retry) {
 		for (i = 0; i < task->light_tasks_num; ++i)
-			if (task->light_tasks[i].status > (int) OPH_ODB_STATUS_COMPLETED) {
+			if ((auto_retry && (task->light_tasks[i].status == (int) OPH_ODB_STATUS_START_ERROR)) || (manual_retry && (task->light_tasks[i].status > (int) OPH_ODB_STATUS_COMPLETED))) {
 				if (oph_trash_append(state->trash, wf->sessionid, task->light_tasks[i].markerid))
-					pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid '%d'.\n", task->light_tasks[i].markerid);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to release markerid '%d'\n", ttype, jobid, task->light_tasks[i].markerid);
 				else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Release markerid '%d'.\n", task->light_tasks[i].markerid);
-				task->light_tasks[i].idjob = 0;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: release markerid '%d'\n", ttype, jobid, task->light_tasks[i].markerid);
 				task->light_tasks[i].markerid = 0;
 				task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+				if (oph_odb_set_job_status(task->light_tasks[i].idjob, task->light_tasks[i].status, oDB))
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
+				task->light_tasks[i].idjob = 0;
 			}
 		task->residual_light_tasks_num = task->light_tasks_num;
 		return OPH_SERVER_OK;
@@ -1441,7 +1445,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				first = 0;
 			hashtbl_insert(task_tbl, OPH_ARG_MARKERID, str_markerid);
 
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: build the submission string.\n", ttype, jobid);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: build the submission string of task '%s' of '%s'.\n", ttype, jobid, wf->tasks[i].name, wf->name);
 			submission_string = sss = errore = NULL;
 			if (oph_workflow_get_submission_string(wf, i, -1, &submission_string, &sss, &errore)) {
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: submission string cannot be loaded\n", ttype, jobid);
@@ -2126,7 +2130,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				hashtbl_remove(task_tbl, OPH_ARG_PARENTID);
 				hashtbl_insert(task_tbl, OPH_ARG_PARENTID, str_parent);
 
-				char retry = (oph_auto_retry && wf->tasks[i].residual_auto_retry_num && (wf->tasks[i].retry_num == 1)) || (wf->tasks[i].retry_num > 1);
+				char retry = (oph_auto_retry && wf->tasks[i].residual_auto_retry_num && (wf->tasks[i].retry_num == 1)) || (wf->tasks[i].residual_retry_num
+																	   && (wf->tasks[i].retry_num > 1));
 				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
 					if (wf->tasks[i].light_tasks[j].status) {
 						if (!retry) {
@@ -2155,6 +2160,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						continue;
 					}
+					if (retry)
+						sprintf(str_markerid, "%d", wf->tasks[i].light_tasks[j].markerid);
 					hashtbl_remove(task_tbl, OPH_ARG_MARKERID);
 					hashtbl_insert(task_tbl, OPH_ARG_MARKERID, str_markerid);
 
@@ -2182,7 +2189,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						continue;
 					}
 					// Create the child job in OphidiaDB
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: create the entry for a child of '%s' in OphidiaDB.\n", ttype, jobid, wf->tasks[i].name);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: create the entry for the light task %d of '%s' in OphidiaDB using markerid '%s'.\n", ttype, jobid, j,
+					      wf->tasks[i].name, str_markerid);
 					if (oph_odb_create_job_unsafe(oDB, sss, task_tbl, -1, &odb_jobid)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save job parameters into OphidiaDB. Check access parameters.\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
@@ -2225,6 +2233,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
+
+				wf->tasks[i].status = retry ? OPH_ODB_STATUS_RUNNING : OPH_ODB_STATUS_PENDING;
+
 			} else	// Single operation
 			{
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
@@ -2268,8 +2279,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
 					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
 				request_data[k]->error_notification = strdup(submission_string_ext);
+
+				wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
 			}
-			wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
 			nn++;
 		}
 	if (task_tbl) {

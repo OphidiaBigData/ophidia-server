@@ -176,6 +176,7 @@ int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, i
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Find job with markerid '%s'\n", markerid);
 
 	if (mysql_query(oDB->conn, query)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
@@ -360,6 +361,7 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_PARENT, id_user, id_session, markerid, status, new_query, nchildren, workflowid);
 	else
 		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB, id_user, id_session, markerid, status, new_query);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Execute query: %s\n", insertQuery);
 
 	if (n >= MYSQL_BUFLEN) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
@@ -444,7 +446,7 @@ int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, 
 			return res;
 		}
 	} else {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Found a job with the same identifier %s\n", task_string);
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Found a job with the same identifier '%s'\n", markerid);
 		return res;
 	}
 
@@ -548,6 +550,10 @@ int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_
 
 	switch (status) {
 		case OPH_ODB_STATUS_UNKNOWN:
+			if (nchildren >= 0) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Status is not changed\n");
+				return OPH_ODB_SUCCESS;
+			}
 			n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_DELETE_OPHIDIADB_JOB, id_job);
 			break;
 		case OPH_ODB_STATUS_CLOSED:
