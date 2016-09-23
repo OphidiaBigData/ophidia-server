@@ -22,6 +22,7 @@
 #include "oph_workflow_exit_codes.h"
 #include "oph_workflow_status_codes.h"
 #include "oph_workflow_define.h"
+#include "oph_trash.h"
 
 #include "hashtbl.h"
 
@@ -253,7 +254,7 @@ typedef struct _oph_workflow_stack {
  * \param tasks_num Number of tasks
  * \param residual_tasks_num Number of residual tasks (initialized to tasks_num)
  * \param response Output of the execution
- * \param exit_values Values to be used in the operation executed on the end of workflow
+ * \param exit_values List of the values to be used in the operation executed on the end of workflow
  * \param run Flag used to enable/disable execution
  * \param parallel_mode Flag used by parallel flow control operator
  * \param vars Global variables
@@ -284,7 +285,7 @@ typedef struct _oph_workflow {
 	int tasks_num;
 	int residual_tasks_num;
 	char *response;
-	char *exit_values;
+	oph_trash *exit_values;
 	int run;
 	oph_workflow_task_out *output;
 	int parallel_mode;

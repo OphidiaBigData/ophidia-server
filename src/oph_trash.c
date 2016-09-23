@@ -65,17 +65,20 @@ int oph_trash_append(oph_trash * trash, const char *key, int item)
 
 	oph_trash_node *tmp;
 	for (tmp = trash->trash; tmp; tmp = tmp->next)
-		if (!strcmp(tmp->key, key))
+		if (!key || !strcmp(tmp->key, key))
 			break;
 	if (!tmp) {
 		tmp = (oph_trash_node *) malloc(sizeof(oph_trash_node));	// Node
 		if (!tmp)
 			return OPH_TRASH_ERROR;
-		tmp->key = strdup(key);	// Key
-		if (!tmp->key) {
-			free(tmp);	// Node
-			return OPH_TRASH_ERROR;
-		}
+		if (key) {
+			tmp->key = strdup(key);	// Key
+			if (!tmp->key) {
+				free(tmp);	// Node
+				return OPH_TRASH_ERROR;
+			}
+		} else
+			tmp->key = NULL;
 		tmp->head = tmp->tail = NULL;
 		tmp->next = trash->trash ? trash->trash->next : NULL;
 		trash->trash = tmp;
@@ -98,7 +101,7 @@ int oph_trash_extract(oph_trash * trash, const char *key, int *item)
 
 	oph_trash_node *tmp, *prev = NULL;
 	for (tmp = trash->trash; tmp; tmp = tmp->next) {
-		if (!strcmp(tmp->key, key))
+		if (!key || !strcmp(tmp->key, key))
 			break;
 		prev = tmp;
 	}
@@ -112,7 +115,8 @@ int oph_trash_extract(oph_trash * trash, const char *key, int *item)
 
 	if (tmp->head == tmp->tail)	// Only one item
 	{
-		free(tmp->key);	// Key
+		if (tmp->key)
+			free(tmp->key);	// Key
 		if (prev)
 			prev->next = tmp->next;
 		else
@@ -120,6 +124,35 @@ int oph_trash_extract(oph_trash * trash, const char *key, int *item)
 		free(tmp);	// Node
 	} else
 		tmp->head = next;	// More items
+
+	return OPH_TRASH_OK;
+}
+
+int oph_trash_order(oph_trash * trash, const char *key)
+{
+	if (!trash)
+		return OPH_TRASH_ERROR;
+
+	oph_trash_node *tmp;
+	oph_trash_item *temp, *next;
+	for (tmp = trash->trash; tmp; tmp = tmp->next)
+		if (!key || !strcmp(tmp->key, key))
+			break;
+	if (!tmp)
+		return OPH_TRASH_ERROR;
+
+	int swap;
+	do {
+		swap = 0;
+		for (temp = tmp->head; temp && temp->next; temp = next) {
+			next = temp->next;
+			if (temp->item > next->item) {
+				swap = temp->item;
+				temp->item = next->item;
+				next->item = swap;
+			}
+		}
+	} while (swap);
 
 	return OPH_TRASH_OK;
 }

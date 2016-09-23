@@ -3833,36 +3833,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										cubeid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
 										if (cubeid) {
 											cubeid++;
-											if (wf->exit_values) {
-												int write = 1;
-												char *last_block = strrchr(wf->exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
-												if (!last_block)
-													last_block = wf->exit_values;
-												else
-													last_block++;
-												char *last_index = strchr(last_block, OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
-												if (last_index) {
-													last_index++;
-													if (strtol(last_index, NULL, 10) + 1 == strtol(cubeid, NULL, 10)) {
-														strcpy(tmp, wf->exit_values);
-														snprintf(tmp + (last_index - wf->exit_values),
-															 OPH_MAX_STRING_SIZE - strlen(tmp) + strlen(last_index), "%s", cubeid);
-														write = 0;
-													}
-												} else {
-													if (strtol(last_block, NULL, 10) + 1 == strtol(cubeid, NULL, 10)) {
-														snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values,
-															 OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
-														write = 0;
-													}
-												}
-												if (write)
-													snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR,
-														 cubeid);
-												free(wf->exit_values);
-												wf->exit_values = strdup(tmp);
-											} else
-												wf->exit_values = strdup(cubeid);
+											if (!wf->exit_values && oph_trash_create(&wf->exit_values)) {
+												pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in allocating the list of exit values\n", ttype,
+												      jobid);
+												pthread_mutex_unlock(&global_flag);
+												*response = OPH_SERVER_SYSTEM_ERROR;
+												return SOAP_OK;
+											}
+											oph_trash_append(wf->exit_values, NULL, strtol(cubeid, NULL, 10));
 											cubeid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
 											if (cubeid)
 												*cubeid = 0;
@@ -3871,8 +3849,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									while (cubeid);
 									free(output_cubes);
 									output_cubes = NULL;
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair '%s=%c%s%c' for final operation\n", ttype, jobid, OPH_ARG_CUBE,
-									      OPH_SEPARATOR_SUBPARAM_OPEN, wf->exit_values, OPH_SEPARATOR_SUBPARAM_CLOSE);
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair for final operation\n", ttype, jobid);
 								}
 								break;
 							}
@@ -4086,15 +4063,48 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					error = 1;
 				} else {
 					kk--;
-					wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CUBE);
-					snprintf(tmp, OPH_MAX_STRING_SIZE, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, wf->exit_values,
+					// Order the exit values
+					int cubeid, write, append;
+					char exit_values[OPH_MAX_STRING_SIZE], *last_block, *last_index;
+					*exit_values = 0;
+					oph_trash_order(wf->exit_values, NULL);
+					while (!oph_trash_extract(wf->exit_values, NULL, &cubeid)) {
+						if (strlen(exit_values)) {
+							write = append = 1;
+							last_block = strrchr(exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
+							if (!last_block)
+								last_block = exit_values;
+							else
+								last_block++;
+							last_index = strchr(last_block, OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
+							if (last_index) {
+								last_index++;
+								if (strtol(last_index, NULL, 10) == cubeid - 1) {
+									snprintf(last_index, OPH_MAX_STRING_SIZE - strlen(last_index), "%d", cubeid);
+									write = append = 0;
+								}
+							} else {
+								if (strtol(last_block, NULL, 10) == cubeid - 1) {
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
+									write = 0;
+								}
+							}
+							if (write)
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
+							if (append)
+								strncat(exit_values, tmp, OPH_MAX_STRING_SIZE);
+						} else
+							snprintf(exit_values, OPH_MAX_STRING_SIZE, "%d", cubeid);
+					}
+					snprintf(tmp, OPH_MAX_STRING_SIZE, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, exit_values,
 						 OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
 						 OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
+					wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CUBE);
 					wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(tmp);
 					final_task = 1;
 					final = 0;
 				}
-				free(wf->exit_values);
+				oph_trash_destroy(wf->exit_values);
 				wf->exit_values = NULL;
 			} else {
 				oph_drop_from_job_list(state->job_info, item, prev);

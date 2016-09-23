@@ -100,7 +100,7 @@ int oph_workflow_free(oph_workflow * workflow)
 		workflow->on_exit = NULL;
 	}
 	if (workflow->exit_values) {
-		free(workflow->exit_values);
+		oph_trash_destroy(workflow->exit_values);
 		workflow->exit_values = NULL;
 	}
 	oph_workflow_task_out *tmp = NULL;
