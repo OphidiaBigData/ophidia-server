@@ -1379,6 +1379,8 @@ int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * t
 					wf->tasks[p].outputs_keys = wf->tasks[p].outputs_values = NULL;
 				}
 
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Reset task '%s' of '%s' and start a new loop.\n", wf->tasks[i].name, wf->name);
+
 				return OPH_SERVER_NO_RESPONSE;
 			}
 		} else
@@ -1949,10 +1951,12 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 		int i = *task_id, ret;
 
 		char error_message[OPH_MAX_STRING_SIZE];
-		snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing oph_endif!");
+		snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing oph_endfor!");
 
 		ret = oph_endfor_impl(wf, i, error_message, state->trash, task_id, odb_jobid);
 		if (ret) {
+			if (exit_code)
+				*exit_code = OPH_ODB_STATUS_COMPLETED;
 			pthread_mutex_unlock(&global_flag);
 			return ret;
 		}

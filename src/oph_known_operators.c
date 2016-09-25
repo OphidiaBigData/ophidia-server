@@ -32,6 +32,8 @@ extern pthread_mutex_t global_flag;
 
 int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB, enum oph__oph_odb_job_status *exit_code)
 {
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize known operator: %s (%s)\n", success ? "success" : "failure", error_message ? error_message : "-");
+
 	char *jstring = NULL;
 	if (oper_json) {
 		int return_code = 0;

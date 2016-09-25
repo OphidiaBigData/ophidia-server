@@ -2331,6 +2331,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
+								   oph_odb_convert_status_to_str(exit_code));
 							char *success_notification =
 							    oph_remake_notification(request_data[k][j].error_notification, request_data[k][j].task_id, request_data[k][j].light_task_id,
 										    request_data[k][j].jobid, exit_code, exit_output ? request_data[k][j].submission_string : NULL, sessionid);
@@ -3068,7 +3070,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 								if (!jsonvalues) {
-									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									break;
 								}
 								jjj = 0;
@@ -3076,7 +3078,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									 OPH_SESSION_MARKER_DELIMITER, wf->tasks[task_index].markerid);
 								jsonvalues[jjj] = strdup(jsontmp);
 								if (!jsonvalues[jjj]) {
-									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < jjj; iii++)
 										if (jsonvalues[iii])
 											free(jsonvalues[iii]);
@@ -3088,7 +3090,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
 								jsonvalues[jjj] = strdup(jsontmp);
 								if (!jsonvalues[jjj]) {
-									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < jjj; iii++)
 										if (jsonvalues[iii])
 											free(jsonvalues[iii]);
@@ -3100,7 +3102,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 								jsonvalues[jjj] = strdup(jsontmp);
 								if (!jsonvalues[jjj]) {
-									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < jjj; iii++)
 										if (jsonvalues[iii])
 											free(jsonvalues[iii]);
@@ -3110,7 +3112,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								}
 								jjj++;
 								if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_INFO, jsonvalues)) {
-									pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: ADD GRID ROW error\n", jobid);
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);
 									for (iii = 0; iii < num_fields; iii++)
 										if (jsonvalues[iii])
 											free(jsonvalues[iii]);
