@@ -342,6 +342,11 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 			int count;
 			char **names;
 			void *me = evaluator_create(condition);
+			if (!me) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong expression '%s'!", condition);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+				return OPH_SERVER_ERROR;
+			}
 			evaluator_get_variables(me, &names, &count);
 			if (count > 0) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Too variables in the expression '%s'!", condition);
