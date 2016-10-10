@@ -445,6 +445,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success) {
@@ -521,6 +522,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success) {
@@ -1141,6 +1143,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					break;
 				}
 				success = 1;
+				*error_message = 0;
 			}
 
 			if (success) {

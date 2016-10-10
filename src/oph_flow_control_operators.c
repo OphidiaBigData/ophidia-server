@@ -1801,6 +1801,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success) {
@@ -1901,6 +1902,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success) {
@@ -2009,6 +2011,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		pthread_mutex_unlock(&global_flag);
@@ -2097,6 +2100,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 #ifdef MATHEVAL_SUPPORT
@@ -2195,6 +2199,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success && !strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE)) {
@@ -2288,6 +2293,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		oph_notify_data *data = NULL;
@@ -2471,6 +2477,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 
 			success = 1;
+			*error_message = 0;
 		}
 
 		if (success) {
