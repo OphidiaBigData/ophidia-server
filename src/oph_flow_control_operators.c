@@ -195,10 +195,12 @@ void *_oph_wait(oph_notify_data * data)
 		else
 			oph_odb_abort_job_fast(idjob, &oDB);
 
-		int jobid;
-		pthread_mutex_lock(&global_flag);
-		jobid = ++*data->state->jobid;
-		pthread_mutex_unlock(&global_flag);
+		int jobid = 0;
+		if (state) {
+			pthread_mutex_lock(&global_flag);
+			jobid = ++*state->jobid;
+			pthread_mutex_unlock(&global_flag);
+		}
 
 		int response = 0;
 		char success_notification[OPH_MAX_STRING_SIZE];
@@ -1533,6 +1535,15 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				wd->filename = strdup(arg_value);
 			} else if (message && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_MESSAGE)) {
 				*message = strdup(arg_value);
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_RUN)) {
+				if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NO))
+					data->run = 0;
+				else if (strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES)) {
+					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong value '%s' for parameter '%s'!", arg_value, OPH_OPERATOR_PARAMETER_RUN);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					break;
+				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_CUBE)) {
 				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_CUBE, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
 				strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
@@ -1698,7 +1709,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Change status of workflow '%s' to %s.\n", wf->name, oph_odb_convert_status_to_str(wf->status));
 		}
 		if (wd->timeout >= 0)
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' starts to wait %s for %d second%s.\n", wf->tasks[i].name, wf->name, wd->timeout ? "" : "virtually",
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' starts to wait %sfor %d second%s.\n", wf->tasks[i].name, wf->name, wd->timeout ? "" : "virtually ",
 			      wd->timeout, wd->timeout == 1 ? "" : "s");
 		else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' starts to wait indefinitely.\n", wf->tasks[i].name, wf->name);
@@ -2304,13 +2315,13 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Memory error.\n");
 				pthread_mutex_unlock(&global_flag);
 				oph_json_free(oper_json);
-				free(data);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			data->wf = wf;
 			data->task_index = i;
 			data->json_output = NULL;
 			data->data = NULL;
+			data->run = 1;
 
 			data->state = (struct oph_plugin_data *) malloc(sizeof(struct oph_plugin_data));
 			if (!data->state) {
@@ -2393,13 +2404,16 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			if (success) {
 				if (*response)
 					data->json_output = strdup(*response);
+				if (data->run) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-				pthread_t tid;
-				pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_wait, data);
+					pthread_t tid;
+					pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_wait, data);
 #else
-				_oph_wait(data);
+					_oph_wait(data);
 #endif
-			} else {
+				}
+			}
+			if (!success || !data->run) {
 				if (data->state) {
 					if (data->state->serverid)
 						free(data->state->serverid);

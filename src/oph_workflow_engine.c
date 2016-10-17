@@ -2526,7 +2526,13 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data);
+	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
+
+	if (!state) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: state not specified. Skipping the notification\n", ttype, jobid);
+		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		return SOAP_OK;
+	}
 
 	oph_argument *args = NULL, *aitem;
 	unsigned int ii, counter;

@@ -29,6 +29,7 @@ typedef struct _oph_notify_data {
 	struct oph_plugin_data *state;
 	char *add_to_notify;
 	void *data;
+	char run;
 } oph_notify_data;
 
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,

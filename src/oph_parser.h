@@ -105,6 +105,7 @@
 #define OPH_OPERATOR_PARAMETER_ACTION "action"
 #define OPH_OPERATOR_PARAMETER_TASKNAME "taskname"
 #define OPH_OPERATOR_PARAMETER_ID "id"
+#define OPH_OPERATOR_PARAMETER_RUN "run"
 
 // Known values
 #define OPH_COMMON_NULL "-"
