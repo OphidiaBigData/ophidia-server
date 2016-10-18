@@ -51,6 +51,7 @@ dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/in
 endif
 
 AM_DEFAULT_VERBOSITY = 1
+CODE_COVERAGE_LCOV_OPTIONS = --gcov-tool "$(GCOV)" --no-external
 @CODE_COVERAGE_RULES@
 
 clean-local:

@@ -54,11 +54,12 @@ void *_oph_wait(oph_notify_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 #endif
+
 	if (!data || !data->data) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading input data\n");
 		return NULL;
 	}
-	// Init
+
 	oph_workflow *wf = data->wf;
 	int task_index = data->task_index, idjob, pidjob, status, success = 1;
 	struct oph_plugin_data *state = data->state;
@@ -67,6 +68,8 @@ void *_oph_wait(oph_notify_data * data)
 	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
 	CURL *curl = NULL;
 
+	// Init
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Initialize waiting procedure\n");
 	switch (wd->type) {
 		case 'f':
 			if (strstr(wd->filename, "http")) {
@@ -99,6 +102,8 @@ void *_oph_wait(oph_notify_data * data)
 
 	// Process
 	if (success) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Process waiting procedure\n");
 
 		int counter;
 		struct stat s;
@@ -178,6 +183,8 @@ void *_oph_wait(oph_notify_data * data)
 		pthread_mutex_unlock(&global_flag);
 	}
 	// Finalize
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize waiting procedure\n");
+
 	ophidiadb oDB;
 	while (success) {
 
@@ -196,7 +203,7 @@ void *_oph_wait(oph_notify_data * data)
 			oph_odb_abort_job_fast(idjob, &oDB);
 
 		int jobid = 0;
-		if (state) {
+		if (state && state->jobid) {
 			pthread_mutex_lock(&global_flag);
 			jobid = ++*state->jobid;
 			pthread_mutex_unlock(&global_flag);
@@ -206,7 +213,8 @@ void *_oph_wait(oph_notify_data * data)
 		char success_notification[OPH_MAX_STRING_SIZE];
 		snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob, OPH_ARG_TASKINDEX,
 			 task_index, OPH_ARG_LIGHTTASKINDEX, -1, data->add_to_notify ? data->add_to_notify : "");
-		oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
+		if (state->jobid)
+			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 		if (response)
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
 
@@ -235,9 +243,12 @@ void *_oph_wait(oph_notify_data * data)
 	}
 	free(data);
 
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
+
 	return NULL;
 }
 
@@ -748,12 +759,77 @@ int oph_extract_from_json(char **key, const char *json_string)
 }
 
 // Thread unsafe
+int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *svalues_num, char *arg_value)
+{
+	int h, hh, kk = 0;
+	char *tmp = strdup(arg_value), expansion, *pch, *pch1, *save_pointer = NULL;
+	if (!tmp)
+		return OPH_SERVER_ERROR;
+	do {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
+		expansion = *svalues_num = 0;
+		pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
+		for (++*svalues_num; pch; ++*svalues_num) {
+			pch1 = pch + 1;
+			if (!pch1 || !*pch1)
+				break;
+			pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
+		}
+		*svalues = (char **) malloc(*svalues_num * sizeof(char *));
+		if (!*svalues)
+			break;
+		pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+		for (kk = 0; kk < *svalues_num; ++kk) {
+			(*svalues)[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
+			if (!(*svalues)[kk])
+				break;
+			for (h = 0; h < wf->tasks_num; ++h)
+				if (wf->tasks[h].response) {
+					for (hh = 0; hh < wf->tasks[h].dependents_indexes_num; ++hh)
+						if (wf->tasks[h].dependents_indexes[hh] == i) {
+							if (!oph_extract_from_json(*svalues + kk, wf->tasks[h].response))	// Found a correspondence
+							{
+								if (strchr((*svalues)[kk], OPH_SEPARATOR_SUBPARAM)) {
+									hh = 0;
+									char expanded_value[1 + strlen(arg_value) + strlen((*svalues)[kk])];
+									for (h = 0; h < kk; ++h)
+										hh = sprintf(expanded_value + hh, "%s%c", (*svalues)[h], OPH_SEPARATOR_SUBPARAM);
+									hh = sprintf(expanded_value + hh, "%s", (*svalues)[kk]);
+									pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+									if (pch)
+										sprintf(expanded_value + hh, "%c%s", OPH_SEPARATOR_SUBPARAM, pch);
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values expansion: %s\n", expanded_value);
+									free(tmp);
+									tmp = strdup(expanded_value);
+									for (h = 0; h <= kk; ++h)
+										free((*svalues)[h]);
+									free(*svalues);
+									expansion = 1;
+								}
+								break;
+							}
+						}
+					if (expansion || (hh < wf->tasks[h].dependents_indexes_num))
+						break;
+				}
+			if (!expansion)
+				pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+		}
+	}
+	while (expansion);
+	free(tmp);
+	if (kk < *svalues_num)
+		return OPH_SERVER_ERROR;
+	return OPH_SERVER_OK;
+}
+
+// Thread unsafe
 int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugin_data *state, char has_action)
 {
 	*error_message = 0;
 
-	char *pch, *save_pointer = NULL, *name = NULL, **names = NULL, **svalues = NULL;
-	int j, kk = 0, h, hh, names_num = 0, svalues_num = 0, wid = 0, tt = -1;
+	char *name = NULL, **names = NULL, **svalues = NULL;
+	int j, kk = 0, names_num = 0, svalues_num = 0, wid = 0, tt = -1;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL;
 	oph_workflow *twf = wf;
@@ -782,65 +858,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
-				char *tmp = strdup(arg_value), expansion, *pch1;
-				if (!tmp)
-					break;
-				do {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
-					expansion = svalues_num = 0;
-					pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
-					for (svalues_num++; pch; svalues_num++) {
-						pch1 = pch + 1;
-						if (!pch1 || !*pch1)
-							break;
-						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
-					}
-					svalues = (char **) malloc(svalues_num * sizeof(char *));
-					if (!svalues)
-						break;
-					pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					for (kk = 0; kk < svalues_num; ++kk) {
-						svalues[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
-						if (!svalues[kk])
-							break;
-						// Begin check in input JSON Response
-						for (h = 0; h < wf->tasks_num; ++h)
-							if (wf->tasks[h].response) {
-								for (hh = 0; hh < wf->tasks[h].dependents_indexes_num; ++hh)
-									if (wf->tasks[h].dependents_indexes[hh] == i) {
-										if (!oph_extract_from_json(svalues + kk, wf->tasks[h].response))	// Found a correspondence
-										{
-											if (strchr(svalues[kk], OPH_SEPARATOR_SUBPARAM)) {
-												hh = 0;
-												char expanded_value[1 + strlen(arg_value) + strlen(svalues[kk])];
-												for (h = 0; h < kk; ++h)
-													hh = sprintf(expanded_value + hh, "%s%c", svalues[h], OPH_SEPARATOR_SUBPARAM);
-												hh = sprintf(expanded_value + hh, "%s", svalues[kk]);
-												pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-												if (pch)
-													sprintf(expanded_value + hh, "%c%s", OPH_SEPARATOR_SUBPARAM, pch);
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values expansion: %s\n", expanded_value);
-												free(tmp);
-												tmp = strdup(expanded_value);
-												for (h = 0; h <= kk; ++h)
-													free(svalues[h]);
-												free(svalues);
-												expansion = 1;
-											}
-											break;
-										}
-									}
-								if (expansion || (hh < wf->tasks[h].dependents_indexes_num))
-									break;
-							}
-						// End check
-						if (!expansion)
-							pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					}
-				}
-				while (expansion);
-				free(tmp);
-				if (kk < svalues_num)
+				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
 			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_ID)) {
 				wid = strtol(arg_value, NULL, 10);
@@ -898,7 +916,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				break;
 			}
 
-			char *tmp = strdup(arg_value), *pch1;
+			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
 				break;
 			pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
@@ -1042,9 +1060,9 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 {
 	*error_message = 0;
 
-	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL, mode = 0;
+	char *name = NULL, **svalues = NULL, mode = 0;
 	int *ivalues = NULL;	// If not allocated then it is equal to [1:values_num]
-	int j, kk = 0, h, hh, svalues_num = 0, ivalues_num = 0;
+	int j, kk = 0, svalues_num = 0, ivalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	long value;
 	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL;
@@ -1072,65 +1090,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUES) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
-				char *tmp = strdup(arg_value), expansion, *pch1;
-				if (!tmp)
-					break;
-				do {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
-					expansion = svalues_num = 0;
-					pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
-					for (svalues_num++; pch; svalues_num++) {
-						pch1 = pch + 1;
-						if (!pch1 || !*pch1)
-							break;
-						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
-					}
-					svalues = (char **) malloc(svalues_num * sizeof(char *));
-					if (!svalues)
-						break;
-					pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					for (kk = 0; kk < svalues_num; ++kk) {
-						svalues[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
-						if (!svalues[kk])
-							break;
-						// Begin check in input JSON Response
-						for (h = 0; h < wf->tasks_num; ++h)
-							if (wf->tasks[h].response) {
-								for (hh = 0; hh < wf->tasks[h].dependents_indexes_num; ++hh)
-									if (wf->tasks[h].dependents_indexes[hh] == i) {
-										if (!oph_extract_from_json(svalues + kk, wf->tasks[h].response))	// Found a correspondence
-										{
-											if (strchr(svalues[kk], OPH_SEPARATOR_SUBPARAM)) {
-												hh = 0;
-												char expanded_value[1 + strlen(arg_value) + strlen(svalues[kk])];
-												for (h = 0; h < kk; ++h)
-													hh = sprintf(expanded_value + hh, "%s%c", svalues[h], OPH_SEPARATOR_SUBPARAM);
-												hh = sprintf(expanded_value + hh, "%s", svalues[kk]);
-												pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-												if (pch)
-													sprintf(expanded_value + hh, "%c%s", OPH_SEPARATOR_SUBPARAM, pch);
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values expansion: %s\n", expanded_value);
-												free(tmp);
-												tmp = strdup(expanded_value);
-												for (h = 0; h <= kk; ++h)
-													free(svalues[h]);
-												free(svalues);
-												expansion = 1;
-											}
-											break;
-										}
-									}
-								if (expansion || (hh < wf->tasks[h].dependents_indexes_num))
-									break;
-							}
-						// End check
-						if (!expansion)
-							pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					}
-				}
-				while (expansion);
-				free(tmp);
-				if (kk < svalues_num)
+				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
 			} else if (!mode && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL)) {
 				if (!strcasecmp(arg_value, OPH_COMMON_YES))
@@ -1411,8 +1371,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 {
 	*error_message = 0;
 
-	char *pch, *save_pointer = NULL, *name = NULL, **names = NULL, **svalues = NULL;
-	int j, kk = 0, h, hh, names_num = 0, svalues_num = 0;
+	char *name = NULL, **names = NULL, **svalues = NULL;
+	int j, kk = 0, names_num = 0, svalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *timeout = NULL, ttype = 'i';
 	char add_to_notify[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
@@ -1449,65 +1409,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
-				char *tmp = strdup(arg_value), expansion, *pch1;
-				if (!tmp)
-					break;
-				do {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
-					expansion = svalues_num = 0;
-					pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
-					for (svalues_num++; pch; svalues_num++) {
-						pch1 = pch + 1;
-						if (!pch1 || !*pch1)
-							break;
-						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
-					}
-					svalues = (char **) malloc(svalues_num * sizeof(char *));
-					if (!svalues)
-						break;
-					pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					for (kk = 0; kk < svalues_num; ++kk) {
-						svalues[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
-						if (!svalues[kk])
-							break;
-						// Begin check in input JSON Response
-						for (h = 0; h < wf->tasks_num; ++h)
-							if (wf->tasks[h].response) {
-								for (hh = 0; hh < wf->tasks[h].dependents_indexes_num; ++hh)
-									if (wf->tasks[h].dependents_indexes[hh] == i) {
-										if (!oph_extract_from_json(svalues + kk, wf->tasks[h].response))	// Found a correspondence
-										{
-											if (strchr(svalues[kk], OPH_SEPARATOR_SUBPARAM)) {
-												hh = 0;
-												char expanded_value[1 + strlen(arg_value) + strlen(svalues[kk])];
-												for (h = 0; h < kk; ++h)
-													hh = sprintf(expanded_value + hh, "%s%c", svalues[h], OPH_SEPARATOR_SUBPARAM);
-												hh = sprintf(expanded_value + hh, "%s", svalues[kk]);
-												pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-												if (pch)
-													sprintf(expanded_value + hh, "%c%s", OPH_SEPARATOR_SUBPARAM, pch);
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values expansion: %s\n", expanded_value);
-												free(tmp);
-												tmp = strdup(expanded_value);
-												for (h = 0; h <= kk; ++h)
-													free(svalues[h]);
-												free(svalues);
-												expansion = 1;
-											}
-											break;
-										}
-									}
-								if (expansion || (hh < wf->tasks[h].dependents_indexes_num))
-									break;
-							}
-						// End check
-						if (!expansion)
-							pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-					}
-				}
-				while (expansion);
-				free(tmp);
-				if (kk < svalues_num)
+				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TYPE)) {
 				if (!strcmp(arg_value, OPH_OPERATOR_WAIT_PARAMETER_TYPE_INPUT))
@@ -1607,7 +1509,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				break;
 			}
 
-			char *tmp = strdup(arg_value), *pch1;
+			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
 				break;
 			pch = strchr(tmp, OPH_SEPARATOR_SUBPARAM);
@@ -1742,6 +1644,11 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 	UNUSED(request);
 	UNUSED(jobid_response);
 	UNUSED(exit_output);
+
+	if (!state) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Workflow list cannot be given\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 
 	int error = OPH_SERVER_UNKNOWN;
 
@@ -2320,6 +2227,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			data->wf = wf;
 			data->task_index = i;
 			data->json_output = NULL;
+			data->add_to_notify = NULL;
 			data->data = NULL;
 			data->run = 1;
 
@@ -2350,6 +2258,14 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 							free(data->state->serverid);
 						free(data->state);
 					}
+					if (data->add_to_notify)
+						free(data->add_to_notify);
+					oph_wait_data *wd = (oph_wait_data *) data->data;
+					if (wd) {
+						if (wd->filename)
+							free(wd->filename);
+						free(wd);
+					}
 					free(data);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
@@ -2373,6 +2289,14 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 						free(data->state->serverid);
 					free(data->state);
 				}
+				if (data->add_to_notify)
+					free(data->add_to_notify);
+				oph_wait_data *wd = (oph_wait_data *) data->data;
+				if (wd) {
+					if (wd->filename)
+						free(wd->filename);
+					free(wd);
+				}
 				free(data);
 			}
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2385,6 +2309,14 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 					if (data->state->serverid)
 						free(data->state->serverid);
 					free(data->state);
+				}
+				if (data->add_to_notify)
+					free(data->add_to_notify);
+				oph_wait_data *wd = (oph_wait_data *) data->data;
+				if (wd) {
+					if (wd->filename)
+						free(wd->filename);
+					free(wd);
 				}
 				free(data);
 			}
@@ -2405,6 +2337,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 				if (*response)
 					data->json_output = strdup(*response);
 				if (data->run) {
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Starting waiting procedure\n");
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 					pthread_t tid;
 					pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_wait, data);
@@ -2418,6 +2351,14 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 					if (data->state->serverid)
 						free(data->state->serverid);
 					free(data->state);
+				}
+				if (data->add_to_notify)
+					free(data->add_to_notify);
+				oph_wait_data *wd = (oph_wait_data *) data->data;
+				if (wd) {
+					if (wd->filename)
+						free(wd->filename);
+					free(wd);
 				}
 				free(data);
 			}

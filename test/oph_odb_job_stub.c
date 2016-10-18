@@ -236,6 +236,8 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 	switch (status) {
 		case OPH_ODB_STATUS_PENDING:
 			return OPH_ODB_STATUS_PENDING_STR;
+		case OPH_ODB_STATUS_WAIT:
+			return OPH_ODB_STATUS_WAIT_STR;
 		case OPH_ODB_STATUS_RUNNING:
 			return OPH_ODB_STATUS_RUNNING_STR;
 		case OPH_ODB_STATUS_START:
@@ -278,10 +280,12 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 			return OPH_ODB_STATUS_DESTROY_ERROR_STR;
 		case OPH_ODB_STATUS_UNSET_ENV_ERROR:
 			return OPH_ODB_STATUS_UNSET_ENV_ERROR_STR;
-		case OPH_ODB_STATUS_ABORTED:
-			return OPH_ODB_STATUS_ABORTED_STR;
 		case OPH_ODB_STATUS_SKIPPED:
 			return OPH_ODB_STATUS_SKIPPED_STR;
+		case OPH_ODB_STATUS_ABORTED:
+			return OPH_ODB_STATUS_ABORTED_STR;
+		case OPH_ODB_STATUS_UNSELECTED:
+			return OPH_ODB_STATUS_UNSELECTED_STR;
 		case OPH_ODB_STATUS_EXPIRED:
 			return OPH_ODB_STATUS_EXPIRED_STR;
 		case OPH_ODB_STATUS_CLOSED:
