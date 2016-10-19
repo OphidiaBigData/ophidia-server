@@ -4100,7 +4100,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							if (write)
 								snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
 							if (append)
-								strncat(exit_values, tmp, OPH_MAX_STRING_SIZE);
+								strncat(exit_values, tmp, OPH_MAX_STRING_SIZE - strlen(exit_values) - 1);
 						} else
 							snprintf(exit_values, OPH_MAX_STRING_SIZE, "%d", cubeid);
 					}
