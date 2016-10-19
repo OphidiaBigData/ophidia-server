@@ -43,12 +43,6 @@ extern char *oph_web_server_location;
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
 
-typedef struct _oph_wait_data {
-	char type;
-	int timeout;
-	char *filename;
-} oph_wait_data;
-
 void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -1470,9 +1464,10 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			if (ttype == 'd') {
 				struct tm tm;
 				time_t epoch;
-				if (strptime(timeout, "%Y-%m-%d %H:%M:%S", &tm) != NULL)
+				if (strptime(timeout, "%Y-%m-%d %H:%M:%S", &tm) != NULL) {
+					tm.tm_isdst = -1;
 					epoch = mktime(&tm);
-				else {
+				} else {
 					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Date conversion error in parsing the value '%s' for task '%s'!", timeout, wf->tasks[i].name);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 					ret = OPH_SERVER_ERROR;

@@ -70,17 +70,21 @@ int openDir(const char *path, int recursive, unsigned int *counter, char **buffe
 		glob_t globbuf;
 		char *path_and_file = NULL;
 		s = asprintf(&path_and_file, "%s/%s", path, file);
-		if (!path_and_file)
+		if (!path_and_file) {
+			closedir(dirp);
 			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		if ((s = glob(path_and_file, GLOB_MARK | GLOB_NOSORT, NULL, &globbuf))) {
 			if (s != GLOB_NOMATCH) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to parse '%s'\n", path_and_file);
 				free(path_and_file);
+				closedir(dirp);
 				return OPH_SERVER_SYSTEM_ERROR;
 			} else {
 				pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "No object found.\n");
 				if (!recursive) {
 					free(path_and_file);
+					closedir(dirp);
 					return OPH_SERVER_OK;
 				}
 			}
@@ -204,8 +208,15 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Filtering query: %s\n", query);
-		if (_query)
-			*_query = strdup(query);
+		if (_query) {
+			if (*_query) {
+				char tquery[2 + strlen(*_query) + strlen(query)];
+				sprintf(tquery, "%s|%s", *_query, query);
+				free(*_query);
+				*_query = strdup(tquery);
+			} else
+				*_query = strdup(query);
+		}
 	}
 
 	char *running_value = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_RUN) : NULL;

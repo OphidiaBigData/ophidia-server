@@ -329,8 +329,9 @@ int _check_oph_server(const char *function, int option)
 					var.caller = -1;
 					var.ivalue = 1;
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "234-234");
-					if (hashtbl_insert_with_size(wf->vars, "condition", (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, "condition", (void *) &var, sizeof(oph_workflow_var))) {
+						goto _EXIT_3;
+					}
 					free(wf->tasks[0].arguments_values[0]);
 					wf->tasks[0].arguments_values[0] = strdup("@condition");
 				}
@@ -353,33 +354,33 @@ int _check_oph_server(const char *function, int option)
 			case 5:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong condition '0/0'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 6:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong condition '1/0'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 9:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Too variables in the expression 'x'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 #endif
 			case 8:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@condition' in task 'IF'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -394,7 +395,7 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || !wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -405,15 +406,15 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Task status is wrong: %s\n", oph_odb_convert_status_to_str(wf->tasks[1].status));
-						return 1;
+						goto _EXIT_3;
 					}
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->tasks[4].deps[0].task_index != 4) || (wf->tasks[4].deps[1].task_index != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Dependence data are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -422,15 +423,15 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (!wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || !wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->tasks[4].deps[0].task_index != 4) || (wf->tasks[4].deps[1].task_index != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Dependence data are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -439,7 +440,7 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || !wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -449,7 +450,7 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || !wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -596,7 +597,7 @@ int _check_oph_server(const char *function, int option)
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -605,15 +606,15 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (wf->tasks[1].status != OPH_ODB_STATUS_UNSELECTED) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->tasks[4].deps[0].task_index != 0) || (wf->tasks[4].deps[1].task_index != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Dependence data are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -622,15 +623,15 @@ int _check_oph_server(const char *function, int option)
 				{
 					if ((wf->tasks[1].status == OPH_ODB_STATUS_UNSELECTED) || (wf->tasks[3].status != OPH_ODB_STATUS_UNSELECTED)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Status flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (wf->tasks[0].is_skipped || wf->tasks[1].is_skipped || !wf->tasks[2].is_skipped || wf->tasks[3].is_skipped || wf->tasks[4].is_skipped) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Skipping flags are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->tasks[4].deps[0].task_index != 1) || (wf->tasks[4].deps[1].task_index != 0)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Dependence data are wrong\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -838,8 +839,9 @@ int _check_oph_server(const char *function, int option)
 					var.caller = -1;
 					var.ivalue = 1;
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "first|second|third");
-					if (hashtbl_insert_with_size(wf->vars, "values", (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, "values", (void *) &var, sizeof(oph_workflow_var))) {
+						goto _EXIT_3;
+					}
 					free(wf->tasks[1].arguments_values[1]);
 					wf->tasks[1].arguments_values[1] = strdup("@values");
 				}
@@ -975,45 +977,45 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 7:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Non-empty stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 8:
 				if (res || !strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nEmpty error message\n", res);
-					return 1;
+					goto _EXIT_3;
 				}
 				if (strcmp(error_message, "Change variable name '1ndex'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Empty stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->caller != for_index) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Flag 'caller' is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->index) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Index is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack->name) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
@@ -1023,30 +1025,30 @@ int _check_oph_server(const char *function, int option)
 			case 15:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'FOR'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Empty stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->caller != for_index) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Flag 'caller' is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->index) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Index is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack->name) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -1058,12 +1060,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->svalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(wf->stack->svalues[0], "first") || strcmp(wf->stack->svalues[1], "second") || strcmp(wf->stack->svalues[2], "third")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %s|%s|%s\n", wf->stack->svalues[0], wf->stack->svalues[1],
 						      wf->stack->svalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1076,12 +1078,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->svalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(wf->stack->svalues[0], "1st") || strcmp(wf->stack->svalues[1], "2nd") || strcmp(wf->stack->svalues[2], "3rd")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %s|%s|%s\n", wf->stack->svalues[0], wf->stack->svalues[1],
 						      wf->stack->svalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1090,12 +1092,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->svalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(wf->stack->svalues[0], "1st") || strcmp(wf->stack->svalues[1], "data.table2.column(4)") || strcmp(wf->stack->svalues[2], "3rd")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %s|%s|%s\n", wf->stack->svalues[0], wf->stack->svalues[1],
 						      wf->stack->svalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1110,12 +1112,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->ivalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->stack->ivalues[0] != 1) || (wf->stack->ivalues[1] != 2) || (wf->stack->ivalues[2] != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %d|%d|%d\n", wf->stack->ivalues[0], wf->stack->ivalues[1],
 						      wf->stack->ivalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1126,7 +1128,7 @@ int _check_oph_server(const char *function, int option)
 				{
 					if ((wf->stack->values_num != 1) || wf->stack->ivalues || wf->stack->svalues) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1218,8 +1220,9 @@ int _check_oph_server(const char *function, int option)
 		int odb_jobid = wf->tasks[2].idjob;
 
 		oph_trash *trash;
-		if (oph_trash_create(&trash))
-			return 1;
+		if (oph_trash_create(&trash)) {
+			goto _EXIT_3;
+		}
 
 		switch (option) {
 			case 3:
@@ -1239,8 +1242,14 @@ int _check_oph_server(const char *function, int option)
 					ivalues[0] = 1;
 					ivalues[1] = 2;
 					ivalues[2] = 3;
-					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num))
-						return 1;
+					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num)) {
+						oph_trash_destroy(trash);
+						while (--svalues_num)
+							free(svalues[svalues_num]);
+						free(svalues);
+						free(ivalues);
+						goto _EXIT_3;
+					}
 				}
 				break;
 
@@ -1255,8 +1264,14 @@ int _check_oph_server(const char *function, int option)
 					ivalues[0] = 1;
 					ivalues[1] = 2;
 					ivalues[2] = 3;
-					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num) || !wf->stack)
-						return 1;
+					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num) || !wf->stack) {
+						oph_trash_destroy(trash);
+						while (--svalues_num)
+							free(svalues[svalues_num]);
+						free(svalues);
+						free(ivalues);
+						goto _EXIT_3;
+					}
 
 					wf->stack->index = 2;
 
@@ -1264,8 +1279,10 @@ int _check_oph_server(const char *function, int option)
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
-					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var))) {
+						oph_trash_destroy(trash);
+						goto _EXIT_3;
+					}
 				}
 				break;
 
@@ -1280,15 +1297,23 @@ int _check_oph_server(const char *function, int option)
 					ivalues[0] = 1;
 					ivalues[1] = 2;
 					ivalues[2] = 3;
-					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num) || !wf->stack)
-						return 1;
+					if (oph_workflow_push(wf, 0, wf->tasks[0].arguments_values[0], svalues, ivalues, svalues_num) || !wf->stack) {
+						oph_trash_destroy(trash);
+						while (--svalues_num)
+							free(svalues[svalues_num]);
+						free(svalues);
+						free(ivalues);
+						goto _EXIT_3;
+					}
 
 					oph_workflow_var var;
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
-					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var))) {
+						oph_trash_destroy(trash);
+						goto _EXIT_3;
+					}
 				}
 		}
 
@@ -1318,18 +1343,21 @@ int _check_oph_server(const char *function, int option)
 			case 5:
 				if (trash && trash->trash) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Non empty trash\n");
-					return 1;
+					oph_trash_destroy(trash);
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (!trash || !trash->trash || !trash->trash->key || !trash->trash->head || !trash->trash->head->item) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Empty trash\n");
-					return 1;
+					oph_trash_destroy(trash);
+					goto _EXIT_3;
 				}
 				if (strcmp(trash->trash->key, wf->sessionid) || (trash->trash->head->item != 4)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Untrashed marker id\n");
-					return 1;
+					oph_trash_destroy(trash);
+					goto _EXIT_3;
 				}
 		}
 
@@ -1340,11 +1368,11 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (res || !strlen(error_message)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(error_message, "No index found in environment of workflow 'test'.")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong error message: %s\n", error_message);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1353,11 +1381,11 @@ int _check_oph_server(const char *function, int option)
 				{
 					if ((res != OPH_SERVER_SYSTEM_ERROR) || !strlen(error_message)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(error_message, "Unable to remove variable 'index' from environment of workflow 'test'.")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong error message: %s\n", error_message);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1366,7 +1394,7 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (res || strlen(error_message)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1374,27 +1402,27 @@ int _check_oph_server(const char *function, int option)
 			default:
 				if ((res != OPH_SERVER_NO_RESPONSE) || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Empty stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->caller) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Flag 'caller' is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->stack->index != 1) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Index is wrong\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (!wf->stack->name) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-					return 1;
+					goto _EXIT_3;
 				}
 				if (wf->tasks[0].outputs_num || wf->tasks[0].outputs_keys || wf->tasks[0].outputs_values) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Task status not reset\n");
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -1404,12 +1432,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->svalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if (strcmp(wf->stack->svalues[0], "first") || strcmp(wf->stack->svalues[1], "second") || strcmp(wf->stack->svalues[2], "third")) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %s|%s|%s\n", wf->stack->svalues[0], wf->stack->svalues[1],
 						      wf->stack->svalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1421,12 +1449,12 @@ int _check_oph_server(const char *function, int option)
 				{
 					if (!wf->stack->ivalues || (wf->stack->values_num != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack\n");
-						return 1;
+						goto _EXIT_3;
 					}
 					if ((wf->stack->ivalues[0] != 1) || (wf->stack->ivalues[1] != 2) || (wf->stack->ivalues[2] != 3)) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameters are not correctly pushed into the stack: %d|%d|%d\n", wf->stack->ivalues[0], wf->stack->ivalues[1],
 						      wf->stack->ivalues[2]);
-						return 1;
+						goto _EXIT_3;
 					}
 				}
 				break;
@@ -1434,20 +1462,29 @@ int _check_oph_server(const char *function, int option)
 	} else if (!strcmp(function, "oph_serve_flow_control_operator")) {
 
 		struct oph_plugin_data *state = (struct oph_plugin_data *) calloc(1, sizeof(struct oph_plugin_data));
-		if (!state)
-			return 1;
+		if (!state) {
+			goto _EXIT_3;
+		}
 
 		oph_job_list *job_info;
-		if (oph_create_job_list(&job_info))
-			return 1;
+		if (oph_create_job_list(&job_info)) {
+			free(state);
+			goto _EXIT_3;
+		}
 		state->job_info = job_info;
 
-		if (oph_wf_list_append(job_info, wf))
-			return 1;
+		if (oph_wf_list_append(job_info, wf)) {
+			oph_destroy_job_list(job_info);
+			free(state);
+			goto _EXIT_3;
+		}
 
 		oph_trash *trash;
-		if (oph_trash_create(&trash))
+		if (oph_trash_create(&trash)) {
+			oph_destroy_job_list(job_info);
+			free(state);
 			return 1;
+		}
 		state->trash = trash;
 
 		char markerid[OPH_SHORT_STRING_SIZE];
@@ -1858,22 +1895,24 @@ int _check_oph_server(const char *function, int option)
 		int res =
 		    oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output, operator_name);
 
+		if (response)
+			free(response);
+
+		if ((option >= 4) && (option <= 6))
+			sleep(3);
+
+		wf = NULL;
+		oph_destroy_job_list(job_info);
+		oph_trash_destroy(trash);
+		free(state);
+
 		if (res != OPH_SERVER_NO_RESPONSE) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 			return 1;
 		}
 
-		if (option == 4)
-			sleep(3);
-		else if ((option >= 5) && (option <= 6))
-			sleep(1);
-
-		oph_destroy_job_list(job_info);
-		oph_trash_destroy(trash);
-		free(state);
-
 	} else if (!strcmp(function, "oph_check_for_massive_operation")) {
-		int test_on_data_num = 32;
+		int test_on_data_num = 32, return_value = 1;
 
 		if (option < test_on_data_num) {
 			int filter_num = 23;
@@ -1920,7 +1959,7 @@ int _check_oph_server(const char *function, int option)
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1' OR container.idfolder='2')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
 				"No query expected",
-				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='1') AND (container.idfolder='1')|SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.idcontainer='5' AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,task AS taskp,hasinput AS hasinputp,datacube AS datacubep WHERE datacube.idcontainer=container.idcontainer AND datacube.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube='4' AND datacubep.idcontainer='3' AND (container.idfolder='1')",
@@ -2006,48 +2045,48 @@ int _check_oph_server(const char *function, int option)
 				case 18:
 					if (res != OPH_SERVER_NO_RESPONSE) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (!query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					if (strcmp(query, equery[option < filter_num ? option : 0])) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				case 9:
 					if (res != OPH_SERVER_SYSTEM_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				case 16:
 					if (res) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				case 22:
 					if (res != OPH_SERVER_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
@@ -2057,11 +2096,11 @@ int _check_oph_server(const char *function, int option)
 				case 26:
 					if (res != OPH_SERVER_NULL_POINTER) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
@@ -2070,48 +2109,48 @@ int _check_oph_server(const char *function, int option)
 				case 30:
 					if (res != OPH_SERVER_SYSTEM_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				case 29:
 					if (res != OPH_SERVER_NO_RESPONSE) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				case 31:
 					if (res) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					break;
 
 				default:
 					if (res) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_1;
 					}
 					if (!query) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
-						return 1;
+						goto _EXIT_1;
 					}
 					if (strcmp(query, equery[option < filter_num ? option : 0])) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong return query: %s\n", query);
-						return 1;
+						goto _EXIT_1;
 					}
 			}
 
@@ -2121,17 +2160,17 @@ int _check_oph_server(const char *function, int option)
 					case 1:
 						if (output_list_dim != 3) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (!output_list) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_1;
 						}
 						for (j = 0; j < output_list_dim; ++j) {
 							snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
 							if (strcmp(output_list[j], object_name)) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", output_list[j]);
-								return 1;
+								goto _EXIT_1;
 							}
 						}
 						break;
@@ -2139,36 +2178,36 @@ int _check_oph_server(const char *function, int option)
 					case 9:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						break;
 
 					case 16:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (wf->tasks[0].light_tasks_num != 3) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_1;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_1;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_1;
 							}
 							snprintf(object_name, OPH_MAX_STRING_SIZE, "%d", 2 * j + 1);
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-								return 1;
+								goto _EXIT_1;
 							}
 						}
 						break;
@@ -2176,29 +2215,29 @@ int _check_oph_server(const char *function, int option)
 					case 17:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (wf->tasks[0].light_tasks_num != 7) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_1;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								goto _EXIT_1;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_1;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_1;
 							}
 						}
 						break;
@@ -2207,54 +2246,57 @@ int _check_oph_server(const char *function, int option)
 					case 22:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_1;
 						}
 						break;
 
 					default:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (wf->tasks[0].light_tasks_num != 3) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_1;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_1;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 2) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								goto _EXIT_1;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_1;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "cube")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_1;
 							}
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 							snprintf(object_name, OPH_MAX_STRING_SIZE, "%s/1/%d", oph_web_server, j + 1);
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_values[0], object_name)) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-								return 1;
+								goto _EXIT_1;
 							}
 						}
 				}
 
+			return_value = 0;
+
+		      _EXIT_1:
 			for (j = 0; j < output_list_dim; ++j)
 				if (output_list[j])
 					free(output_list[j]);
@@ -2264,6 +2306,10 @@ int _check_oph_server(const char *function, int option)
 			if (query)
 				free(query);
 			query = NULL;
+
+			if (return_value)
+				goto _EXIT_3;
+
 		} else {
 			option -= test_on_data_num;
 
@@ -2316,11 +2362,7 @@ int _check_oph_server(const char *function, int option)
 			char **output_list = NULL;
 			int res, j, output_list_dim = 0;
 
-			switch (option) {
-
-				default:
-					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
-			}
+			res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
 
 			switch (option) {
 
@@ -2328,21 +2370,21 @@ int _check_oph_server(const char *function, int option)
 				case 13:
 					if (res != OPH_SERVER_NO_RESPONSE) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_2;
 					}
 					break;
 
 				case 15:
 					if (res != OPH_SERVER_SYSTEM_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_2;
 					}
 					break;
 
 				default:
 					if (res) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						return 1;
+						goto _EXIT_2;
 					}
 			}
 
@@ -2354,29 +2396,30 @@ int _check_oph_server(const char *function, int option)
 					case 10:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num != 4) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_2;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 3) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								return_value = 1;
+								goto _EXIT_2;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_2;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_2;
 							}
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 						}
@@ -2386,29 +2429,30 @@ int _check_oph_server(const char *function, int option)
 					case 9:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num != 6) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_2;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 3) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								return_value = 1;
+								goto _EXIT_2;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_2;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_2;
 							}
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 						}
@@ -2417,29 +2461,30 @@ int _check_oph_server(const char *function, int option)
 					case 11:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num != 1) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_2;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 3) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								return_value = 1;
+								goto _EXIT_2;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_2;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_2;
 							}
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 						}
@@ -2450,44 +2495,44 @@ int _check_oph_server(const char *function, int option)
 					case 15:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_2;
 						}
 						break;
 
 					default:
 						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num != 2) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							return 1;
+							goto _EXIT_2;
 						}
 						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							return 1;
+							goto _EXIT_2;
 						}
 						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 							if (wf->tasks[0].light_tasks[j].arguments_num != 3) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
 								      wf->tasks[0].light_tasks[j].arguments_num);
-								return 1;
+								goto _EXIT_2;
 							}
 							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
-								return 1;
+								goto _EXIT_2;
 							}
 							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
 								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
-								return 1;
+								goto _EXIT_2;
 							}
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
 						}
@@ -2499,7 +2544,7 @@ int _check_oph_server(const char *function, int option)
 					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 						if (strcmp(wf->tasks[0].light_tasks[j].arguments_values[2], "a")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[2]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					// No break is correct
@@ -2510,7 +2555,7 @@ int _check_oph_server(const char *function, int option)
 						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					break;
@@ -2523,7 +2568,7 @@ int _check_oph_server(const char *function, int option)
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_1.tst")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_124.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					break;
@@ -2535,7 +2580,7 @@ int _check_oph_server(const char *function, int option)
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_1.tst")
 						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_124.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					break;
@@ -2545,7 +2590,7 @@ int _check_oph_server(const char *function, int option)
 						if (strcmp(wf->tasks[0].light_tasks[j].arguments_values[2], "a")
 						    && !strcmp(wf->tasks[0].light_tasks[j].arguments_values[2], "b")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[2]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					// No break is correct
@@ -2558,7 +2603,7 @@ int _check_oph_server(const char *function, int option)
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_1.tst")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_124.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 
@@ -2571,7 +2616,7 @@ int _check_oph_server(const char *function, int option)
 						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_1.tst")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_124.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					break;
@@ -2585,7 +2630,7 @@ int _check_oph_server(const char *function, int option)
 						    && strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_1.tst")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/testdata2/b_124.test")) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[0]);
-							return 1;
+							goto _EXIT_2;
 						}
 					}
 					break;
@@ -2593,12 +2638,18 @@ int _check_oph_server(const char *function, int option)
 				default:;
 			}
 
+			return_value = 0;
+
+		      _EXIT_2:
 			for (j = 0; j < output_list_dim; ++j)
 				if (output_list[j])
 					free(output_list[j]);
 			if (output_list)
 				free(output_list);
 			output_list = NULL;
+
+			if (return_value)
+				goto _EXIT_3;
 		}
 
 	} else if (!strcmp(function, "oph_set_impl")) {
@@ -2646,8 +2697,9 @@ int _check_oph_server(const char *function, int option)
 					var.caller = -1;
 					var.ivalue = 1;
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+						goto _EXIT_3;
+					}
 
 					wf->tasks[0].arguments_values[1] = strdup("@goodvariable");
 				}
@@ -2669,14 +2721,14 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'SET'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -2769,8 +2821,9 @@ int _check_oph_server(const char *function, int option)
 					var.caller = -1;
 					var.ivalue = 1;
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+						goto _EXIT_3;
+					}
 
 					wf->tasks[0].arguments_values[1] = strdup("@goodvariable");
 				}
@@ -2870,42 +2923,42 @@ int _check_oph_server(const char *function, int option)
 			case 2:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'INPUT'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 3:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Invalid task name, task not found or ambiguous!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 5:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad number of keys in parameter 'value'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 7:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong workflow identifier '-1'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			case 11:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong action 'wrong'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 		}
 
@@ -3061,8 +3114,9 @@ int _check_oph_server(const char *function, int option)
 					var.caller = -1;
 					var.ivalue = 1;
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var)))
-						return 1;
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+						goto _EXIT_3;
+					}
 
 					wf->tasks[0].arguments_num = 5;
 					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
@@ -3104,7 +3158,7 @@ int _check_oph_server(const char *function, int option)
 		oph_notify_data *data = (oph_notify_data *) malloc(sizeof(oph_notify_data));
 		if (!data) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-			return 1;
+			goto _EXIT_3;
 		}
 		data->wf = wf;
 		data->task_index = 0;
@@ -3112,56 +3166,69 @@ int _check_oph_server(const char *function, int option)
 		data->data = NULL;
 		data->run = 1;
 		data->state = NULL;
+		data->add_to_notify = NULL;
 
 		int res = oph_wait_impl(wf, 0, error_message, &message, data);
+
+		if (message)
+			free(message);
+
+		if (data->add_to_notify)
+			free(data->add_to_notify);
+		oph_wait_data *wd = (oph_wait_data *) data->data;
+		if (wd) {
+			if (wd->filename)
+				free(wd->filename);
+			free(wd);
+		}
+		free(data);
 
 		switch (option) {
 
 			case 1:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Timeout can be infinity only for type 'input'. Use a non-negative value!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 2:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong timeout type 'wrong'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 3:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong value 'wrong' for parameter 'run'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 7:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong type 'wrong'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 			case 9:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'WAIT'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 				break;
 
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
-					return 1;
+					goto _EXIT_3;
 				}
 		}
-
-		if (message)
-			free(message);
-		free(data);
 	}
-	//oph_workflow_free(wf);
-
+	oph_workflow_free(wf);
 	return 0;
+
+      _EXIT_3:
+	oph_workflow_free(wf);
+	return 1;
 }
 
 int check_oph_server(int *i, int *f, int n, const char *function, int option, int abort_on_first_error, FILE * file)
