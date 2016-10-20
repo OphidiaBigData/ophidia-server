@@ -1,4 +1,38 @@
 
+## v0.10.6 - 2016-10-20
+
+### Fixed:
+
+- Memory leaks in testing program
+- Inclusion of curl.h in code coverage (INDIGO-DataCloud Project)
+- Warning messages set in JSON response in case of successful tasks
+- Bug in handling wrong expression with OPH_IF (INDIGO-DataCloud Project)
+- Bug in setting exit status of OPH_ENDFOR (INDIGO-DataCloud Project)
+- Compact output format in resuming status of running workflow 
+- Improved procedure to set final operation arguments 
+- Bug in OphidiaDB update when a massive operation is retried
+- Bug in handling OPH_IF when Matheval is not enabled (INDIGO-DataCloud Project)
+- Bug in job monitoring procedure
+- Bug in auto-retry feature
+
+### Added:
+
+- New unit tests for OPH_WAIT, OPH_INPUT and OPH_SET (INDIGO-DataCloud Project)
+- Htacces to define url redirect for Ophidia web section
+- Argument to define type of operation in OPH_CANCEL
+- BASE_BACKOFF configuration parameter
+- BASE_SRC_PATH configuration parameter (INDIGO-DataCloud Project)
+- New operator OPH_INPUT (INDIGO-DataCloud Project)
+- New operator OPH_WAIT (INDIGO-DataCloud Project)
+
+### Changed:
+
+- Query of OPH_RESUME to return OPH_STATUS_WAITING in case there is at least a waiting task (INDIGO-DataCloud Project)
+- Workflow status list; added OPH_STATUS_WAITING and OPH_STATUS_UNSELECTED (INDIGO-DataCloud Project)
+- Policy to set auto-retry interval (backoff-based policy)
+- OPH_FOR and OPH_SET input parameter "name" to "key" 
+- Default value for SERVER_FARM_SIZE to 128
+
 ## v0.10.5 - 2016-08-24
 
 ### Fixed:
