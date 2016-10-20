@@ -2262,6 +2262,8 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 						free(wd);
 					}
 					free(data);
+					if (message)
+						free(message);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 			}

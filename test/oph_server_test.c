@@ -1858,6 +1858,34 @@ int _check_oph_server(const char *function, int option)
 
 			case 7:
 				{
+					task_id = 7;
+					odb_jobid = 9;
+					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_wait");
+					wf->residual_tasks_num = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[3].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[4].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[5].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[6].status = OPH_ODB_STATUS_COMPLETED;
+
+					free(wf->tasks[7].arguments_keys[0]);
+					free(wf->tasks[7].arguments_keys);
+					free(wf->tasks[7].arguments_values[0]);
+					free(wf->tasks[7].arguments_values);
+					wf->tasks[7].arguments_num = 2;
+					wf->tasks[7].arguments_keys = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_keys[0] = strdup("timeout");
+					wf->tasks[7].arguments_keys[1] = strdup("type");
+					wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_values[0] = strdup("2");
+					wf->tasks[7].arguments_values[1] = strdup("input");
+				}
+				break;
+
+			case 8:
+				{
 					task_id = 8;
 					odb_jobid = 10;
 					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_set");
@@ -1872,7 +1900,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 8:
+			case 9:
 				{
 					task_id = 9;
 					odb_jobid = 11;
@@ -1898,7 +1926,7 @@ int _check_oph_server(const char *function, int option)
 		if (response)
 			free(response);
 
-		if ((option >= 4) && (option <= 6))
+		if ((option >= 4) && (option <= 7))
 			sleep(3);
 
 		wf = NULL;
@@ -3304,7 +3332,7 @@ int main(int argc, char *argv[])
 	}
 
 	int test_mode_num = 9;
-	int test_num[] = { 10, 2, 19, 6, 9, 48, 3, 10, 10 };
+	int test_num[] = { 10, 2, 19, 6, 10, 48, 3, 10, 10 };
 	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_serve_flow_control_operator", "oph_check_for_massive_operation", "oph_set_impl", "oph_input_impl",
 		"oph_wait_impl"
 	};
