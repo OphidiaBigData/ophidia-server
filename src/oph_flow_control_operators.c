@@ -2159,7 +2159,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 		}
 		oph_workflow *wf = item->wf;
 
-		int i = *task_id, idjob = wf->tasks[i].idjob;
+		int i = *task_id, idjob = wf->tasks[i].idjob, first = wf->status < (int) OPH_ODB_STATUS_RUNNING;
 
 		// JSON Response creation
 		int success = 0;
@@ -2319,6 +2319,9 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			}
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
+
+		if (success && first)
+			oph_odb_start_job_fast(wf->idjob, &oDB);
 
 		if (success && exit_code)
 			*exit_code = OPH_ODB_STATUS_WAIT;
