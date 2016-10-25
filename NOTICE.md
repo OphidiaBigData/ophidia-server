@@ -65,10 +65,6 @@ http://www.apache.org/licenses/
 Apache License 2.0</br>
 http://www.apache.org/licenses/
 
-- PyWPS - Python Web Processing Service</br>
-GPLv2+</br>
-http://pywps.github.io/licence/index.html
-
 - GNU libmatheval</br>
 GPLv3</br>
 http://www.gnu.org/copyleft/gpl.html
