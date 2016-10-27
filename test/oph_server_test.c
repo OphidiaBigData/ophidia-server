@@ -24,6 +24,7 @@
 #include "oph_task_parser_library.h"
 #include "oph_plugin.h"
 #include "oph_memory_job.h"
+#include "oph_filters.h"
 
 #include <unistd.h>
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -180,6 +181,12 @@ int _check_oph_server(const char *function, int option)
 			case 9:
 				{
 					sprintf(condition, "x");
+				}
+				break;
+
+			case 10:
+				{
+					sprintf(condition, "---");
 				}
 				break;
 
@@ -372,6 +379,13 @@ int _check_oph_server(const char *function, int option)
 #endif
 			case 8:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@condition' in task 'IF'")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 10:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong expression '---'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}
@@ -3250,7 +3264,268 @@ int _check_oph_server(const char *function, int option)
 					goto _EXIT_3;
 				}
 		}
+	} else if (!strcmp(function, "oph_filters")) {
+
+		int res, i, j;
+		char tables[OPH_MAX_STRING_SIZE], where_clause[OPH_MAX_STRING_SIZE];
+		*tables = *where_clause = 0;
+
+		switch (option) {
+
+			case 0:
+				res = oph_filter_level(NULL, tables, where_clause, NULL);
+				break;
+
+			case 1:
+				res = oph_filter_level("", tables, where_clause, NULL);
+				break;
+
+			case 2:
+				res = oph_filter_level("level=", tables, where_clause, NULL);
+				break;
+
+			case 3:
+				res = oph_filter_level("1", tables, where_clause, NULL);
+				break;
+
+			case 4:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_level("1", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 5:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_level("1|2|3", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 6:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_measure("measure", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 7:
+				res = oph_filter_parent("wrong", tables, where_clause, NULL);
+				break;
+
+			case 8:
+				res = oph_filter_parent("http://localhostwrong", tables, where_clause, NULL);
+				break;
+
+			case 9:
+				res = oph_filter_parent("http://localhost/", tables, where_clause, NULL);
+				break;
+
+			case 10:
+				res = oph_filter_parent("http://localhost/wrong", tables, where_clause, NULL);
+				break;
+
+			case 11:
+				for (j = 0; j < 300; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					*tables = where_clause[i] = 0;
+					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 12:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						tables[i] = ' ';
+					*where_clause = tables[i] = 0;
+					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 13:
+				res = oph_filter_using_subset("1:1:1:1", tables, where_clause, NULL);
+				break;
+
+			case 14:
+				for (j = 0; j < 200; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_using_subset("1:2,3", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 15:
+				res = oph_filter_container("", tables, where_clause, NULL);
+				break;
+
+			case 16:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_container("container", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 17:
+				res = oph_filter_container_pid("", tables, where_clause, NULL);
+				break;
+
+			case 18:
+				res = oph_filter_container_pid("wrong", tables, where_clause, NULL);
+				break;
+
+			case 19:
+				res = oph_filter_container_pid("http://localhostwrong", tables, where_clause, NULL);
+				break;
+
+			case 20:
+				for (j = 0; j < 100; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					where_clause[i] = 0;
+					res = oph_filter_container_pid("http://localhost/1", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 21:
+				res = oph_filter_metadata_key("", tables, where_clause, NULL);
+				break;
+
+			case 22:
+				res = oph_filter_metadata_key("key=", tables, where_clause, NULL);
+				break;
+
+			case 23:
+				for (j = 0; j < 300; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					*tables = where_clause[i] = 0;
+					res = oph_filter_metadata_key("key1|key2", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 24:
+				for (j = 0; j < 300; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						tables[i] = ' ';
+					*where_clause = tables[i] = 0;
+					res = oph_filter_metadata_key("key1|key2", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 25:
+				res = oph_filter_metadata_value("", "", tables, where_clause, NULL);
+				break;
+
+			case 26:
+				res = oph_filter_metadata_value("", "value=", tables, where_clause, NULL);
+				break;
+
+			case 27:
+				res = oph_filter_metadata_value("key1|key2", "value=", tables, where_clause, NULL);
+				break;
+
+			case 28:
+				res = oph_filter_metadata_value("key1|key2", "value", tables, where_clause, NULL);
+				break;
+
+			case 29:
+				res = oph_filter_metadata_value("key=", "value", tables, where_clause, NULL);
+				break;
+
+			case 30:
+				for (j = 0; j < 600; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						where_clause[i] = ' ';
+					*tables = where_clause[i] = 0;
+					res = oph_filter_metadata_value("key1|key2", "value1|value2", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 31:
+				for (j = 0; j < 600; ++j) {
+					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
+						tables[i] = ' ';
+					*where_clause = tables[i] = 0;
+					res = oph_filter_metadata_value("key1|key2", "value1|value2", tables, where_clause, NULL);
+					if (!res)
+						break;
+				}
+				break;
+
+			case 32:
+				res = oph_filter_path("", "yes", "2", sessionid, NULL, tables, where_clause, NULL);
+				break;
+
+		}
+
+		switch (option) {
+
+			case 0:
+			case 1:
+			case 3:
+			case 4:
+			case 5:
+			case 6:
+			case 11:
+			case 12:
+			case 14:
+			case 15:
+			case 16:
+			case 17:
+			case 20:
+			case 21:
+			case 23:
+			case 24:
+			case 25:
+			case 30:
+			case 31:
+			case 32:
+				if (res) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+					goto _EXIT_3;
+				}
+				break;
+
+			default:
+				if (res != OPH_MF_ERROR) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
+					goto _EXIT_3;
+				}
+		}
 	}
+
 	oph_workflow_free(wf);
 	return 0;
 
@@ -3262,6 +3537,7 @@ int _check_oph_server(const char *function, int option)
 int check_oph_server(int *i, int *f, int n, const char *function, int option, int abort_on_first_error, FILE * file)
 {
 	(*i)++;
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "TEST %d/%d: function '%s' input %d\n", *i, n, function, 1 + option);
 	fprintf(file, "TEST %d/%d: function '%s' input %d ... ", *i, n, function, 1 + option);
 	if (_check_oph_server(function, option)) {
 		(*f)++;
@@ -3331,10 +3607,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	int test_mode_num = 9;
-	int test_num[] = { 10, 2, 19, 6, 10, 48, 3, 10, 10 };
+	int test_mode_num = 10;
+	int test_num[] = { 11, 2, 19, 6, 10, 48, 3, 10, 10, 33 };
 	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_serve_flow_control_operator", "oph_check_for_massive_operation", "oph_set_impl", "oph_input_impl",
-		"oph_wait_impl"
+		"oph_wait_impl", "oph_filters"
 	};
 	int i = 0, j, k, f = 0, n = 0;
 	for (j = 0; j < test_mode_num; ++j)
