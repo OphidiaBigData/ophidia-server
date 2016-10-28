@@ -29,6 +29,7 @@ stamp-h1
 *.gcda
 *.gcno
 *.info
+*.tmp
 etc/oph_server
 etc/oph_server_logrotate
 etc/server.conf
@@ -39,4 +40,5 @@ src/oph_manage_user
 test/oph_server_test
 *-coverage
 test/*-coverage
+coverage.xml
 

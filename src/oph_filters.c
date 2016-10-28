@@ -560,7 +560,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 
 	if (oph_get_session_code(sessionid, ext_path + 1)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
-		return OPH_SERVER_SYSTEM_ERROR;
+		return OPH_MF_ERROR;
 	}
 	if (path && strlen(path)) {
 		char *first_nospace = path;

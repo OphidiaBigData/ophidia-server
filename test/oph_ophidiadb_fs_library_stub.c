@@ -35,7 +35,7 @@ extern pthread_mutex_t global_flag;
 int oph_odb_fs_path_parsing(char *inpath, char *cwd, int *folder_id, char **output_path, ophidiadb * oDB)
 {
 
-	if (!oDB || !inpath || !cwd || !folder_id) {
+	if (!inpath || !cwd || !folder_id) {
 		return OPH_ODB_NULL_PARAM;
 	}
 
@@ -173,7 +173,7 @@ int oph_odb_fs_path_parsing(char *inpath, char *cwd, int *folder_id, char **outp
 
 int oph_odb_fs_check_folder_session(int folder_id, char *sessionid, ophidiadb * oDB, int *status)
 {
-	if (!oDB || !folder_id || !sessionid || !status) {
+	if (!folder_id || !sessionid || !status) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*status = 1;
@@ -184,7 +184,7 @@ int oph_odb_fs_check_folder_session(int folder_id, char *sessionid, ophidiadb * 
 
 int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb * oDB, int *folder_id)
 {
-	if (!oDB || !folder_id || !sessionid) {
+	if (!folder_id || !sessionid) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*folder_id = 1;
@@ -194,7 +194,7 @@ int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb * oDB, int *folder
 
 int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL_BUFLEN])
 {
-	if (!oDB || !folder_id || !out_path) {
+	if (!folder_id || !out_path) {
 		return OPH_ODB_NULL_PARAM;
 	}
 
@@ -208,7 +208,7 @@ int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, in
 {
 	UNUSED(non_hidden);
 
-	if (!oDB || !folder_id || !container_id) {
+	if (!folder_id || !container_id) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*folder_id = 1;
@@ -279,7 +279,7 @@ int oph_odb_fs_str_last_token(const char *input, char **first_part, char **last_
 
 int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
-	if (!oDB || !name || !folder_id || !answer) {
+	if (!name || !folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*answer = 1;
@@ -289,7 +289,7 @@ int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb * oDB, 
 
 int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
-	if (!oDB || !name || !folder_id || !answer) {
+	if (!name || !folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*answer = 0;
@@ -299,7 +299,7 @@ int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb * oDB, i
 
 int oph_odb_fs_is_unique(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
-	if (!oDB || !name || !folder_id || !answer) {
+	if (!name || !folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*answer = 1;
@@ -309,7 +309,7 @@ int oph_odb_fs_is_unique(int folder_id, char *name, ophidiadb * oDB, int *answer
 
 int oph_odb_fs_is_unique_hidden(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
-	if (!oDB || !name || !folder_id || !answer) {
+	if (!name || !folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
@@ -322,7 +322,7 @@ int oph_odb_fs_is_unique_hidden(int folder_id, char *name, ophidiadb * oDB, int 
 
 int oph_odb_fs_is_empty_folder(int folder_id, ophidiadb * oDB, int *answer)
 {
-	if (!oDB || !folder_id || !answer) {
+	if (!folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*answer = 1;
@@ -332,7 +332,7 @@ int oph_odb_fs_is_empty_folder(int folder_id, ophidiadb * oDB, int *answer)
 
 int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidiadb * oDB)
 {
-	if (!oDB || !container_id || hidden < 0 || hidden > 1) {
+	if (!container_id || hidden < 0 || hidden > 1) {
 		return OPH_ODB_NULL_PARAM;
 	}
 
@@ -341,7 +341,7 @@ int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidia
 
 int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, int out_folder_id, char *out_container_name)
 {
-	if (!oDB || !in_container_id || !out_folder_id || !out_container_name) {
+	if (!in_container_id || !out_folder_id || !out_container_name) {
 		return OPH_ODB_NULL_PARAM;
 	}
 
@@ -355,7 +355,7 @@ int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hi
 
 	(*information_list) = NULL;
 
-	if (!oDB || !id_folder) {
+	if (!id_folder) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	if (level > 3) {
@@ -367,7 +367,7 @@ int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hi
 
 int oph_odb_fs_get_subfolders(int folder_id, int **subfolder_id, int *num_subfolders, ophidiadb * oDB)
 {
-	if (!oDB || !folder_id || !subfolder_id || !num_subfolders) {
+	if (!folder_id || !subfolder_id || !num_subfolders) {
 		return OPH_ODB_NULL_PARAM;
 	}
 
