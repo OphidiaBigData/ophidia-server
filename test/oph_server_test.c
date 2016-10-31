@@ -67,7 +67,7 @@ unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 oph_auth_user_bl *bl_head = 0;
 char oph_server_is_running = 1;
-char *oph_base_src_path = ".";
+char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
 
 void set_global_values(const char *configuration_file)
@@ -116,6 +116,8 @@ void cleanup()
 	if (oph_server_location)
 		free(oph_server_location);
 #endif
+	if (oph_base_src_path)
+		free(oph_base_src_path);
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_destroy(&global_flag);
 #endif
@@ -1866,11 +1868,49 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
 					wf->tasks[7].arguments_values[0] = strdup("2");
 					wf->tasks[7].arguments_values[1] = strdup("file");
-					wf->tasks[7].arguments_values[2] = strdup("http://localhost");
+					wf->tasks[7].arguments_values[2] = strdup("testdata/a_12.test");
+
+					if (wf->sessionid)
+						free(wf->sessionid);
+					wf->sessionid = strdup("");
+
+					if (oph_base_src_path)
+						free(oph_base_src_path);
+					oph_base_src_path = NULL;
 				}
 				break;
 
 			case 7:
+				{
+					task_id = 7;
+					odb_jobid = 9;
+					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_wait");
+					wf->residual_tasks_num = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[3].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[4].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[5].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[6].status = OPH_ODB_STATUS_COMPLETED;
+
+					free(wf->tasks[7].arguments_keys[0]);
+					free(wf->tasks[7].arguments_keys);
+					free(wf->tasks[7].arguments_values[0]);
+					free(wf->tasks[7].arguments_values);
+					wf->tasks[7].arguments_num = 3;
+					wf->tasks[7].arguments_keys = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_keys[0] = strdup("timeout");
+					wf->tasks[7].arguments_keys[1] = strdup("type");
+					wf->tasks[7].arguments_keys[2] = strdup("filename");
+					wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_values[0] = strdup("2");
+					wf->tasks[7].arguments_values[1] = strdup("file");
+					wf->tasks[7].arguments_values[2] = strdup("http://localhost");
+				}
+				break;
+
+			case 8:
 				{
 					task_id = 7;
 					odb_jobid = 9;
@@ -1898,7 +1938,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 8:
+			case 9:
 				{
 					task_id = 8;
 					odb_jobid = 10;
@@ -1914,7 +1954,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 9:
+			case 10:
 				{
 					task_id = 9;
 					odb_jobid = 11;
@@ -1940,8 +1980,11 @@ int _check_oph_server(const char *function, int option)
 		if (response)
 			free(response);
 
-		if ((option >= 4) && (option <= 7))
+		if ((option >= 4) && (option <= 8))
 			sleep(3);
+
+		if (!oph_base_src_path)
+			oph_base_src_path = strdup(".");
 
 		wf = NULL;
 		oph_destroy_job_list(job_info);
@@ -3401,7 +3444,7 @@ int _check_oph_server(const char *function, int option)
 				for (j = 0; j < 100; ++j) {
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
-					where_clause[i] = 0;
+					*tables = where_clause[i] = 0;
 					res = oph_filter_level("1", tables, where_clause, NULL);
 					if (!res)
 						break;
@@ -3412,7 +3455,7 @@ int _check_oph_server(const char *function, int option)
 				for (j = 0; j < 100; ++j) {
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
-					where_clause[i] = 0;
+					*tables = where_clause[i] = 0;
 					res = oph_filter_level("1|2|3", tables, where_clause, NULL);
 					if (!res)
 						break;
@@ -3806,12 +3849,43 @@ int _check_oph_server(const char *function, int option)
 				res = _oph_mf_parse_query(NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 				break;
 
+			case 6:
+				_oph_wait(NULL);
+				break;
+
+			case 7:
+				{
+					oph_notify_data *data = (oph_notify_data *) malloc(sizeof(oph_notify_data));
+					if (!data)
+						break;
+					data->wf = wf;
+					data->task_index = 0;
+					data->json_output = NULL;
+					data->data = NULL;
+					data->run = 1;
+					data->state = NULL;
+					data->add_to_notify = NULL;
+
+					oph_wait_data *wd = (oph_wait_data *) malloc(sizeof(oph_wait_data));
+					if (!wd)
+						break;
+					wd->type = 'w';	// Wrong type
+					wd->timeout = -1;
+					wd->filename = NULL;
+					data->data = (void *) wd;
+
+					_oph_wait(data);
+
+					res = 0;
+				}
+				break;
 		}
 
 		switch (option) {
 
 			case 0:
 			case 3:
+			case 7:
 				if (res) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 					goto _EXIT_3;
@@ -3859,7 +3933,7 @@ int main(int argc, char *argv[])
 	pthread_cond_init(&termination_flag, NULL);
 #endif
 
-	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 1;
+	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 0;
 	static char *USAGE = "\nUSAGE:\noph_server_test [-a] [-d] [-o output_file] [-v] [-w]\n";
 	char *filename = "test_output.trs";
 
@@ -3896,6 +3970,7 @@ int main(int argc, char *argv[])
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
 
 	oph_server_location = strdup("..");
+	oph_base_src_path = strdup(".");
 
 	char configuration_file[OPH_MAX_STRING_SIZE];
 	snprintf(configuration_file, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, getenv("PWD"));
@@ -3908,7 +3983,7 @@ int main(int argc, char *argv[])
 	}
 
 	int test_mode_num = 11;
-	int test_num[] = { 11, 2, 19, 6, 10, 53, 3, 10, 10, 46, 6 };
+	int test_num[] = { 11, 2, 19, 6, 11, 53, 3, 10, 10, 46, 8 };
 	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_serve_flow_control_operator", "oph_check_for_massive_operation", "oph_set_impl", "oph_input_impl",
 		"oph_wait_impl", "oph_filters", "misc"
 	};

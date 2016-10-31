@@ -40,7 +40,8 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_LEVEL, value);
 
-	int i, level, key_num = 0, s;
+	int i, level, key_num = 0;
+	unsigned int s;
 	char condition[OPH_MAX_STRING_SIZE], **key_list = NULL;
 	if (oph_tp_parse_multiple_value_param(value, &key_list, &key_num) || !key_num)
 		return OPH_MF_ERROR;
@@ -92,7 +93,7 @@ int oph_filter_measure(const char *value, char *tables, char *where_clause, pthr
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_MEASURE, value);
 
 	char condition[OPH_MAX_STRING_SIZE];
-	int s;
+	unsigned int s;
 	if (*where_clause) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
 			return OPH_MF_ERROR;
@@ -138,7 +139,8 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 		return OPH_MF_ERROR;
 	}
 
-	int s, idcontainer = (int) strtol(pointer1, NULL, 10), idparent = (int) strtol(pointer2, NULL, 10);
+	int unsigned s;
+	int idcontainer = (int) strtol(pointer1, NULL, 10), idparent = (int) strtol(pointer2, NULL, 10);
 
 	if (*tables) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1)
@@ -173,7 +175,7 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, value);
 
-	int s;
+	unsigned int s;
 
 	if (*where_clause) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND2))
@@ -236,7 +238,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_CONTAINER, value);
 
 	char condition[OPH_MAX_STRING_SIZE];
-	int s;
+	unsigned int s;
 
 	if (*where_clause) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
@@ -274,7 +276,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 	pointer++;
 	int idcontainer = (int) strtol(pointer, NULL, 10);
 	char condition[OPH_MAX_STRING_SIZE];
-	int s;
+	unsigned int s;
 	if (*where_clause) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
 			return OPH_MF_ERROR;
@@ -302,7 +304,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 	if (oph_tp_parse_multiple_value_param(value, &key_list, &key_num) || !key_num)
 		return OPH_MF_ERROR;
 
-	int s;
+	unsigned int s;
 	if (*tables) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
@@ -377,7 +379,7 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 		return OPH_MF_ERROR;
 	}
 
-	int s;
+	unsigned int s;
 	if (*tables) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
@@ -445,7 +447,7 @@ int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_
 
 int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * oDB, int recursive_flag, pthread_mutex_t * flag)
 {
-	int s;
+	unsigned int s;
 	char condition[OPH_MAX_STRING_SIZE];
 	if (*counter) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_OR))
@@ -483,7 +485,8 @@ int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, o
 	if (!path || !strlen(path))
 		return OPH_MF_OK;
 
-	int permission = 0, folder_id = 0, s, counter = 0, recursive_flag = recursive && !strcmp(recursive, OPH_MF_ARG_VALUE_YES);
+	int permission = 0, folder_id = 0, counter = 0, recursive_flag = recursive && !strcmp(recursive, OPH_MF_ARG_VALUE_YES);
+	unsigned int s;
 	if (recursive_flag && depth) {
 		int rdepth = (int) strtol(depth, NULL, 10);
 		if (rdepth > 0)
