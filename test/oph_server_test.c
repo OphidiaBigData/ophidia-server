@@ -163,6 +163,7 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 2:
+			case 11:
 				{
 					sprintf(condition, "0");
 				}
@@ -350,6 +351,48 @@ int _check_oph_server(const char *function, int option)
 				{
 					free(wf->tasks[0].arguments_values[0]);
 					wf->tasks[0].arguments_values[0] = strdup("@condition");
+				}
+				break;
+
+			case 11:
+				{
+					// ELSE
+					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
+					if (wf->tasks[2].deps) {
+						if (wf->tasks[2].deps[0].task_name)
+							free(wf->tasks[2].deps[0].task_name);
+						if (wf->tasks[2].deps[0].type)
+							free(wf->tasks[2].deps[0].type);
+						free(wf->tasks[2].deps);
+					}
+					wf->tasks[2].deps_num = 0;
+					wf->tasks[2].deps = NULL;
+
+					// Operator for false
+					wf->tasks[3].status = OPH_ODB_STATUS_COMPLETED;
+					if (wf->tasks[3].dependents_indexes);
+					free(wf->tasks[3].dependents_indexes);
+					wf->tasks[3].dependents_indexes_num = 1;
+					wf->tasks[3].dependents_indexes = NULL;
+
+					// ENDIF
+					if (wf->tasks[4].deps) {
+						if (wf->tasks[4].deps[0].task_name);
+						free(wf->tasks[4].deps[0].task_name);
+						if (wf->tasks[4].deps[0].type)
+							free(wf->tasks[4].deps[0].type);
+						if (wf->tasks[4].deps[1].task_name);
+						free(wf->tasks[4].deps[1].task_name);
+						if (wf->tasks[4].deps[1].type)
+							free(wf->tasks[4].deps[1].type);
+						free(wf->tasks[4].deps);
+					}
+					wf->tasks[4].deps_num = 1;
+					wf->tasks[4].deps = (oph_workflow_dep *) calloc(wf->tasks[4].deps_num, sizeof(oph_workflow_dep));
+					wf->tasks[4].deps[0].task_name = strdup("Operator for true");
+					wf->tasks[4].deps[0].task_index = 1;
+					wf->tasks[4].deps[0].type = strdup("embedded");
+					wf->tasks[4].branch_num = 1;
 				}
 				break;
 
@@ -727,12 +770,52 @@ int _check_oph_server(const char *function, int option)
             ] \
         }, \
         { \
+            \"objclass\": \"grid\", \
+            \"objkey\": \"data2\", \
+            \"objcontent\": [ \
+                { \
+                    \"rowvalues\": [ \
+                        [ \
+                            \"1st\", \
+                            \"2nd\", \
+                            \"3rd\" \
+                        ] \
+                    ], \
+                    \"rowfieldtypes\": [ \
+                        \"string\", \
+                        \"string\", \
+                        \"string\" \
+                    ], \
+                    \"title\": \"table1\", \
+                    \"rowkeys\": [ \
+                        \"column1\", \
+                        \"column2\", \
+                        \"column3\" \
+                    ] \
+                } \
+            ] \
+        }, \
+        { \
             \"objclass\": \"text\", \
             \"objkey\": \"summary\", \
             \"objcontent\": [ \
                 { \
                     \"title\": \"text\", \
                     \"message\": \"1st\" \
+                } \
+            ] \
+        }, \
+        { \
+            \"objclass\": \"text\", \
+            \"objkey\": \"summary2\", \
+            \"objcontent\": [ \
+                { \
+                    \"title\": \"text\", \
+                    \"message\": \"2nd\" \
+                }, \
+				{ \
+                    \"title\": \"text2\", \
+                    \"message\": \"3rd\" \
                 } \
             ] \
         }, \
@@ -748,7 +831,9 @@ int _check_oph_server(const char *function, int option)
 	], \
 	\"responseKeyset\": [ \
         \"data\", \
+        \"data2\", \
         \"summary\", \
+        \"summary2\", \
         \"status\" \
     ], \
     \"source\": { \
@@ -984,6 +1069,97 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
+			case 19:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("wrong(0.0)|wrong.wrong(0,0)|wrong.wrong.wrong(0)");
+				}
+				break;
+
+			case 20:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("text(0)|text.text|text.text(0)");
+				}
+				break;
+
+			case 21:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("table2.column(1)|table2.column(2)|table2.column(3)");
+				}
+				break;
+
+			case 22:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("table1.column1|table2.column(2)|table2.column(3)");
+				}
+				break;
+
+			case 23:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("summary|summary|summary");
+				}
+				break;
+
+			case 24:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("summary2|summary2|summary2");
+				}
+				break;
+
+			case 25:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("data(1,1)|data(1,1)|data(1,1)");
+				}
+				break;
+
+			case 26:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("data2|data2|data2");
+				}
+				break;
+
+			case 27:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("data.table2.column1(10)|data.table2.column2(20)|data.table2.column3(30)");
+				}
+				break;
+
+			case 28:
+				{
+					free(wf->tasks[1].arguments_values[1]);
+					wf->tasks[1].arguments_values[1] = strdup("data.table2.(*,*)|data.table2(*.*)|data.table2.(*,*)");
+				}
+				break;
+
+			case 29:
+				{
+					free(wf->tasks[1].arguments_values[2]);
+					wf->tasks[1].arguments_values[2] = strdup("3:1");
+				}
+				break;
+
+			case 30:
+				{
+					free(wf->tasks[1].arguments_values[2]);
+					wf->tasks[1].arguments_values[2] = strdup("1:2");
+				}
+				break;
+
+			case 31:
+				{
+					free(wf->tasks[1].arguments_values[0]);
+					wf->tasks[1].arguments_values[0] = strdup("special:");
+				}
+				break;
+
 			default:;
 		}
 
@@ -1041,6 +1217,27 @@ int _check_oph_server(const char *function, int option)
 			case 15:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'FOR'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 29:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Generic error in parsing arguments of task 'FOR'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 30:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Arguments 'values' and 'counter' have different sizes.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 31:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nEmpty error message\n", res);
 					goto _EXIT_3;
 				}
 				break;
@@ -1502,6 +1699,7 @@ int _check_oph_server(const char *function, int option)
 			return 1;
 		}
 		state->trash = trash;
+		state->serverid = strdup(oph_web_server);
 
 		char markerid[OPH_SHORT_STRING_SIZE];
 		int odb_wf_id = 1;
@@ -1940,6 +2138,53 @@ int _check_oph_server(const char *function, int option)
 
 			case 9:
 				{
+					task_id = 7;
+					odb_jobid = 9;
+					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_wait");
+					wf->residual_tasks_num = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[3].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[4].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[5].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[6].status = OPH_ODB_STATUS_COMPLETED;
+					wf->status = OPH_ODB_STATUS_COMPLETED;	// Wrong value
+				}
+				break;
+
+			case 10:
+				{
+					task_id = 7;
+					odb_jobid = 9;
+					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_wait");
+					wf->residual_tasks_num = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[1].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[2].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[3].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[4].status = OPH_ODB_STATUS_UNSELECTED;
+					wf->tasks[5].status = OPH_ODB_STATUS_COMPLETED;
+					wf->tasks[6].status = OPH_ODB_STATUS_COMPLETED;
+
+					free(wf->tasks[7].arguments_keys[0]);
+					free(wf->tasks[7].arguments_keys);
+					free(wf->tasks[7].arguments_values[0]);
+					free(wf->tasks[7].arguments_values);
+					wf->tasks[7].arguments_num = 3;
+					wf->tasks[7].arguments_keys = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_keys[0] = strdup("timeout");
+					wf->tasks[7].arguments_keys[1] = strdup("type");
+					wf->tasks[7].arguments_keys[2] = strdup("filename");
+					wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
+					wf->tasks[7].arguments_values[0] = strdup("2");
+					wf->tasks[7].arguments_values[1] = strdup("file");
+					wf->tasks[7].arguments_values[2] = strdup("testdata/test.test");
+				}
+				break;
+
+			case 11:
+				{
 					task_id = 8;
 					odb_jobid = 10;
 					snprintf(operator_name, OPH_MAX_STRING_SIZE, "oph_set");
@@ -1954,7 +2199,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 10:
+			case 12:
 				{
 					task_id = 9;
 					odb_jobid = 11;
@@ -1980,8 +2225,16 @@ int _check_oph_server(const char *function, int option)
 		if (response)
 			free(response);
 
-		if ((option >= 4) && (option <= 8))
+		if ((option >= 4) && (option <= 9))
 			sleep(3);
+		if (option == 10) {
+			sleep(3);
+			FILE *file = fopen("testdata/test.test", "w");
+			if (file)
+				fclose(file);
+			sleep(3);
+			unlink("testdata/test.test");
+		}
 
 		if (!oph_base_src_path)
 			oph_base_src_path = strdup(".");
@@ -1989,6 +2242,8 @@ int _check_oph_server(const char *function, int option)
 		wf = NULL;
 		oph_destroy_job_list(job_info);
 		oph_trash_destroy(trash);
+		if (state->serverid)
+			free(state->serverid);
 		free(state);
 
 		if (res != OPH_SERVER_NO_RESPONSE) {
@@ -2934,7 +3189,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
 		wf->vars = hashtbl_create(wf->tasks_num, NULL);
 
-		if (option < 6)
+		if ((option < 6) || (option > 11))
 			wf->tasks[0].arguments_num = 3;
 		else
 			wf->tasks[0].arguments_num = 4;
@@ -3018,7 +3273,6 @@ int _check_oph_server(const char *function, int option)
 					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
 						goto _EXIT_3;
 					}
-
 					wf->tasks[0].arguments_values[1] = strdup("@goodvariable");
 				}
 				break;
@@ -3031,7 +3285,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 3:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					free(wf->tasks[0].arguments_values[2]);
 					wf->tasks[0].arguments_values[2] = strdup("wrong");
@@ -3040,7 +3293,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 4:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value|discarded");
 				}
 				break;
@@ -3055,7 +3307,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 6:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("id");
 					wf->tasks[0].arguments_values[3] = strdup("1");
@@ -3064,7 +3315,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 7:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("id");
 					wf->tasks[0].arguments_values[3] = strdup("-1");
@@ -3073,7 +3323,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 8:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("action");
 					wf->tasks[0].arguments_values[3] = strdup("continue");
@@ -3082,7 +3331,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 9:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("action");
 					wf->tasks[0].arguments_values[3] = strdup("wait");
@@ -3091,7 +3339,6 @@ int _check_oph_server(const char *function, int option)
 
 			case 10:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("action");
 					wf->tasks[0].arguments_values[3] = strdup("abort");
@@ -3100,10 +3347,33 @@ int _check_oph_server(const char *function, int option)
 
 			case 11:
 				{
-
 					wf->tasks[0].arguments_values[1] = strdup("value");
 					wf->tasks[0].arguments_keys[3] = strdup("action");
 					wf->tasks[0].arguments_values[3] = strdup("wrong");
+				}
+				break;
+
+			case 12:
+				{
+					free(wf->tasks[0].arguments_values[0]);
+					wf->tasks[0].arguments_values[0] = strdup("@badvariable");
+					wf->tasks[0].arguments_values[1] = strdup("value");
+				}
+				break;
+
+			case 13:
+				{
+					free(wf->tasks[0].arguments_values[0]);
+					wf->tasks[0].arguments_values[0] = strdup("special:");
+					wf->tasks[0].arguments_values[1] = strdup("value");
+				}
+				break;
+
+			case 14:
+				{
+					free(wf->tasks[0].arguments_values[0]);
+					wf->tasks[0].arguments_values[0] = strdup("1ndex");
+					wf->tasks[0].arguments_values[1] = strdup("value");
 				}
 				break;
 
@@ -3144,6 +3414,27 @@ int _check_oph_server(const char *function, int option)
 
 			case 11:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong action 'wrong'!")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 12:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'INPUT'")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 13:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 14:
+				if (res || strcmp(error_message, "Change variable name '1ndex'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}
@@ -3346,6 +3637,78 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
+			case 10:
+				{
+					wf->tasks[0].arguments_num = 5;
+					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_keys[0] = strdup("timeout");
+					wf->tasks[0].arguments_keys[1] = strdup("run");
+					wf->tasks[0].arguments_keys[2] = strdup("type");
+					wf->tasks[0].arguments_keys[3] = strdup("key");
+					wf->tasks[0].arguments_keys[4] = strdup("value");
+					wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_values[0] = strdup("10");
+					wf->tasks[0].arguments_values[1] = strdup("no");
+					wf->tasks[0].arguments_values[2] = strdup("input");
+					wf->tasks[0].arguments_values[3] = strdup("1ndex");
+					wf->tasks[0].arguments_values[4] = strdup("value");
+				}
+				break;
+
+			case 11:
+				{
+					wf->tasks[0].arguments_num = 5;
+					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_keys[0] = strdup("timeout");
+					wf->tasks[0].arguments_keys[1] = strdup("run");
+					wf->tasks[0].arguments_keys[2] = strdup("type");
+					wf->tasks[0].arguments_keys[3] = strdup("key");
+					wf->tasks[0].arguments_keys[4] = strdup("value");
+					wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_values[0] = strdup("10");
+					wf->tasks[0].arguments_values[1] = strdup("no");
+					wf->tasks[0].arguments_values[2] = strdup("input");
+					wf->tasks[0].arguments_values[3] = strdup("special:");
+					wf->tasks[0].arguments_values[4] = strdup("value");
+				}
+				break;
+
+			case 12:
+				{
+					wf->tasks[0].arguments_num = 5;
+					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_keys[0] = strdup("timeout");
+					wf->tasks[0].arguments_keys[1] = strdup("run");
+					wf->tasks[0].arguments_keys[2] = strdup("type");
+					wf->tasks[0].arguments_keys[3] = strdup("key");
+					wf->tasks[0].arguments_keys[4] = strdup("value");
+					wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_values[0] = strdup("10");
+					wf->tasks[0].arguments_values[1] = strdup("no");
+					wf->tasks[0].arguments_values[2] = strdup("input");
+					wf->tasks[0].arguments_values[3] = strdup("variable");
+					wf->tasks[0].arguments_values[4] = strdup("value|value2");
+				}
+				break;
+
+			case 13:
+				{
+					wf->tasks[0].arguments_num = 5;
+					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_keys[0] = strdup("timeout");
+					wf->tasks[0].arguments_keys[1] = strdup("run");
+					wf->tasks[0].arguments_keys[2] = strdup("type");
+					wf->tasks[0].arguments_keys[3] = strdup("key");
+					wf->tasks[0].arguments_keys[4] = strdup("value");
+					wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
+					wf->tasks[0].arguments_values[0] = strdup("10");
+					wf->tasks[0].arguments_values[1] = strdup("no");
+					wf->tasks[0].arguments_values[2] = strdup("input");
+					wf->tasks[0].arguments_values[3] = strdup("variable|variable2");
+					wf->tasks[0].arguments_values[4] = strdup("value");
+				}
+				break;
+
 			default:;
 		}
 
@@ -3409,6 +3772,24 @@ int _check_oph_server(const char *function, int option)
 					goto _EXIT_3;
 				}
 				break;
+			case 10:
+				if (res || strcmp(error_message, "Change variable name '1ndex'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+			case 11:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+			case 13:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad number of keys in parameter 'value'.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
 
 			default:
 				if (res || strlen(error_message)) {
@@ -3466,7 +3847,7 @@ int _check_oph_server(const char *function, int option)
 				for (j = 0; j < 100; ++j) {
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
-					where_clause[i] = 0;
+					*tables = where_clause[i] = 0;
 					res = oph_filter_measure("measure", tables, where_clause, NULL);
 					if (!res)
 						break;
@@ -3864,7 +4245,7 @@ int _check_oph_server(const char *function, int option)
 					data->data = NULL;
 					data->run = 1;
 					data->state = NULL;
-					data->add_to_notify = NULL;
+					data->add_to_notify = strdup("");
 
 					oph_wait_data *wd = (oph_wait_data *) malloc(sizeof(oph_wait_data));
 					if (!wd)
@@ -3879,6 +4260,127 @@ int _check_oph_server(const char *function, int option)
 					res = 0;
 				}
 				break;
+
+			case 8:
+				{
+					oph_notify_data *data = (oph_notify_data *) malloc(sizeof(oph_notify_data));
+					if (!data)
+						break;
+					data->wf = wf;
+					data->task_index = 0;
+					data->json_output = NULL;
+					data->data = NULL;
+					data->run = 1;
+					data->state = NULL;
+					data->add_to_notify = strdup("");
+
+					oph_wait_data *wd = (oph_wait_data *) malloc(sizeof(oph_wait_data));
+					if (!wd)
+						break;
+					wd->type = 'f';
+					wd->timeout = -1;
+					wd->filename = strdup("testdata/a_12.test");
+					data->data = (void *) wd;
+
+					// Tasks
+					wf->tasks_num = wf->residual_tasks_num = 1;
+					wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+					wf->vars = hashtbl_create(wf->tasks_num, NULL);
+
+					// WAIT
+					wf->tasks[0].idjob = wf->tasks[0].markerid = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
+					wf->tasks[0].name = strdup("WAIT");
+					wf->tasks[0].operator = strdup("oph_wait");
+					wf->tasks[0].arguments_num = 0;
+					wf->tasks[0].arguments_keys = NULL;
+					wf->tasks[0].arguments_values = NULL;
+					wf->tasks[0].deps_num = 0;
+					wf->tasks[0].deps = NULL;
+					wf->tasks[0].dependents_indexes_num = 0;
+					wf->tasks[0].dependents_indexes = NULL;
+
+					_oph_wait(data);
+
+					res = 0;
+				}
+				break;
+
+			case 9:
+				{
+					// Tasks
+					wf->tasks_num = wf->residual_tasks_num = 1;
+					wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+					wf->vars = hashtbl_create(wf->tasks_num, NULL);
+
+					// WAIT
+					wf->tasks[0].idjob = wf->tasks[0].markerid = 2;
+					wf->tasks[0].status = OPH_ODB_STATUS_PENDING;
+					wf->tasks[0].name = strdup("WAIT");
+					wf->tasks[0].operator = strdup("oph_wait");
+					wf->tasks[0].arguments_num = 0;
+					wf->tasks[0].arguments_keys = NULL;
+					wf->tasks[0].arguments_values = NULL;
+					wf->tasks[0].deps_num = 0;
+					wf->tasks[0].deps = NULL;
+					wf->tasks[0].dependents_indexes_num = 1;	// Wrong
+					wf->tasks[0].dependents_indexes = NULL;
+					res = oph_set_status_of_selection_block(wf, 0, OPH_ODB_STATUS_UNSELECTED, -1, 0, 1, NULL);
+
+					wf->tasks[0].dependents_indexes_num = 0;
+				}
+				break;
+
+			case 10:
+				res = oph_extract_from_json(NULL, "");
+				break;
+
+			case 11:
+				{
+					char *key = strdup("");
+					res = oph_extract_from_json(&key, "");
+					if (key)
+						free(key);
+				}
+				break;
+
+			case 12:
+				{
+					char *key = strdup("a.b.c.d");
+					res = oph_extract_from_json(&key, "");
+					if (key)
+						free(key);
+				}
+				break;
+
+			case 13:
+				{
+					char *key = strdup("a.b.c(d");
+					res = oph_extract_from_json(&key, "");
+					if (key)
+						free(key);
+				}
+				break;
+
+			case 14:
+				{
+					char *key = strdup("a(b,c");
+					res = oph_extract_from_json(&key, "");
+					if (key)
+						free(key);
+				}
+				break;
+
+			case 15:
+				{
+					char *key = strdup("a(b,c)");
+					res = oph_extract_from_json(&key, "");
+					if (key)
+						free(key);
+				}
+				break;
+
+			default:;
 		}
 
 		switch (option) {
@@ -3886,6 +4388,7 @@ int _check_oph_server(const char *function, int option)
 			case 0:
 			case 3:
 			case 7:
+			case 8:
 				if (res) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 					goto _EXIT_3;
@@ -3933,7 +4436,7 @@ int main(int argc, char *argv[])
 	pthread_cond_init(&termination_flag, NULL);
 #endif
 
-	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 0;
+	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 1;
 	static char *USAGE = "\nUSAGE:\noph_server_test [-a] [-d] [-o output_file] [-v] [-w]\n";
 	char *filename = "test_output.trs";
 
@@ -3983,7 +4486,7 @@ int main(int argc, char *argv[])
 	}
 
 	int test_mode_num = 11;
-	int test_num[] = { 11, 2, 19, 6, 11, 53, 3, 10, 10, 46, 8 };
+	int test_num[] = { 12, 2, 32, 6, 13, 53, 3, 15, 14, 46, 16 };
 	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_serve_flow_control_operator", "oph_check_for_massive_operation", "oph_set_impl", "oph_input_impl",
 		"oph_wait_impl", "oph_filters", "misc"
 	};

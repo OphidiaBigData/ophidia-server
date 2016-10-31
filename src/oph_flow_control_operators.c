@@ -153,13 +153,10 @@ void *_oph_wait(oph_notify_data * data)
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' exists\n", _filename);
 					case 'c':
 					case 'i':
+					default:
 						pthread_mutex_lock(&global_flag);
 						status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
 						pthread_mutex_unlock(&global_flag);
-						break;
-					default:
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Processing error\n");
-						success = 0;
 				}
 			}
 
@@ -196,27 +193,26 @@ void *_oph_wait(oph_notify_data * data)
 		else
 			oph_odb_abort_job_fast(idjob, &oDB);
 
-		int jobid = 0;
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+
 		if (state && state->jobid) {
+
+			int jobid = 0;
 			pthread_mutex_lock(&global_flag);
 			jobid = ++*state->jobid;
 			pthread_mutex_unlock(&global_flag);
-		}
 
-		int response = 0;
-		char success_notification[OPH_MAX_STRING_SIZE];
-		snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob, OPH_ARG_TASKINDEX,
-			 task_index, OPH_ARG_LIGHTTASKINDEX, -1, data->add_to_notify ? data->add_to_notify : "");
-		if (state->jobid)
+			int response = 0;
+			char success_notification[OPH_MAX_STRING_SIZE];
+			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob,
+				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
-		if (response)
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
+			if (response)
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
+		}
 
 		break;
 	}
-
-	if (success)
-		oph_odb_disconnect_from_ophidiadb(&oDB);
 
 	// Free
 	if (curl)
@@ -460,10 +456,10 @@ int oph_extract_from_json(char **key, const char *json_string)
 
 		pch = strchr(row, OPH_WORKFLOW_SEPARATORS[3]);
 		if (!pch) {
-			if (!colkey)
-				break;
 			pch = strchr(row, OPH_WORKFLOW_BRACKET_END[0]);
 			if (!pch)
+				break;
+			if (!title && !colkey)
 				break;
 			*pch = 0;
 			step = 2;	// Bracket closed, row by index, col by name
@@ -482,15 +478,14 @@ int oph_extract_from_json(char **key, const char *json_string)
 		break;
 	}
 	if (!pch && step) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: syntax error\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: syntax error at step %d\n", step);
 		return OPH_SERVER_ERROR;
 	}
 
 	oph_json *json = NULL;
 	if (oph_json_from_json_string_unsafe(&json, json_string)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: json lookup failed\n");
-		if (json)
-			oph_json_free(json);
+		oph_json_free(json);
 		return OPH_SERVER_ERROR;
 	}
 
@@ -501,8 +496,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 	if (i >= json->response_num) {
 		if (colkey) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objkey not found\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 		// Let us assume the form title[.colname]
@@ -538,15 +532,14 @@ int oph_extract_from_json(char **key, const char *json_string)
 				if (j < json->response[i].objcontent_num)
 					break;
 			}
+
 		if (i < json->response_num) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: more than one objcontent found\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		} else if (k >= json->response_num) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objcontent not found\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 		i = k;
@@ -555,8 +548,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 
 	if (!json->response[i].objclass) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objclass not found\n");
-		if (json)
-			oph_json_free(json);
+		oph_json_free(json);
 		return OPH_SERVER_ERROR;
 	}
 
@@ -578,8 +570,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 			}
 		if ((j >= json->response[i].objcontent_num) && (title || (objcontent_num != 1))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objcontent not found\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 		if (!title) {
@@ -587,8 +578,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 			title = obj->title;
 			if (!title) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objcontent not found\n");
-				if (json)
-					oph_json_free(json);
+				oph_json_free(json);
 				return OPH_SERVER_ERROR;
 			}
 		}
@@ -597,8 +587,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 		*key = strdup(obj->message);
 		if (!(*key)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 
@@ -619,8 +608,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 			}
 		if ((j >= json->response[i].objcontent_num) && (title || (objcontent_num != 1))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objcontent not found\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 		if (!title) {
@@ -628,8 +616,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 			title = obj->title;
 			if (!title) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objcontent not found\n");
-				if (json)
-					oph_json_free(json);
+				oph_json_free(json);
 				return OPH_SERVER_ERROR;
 			}
 		}
@@ -643,8 +630,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 						break;
 			if (!obj->keys || (icol >= obj->keys_num)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: rowkey not found\n");
-				if (json)
-					oph_json_free(json);
+				oph_json_free(json);
 				return OPH_SERVER_ERROR;
 			}
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' at column %d\n", colkey, icol);
@@ -660,8 +646,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 		if (row && !strcmp(row, OPH_WORKFLOW_GENERIC_VALUE)) {
 			if (all_values) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: only scalars and vectors can be extracted\n");
-				if (json)
-					oph_json_free(json);
+				oph_json_free(json);
 				return OPH_SERVER_ERROR;
 			}
 			all_values = 1;
@@ -673,82 +658,70 @@ int oph_extract_from_json(char **key, const char *json_string)
 
 		if ((irow >= obj->values_num1) || (icol >= obj->values_num2)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: index out of boundaries\n");
-			if (json)
-				oph_json_free(json);
+			oph_json_free(json);
 			return OPH_SERVER_ERROR;
 		}
 
 		free(*key);
 		*key = NULL;
-		if (all_values) {
-			char *tmp_key = NULL;
-			switch (all_values) {
-				case 1:	// All the rows
-					if (obj->values_num1)
-						*key = strdup(obj->values[0][icol]);
-					for (irow = 1; irow < obj->values_num1; irow++) {
-						tmp_key = *key;
-						*key = (char *) malloc(strlen(tmp_key) + 2 + strlen(obj->values[irow][icol]));
-						if (!(*key)) {
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
-							if (tmp_key)
-								free(tmp_key);
-							if (json)
-								oph_json_free(json);
-							return OPH_SERVER_ERROR;
-						}
-						sprintf(*key, "%s%s%s", tmp_key, OPH_SEPARATOR_SUBPARAM_STR, obj->values[irow][icol]);
-						if (tmp_key)
-							free(tmp_key);
-						tmp_key = NULL;
-					}
-					break;
-				case 2:	// All the columns
-					if (obj->values_num2)
-						*key = strdup(obj->values[irow][0]);
-					for (icol = 1; icol < obj->values_num2; icol++) {
-						tmp_key = *key;
-						*key = (char *) malloc(strlen(tmp_key) + 2 + strlen(obj->values[irow][icol]));
-						if (!(*key)) {
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
-							if (tmp_key)
-								free(tmp_key);
-							if (json)
-								oph_json_free(json);
-							return OPH_SERVER_ERROR;
-						}
-						sprintf(*key, "%s%s%s", tmp_key, OPH_SEPARATOR_SUBPARAM_STR, obj->values[irow][icol]);
-						if (tmp_key)
-							free(tmp_key);
-						tmp_key = NULL;
-					}
-					break;
-				default:
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: wrong condition\n");
-					if (json)
-						oph_json_free(json);
-					return OPH_SERVER_ERROR;
-			}
-		} else {
-			*key = strdup(obj->values[irow][icol]);
-			if (!(*key)) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
-				if (json)
-					oph_json_free(json);
-				return OPH_SERVER_ERROR;
-			}
-		}
 
+		char *tmp_key = NULL;
+		switch (all_values) {
+			case 1:	// All the rows
+				if (obj->values_num1)
+					*key = strdup(obj->values[0][icol]);
+				for (irow = 1; irow < obj->values_num1; irow++) {
+					tmp_key = *key;
+					*key = (char *) malloc(strlen(tmp_key) + 2 + strlen(obj->values[irow][icol]));
+					if (!(*key)) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+						if (tmp_key)
+							free(tmp_key);
+						oph_json_free(json);
+						return OPH_SERVER_ERROR;
+					}
+					sprintf(*key, "%s%s%s", tmp_key, OPH_SEPARATOR_SUBPARAM_STR, obj->values[irow][icol]);
+					if (tmp_key)
+						free(tmp_key);
+					tmp_key = NULL;
+				}
+				break;
+			case 2:	// All the columns
+				if (obj->values_num2)
+					*key = strdup(obj->values[irow][0]);
+				for (icol = 1; icol < obj->values_num2; icol++) {
+					tmp_key = *key;
+					*key = (char *) malloc(strlen(tmp_key) + 2 + strlen(obj->values[irow][icol]));
+					if (!(*key)) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+						if (tmp_key)
+							free(tmp_key);
+						oph_json_free(json);
+						return OPH_SERVER_ERROR;
+					}
+					sprintf(*key, "%s%s%s", tmp_key, OPH_SEPARATOR_SUBPARAM_STR, obj->values[irow][icol]);
+					if (tmp_key)
+						free(tmp_key);
+					tmp_key = NULL;
+				}
+				break;
+			default:
+				*key = strdup(obj->values[irow][icol]);
+				if (!(*key)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: memory error\n");
+					oph_json_free(json);
+					return OPH_SERVER_ERROR;
+				}
+		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Key '%s' updated to '%s'\n", title, *key);
+
 	} else {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Parse error: objclass not supported\n");
-		if (json)
-			oph_json_free(json);
+		oph_json_free(json);
 		return OPH_SERVER_ERROR;
 	}
 
-	if (json)
-		oph_json_free(json);
+	oph_json_free(json);
 	return OPH_SERVER_OK;
 }
 
@@ -897,18 +870,8 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", error_msg ? error_msg : "Error in variable substitution!");
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-				if (error_msg) {
-					free(error_msg);
-					error_msg = NULL;
-				}
-				ret = OPH_SERVER_ERROR;
-				break;
-			}
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
@@ -954,6 +917,12 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				}
 				if (!name)
 					break;
+			}
+			if (!name) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_OPERATOR_PARAMETER_KEY);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+				ret = OPH_SERVER_ERROR;
+				break;
 			}
 		}
 		if (!name && !has_action) {
@@ -1107,16 +1076,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 		}
 		for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
-				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "%s", error_msg ? error_msg : "Error in variable substitution!");
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-				if (error_msg) {
-					free(error_msg);
-					error_msg = NULL;
-				}
-				ret = OPH_SERVER_ERROR;
-				break;
-			}
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
 
 			if (!ivalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				oph_subset *subset_struct = NULL;
@@ -1159,19 +1119,8 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", error_msg ? error_msg : "Error in variable substitution!");
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-				if (error_msg) {
-					free(error_msg);
-					error_msg = NULL;
-				}
-				ret = OPH_SERVER_ERROR;
-				break;
-			}
-
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
 			name = arg_value;
 		}
 
@@ -1491,18 +1440,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
-				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "%s", error_msg ? error_msg : "Error in variable substitution!");
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-				if (error_msg) {
-					free(error_msg);
-					error_msg = NULL;
-				}
-				ret = OPH_SERVER_ERROR;
-				break;
-			}
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)

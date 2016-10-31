@@ -47,7 +47,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 		return OPH_MF_ERROR;
 
 	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1 - strlen(OPH_FILTER_AND2)) <= 0) {
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND2)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			return OPH_MF_ERROR;
 		}
