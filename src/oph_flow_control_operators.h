@@ -30,6 +30,7 @@ typedef struct _oph_notify_data {
 	char *add_to_notify;
 	void *data;
 	char run;
+	char detach;
 } oph_notify_data;
 
 typedef struct _oph_wait_data {

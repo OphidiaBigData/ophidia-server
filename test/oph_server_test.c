@@ -2104,7 +2104,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
 					wf->tasks[7].arguments_values[0] = strdup("2");
 					wf->tasks[7].arguments_values[1] = strdup("file");
-					wf->tasks[7].arguments_values[2] = strdup("http://localhost");
+					wf->tasks[7].arguments_values[2] = strdup(oph_web_server);
 				}
 				break;
 
@@ -2219,21 +2219,32 @@ int _check_oph_server(const char *function, int option)
 		}
 		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", odb_jobid);
 
-		int res =
-		    oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output, operator_name);
+		int res;
+		pthread_t tid;
+		if ((option >= 4) && (option <= 10))
+			res =
+			    _oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
+							     operator_name, &tid);
+		else
+			res =
+			    oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
+							    operator_name);
 
 		if (response)
 			free(response);
 
-		if ((option >= 4) && (option <= 9))
+		if ((option >= 4) && (option <= 10)) {
 			sleep(3);
-		if (option == 10) {
-			sleep(3);
-			FILE *file = fopen("testdata/test.test", "w");
-			if (file)
-				fclose(file);
-			sleep(3);
-			unlink("testdata/test.test");
+			if (option == 10) {
+				FILE *file = fopen("testdata/test.test", "w");
+				if (file)
+					fclose(file);
+				sleep(3);
+				unlink("testdata/test.test");
+			}
+			pthread_mutex_lock(&global_flag);
+			pthread_cancel(tid);
+			pthread_mutex_unlock(&global_flag);
 		}
 
 		if (!oph_base_src_path)
@@ -3721,7 +3732,7 @@ int _check_oph_server(const char *function, int option)
 		data->task_index = 0;
 		data->json_output = NULL;
 		data->data = NULL;
-		data->run = 1;
+		data->run = data->detach = 1;
 		data->state = NULL;
 		data->add_to_notify = NULL;
 
@@ -4243,7 +4254,7 @@ int _check_oph_server(const char *function, int option)
 					data->task_index = 0;
 					data->json_output = NULL;
 					data->data = NULL;
-					data->run = 1;
+					data->run = data->detach = 1;
 					data->state = NULL;
 					data->add_to_notify = strdup("");
 
@@ -4270,7 +4281,7 @@ int _check_oph_server(const char *function, int option)
 					data->task_index = 0;
 					data->json_output = NULL;
 					data->data = NULL;
-					data->run = 1;
+					data->run = data->detach = 1;
 					data->state = NULL;
 					data->add_to_notify = strdup("");
 

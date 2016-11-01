@@ -46,7 +46,8 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_detach(pthread_self());
+	if (data && data->detach)
+		pthread_detach(pthread_self());
 #endif
 
 	if (!data || !data->data) {
@@ -100,6 +101,7 @@ void *_oph_wait(oph_notify_data * data)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Process waiting procedure\n");
 
 		int counter;
+		CURLcode res;
 		struct stat s;
 
 		pthread_mutex_lock(&global_flag);
@@ -140,10 +142,10 @@ void *_oph_wait(oph_notify_data * data)
 			if (status == (int) OPH_ODB_STATUS_WAIT) {
 				switch (wd->type) {
 					case 'f':
-						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check if file '%s' exists\n", _filename);
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check if the object '%s' exists\n", _filename);
 						if (curl) {
-							if (curl_easy_perform(curl) != CURLE_OK) {
-								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", _filename);
+							if ((res = curl_easy_perform(curl)) != CURLE_OK) {
+								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable (errno %d)\n", _filename, res);
 								break;
 							}
 						} else if (stat(_filename, &s)) {
@@ -1571,8 +1573,9 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 	return ret;
 }
 
-int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
+				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name,
+				     pthread_t * tid)
 {
 	UNUSED(ncores);
 	UNUSED(request);
@@ -2164,6 +2167,7 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			data->add_to_notify = NULL;
 			data->data = NULL;
 			data->run = 1;
+			data->detach = !tid;
 
 			data->state = (struct oph_plugin_data *) malloc(sizeof(struct oph_plugin_data));
 			if (!data->state) {
@@ -2272,20 +2276,23 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		if (data) {
+			char run = data->run;
 			if (success) {
 				if (*response)
 					data->json_output = strdup(*response);
 				if (data->run) {
 					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Starting waiting procedure\n");
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-					pthread_t tid;
-					pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_wait, data);
+					pthread_t _tid;
+					pthread_create(&_tid, NULL, (void *(*)(void *)) &_oph_wait, data);
+					if (tid)
+						*tid = _tid;
 #else
 					_oph_wait(data);
 #endif
 				}
 			}
-			if (!success || !data->run) {
+			if (!success || !run) {
 				if (data->state) {
 					if (data->state->serverid)
 						free(data->state->serverid);
@@ -2408,4 +2415,11 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 	}
 
 	return error;
+}
+
+int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
+				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+{
+	return _oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
+						operator_name, NULL);
 }
