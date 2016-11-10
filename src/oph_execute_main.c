@@ -4496,6 +4496,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			response->error = OPH_SERVER_SYSTEM_ERROR;
 			return SOAP_OK;
 		}
+		// Create temporary host partition (if any)
+		if (oph_workflow_create_hp(wf, &oDB)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: host partition cannot be set for workflow '%s'\n", jobid, wf->name);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_wf_list_drop(state->job_info, wf->idjob);
+			free(initial_tasks_indexes);
+			response->error = OPH_SERVER_SYSTEM_ERROR;
+			return SOAP_OK;
+		}
 		// Execute the workflow
 		char *jobid_response = NULL;
 		if (oph_workflow_execute(state, 'R', jobid, wf, initial_tasks_indexes, initial_tasks_indexes_num, &oDB, &jobid_response)) {

@@ -79,6 +79,11 @@
 			"default": "classic",
 			"description": "mode to code workflow output. Possible values are: classic or compact (common fields such as session code and workfow id are shown separately)"
 		},
+		"host_partition":
+		{
+			"type": "string",
+			"description": "name of host partition to be used in the workflow"
+		},
 		"tasks":
 		{
 			"type": "array",

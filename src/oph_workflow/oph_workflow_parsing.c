@@ -66,10 +66,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 	}
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cube = NULL, *callback_url = NULL, *on_error = NULL, *command =
-	    NULL, *on_exit = NULL, *run = NULL, *output_format = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode", &exec_mode,
+	    NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode", &exec_mode,
 		    "ncores", &ncores, "cwd", &cwd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run, "output_format",
-		    &output_format);
+		    &output_format, "host_partition", &host_partition);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -207,6 +207,16 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 				json_decref(jansson);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'output_format'\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+	}
+	if (host_partition && strlen(host_partition)) {
+		(*workflow)->host_partition = (char *) strdup((const char *) host_partition);
+		if (!((*workflow)->host_partition)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating host_partition\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
 	//unpack tasks
@@ -669,6 +679,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "command", workflow->command))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (_oph_workflow_add_to_json(request, "host_partition", workflow->host_partition))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	json_t *tasks = json_array();
 	if (!tasks) {
@@ -849,6 +861,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->stack = NULL;
 	(*workflow)->run = 1;
 	(*workflow)->parallel_mode = 0;
+	(*workflow)->host_partition = NULL;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

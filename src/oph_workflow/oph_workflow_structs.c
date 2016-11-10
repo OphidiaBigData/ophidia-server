@@ -52,6 +52,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->callback_url);
 		workflow->callback_url = NULL;
 	}
+	if (workflow->host_partition) {
+		free(workflow->host_partition);
+		workflow->host_partition = NULL;
+	}
 	if (workflow->cube) {
 		free(workflow->cube);
 		workflow->cube = NULL;

@@ -263,6 +263,7 @@ typedef struct _oph_workflow_stack {
  * \param on_exit Action to be taken at the end of workflow execution
  * \param output_format Format to code workflow output
  * \param cancel_type Used to differentiate workflow abort
+ * \param host_partition Host partition to be used during the workflow
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -295,6 +296,7 @@ typedef struct _oph_workflow {
 	char *on_exit;
 	int output_format;
 	char cancel_type;
+	char *host_partition;
 } oph_workflow;
 
 /* Functions for structs cleanup */

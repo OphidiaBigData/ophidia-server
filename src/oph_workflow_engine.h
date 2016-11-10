@@ -40,4 +40,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level);
 
 int oph_workflow_check_job_queue(struct oph_plugin_data *state);
 
+int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB);
+int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB);
+
 #endif				/* OPH_WORKFLOW_ENGINE_H */

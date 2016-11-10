@@ -274,3 +274,19 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 
 	return OPH_ODB_SUCCESS;
 }
+
+int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
+{
+	if (!oDB || !name || !parent)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
+{
+	if (!oDB || !name)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}

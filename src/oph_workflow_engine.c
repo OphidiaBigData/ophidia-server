@@ -5086,6 +5086,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
+		oph_workflow_destroy_hp(wf, &oDB);
+
 		if (wf->exec_mode && !strncasecmp(wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
 			pthread_mutex_lock(&global_flag);
 			wf->status = OPH_ODB_STATUS_CLOSED;	// Effective termination
@@ -5563,5 +5565,40 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 	pthread_t tid;
 	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_workflow_check_job_queue, data);
 #endif
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
+{
+	if (!wf || !oDB)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	if (!wf->host_partition || !strlen(wf->host_partition))
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+
+	char pname[OPH_SHORT_STRING_SIZE];
+	snprintf(pname, OPH_SHORT_STRING_SIZE, "_%d", wf->idjob);
+	if (oph_odb_create_hp(oDB, pname, wf->host_partition))
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
+	free(wf->host_partition);
+	wf->host_partition = strdup(pname);
+	if (!wf->host_partition)
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
+{
+	if (!wf || !oDB)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	if (!wf->host_partition || !strlen(wf->host_partition))
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+
+	if (oph_odb_destroy_hp(oDB, wf->host_partition))
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

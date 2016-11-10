@@ -187,6 +187,17 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		 subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob,
 		 task_index, light_task_index);
 
+	if (workflow->host_partition) {
+		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
+		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
+			if (error)
+				*error = strdup("Space for submission string is not enough");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		strncat(long_submit_string, key_value, length);
+	}
+
 	if (short_submission_string)
 		snprintf(short_submit_string, OPH_WORKFLOW_MAX_STRING, "%s ", workflow->tasks[task_index].operator);
 

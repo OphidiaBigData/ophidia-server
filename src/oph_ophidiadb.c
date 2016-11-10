@@ -612,3 +612,53 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 
 	return OPH_ODB_SUCCESS;
 }
+
+int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
+{
+	if (!oDB || !name || !parent)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	char insertQuery[MYSQL_BUFLEN];
+
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_CREATE_PARTITION, name);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, insertQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_FILL_PARTITION, parent);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, insertQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
+{
+	if (!oDB || !name)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	char updateQuery[MYSQL_BUFLEN];
+
+	int n = snprintf(updateQuery, MYSQL_BUFLEN, OPHIDIADB_DESTROY_PARTITION, name);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, updateQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
