@@ -1,4 +1,21 @@
 
+## v0.10.6 - 2016-11-14
+
+### Fixed:
+
+- Fix bug in testing OPH_WAIT (INDIGO-DataCloud Project)
+- Bug [\#6](https://github.com/OphidiaBigData/ophidia-server/issues/6)
+
+### Added:
+
+- Option 'host_partition'
+
+### Changed:
+
+- Improve code coverage (INDIGO-DataCloud Project)
+- Remove reference to PyWPS
+- Remove references to folder 'txt'
+
 ## v0.10.6 - 2016-10-20
 
 ### Fixed:
