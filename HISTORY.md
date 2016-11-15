@@ -1,20 +1,19 @@
 
-## v0.10.6 - 2016-11-14
+## v0.10.7 - 2016-11-15
 
 ### Fixed:
 
-- Fix bug in testing OPH_WAIT (INDIGO-DataCloud Project)
-- Bug [\#6](https://github.com/OphidiaBigData/ophidia-server/issues/6)
+- Bug in testing OPH_WAIT (INDIGO-DataCloud Project)
+- Bug [#6](https://github.com/OphidiaBigData/ophidia-server/issues/6)
 
 ### Added:
 
-- Option 'host_partition'
+- Option 'host_partition' in workflow schema
 
 ### Changed:
 
-- Improve code coverage (INDIGO-DataCloud Project)
-- Remove reference to PyWPS
-- Remove references to folder 'txt'
+- Improve code coverage of unit tests (INDIGO-DataCloud Project)
+- Remove references to 'txt' folder
 
 ## v0.10.6 - 2016-10-20
 
@@ -99,9 +98,9 @@
 - Bug in file matching during directory scanning
 - Bug in handling subset strings for argument 'counter' of OPH_FOR
 - Bug in handling on_exit:oph_delete in case of massive operations
-- Bug [\#4](https://github.com/OphidiaBigData/ophidia-server/issues/4)
-- Bug [\#2](https://github.com/OphidiaBigData/ophidia-server/issues/2)
-- Bug [\#1](https://github.com/OphidiaBigData/ophidia-server/issues/1)
+- Bug [#4](https://github.com/OphidiaBigData/ophidia-server/issues/4)
+- Bug [#2](https://github.com/OphidiaBigData/ophidia-server/issues/2)
+- Bug [#1](https://github.com/OphidiaBigData/ophidia-server/issues/1)
 
 ### Added:
 
