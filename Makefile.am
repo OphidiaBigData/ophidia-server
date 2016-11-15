@@ -27,6 +27,9 @@ include_HEADERS = src/oph_types.h src/oph_execute_main.h
 certdir = $(prefix)/etc/cert/
 dist_cert_DATA =
 
+txtdir = $(prefix)/txt/
+dist_txt_DATA = 
+
 logdir = $(prefix)/log/
 dist_log_DATA =
 

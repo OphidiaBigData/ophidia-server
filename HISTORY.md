@@ -13,7 +13,6 @@
 ### Changed:
 
 - Improve code coverage of unit tests (INDIGO-DataCloud Project)
-- Remove references to 'txt' folder
 
 ## v0.10.6 - 2016-10-20
 
