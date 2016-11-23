@@ -125,6 +125,9 @@ int oph_ssh_submit(const char *cmd)
 		return OPH_LIBSSH_ERROR;
 	}
 
+	char *errmsg = NULL;
+	int errmsg_len = 0;
+
 	session = libssh2_session_init();
 	if (!session) {
 #ifdef WIN32
@@ -134,7 +137,7 @@ int oph_ssh_submit(const char *cmd)
 #endif
 		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to init ssh sessione\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to init ssh session\n");
 		return OPH_LIBSSH_ERROR;
 	}
 
@@ -142,6 +145,7 @@ int oph_ssh_submit(const char *cmd)
 
 	while ((rc = libssh2_session_handshake(session, sock)) == LIBSSH2_ERROR_EAGAIN);
 	if (rc) {
+		libssh2_session_last_error(session, &errmsg, &errmsg_len, 1);
 		libssh2_session_disconnect(session, "Session disconnected");
 		libssh2_session_free(session);
 #ifdef WIN32
@@ -151,12 +155,15 @@ int oph_ssh_submit(const char *cmd)
 #endif
 		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failure establishing SSH session: %d\n", rc);
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failure establishing SSH session (%d): %s\n", rc, errmsg ? errmsg : "no additional info");
+		if (errmsg)
+			free(errmsg);
 		return OPH_LIBSSH_ERROR;
 	}
 
 	while ((rc = libssh2_userauth_publickey_fromfile(session, oph_subm_user, oph_subm_user_publk, oph_subm_user_privk, "")) == LIBSSH2_ERROR_EAGAIN);
 	if (rc) {
+		libssh2_session_last_error(session, &errmsg, &errmsg_len, 1);
 		libssh2_session_disconnect(session, "Session disconnected");
 		libssh2_session_free(session);
 #ifdef WIN32
@@ -166,7 +173,9 @@ int oph_ssh_submit(const char *cmd)
 #endif
 		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Authentication by public key failed\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Authentication by public key failed (%d): %s\n", rc, errmsg ? errmsg : "no additional info");
+		if (errmsg)
+			free(errmsg);
 		return OPH_LIBSSH_ERROR;
 	}
 
@@ -174,6 +183,7 @@ int oph_ssh_submit(const char *cmd)
 		waitsocket(sock, session);
 	}
 	if (channel == NULL) {
+		libssh2_session_last_error(session, &errmsg, &errmsg_len, 1);
 		libssh2_session_disconnect(session, "Session disconnected");
 		libssh2_session_free(session);
 #ifdef WIN32
@@ -183,13 +193,16 @@ int oph_ssh_submit(const char *cmd)
 #endif
 		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during opening session channel\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during opening channel session: %s\n", errmsg ? errmsg : "no additional info");
+		if (errmsg)
+			free(errmsg);
 		return OPH_LIBSSH_ERROR;
 	}
 	while ((rc = libssh2_channel_exec(channel, cmd)) == LIBSSH2_ERROR_EAGAIN) {
 		waitsocket(sock, session);
 	}
-	if (rc != 0) {
+	if (rc) {
+		libssh2_session_last_error(session, &errmsg, &errmsg_len, 1);
 		libssh2_channel_free(channel);
 		libssh2_session_disconnect(session, "Session disconnected");
 		libssh2_session_free(session);
@@ -200,7 +213,9 @@ int oph_ssh_submit(const char *cmd)
 #endif
 		libssh2_exit();
 		pthread_mutex_unlock(&libssh2_flag);
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during opening session channel\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during sending commands over ssh channel (%d): %s\n", rc, errmsg ? errmsg : "no additional info");
+		if (errmsg)
+			free(errmsg);
 		return OPH_LIBSSH_ERROR;
 	}
 
