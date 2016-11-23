@@ -1546,7 +1546,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						char **jsonkeys = NULL;
 						char **fieldtypes = NULL;
 						char **jsonvalues = NULL;
-						char jsontmp[OPH_MAX_STRING_SIZE];
 
 						success = 0;
 						while (!success) {
@@ -1630,8 +1629,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									break;
 								}
 								jjj = 0;
-								snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s", output_list[j]);
-								jsonvalues[jjj] = strdup(jsontmp);
+								jsonvalues[jjj] = strdup(output_list[j]);
 								if (!jsonvalues[jjj]) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < jjj; iii++)
