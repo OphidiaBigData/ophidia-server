@@ -284,8 +284,8 @@ int oph_ssh_submit(const char *cmd)
 
 #else
 
-	char scmd[6 + strlen(oph_ip_target_host) + strlen(cmd)];
-	sprintf(scmd, "ssh %s %s", oph_ip_target_host, cmd);
+	char scmd[8 + strlen(oph_ip_target_host) + strlen(cmd)];
+	sprintf(scmd, "ssh %s '%s'", oph_ip_target_host, cmd);
 	pthread_mutex_lock(&libssh2_flag);
 	int result = system(scmd);
 	pthread_mutex_unlock(&libssh2_flag);
