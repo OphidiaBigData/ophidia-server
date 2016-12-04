@@ -373,6 +373,15 @@ AC_SUBST(LIBSSL_INCLUDE)
 LIBSSL_LIB="$libopenssl_lib_path"
 AC_SUBST(LIBSSL_LIB)
 
+#Disable SSH
+SSH_SUPPORT=
+AC_ARG_ENABLE(ssh_lib,
+	   [ --disable-ssh-lib	Disable libSSH to submit commands to the cluster. (Enabled by default)],
+	   [ ssh_lib="no" ],
+           [ ssh_lib="yes" ]
+	   )
+AM_CONDITIONAL([SSH_SUPPORT], [test "x$ssh_lib" = "xyes"])
+
 PKG_CHECK_MODULES(SSH2, libssh2 >= 0.23)
 AC_ARG_WITH(libssh2_header_path,
 	   [  --with-libssh2-header-path=PATH 		Location of libssh2 includes directory],

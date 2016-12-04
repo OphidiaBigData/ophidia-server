@@ -73,6 +73,12 @@ int waitsocket(int socket_fd, LIBSSH2_SESSION * session)
 
 int oph_ssh_submit(const char *cmd)
 {
+	if (!cmd || !strlen(cmd)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
+		return OPH_LIBSSH_ERROR;
+	}
+#ifdef SSH_SUPPORT
+
 	int sock;
 	struct sockaddr_in sin;
 	struct addrinfo hints, *result;
@@ -275,6 +281,19 @@ int oph_ssh_submit(const char *cmd)
 
 	pthread_mutex_unlock(&libssh2_flag);	// Release the lock for SSH library
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "SSH2 library unlocked\n");
+
+#else
+
+	char scmd[6 + strlen(oph_ip_target_host) + strlen(cmd)];
+	sprintf(scmd, "ssh %s %s", oph_ip_target_host, cmd);
+	pthread_mutex_lock(&libssh2_flag);
+	int result = system(scmd);
+	pthread_mutex_unlock(&libssh2_flag);
+	if (result) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to submit the command %s\n", cmd);
+		return OPH_LIBSSH_ERROR;
+	}
+#endif
 
 	return OPH_LIBSSH_OK;
 }
