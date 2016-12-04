@@ -16,15 +16,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef SSH_SUPPORT
 #include <libssh2.h>
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -32,6 +31,10 @@
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
+#else
+#define OPH_LIBSSH_SEPARATOR '\"'
+#define OPH_LIBSSH_ESCAPE '\\'
+#endif
 
 #include "oph_ssh_submit.h"
 
@@ -42,6 +45,7 @@ extern char *oph_subm_user;
 extern char *oph_subm_user_publk;
 extern char *oph_subm_user_privk;
 
+#ifdef SSH_SUPPORT
 int waitsocket(int socket_fd, LIBSSH2_SESSION * session)
 {
 	struct timeval timeout;
@@ -70,6 +74,7 @@ int waitsocket(int socket_fd, LIBSSH2_SESSION * session)
 
 	return rc;
 }
+#endif
 
 int oph_ssh_submit(const char *cmd)
 {
@@ -284,11 +289,24 @@ int oph_ssh_submit(const char *cmd)
 
 #else
 
-	char scmd[8 + strlen(oph_ip_target_host) + strlen(cmd)];
-	sprintf(scmd, "ssh %s '%s'", oph_ip_target_host, cmd);
+	size_t i, j, size_cmd = strlen(cmd);
+	char scmd[2 * size_cmd];
+	for (i = j = 0; i < size_cmd; ++i, ++j) {
+		if (cmd[i] == OPH_LIBSSH_SEPARATOR) {
+			scmd[j++] = OPH_LIBSSH_ESCAPE;
+		}
+		scmd[j] = cmd[i];
+	}
+	scmd[j] = 0;
+
+	char rcmd[8 + strlen(oph_ip_target_host) + j];
+	sprintf(rcmd, "ssh %s %c%s%c", oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
+
 	pthread_mutex_lock(&libssh2_flag);
-	int result = system(scmd);
+	int result = system(rcmd);
 	pthread_mutex_unlock(&libssh2_flag);
+
 	if (result) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to submit the command %s\n", cmd);
 		return OPH_LIBSSH_ERROR;

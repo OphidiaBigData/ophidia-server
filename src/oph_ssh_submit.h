@@ -23,15 +23,15 @@
 #include <pthread.h>
 #endif
 
-
 #include "oph_gather.h"
-
-#define OPH_TEST_COMMAND "hostname"
 
 #define OPH_LIBSSH_OK 0
 #define OPH_LIBSSH_ERROR 1
 
+#ifdef SSH_SUPPORT
 static int waitsocket(int socket_fd, LIBSSH2_SESSION * session);
+#endif
+
 int oph_ssh_submit(const char *cmd);
 
 #endif				/* OPH_SSH_SUBMIT_H */
