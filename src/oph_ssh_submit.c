@@ -34,6 +34,7 @@
 #else
 #define OPH_LIBSSH_SEPARATOR '\"'
 #define OPH_LIBSSH_ESCAPE '\\'
+#define OPH_LIBSSH_SYSTEM_COMMAND "ssh %s %c%s%c >/dev/null 2>&1"
 #endif
 
 #include "oph_ssh_submit.h"
@@ -299,8 +300,8 @@ int oph_ssh_submit(const char *cmd)
 	}
 	scmd[j] = 0;
 
-	char rcmd[8 + strlen(oph_ip_target_host) + j];
-	sprintf(rcmd, "ssh %s %c%s%c", oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
+	char rcmd[25 + strlen(oph_ip_target_host) + j];
+	sprintf(rcmd, OPH_LIBSSH_SYSTEM_COMMAND, oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
 
 	pthread_mutex_lock(&libssh2_flag);

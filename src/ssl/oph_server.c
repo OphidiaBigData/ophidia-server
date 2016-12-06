@@ -716,5 +716,5 @@ void oph_signal_handler(int sig)
 
 void oph_child_signal_handler(int sig)
 {
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, sys_siglist[sig] ? sys_siglist[sig] : "");
+	UNUSED(sig);
 }
