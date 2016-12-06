@@ -24,6 +24,11 @@ ADDITIONAL_LIBS = -lm -lpthread
 
 if SSH_SUPPORT
 ADDITIONAL_CFLAGS += -DSSH_SUPPORT
+LIBSSH2_CFLAGS = ${SSH2_CFLAGS}
+LIBSSH2_LIBS = ${SSH2_LIBS}
+else
+LIBSSH2_CFLAGS =
+LIBSSH2_LIBS =
 endif
 
 if INTERFACE_TYPE_IS_SSL
@@ -168,9 +173,9 @@ liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser
 
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
-liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${SSH2_CFLAGS}
+liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${LIBSSH2_CFLAGS}
 liboph_ssh_submit_la_LDFLAGS = -shared
-liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${SSH2_LIBS}
+liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS}
 
 LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager.c
