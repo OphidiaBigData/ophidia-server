@@ -4056,6 +4056,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].name = strdup(OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETE);
+				wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
 				int kk = wf->tasks[wf->tasks_num].arguments_num;
 				if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk) || (kk != 1 + wf->tasks[wf->tasks_num].arguments_num)) {
