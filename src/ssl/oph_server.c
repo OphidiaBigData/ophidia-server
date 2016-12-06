@@ -625,6 +625,9 @@ int oph_handle_signals(void)
 	if (rc != 0) {
 		return -1;
 	}
+#ifdef  SA_RESTART
+	act.sa_flags |= SA_RESTART;
+#endif
 
 	act.sa_handler = SIG_IGN;
 
@@ -689,6 +692,9 @@ int oph_handle_signals(void)
 	if (rc != 0) {
 		return -1;
 	}
+#ifdef  SA_NOCLDSTOP
+	act.sa_flags |= SA_NOCLDSTOP;
+#endif
 
 	act.sa_handler = oph_child_signal_handler;
 
