@@ -3810,12 +3810,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						for (k = 0; k < wf->tasks[task_index].outputs_num; ++k)
 							if (!strncmp(wf->tasks[task_index].outputs_keys[k], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes for final operation\n", ttype, jobid,
+								      wf->tasks[task_index].outputs_values[k]);
 								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {
 									for (i = 0; i < wf->tasks[task_index].arguments_num; ++i)
 										if (!strncmp(wf->tasks[task_index].arguments_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-											pch2 = wf->tasks[task_index].arguments_values[i];
+											if (wf->tasks[task_index].light_tasks_num) {
+												for (j = 0; j < wf->tasks[task_index].light_tasks_num; ++j) {
+													if (!strcmp(pch, pch2 = wf->tasks[task_index].light_tasks[j].arguments_values[i]))
+														break;
+												}
+												if (j >= wf->tasks[task_index].light_tasks_num)
+													pch2 = NULL;
+											} else
+												pch2 = wf->tasks[task_index].arguments_values[i];
 											while ((pch2 = strstr(pch2, pch))) {
 												pch2 += strlen(pch);
 												if (!(*pch2) || (*pch2 == OPH_SEPARATOR_SUBPARAM_STR[0]))
@@ -3829,12 +3839,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											free(output_cubes);
 											output_cubes = strdup(tmp);
 										} else
-											output_cubes = strdup(wf->tasks[task_index].outputs_values[k]);
-									}
+											output_cubes = strdup(pch);
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to candidate list for final operation\n", ttype, jobid, pch);
+									} else
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: '%s' will be not considered for final operation\n", ttype, jobid, pch);
 									pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								}
 								if (output_cubes) {
 									char *cubeid = NULL;
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select cubes for final operation\n", ttype, jobid, output_cubes);
 									do {
 										cubeid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
 										if (cubeid) {
@@ -3847,6 +3860,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												return SOAP_OK;
 											}
 											oph_trash_append(wf->exit_values, NULL, strtol(cubeid, NULL, 10));
+											pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype, jobid, cubeid);
 											cubeid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
 											if (cubeid)
 												*cubeid = 0;
