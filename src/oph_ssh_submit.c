@@ -75,6 +75,37 @@ int waitsocket(int socket_fd, LIBSSH2_SESSION * session)
 
 	return rc;
 }
+#else
+int _system(const char *command)
+{
+	if (!command)
+		return -1;
+
+	pid_t childPid;
+	int status;
+
+	switch (childPid = fork()) {
+
+		case -1:
+			status = -1;
+			break;
+
+		case 0:
+			execl("/bin/sh", "sh", "-c", command, (char *) NULL);
+			_exit(127);
+
+		default:
+			while (waitpid(childPid, &status, 0) == -1) {
+				if (errno != EINTR) {
+					status = -1;
+					break;
+				}
+			}
+			break;
+	}
+
+	return status;
+}
 #endif
 
 int oph_ssh_submit(const char *cmd)
@@ -305,7 +336,7 @@ int oph_ssh_submit(const char *cmd)
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
 
 	pthread_mutex_lock(&libssh2_flag);
-	int result = system(rcmd);
+	int result = _system(rcmd);
 	pthread_mutex_unlock(&libssh2_flag);
 
 	if (result) {
