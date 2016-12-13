@@ -2282,6 +2282,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							jjj++;
 							if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_RUNNING_STR) && !strcmp(list.max_status[i], OPH_ODB_STATUS_WAIT_STR))
 								jsonvalues[jjj] = strdup(list.max_status[i]);
+							else if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_ERROR_STR) && strcmp(list.max_status[i], OPH_ODB_STATUS_COMPLETED_STR)
+								 && !strstr(list.max_status[i], "ERROR"))
+								jsonvalues[jjj] = strdup(OPH_ODB_STATUS_RUNNING_ERROR_STR);
 							else
 								jsonvalues[jjj] = strdup(list.name[i]);
 							if (!jsonvalues[jjj]) {
