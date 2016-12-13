@@ -585,6 +585,8 @@ int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_
 		case OPH_ODB_STATUS_COMPLETED:
 		case OPH_ODB_STATUS_ERROR:
 		case OPH_ODB_STATUS_START_ERROR:	// Exception due to errors in operator arguments
+		case OPH_ODB_STATUS_ABORTED:
+		case OPH_ODB_STATUS_EXPIRED:
 			if (nchildren < 0)
 				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3, oph_odb_convert_status_to_str(status), id_job);
 			else
