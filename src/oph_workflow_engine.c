@@ -3494,6 +3494,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 			output_json = NULL;	// Skip output JSON in case of massive operation --> refer to my_output_json instead
 		} else {
+			char set_update_task_data = 0;
+			if (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_PENDING)
+				set_update_task_data = 1;
 			wf->tasks[task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been updated to %s in memory\n", ttype, jobid, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].status));
@@ -3514,29 +3517,35 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						save = 1;
 				} else
 					save = 1;
-				if (save && (task_index < wf->tasks_num)) {
-					struct stat s;
-					char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
-					snprintf(str_markerid, OPH_MAX_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
-					snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
-					if (stat(filename, &s) && (errno == ENOENT)) {
-						char error_message[OPH_MAX_STRING_SIZE];
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing task '%s'!", wf->tasks[task_index].name);
-
-						update_task_data = 1;
-						if (oph_save_basic_json(ttype, jobid, wf, task_index, -1, "ERROR", error_message, &my_output_json)) {
-							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name,
-							      wf->name);
-							pthread_mutex_unlock(&global_flag);
-							*response = OPH_SERVER_IO_ERROR;
-							oph_output_data_free(outputs_keys, outputs_num);
-							oph_output_data_free(outputs_values, outputs_num);
-							return SOAP_OK;
+				if (save) {
+					if (task_index < wf->tasks_num) {
+						struct stat s;
+						char filename[OPH_MAX_STRING_SIZE], str_markerid[OPH_MAX_STRING_SIZE];
+						snprintf(str_markerid, OPH_MAX_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+						snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
+						if (stat(filename, &s) && (errno == ENOENT)) {
+							char error_message[OPH_MAX_STRING_SIZE];
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing task '%s'!", wf->tasks[task_index].name);
+							update_task_data = 1;
+							if (oph_save_basic_json(ttype, jobid, wf, task_index, -1, "ERROR", error_message, &my_output_json)) {
+								pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid,
+								      wf->tasks[task_index].name, wf->name);
+								pthread_mutex_unlock(&global_flag);
+								*response = OPH_SERVER_IO_ERROR;
+								oph_output_data_free(outputs_keys, outputs_num);
+								oph_output_data_free(outputs_values, outputs_num);
+								return SOAP_OK;
+							}
 						}
 					}
+					if (set_update_task_data)
+						update_task_data = 1;
 				}
-			} else
+			} else {
 				wf->tasks[task_index].residual_auto_retry_num = 0;
+				if (set_update_task_data)
+					update_task_data = 1;
+			}
 		}
 
 		int check_status;
