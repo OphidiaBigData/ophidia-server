@@ -89,6 +89,9 @@ unsigned int oph_base_backoff = 0;
 
 void set_global_values(const char *configuration_file)
 {
+	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin))
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdin\n");
+
 	if (!configuration_file)
 		return;
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Loading configuration from '%s'\n", configuration_file);

@@ -102,6 +102,9 @@ unsigned int oph_base_backoff = 0;
 
 void set_global_values(const char *configuration_file)
 {
+	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin))
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdin\n");
+
 	if (!configuration_file)
 		return;
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Loading configuration from '%s'\n", configuration_file);
@@ -265,7 +268,6 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
-
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 }

@@ -93,6 +93,7 @@
 #define OPH_SERVER_POLL_TIME 60	// sec
 #define OPH_SERVER_POLL_ITEMS 128	// tasks
 #define OPH_BASE_SRC_PATH ""
+#define OPH_SERVER_DEV_NULL "/dev/null"
 
 // RMS info
 #define OPH_RMANAGER_CONF_FILE "%s/etc/rmanager.conf"
