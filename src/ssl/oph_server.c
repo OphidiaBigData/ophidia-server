@@ -612,8 +612,6 @@ void CRYPTO_thread_cleanup()
 
 int oph_handle_signals(void)
 {
-
-
 	int rc;
 	struct sigaction act;
 
@@ -692,6 +690,21 @@ int oph_handle_signals(void)
 	if (rc != 0) {
 		return -1;
 	}
+
+	rc = sigaction(SIGTSTP, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+
+	rc = sigaction(SIGTTIN, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+
+	rc = sigaction(SIGTTOU, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
 #ifdef  SA_NOCLDSTOP
 	act.sa_flags |= SA_NOCLDSTOP;
 #endif
@@ -704,7 +717,6 @@ int oph_handle_signals(void)
 	}
 
 	return 0;
-
 }
 
 void oph_signal_handler(int sig)

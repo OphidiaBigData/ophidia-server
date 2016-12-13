@@ -5447,8 +5447,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 										if (k >= n) {
 											snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j,
 												 temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED);
-											error_notification[nn] = strdup(submission_string_ext);
-											nn++;
+											error_notification[nn++] = strdup(submission_string_ext);
 											if (nn >= OPH_SERVER_POLL_ITEMS)
 												break;
 										}
@@ -5464,8 +5463,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 								if (k >= n) {
 									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
 										 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED);
-									error_notification[nn] = strdup(submission_string_ext);
-									nn++;
+									error_notification[nn++] = strdup(submission_string_ext);
 									if (nn >= OPH_SERVER_POLL_ITEMS)
 										break;
 								}
@@ -5525,20 +5523,18 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 
 			pthread_mutex_unlock(&global_flag);
 
-			for (k = 0; k < nn; ++k) {
-				pthread_mutex_lock(&global_flag);
-				jobid = ++*data->state->jobid;
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
-				pthread_mutex_unlock(&global_flag);
-
+			for (k = 0; k < nn; ++k)
 				if (error_notification[k]) {
+					pthread_mutex_lock(&global_flag);
+					jobid = ++*data->state->jobid;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "M%d: a task has been aborted before sending error notification\n", jobid);
+					pthread_mutex_unlock(&global_flag);
+
 					response = 0;
 					oph_workflow_notify(data->state, 'M', jobid, error_notification[k], NULL, &response);
 					if (response)
 						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "M%d: error %d in notify\n", jobid, response);
 				}
-			}
-
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
 				if (list[k] < 0)
