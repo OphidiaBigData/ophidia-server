@@ -5501,6 +5501,29 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 							}
 						}
 				}
+			for (k = 0; k < n; ++k)
+				if (list[k] > 0) {
+					for (temp = job_list->head; temp; temp = temp->next)
+						if (temp->wf) {
+							for (i = 0; i <= temp->wf->tasks_num; ++i)
+								if (temp->wf->tasks[i].name) {
+									if (temp->wf->tasks[i].light_tasks_num) {
+										for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
+											if (temp->wf->tasks[i].light_tasks[j].idjob == list[k]) {
+												list[k] = -list[k];
+												break;
+											}
+										if (j < temp->wf->tasks[i].light_tasks_num)
+											break;
+									} else if (temp->wf->tasks[i].idjob == list[k]) {
+										list[k] = -list[k];
+										break;
+									}
+								}
+							if (i <= temp->wf->tasks_num)
+								break;
+						}
+				}
 
 			pthread_mutex_unlock(&global_flag);
 
