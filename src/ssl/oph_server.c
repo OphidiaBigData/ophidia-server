@@ -644,6 +644,21 @@ int oph_handle_signals(void)
 		return -1;
 	}
 
+	rc = sigaction(SIGTSTP, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+
+	rc = sigaction(SIGTTIN, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+
+	rc = sigaction(SIGTTOU, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+
 	act.sa_handler = oph_signal_handler;
 
 	rc = sigaction(SIGINT, &act, NULL);
@@ -687,21 +702,6 @@ int oph_handle_signals(void)
 	}
 
 	rc = sigaction(SIGXFSZ, &act, NULL);
-	if (rc != 0) {
-		return -1;
-	}
-
-	rc = sigaction(SIGTSTP, &act, NULL);
-	if (rc != 0) {
-		return -1;
-	}
-
-	rc = sigaction(SIGTTIN, &act, NULL);
-	if (rc != 0) {
-		return -1;
-	}
-
-	rc = sigaction(SIGTTOU, &act, NULL);
 	if (rc != 0) {
 		return -1;
 	}

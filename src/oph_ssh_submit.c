@@ -34,7 +34,7 @@
 #else
 #define OPH_LIBSSH_SEPARATOR '\"'
 #define OPH_LIBSSH_ESCAPE '\\'
-#define OPH_LIBSSH_SYSTEM_COMMAND "ssh %s %c%s%c >/dev/null 2>&1"
+#define OPH_LIBSSH_SYSTEM_COMMAND "ssh %s %c%s%c >/dev/null 2>&1 </dev/null"
 #endif
 
 #include "oph_ssh_submit.h"
