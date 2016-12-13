@@ -17,6 +17,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+Source code is available on github at: 
+https://github.com/OphidiaBigData/ophidia-server
+
 =====================================================================
 
 The following libraries have been used:
@@ -47,7 +50,7 @@ http://www.libssh2.org/license.html
 
 - Hash table</br>
 Creative Commons CC0 1.0</br>
-http://en.literateprograms.org/Hash_table_(C)
+https://creativecommons.org/publicdomain/zero/1.0/
 
 - gSOAP XML Web services tools</br>
 GPLv2</br>
