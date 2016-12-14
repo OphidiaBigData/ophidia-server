@@ -1546,7 +1546,6 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						char **jsonkeys = NULL;
 						char **fieldtypes = NULL;
 						char **jsonvalues = NULL;
-						char jsontmp[OPH_MAX_STRING_SIZE];
 
 						success = 0;
 						while (!success) {
@@ -1630,8 +1629,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									break;
 								}
 								jjj = 0;
-								snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%s", output_list[j]);
-								jsonvalues[jjj] = strdup(jsontmp);
+								jsonvalues[jjj] = strdup(output_list[j]);
 								if (!jsonvalues[jjj]) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < jjj; iii++)
@@ -3812,12 +3810,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						for (k = 0; k < wf->tasks[task_index].outputs_num; ++k)
 							if (!strncmp(wf->tasks[task_index].outputs_keys[k], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes for final operation\n", ttype, jobid,
+								      wf->tasks[task_index].outputs_values[k]);
 								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {
 									for (i = 0; i < wf->tasks[task_index].arguments_num; ++i)
 										if (!strncmp(wf->tasks[task_index].arguments_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-											pch2 = wf->tasks[task_index].arguments_values[i];
+											if (wf->tasks[task_index].light_tasks_num) {
+												for (j = 0; j < wf->tasks[task_index].light_tasks_num; ++j) {
+													if (!strcmp(pch, pch2 = wf->tasks[task_index].light_tasks[j].arguments_values[i]))
+														break;
+												}
+												if (j >= wf->tasks[task_index].light_tasks_num)
+													pch2 = NULL;
+											} else
+												pch2 = wf->tasks[task_index].arguments_values[i];
 											while ((pch2 = strstr(pch2, pch))) {
 												pch2 += strlen(pch);
 												if (!(*pch2) || (*pch2 == OPH_SEPARATOR_SUBPARAM_STR[0]))
@@ -3831,12 +3839,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											free(output_cubes);
 											output_cubes = strdup(tmp);
 										} else
-											output_cubes = strdup(wf->tasks[task_index].outputs_values[k]);
-									}
+											output_cubes = strdup(pch);
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to candidate list for final operation\n", ttype, jobid, pch);
+									} else
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: '%s' will be not considered for final operation\n", ttype, jobid, pch);
 									pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								}
 								if (output_cubes) {
 									char *cubeid = NULL;
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select cubes for final operation\n", ttype, jobid, output_cubes);
 									do {
 										cubeid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
 										if (cubeid) {
@@ -3849,6 +3860,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												return SOAP_OK;
 											}
 											oph_trash_append(wf->exit_values, NULL, strtol(cubeid, NULL, 10));
+											pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype, jobid, cubeid);
 											cubeid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
 											if (cubeid)
 												*cubeid = 0;
@@ -4058,6 +4070,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].name = strdup(OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETE);
+				wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
 				int kk = wf->tasks[wf->tasks_num].arguments_num;
 				if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk) || (kk != 1 + wf->tasks[wf->tasks_num].arguments_num)) {
@@ -5487,6 +5500,27 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 									}
 							}
 						}
+				}
+			for (k = 0; k < n; ++k)
+				if (list[k] > 0) {
+					for (temp = job_list->head; temp; temp = temp->next)
+						if (temp->wf) {
+							for (i = 0; i <= temp->wf->tasks_num; ++i)
+								if (temp->wf->tasks[i].name) {
+									if (temp->wf->tasks[i].light_tasks_num) {
+										for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
+											if (temp->wf->tasks[i].light_tasks[j].idjob == list[k])
+												break;
+										if (j < temp->wf->tasks[i].light_tasks_num)
+											break;
+									} else if (temp->wf->tasks[i].idjob == list[k])
+										break;
+								}
+							if (i <= temp->wf->tasks_num)
+								break;
+						}
+					if (!temp)
+						list[k] = -list[k];
 				}
 
 			pthread_mutex_unlock(&global_flag);
