@@ -117,6 +117,7 @@ typedef struct _oph_workflow_dep {
  * \param on_exit Action to be taken at the end of workflow execution
  * \param is_skipped Flag used to skip task execution
  * \param branch_num Number of selection blocks which the task is involved in
+ * \param isknown Flag set only for known operators
  */
 typedef struct _oph_workflow_task {
 	int idjob;
@@ -157,6 +158,7 @@ typedef struct _oph_workflow_task {
 	char *on_exit;
 	int is_skipped;
 	int branch_num;
+	char isknown;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

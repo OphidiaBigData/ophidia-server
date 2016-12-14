@@ -1610,6 +1610,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -1711,6 +1712,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -1811,6 +1813,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, ret;
+		wf->tasks[i].isknown = 1;
 
 		char error_message[OPH_MAX_STRING_SIZE];
 		snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing oph_endfor!");
@@ -1909,6 +1912,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, idjob = wf->tasks[i].idjob;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2008,6 +2012,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, idjob = wf->tasks[i].idjob;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2102,6 +2107,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob, first = wf->status < (int) OPH_ODB_STATUS_RUNNING;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2330,8 +2336,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		oph_workflow *wf = item->wf;
-
 		int i = *task_id, idjob = wf->tasks[i].idjob;
+		wf->tasks[i].isknown = 1;
 
 		// JSON Response creation
 		int success = 0;

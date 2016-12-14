@@ -5443,7 +5443,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 				if (temp->wf) {
 					for (i = 0; i <= temp->wf->tasks_num; ++i)
 						if (temp->wf->tasks[i].name && (temp->wf->tasks[i].status > (int) OPH_ODB_STATUS_PENDING)
-						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
+						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED) && !temp->wf->tasks[i].isknown) {
 							if (temp->wf->tasks[i].light_tasks_num) {
 								for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
 									if ((temp->wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_PENDING)
