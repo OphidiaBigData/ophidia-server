@@ -24,7 +24,7 @@ start() {
 		echo -n "Already running !" && warning
 		echo
 	else
-		$exec -d -l $logfile > /dev/null 2>&1 &
+		daemon --user=ophidia $exec "-d -l $logfile > /dev/null 2>&1 < /dev/null &"
 	       	RETVAL=$?
 	       	PID=$!
 		[ "$RETVAL" = 0 ] && touch ${lockfile} && success || failure
