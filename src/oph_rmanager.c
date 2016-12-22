@@ -401,7 +401,7 @@ int oph_cancel_request(int jobid)
 		return RMANAGER_NULL_PARAM;
 	if (orm && orm->subm_cancel) {
 #ifdef LOCAL_FRAMEWORK
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n");
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
 		size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
 		char cmd[len];

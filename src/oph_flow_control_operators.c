@@ -60,7 +60,7 @@ void *_oph_wait(oph_notify_data * data)
 	struct oph_plugin_data *state = data->state;
 	char *json_output = data->json_output;
 	oph_wait_data *wd = (oph_wait_data *) data->data;
-	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
+	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], fast_exit = 0;
 	CURL *curl = NULL;
 
 	// Init
@@ -128,6 +128,13 @@ void *_oph_wait(oph_notify_data * data)
 			counter = 0;
 			while ((status == (int) OPH_ODB_STATUS_WAIT) && ((wd->timeout < 0) || (counter < wd->timeout))) {
 
+				pthread_mutex_lock(&global_flag);
+				if (wf->waiting_tasks_num >= 0)
+					wf->waiting_tasks_num++;
+				else
+					wf->waiting_tasks_num--;
+				pthread_mutex_unlock(&global_flag);
+
 				sleep(1);
 				counter++;
 
@@ -136,6 +143,16 @@ void *_oph_wait(oph_notify_data * data)
 					status = wf->tasks[task_index].status;
 				else
 					status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
+				if (wf->waiting_tasks_num > 0)
+					wf->waiting_tasks_num--;
+				else {
+					wf->waiting_tasks_num++;
+					if (!wf->waiting_tasks_num) {
+						oph_workflow_free(wf);
+						status = OPH_ODB_STATUS_ABORTED;
+						fast_exit = 1;
+					}
+				}
 				pthread_mutex_unlock(&global_flag);
 			}
 
@@ -164,16 +181,20 @@ void *_oph_wait(oph_notify_data * data)
 
 		} while (status == (int) OPH_ODB_STATUS_WAIT);
 
-		pthread_mutex_lock(&global_flag);
+		if (!fast_exit) {
 
-		idjob = wf->tasks[task_index].idjob;
-		pidjob = wf->idjob;
-		if (status < (int) OPH_ODB_STATUS_COMPLETED)
-			status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
+			pthread_mutex_lock(&global_flag);
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name, oph_odb_convert_status_to_str(status));
+			idjob = wf->tasks[task_index].idjob;
+			pidjob = wf->idjob;
+			if (status < (int) OPH_ODB_STATUS_COMPLETED)
+				status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
 
-		pthread_mutex_unlock(&global_flag);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name,
+			      oph_odb_convert_status_to_str(status));
+
+			pthread_mutex_unlock(&global_flag);
+		}
 	}
 	// Finalize
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize waiting procedure\n");

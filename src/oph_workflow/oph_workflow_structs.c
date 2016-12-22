@@ -39,6 +39,11 @@ int oph_workflow_free(oph_workflow * workflow)
 {
 	if (!workflow)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
+	if (workflow->waiting_tasks_num) {
+		if (workflow->waiting_tasks_num > 0)
+			workflow->waiting_tasks_num = -workflow->waiting_tasks_num;
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+	}
 	int i;
 	if (workflow->abstract) {
 		free(workflow->abstract);
