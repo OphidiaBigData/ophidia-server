@@ -16,6 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #ifdef SSH_SUPPORT
 #include <libssh2.h>
 #include <sys/socket.h>
@@ -25,7 +28,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>

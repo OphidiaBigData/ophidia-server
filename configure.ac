@@ -376,9 +376,9 @@ AC_SUBST(LIBSSL_LIB)
 #Disable SSH
 SSH_SUPPORT=
 AC_ARG_ENABLE(ssh_lib,
-	   [ --disable-ssh-lib	Disable libSSH to submit commands to the cluster. (Enabled by default)],
-	   [ ssh_lib="no" ],
-           [ ssh_lib="yes" ]
+	   [ --enable-ssh-lib	Enable libSSH to submit commands to the cluster. (Disabled by default)],
+	   [ ssh_lib="yes" ],
+           [ ssh_lib="no" ]
 	   )
 AM_CONDITIONAL([SSH_SUPPORT], [test "x$ssh_lib" = "xyes"])
 
