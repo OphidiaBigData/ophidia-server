@@ -90,6 +90,60 @@ int oph_check_operator(const char *operator, int *ncores, int *role)
 	return OPH_SERVER_OK;
 }
 
+int oph_check_status_mask(enum oph__oph_odb_job_status status, char *smask)
+{
+	int i;
+	if (!smask)
+		return 0;
+	switch (status) {
+		case OPH_ODB_STATUS_PENDING:
+			i = 0;
+			break;
+		case OPH_ODB_STATUS_WAIT:
+			i = 1;
+			break;
+		case OPH_ODB_STATUS_RUNNING:
+		case OPH_ODB_STATUS_START:
+		case OPH_ODB_STATUS_SET_ENV:
+		case OPH_ODB_STATUS_INIT:
+		case OPH_ODB_STATUS_DISTRIBUTE:
+		case OPH_ODB_STATUS_EXECUTE:
+		case OPH_ODB_STATUS_REDUCE:
+		case OPH_ODB_STATUS_DESTROY:
+		case OPH_ODB_STATUS_UNSET_ENV:
+			i = 2;
+			break;
+		case OPH_ODB_STATUS_COMPLETED:
+			i = 3;
+			break;
+		case OPH_ODB_STATUS_ERROR:
+		case OPH_ODB_STATUS_PENDING_ERROR:
+		case OPH_ODB_STATUS_RUNNING_ERROR:
+		case OPH_ODB_STATUS_START_ERROR:
+		case OPH_ODB_STATUS_SET_ENV_ERROR:
+		case OPH_ODB_STATUS_INIT_ERROR:
+		case OPH_ODB_STATUS_DISTRIBUTE_ERROR:
+		case OPH_ODB_STATUS_EXECUTE_ERROR:
+		case OPH_ODB_STATUS_REDUCE_ERROR:
+		case OPH_ODB_STATUS_DESTROY_ERROR:
+		case OPH_ODB_STATUS_UNSET_ENV_ERROR:
+			i = 4;
+			break;
+		case OPH_ODB_STATUS_SKIPPED:
+			i = 5;
+			break;
+		case OPH_ODB_STATUS_ABORTED:
+			i = 6;
+			break;
+		case OPH_ODB_STATUS_UNSELECTED:
+			i = 7;
+			break;
+		default:
+			return 0;
+	}
+	return smask[i] == OPH_OPERATOR_RESUME_PARAMETER_MASK_UP;
+}
+
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	char _host[OPH_SHORT_STRING_SIZE];
@@ -1515,7 +1569,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Handle RESUME_OPERATOR
 	if (oph_known_operator == OPH_RESUME_OPERATOR) {
-		char *session = NULL, *user = NULL;
+		char *session = NULL, *user = NULL, *mask = NULL;
 		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0;
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_SESSION, OPH_ARG_MARKER);
@@ -1594,8 +1648,21 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_ARG_USER, OPH_MAX_STRING_SIZE)) {
 				if (!user)
 					user = wf->tasks[0].arguments_values[i];
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_STATUS_FILTER, OPH_MAX_STRING_SIZE)) {
+				if (!mask)
+					mask = wf->tasks[0].arguments_values[i];
 			}
 		}
+
+		char smask[OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE];
+		if (mask) {
+			int mask_size = strlen(mask);
+			for (i = 0; (i < OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE) && (i < mask_size); ++i)
+				smask[i] = mask[i] == OPH_OPERATOR_RESUME_PARAMETER_MASK_UP ? OPH_OPERATOR_RESUME_PARAMETER_MASK_UP : OPH_OPERATOR_RESUME_PARAMETER_MASK_DOWN;
+			for (; i < OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE; ++i)
+				smask[i] = OPH_OPERATOR_RESUME_PARAMETER_MASK_DOWN;
+		} else
+			snprintf(smask, OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE, OPH_OPERATOR_RESUME_PARAMETER_MASK);
 
 		if (id < 0)
 			id = 0;
@@ -3645,7 +3712,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											while (make_swap);
 
 											for (i = 0; i < item->wf->tasks_num; ++i) {
-												if (item->wf->tasks[i].status && (item->wf->tasks[i].status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
+												if (item->wf->tasks[i].status && oph_check_status_mask(item->wf->tasks[i].status, smask))	// Discard uninitialized or aborted jobs
 												{
 													jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 													if (!jsonvalues) {
@@ -3768,7 +3835,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															free(jsonvalues[iii]);
 													if (jsonvalues)
 														free(jsonvalues);
-												} else if (item->wf->tasks[i].status == OPH_ODB_STATUS_ABORTED)
+												}
+												if (item->wf->tasks[i].status == OPH_ODB_STATUS_ABORTED)
 													check_for_aborted++;
 											}
 
@@ -4312,7 +4380,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											while (make_swap);
 
 											for (i = 0; i < item->wf->tasks[task_index].light_tasks_num; ++i) {
-												if (item->wf->tasks[task_index].light_tasks[i].status && (item->wf->tasks[task_index].light_tasks[i].status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
+												if (item->wf->tasks[task_index].light_tasks[i].status && oph_check_status_mask(item->wf->tasks[task_index].light_tasks[i].status, smask))	// Discard uninitialized or aborted jobs
 												{
 													jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 													if (!jsonvalues) {
