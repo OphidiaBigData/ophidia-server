@@ -1355,14 +1355,19 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 // Thread safe
 int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *tasks_indexes, int tasks_indexes_num, ophidiadb * oDB, char **jobid_response)
 {
-	if (!state || !wf || !tasks_indexes || !oDB) {
+	if (!state || !wf || !oDB) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: wrong parameters\n", ttype, jobid);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	if (!tasks_indexes_num) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: no tasks have to be executed\n", ttype, jobid);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: no tasks have to be executed\n", ttype, jobid);
 		return OPH_WORKFLOW_EXIT_SUCCESS;
+	}
+
+	if (!tasks_indexes) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: wrong parameters\n", ttype, jobid);
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
 	int i, j, k, odb_jobid, first = 1, res, nn = 0;
