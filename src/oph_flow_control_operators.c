@@ -62,27 +62,37 @@ void *_oph_wait(oph_notify_data * data)
 	oph_wait_data *wd = (oph_wait_data *) data->data;
 	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], fast_exit = 0;
 	CURL *curl = NULL;
+	char *pointer = wd->filename;
 
 	// Init
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Initialize waiting procedure\n");
 	switch (wd->type) {
 		case 'f':
-			if (strstr(wd->filename, "http")) {
+			while (pointer && (*pointer == ' '))
+				pointer++;
+			if (!pointer) {
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Empty parameter %s\n", OPH_OPERATOR_PARAMETER_FILENAME);
+				success = 0;
+				break;
+			}
+			if (strstr(pointer, "http")) {
 				curl = curl_easy_init();
 				if (!curl) {
 					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to check remote objects\n");
 					success = 0;
 					break;
 				}
-				curl_easy_setopt(curl, CURLOPT_URL, wd->filename);
+				curl_easy_setopt(curl, CURLOPT_URL, pointer);
 				curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 				curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "CURL options set\n");
-				strcpy(_filename, wd->filename);
-			} else if (oph_base_src_path && strlen(oph_base_src_path))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_base_src_path, wd->filename);
+				strcpy(_filename, pointer);
+			} else if (*pointer == '/')
+				strcpy(_filename, pointer);
+			else if (oph_base_src_path && strlen(oph_base_src_path))
+				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_base_src_path, pointer);
 			else if (!oph_get_session_code(wf->sessionid, tmp))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "/%s", oph_web_server_location, tmp, wd->filename);
+				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "/%s", oph_web_server_location, tmp, pointer);
 			else {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
 				success = 0;

@@ -33,6 +33,7 @@
 #include <libgen.h>
 
 extern char *oph_web_server;
+extern char *oph_base_src_path;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
@@ -229,12 +230,19 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	cube *datacube = NULL;
 	if (is_src_path)	// In case of src_path only the parameter OPH_MF_ARG_PATH is considered
 	{
+		char _path[PATH_MAX];
 		char *path = hashtbl_get(task_tbl, OPH_MF_ARG_PATH);
+		while (path && (*path == ' '))
+			path++;
 		if (!path) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to parse '%s'.\n", task_string);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if ((*path != '/') && oph_base_src_path && strlen(oph_base_src_path)) {
+			snprintf(_path, PATH_MAX, "%s/%s", oph_base_src_path, path);
+			path = _path;
 		}
 
 		int recursive = 0;
