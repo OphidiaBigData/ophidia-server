@@ -19,6 +19,8 @@
 #include "oph_ophidiadb.h"
 #include "oph_gather.h"
 
+#include <ctype.h>
+
 extern char *oph_server_location;
 extern ophidiadb *ophDB;
 
@@ -43,72 +45,82 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 		if (file == NULL)
 			return OPH_ODB_ERROR;
 
-		char buffer[OPH_MAX_STRING_SIZE];
-		char *position;
-		if (fscanf(file, "%s", buffer) == EOF) {
-			fclose(file);
-			return OPH_ODB_ERROR;
-		}
-
-		position = strchr(buffer, '=');
-		if (position != NULL) {
-			if (!(ophDB->name = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
-				fclose(file);
-				return OPH_ODB_MEMORY_ERROR;
+		unsigned int i;
+		char *argument = NULL;
+		char *argument_value = NULL;
+		int argument_length = 0;
+		char *result = NULL;
+		char line[OPH_MAX_STRING_SIZE] = {'\0'};
+		while (!feof (file))
+		{
+			result = fgets (line, OPH_MAX_STRING_SIZE, file);
+			if (!result) {
+				if (ferror (file)) {
+					fclose (file);
+					return OPH_ODB_ERROR;
+				} else {
+					break;
+				}
 			}
-			strncpy(ophDB->name, position + 1, strlen(position + 1) + 1);
-			ophDB->name[strlen(position + 1)] = '\0';
-		}
-		if (fscanf(file, "%s", buffer) == EOF) {
-			fclose(file);
-			return OPH_ODB_ERROR;
-		}
 
-		position = strchr(buffer, '=');
-		if (position != NULL) {
-			if (!(ophDB->hostname = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
-				fclose(file);
-				return OPH_ODB_MEMORY_ERROR;
+			/* Remove trailing newline */
+			if (line[strlen(line) - 1] == '\n')
+				line[strlen(line) - 1] = '\0';
+
+			/* Skip comment lines */
+			if (line[0] == '#') {
+				continue;
 			}
-			strncpy(ophDB->hostname, position + 1, strlen(position + 1) + 1);
-			ophDB->hostname[strlen(position + 1)] = '\0';
-		}
-		if (fscanf(file, "%s", buffer) == EOF) {
-			fclose(file);
-			return OPH_ODB_ERROR;
-		}
 
-		position = strchr(buffer, '=');
-		if (position != NULL)
-			ophDB->server_port = (int) strtol(position + 1, NULL, 10);
-
-		if (fscanf(file, "%s", buffer) == EOF) {
-			fclose(file);
-			return OPH_ODB_ERROR;
-		}
-
-		position = strchr(buffer, '=');
-		if (position != NULL) {
-			if (!(ophDB->username = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
-				fclose(file);
-				return OPH_ODB_MEMORY_ERROR;
+			/* Check if line contains only spaces */
+			for(i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
+				if(!isspace((unsigned char)line[i]))
+				break;
 			}
-			strncpy(ophDB->username, position + 1, strlen(position + 1) + 1);
-			ophDB->username[strlen(position + 1)] = '\0';
-		}
-		if (fscanf(file, "%s", buffer) == EOF) {
-			fclose(file);
-			return OPH_ODB_ERROR;
-		}
-
-		position = strchr(buffer, '=');
-		if (position != NULL) {
-			if (!(ophDB->pwd = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
-				fclose(file);
-				return OPH_ODB_MEMORY_ERROR;
+			if( i == strlen(line) || i == OPH_MAX_STRING_SIZE) {
+				continue;
 			}
-			strncpy(ophDB->pwd, position + 1, strlen(position + 1) + 1);
-			ophDB->pwd[strlen(position + 1)] = '\0';
+
+			/* Split argument and value on '=' character */
+			for(i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
+				if(line[i] == '=')
+					break;
+			}
+			if( (i == strlen(line)) || (i == OPH_MAX_STRING_SIZE)) {
+				continue;
+			}
+
+			argument_length = strlen(line) - i - 1;
+
+			argument = (char *)strndup(line, sizeof(char) * i);
+			if (!argument) {
+				fclose (file);
+				return OPH_ODB_ERROR;
+			}
+
+			argument_value = (char *)strndup(line + i + 1 , sizeof(char) * argument_length);
+			if (!argument_value) {
+				fclose (file);
+				free(argument);
+				return OPH_ODB_ERROR;
+			}
+
+			if(!strncasecmp(argument, OPH_CONF_OPHDB_NAME, strlen(OPH_CONF_OPHDB_NAME))) {
+				ophDB->name = argument_value;
+			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_HOST, strlen(OPH_CONF_OPHDB_HOST))) {
+				ophDB->hostname = argument_value;
+			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_PORT, strlen(OPH_CONF_OPHDB_PORT))) {
+				ophDB->server_port = (int)strtol(argument_value, NULL, 10);
+				free(argument_value);
+			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_LOGIN, strlen(OPH_CONF_OPHDB_LOGIN))) {
+				ophDB->username = argument_value;
+			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_PWD, strlen(OPH_CONF_OPHDB_PWD))) {
+				ophDB->pwd = argument_value;
+			} else {
+				free(argument_value);
+			}
+
+			free(argument);
 		}
 
 		fclose(file);
