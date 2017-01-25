@@ -50,13 +50,12 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 		char *argument_value = NULL;
 		int argument_length = 0;
 		char *result = NULL;
-		char line[OPH_MAX_STRING_SIZE] = {'\0'};
-		while (!feof (file))
-		{
-			result = fgets (line, OPH_MAX_STRING_SIZE, file);
+		char line[OPH_MAX_STRING_SIZE] = { '\0' };
+		while (!feof(file)) {
+			result = fgets(line, OPH_MAX_STRING_SIZE, file);
 			if (!result) {
-				if (ferror (file)) {
-					fclose (file);
+				if (ferror(file)) {
+					fclose(file);
 					return OPH_ODB_ERROR;
 				} else {
 					break;
@@ -73,48 +72,48 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 			}
 
 			/* Check if line contains only spaces */
-			for(i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
-				if(!isspace((unsigned char)line[i]))
-				break;
+			for (i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
+				if (!isspace((unsigned char) line[i]))
+					break;
 			}
-			if( i == strlen(line) || i == OPH_MAX_STRING_SIZE) {
+			if (i == strlen(line) || i == OPH_MAX_STRING_SIZE) {
 				continue;
 			}
 
 			/* Split argument and value on '=' character */
-			for(i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
-				if(line[i] == '=')
+			for (i = 0; (i < strlen(line)) && (i < OPH_MAX_STRING_SIZE); i++) {
+				if (line[i] == '=')
 					break;
 			}
-			if( (i == strlen(line)) || (i == OPH_MAX_STRING_SIZE)) {
+			if ((i == strlen(line)) || (i == OPH_MAX_STRING_SIZE)) {
 				continue;
 			}
 
 			argument_length = strlen(line) - i - 1;
 
-			argument = (char *)strndup(line, sizeof(char) * i);
+			argument = (char *) strndup(line, sizeof(char) * i);
 			if (!argument) {
-				fclose (file);
+				fclose(file);
 				return OPH_ODB_ERROR;
 			}
 
-			argument_value = (char *)strndup(line + i + 1 , sizeof(char) * argument_length);
+			argument_value = (char *) strndup(line + i + 1, sizeof(char) * argument_length);
 			if (!argument_value) {
-				fclose (file);
+				fclose(file);
 				free(argument);
 				return OPH_ODB_ERROR;
 			}
 
-			if(!strncasecmp(argument, OPH_CONF_OPHDB_NAME, strlen(OPH_CONF_OPHDB_NAME))) {
+			if (!strncasecmp(argument, OPH_CONF_OPHDB_NAME, strlen(OPH_CONF_OPHDB_NAME))) {
 				ophDB->name = argument_value;
-			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_HOST, strlen(OPH_CONF_OPHDB_HOST))) {
+			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_HOST, strlen(OPH_CONF_OPHDB_HOST))) {
 				ophDB->hostname = argument_value;
-			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_PORT, strlen(OPH_CONF_OPHDB_PORT))) {
-				ophDB->server_port = (int)strtol(argument_value, NULL, 10);
+			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_PORT, strlen(OPH_CONF_OPHDB_PORT))) {
+				ophDB->server_port = (int) strtol(argument_value, NULL, 10);
 				free(argument_value);
-			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_LOGIN, strlen(OPH_CONF_OPHDB_LOGIN))) {
+			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_LOGIN, strlen(OPH_CONF_OPHDB_LOGIN))) {
 				ophDB->username = argument_value;
-			} else if(!strncasecmp(argument, OPH_CONF_OPHDB_PWD, strlen(OPH_CONF_OPHDB_PWD))) {
+			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_PWD, strlen(OPH_CONF_OPHDB_PWD))) {
 				ophDB->pwd = argument_value;
 			} else {
 				free(argument_value);
