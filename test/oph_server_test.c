@@ -2683,7 +2683,7 @@ int _check_oph_server(const char *function, int option)
 				"[path=testdata;file=nofile]",
 				"[path=testdata;file={nofile}]",
 				"[path=testdata;convention=cmip5]|[path=testdata/a;convention=cmip5]",
-				"[convention=cmip5;recursive=yes]",
+				"[path=testdata;convention=cmip5;recursive=yes]",
 				"[file={nofile}]",
 				"[wrong",
 				"[path=testdata;run=no;measure=measure]",
@@ -2726,6 +2726,7 @@ int _check_oph_server(const char *function, int option)
 
 				case 12:
 				case 13:
+				case 16:
 				case 18:
 				case 20:
 					if (res != OPH_SERVER_NO_RESPONSE) {
@@ -2741,8 +2742,6 @@ int _check_oph_server(const char *function, int option)
 					}
 					break;
 
-				case 15:
-				case 16:
 				case 19:
 					if (res != OPH_SERVER_SYSTEM_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
@@ -2892,7 +2891,6 @@ int _check_oph_server(const char *function, int option)
 
 					case 12:
 					case 13:
-					case 15:
 					case 16:
 					case 17:
 					case 19:
@@ -2917,6 +2915,37 @@ int _check_oph_server(const char *function, int option)
 							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks_num != 3) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
+							goto _EXIT_2;
+						}
+						if (!wf->tasks[0].light_tasks) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
+							goto _EXIT_2;
+						}
+						for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
+							if (wf->tasks[0].light_tasks[j].arguments_num != 3) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of arguments of object %d returned from the function: %d\n", j,
+								      wf->tasks[0].light_tasks[j].arguments_num);
+								goto _EXIT_2;
+							}
+							if (!wf->tasks[0].light_tasks[j].arguments_keys || !wf->tasks[0].light_tasks[j].arguments_values) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad arguments in object %d returned from the function\n", j);
+								goto _EXIT_2;
+							}
+							if (strcmp(wf->tasks[0].light_tasks[j].arguments_keys[0], "src_path")) {
+								pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object 'cube' returned from the function\n");
+								goto _EXIT_2;
+							}
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Argument value for %d: %s\n", j, wf->tasks[0].light_tasks[j].arguments_values[0]);
+						}
+						break;
+
+					case 15:
+						if (output_list || output_list_dim) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
+							goto _EXIT_2;
+						}
+						if (wf->tasks[0].light_tasks_num != 7) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
@@ -3044,16 +3073,8 @@ int _check_oph_server(const char *function, int option)
 					}
 					break;
 
-				case 15:
-					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
-						if (strcmp(wf->tasks[0].light_tasks[j].arguments_values[2], "a")
-						    && !strcmp(wf->tasks[0].light_tasks[j].arguments_values[2], "b")) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object '%s' returned from the function\n", wf->tasks[0].light_tasks[j].arguments_values[2]);
-							goto _EXIT_2;
-						}
-					}
-					// No break is correct
 				case 5:
+				case 15:
 					for (j = 0; j < wf->tasks[0].light_tasks_num; ++j) {
 						if (!strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_123.test")
 						    && !strstr(wf->tasks[0].light_tasks[j].arguments_values[0], "testdata/a_12.test")
