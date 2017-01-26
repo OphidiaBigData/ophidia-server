@@ -90,7 +90,7 @@
 #define OPH_SERVER_WORKFLOW_TIMEOUT 2592000	// sec
 #define OPH_USER_ADMIN "admin"
 #define OPH_USER_NOTIFIER "framework"
-#define OPH_SERVER_POLL_TIME 60	// sec
+#define OPH_SERVER_POLL_TIME 0	// sec
 #define OPH_SERVER_POLL_ITEMS 128	// tasks
 #define OPH_BASE_SRC_PATH ""
 #define OPH_SERVER_DEV_NULL "/dev/null"
