@@ -1,4 +1,30 @@
 
+## v0.11.0 - 2017-01-31
+
+### Fixed:
+
+- Unit tests
+- Bug that raises an error message at the end of leaf tasks
+- Bug when a waiting task is terminated by OPH_CANCEL
+- Bug in job monitoring procedure
+- Bugs in building the list of cubes to be processed by 'exit action'
+
+### Added:
+
+- Use of BASE_SRC_PATH as prefix of files involved in massive and waiting operations (INDIGO-DataCloud Project)
+- Parameter 'status_filter' to OPH_RESUME
+- Status OPH_RUNNING_ERROR in workflow in case of error while it is still running
+
+### Changed:
+
+- Disabled usage of libSSH by default
+- Exit status saved in OphidiaDB when workflow is aborted
+- System command in case libSSH is not used
+- Number of cores to execute each light task of final task to 1
+- SSH connection method
+- OPH_SERVICE to list running tasks
+- Configuration parameters names in ophidiadb.conf
+
 ## v0.10.7 - 2016-11-15
 
 ### Fixed:
