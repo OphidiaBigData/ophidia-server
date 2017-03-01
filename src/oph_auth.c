@@ -207,8 +207,10 @@ short oph_is_in_bl(const char *userid, const char *host, char *deadline)
 			free(bl_item);
 			bl_item = bl_prev ? bl_prev->next : bl_head;
 		} else if (!strcmp(bl_item->userid, userid) && !strcmp(bl_item->host, host)) {
-			struct tm *nowtm = localtime(&deadtime);
-			strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", nowtm);
+			struct tm nowtm;
+			if (!localtime_r(&deadtime, &nowtm))
+				return -1;
+			strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
 			bl_item->count++;
 			return bl_item->count;
 		} else {
@@ -645,16 +647,20 @@ int oph_save_session(const char *userid, const char *sessionid, oph_argument * a
 			return OPH_SERVER_ERROR;
 		}
 		time_t nowtime = (time_t) strtol(str_time, NULL, 10);
-		struct tm *nowtm = localtime(&nowtime);
-		strftime(str_time, OPH_MAX_STRING_SIZE, "%Y", nowtm);
+		struct tm nowtm;
+		if (!localtime_r(&nowtime, &nowtm)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get system time\n");
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		strftime(str_time, OPH_MAX_STRING_SIZE, "%Y", &nowtm);
 		snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_REAL_DIR, oph_auth_location, str_time);
 		if (mkdir(dirname, 0755))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to create the folder '%s', but don't care\n", dirname);
-		strftime(str_time, OPH_MAX_STRING_SIZE, "/%m", nowtm);
+		strftime(str_time, OPH_MAX_STRING_SIZE, "/%m", &nowtm);
 		strncat(dirname, str_time, OPH_MAX_STRING_SIZE - strlen(dirname));
 		if (mkdir(dirname, 0755))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to create the folder '%s', but don't care\n", dirname);
-		strftime(str_time, OPH_MAX_STRING_SIZE, "/%d", nowtm);
+		strftime(str_time, OPH_MAX_STRING_SIZE, "/%d", &nowtm);
 		strncat(dirname, str_time, OPH_MAX_STRING_SIZE - strlen(dirname));
 		if (mkdir(dirname, 0755))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to create the folder '%s', but don't care\n", dirname);

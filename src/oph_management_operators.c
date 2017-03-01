@@ -827,15 +827,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			}
 
 			time_t nowtime, nowtime2;
-			struct tm *nowtm, *nowtm2;
+			struct tm nowtm, nowtm2;
 			// Data
 			success = 0;
 			while (!success) {
 				for (session_args_item = session_args_list; session_args_item; session_args_item = session_args_item->next) {
 					session_args = session_args_item->item;
 					nowtime = (time_t) (session_args_item->id);
-					nowtm = localtime(&nowtime);
-					strftime(filename, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", nowtm);
+					if (!localtime_r(&nowtime, &nowtm)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error getting system time\n");
+						break;
+					}
+					strftime(filename, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 
 					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonvalues) {
@@ -882,8 +885,16 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					exist = !oph_get_arg(session_args, OPH_SESSION_CREATION_TIME, tmp);
 					if (exist) {
 						nowtime2 = (time_t) strtol(tmp, NULL, 10);
-						nowtm2 = localtime(&nowtime2);
-						strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", nowtm2);
+						if (!localtime_r(&nowtime2, &nowtm2)) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error getting system time\n");
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonvalues[iii])
+									free(jsonvalues[iii]);
+							if (jsonvalues)
+								free(jsonvalues);
+							break;
+						}
+						strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm2);
 					}
 					jsonvalues[jjj] = strdup(exist ? tmp : "-");
 					if (!jsonvalues[jjj]) {
@@ -1144,7 +1155,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (success) {
 				oph_argument *tmp2, *us_args = NULL;
 				time_t nowtime;
-				struct tm *nowtm;
+				struct tm nowtm;
 				// Data
 				success = 0;
 				while (!success) {
@@ -1154,8 +1165,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						if (tmp2->value) {
 							if (!strcmp(tmp2->key, OPH_SESSION_CREATION_TIME) || !strcmp(tmp2->key, OPH_SESSION_LAST_ACCESS_TIME)) {
 								nowtime = (time_t) strtol(tmp2->value, NULL, 10);
-								nowtm = localtime(&nowtime);
-								strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", nowtm);
+								if (!localtime_r(&nowtime, &nowtm)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error getting system time\n");
+									break;
+								}
+								strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 							} else
 								strncpy(tmp, tmp2->value, OPH_MAX_STRING_SIZE);
 						}

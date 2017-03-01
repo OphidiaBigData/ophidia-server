@@ -654,8 +654,13 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_USERS);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
-		struct tm *nowtm = localtime(&(tv.tv_sec));
-		strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", nowtm);
+		struct tm nowtm;
+		if (!localtime_r(&tv.tv_sec, &nowtm)) {
+			oph_cleanup_args(&args);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in getting system time\n", ttype, jobid);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+		strftime(tmp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 		if (oph_set_arg(&args, OPH_SESSION_LABEL, tmp)) {
 			oph_cleanup_args(&args);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_LABEL);
