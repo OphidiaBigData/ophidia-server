@@ -34,6 +34,8 @@
 #include <signal.h>
 #include <mysql.h>
 
+#define OPH_STATUS_LOG_PERIOD 1
+
 /******************************************************************************\
  *
  *	Forward decls
@@ -41,6 +43,7 @@
 \******************************************************************************/
 
 void *process_request(struct soap *);
+void *status_logger(struct soap *);
 int CRYPTO_thread_setup();
 void CRYPTO_thread_cleanup();
 int oph_handle_signals();
@@ -71,6 +74,8 @@ int oph_server_inactivity_timeout = OPH_SERVER_INACTIVITY_TIMEOUT;
 int oph_server_workflow_timeout = OPH_SERVER_WORKFLOW_TIMEOUT;
 FILE *logfile = 0;
 char *oph_log_file_name = 0;
+FILE *statuslogfile = 0;
+char *oph_status_log_file_name = 0;
 char *oph_server_cert = 0;
 char *oph_server_ca = 0;
 char *oph_server_password = 0;
@@ -293,6 +298,10 @@ void cleanup()
 		fclose(stdout);
 		fclose(stderr);
 	}
+	if (statuslogfile) {
+		fclose(statuslogfile);
+		statuslogfile = 0;
+	}
 	if (oph_server_params)
 		hashtbl_destroy(oph_server_params);
 #ifdef OPH_SERVER_LOCATION
@@ -331,7 +340,7 @@ int main(int argc, char *argv[])
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "dhl:p:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "dhl:p:s:vwxz")) != -1) {
 		switch (ch) {
 			case 'd':
 				msglevel = LOG_DEBUG;
@@ -344,6 +353,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'p':
 				oph_server_port = optarg;
+				break;
+			case 's':
+				oph_status_log_file_name = optarg;
 				break;
 			case 'v':
 				return 0;
@@ -394,6 +406,15 @@ int main(int argc, char *argv[])
 			set_log_file(logfile);
 	} else
 		oph_log_file_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE);
+
+	if (oph_status_log_file_name) {
+		if (statuslogfile)
+			fclose(statuslogfile);
+		if (!(statuslogfile = fopen(oph_status_log_file_name, "a"))) {
+			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
+			return 1;
+		}
+	}
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 
@@ -452,6 +473,14 @@ int main(int argc, char *argv[])
 	}
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bind successful: socket = %d\n", m);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (statuslogfile) {
+		tsoap = soap_copy(&soap);
+		if (tsoap)
+			pthread_create(&tid, NULL, (void *(*)(void *)) &status_logger, tsoap);
+	}
+#endif
+
 	for (;;) {
 		SOAP_SOCKET s = soap_accept(&soap);
 		if (!soap_valid_socket(s)) {
@@ -500,6 +529,96 @@ void *process_request(struct soap *soap)
 
 	return NULL;
 }
+
+void *status_logger(struct soap *soap)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+
+	struct oph_plugin_data *state = NULL;
+	if (!(state = (struct oph_plugin_data *) soap_lookup_plugin((struct soap *) soap, OPH_PLUGIN_ID))) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on oph lookup plugin struct\n");
+		return NULL;
+	}
+
+	unsigned long pw;	// Number of pending workflows
+	unsigned long ww;	// Number of waiting workflows
+	unsigned long rw;	// Number of running workflows
+	unsigned long pt;	// Number of pending tasks
+	unsigned long wt;	// Number of waiting tasks
+	unsigned long rt;	// Number of running tasks
+	unsigned long ct;	// Number of completed tasks
+	unsigned long ft;	// Number of failed tasks
+
+	oph_job_list *job_info;
+	oph_job_info *temp;
+	oph_workflow *wf;
+	time_t t1;
+	char *now = NULL;
+	int i;
+
+	while (statuslogfile) {
+
+		pw = ww = rw = pt = wt = rt = ct = ft = 0;	// Initialization
+
+		job_info = state->job_info;
+		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
+			if (!(wf = temp->wf))
+				continue;
+			if (wf->status == (int)OPH_ODB_STATUS_PENDING)
+				pw++;
+			else if (wf->status == (int)OPH_ODB_STATUS_WAIT)
+				ww++;
+			else if ((wf->status > (int)OPH_ODB_STATUS_WAIT) && (wf->status < (int)OPH_ODB_STATUS_COMPLETED))
+				rw++;
+			if ((wf->status > (int)OPH_ODB_STATUS_PENDING) && (wf->status < (int)OPH_ODB_STATUS_COMPLETED)) {	// Loop on tasks
+				for (i = 0; i < wf->tasks_num; ++i) {
+					if (wf->tasks[i].status == (int)OPH_ODB_STATUS_PENDING)
+						pt++;
+					else if (wf->tasks[i].status == (int)OPH_ODB_STATUS_WAIT)
+						wt++;
+					else if ((wf->tasks[i].status > (int)OPH_ODB_STATUS_WAIT) && (wf->tasks[i].status < (int)OPH_ODB_STATUS_COMPLETED))
+						rt++;
+					else if (wf->tasks[i].status == (int)OPH_ODB_STATUS_COMPLETED)
+						ct++;
+					else if ((wf->tasks[i].status > (int)OPH_ODB_STATUS_COMPLETED) && (wf->tasks[i].status < (int)OPH_ODB_STATUS_UNSELECTED))
+						ft++;
+				}
+			}
+		}
+
+		t1 = time(NULL);
+		now = ctime(&t1);
+		if (now) {
+			now[strlen(now) - 1] = 0;
+			if (statuslogfile) {
+				fprintf(statuslogfile, "[%s][Pending workflows]#%ld\n", now, pw);
+				fprintf(statuslogfile, "[%s][Waiting workflows]#%ld\n", now, ww);
+				fprintf(statuslogfile, "[%s][Running workflows]#%ld\n", now, rw);
+				fprintf(statuslogfile, "[%s][Pending tasks]#%ld\n", now, pt);
+				fprintf(statuslogfile, "[%s][Waiting tasks]#%ld\n", now, wt);
+				fprintf(statuslogfile, "[%s][Running tasks]#%ld\n", now, rt);
+				fprintf(statuslogfile, "[%s][Completed tasks]#%ld\n", now, ct);
+				fprintf(statuslogfile, "[%s][Failed tasks]#%ld\n", now, ft);
+			}
+		}
+
+		if (statuslogfile)
+			fflush(statuslogfile);
+
+		sleep(OPH_STATUS_LOG_PERIOD);
+	}
+
+	soap_destroy(soap);	/* for C++ */
+	soap_end(soap);
+	soap_free(soap);
+
+	mysql_thread_end();
+
+	return NULL;
+}
+
 
 /******************************************************************************\
  *
