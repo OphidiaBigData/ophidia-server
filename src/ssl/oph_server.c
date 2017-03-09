@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
 	if (oph_status_log_file_name) {
 		if (statuslogfile)
 			fclose(statuslogfile);
-		if (!(statuslogfile = fopen(oph_status_log_file_name, "a"))) {
+		if (!(statuslogfile = fopen(oph_status_log_file_name, "w"))) {
 			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
 			return 1;
 		}
@@ -608,6 +608,11 @@ void *status_logger(struct soap *soap)
 			fflush(statuslogfile);
 
 		sleep(OPH_STATUS_LOG_PERIOD);
+	}
+
+	if (statuslogfile) {
+		fprintf(statuslogfile, "[%s][END]\n");
+		fflush(statuslogfile);
 	}
 
 	soap_destroy(soap);	/* for C++ */
