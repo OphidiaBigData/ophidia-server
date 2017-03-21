@@ -1,4 +1,10 @@
 
+## v1.0.0 - 2017-03-21
+
+### Fixed:
+
+- localtime function calls to be reentrant
+
 ## v0.11.0 - 2017-01-31
 
 ### Fixed:

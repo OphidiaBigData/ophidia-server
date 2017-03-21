@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [0.11.0], [ophidia-info@lists.cmcc.it])
+AC_INIT([ophidia-server], [1.0.0], [ophidia-info@lists.cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
