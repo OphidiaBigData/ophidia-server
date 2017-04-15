@@ -43,6 +43,7 @@ extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
+extern char oph_subm_ssh;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -533,12 +534,12 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir(name)) {
+		if (oph_mkdir2(name, oph_subm_ssh ? 0755 : 0775)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_EXPORT_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir(name)) {
+		if (oph_mkdir2(name, oph_subm_ssh ? 0755 : 0775)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
@@ -2336,7 +2337,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				    if ((response =
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
-							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK) {
+							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output, username)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,

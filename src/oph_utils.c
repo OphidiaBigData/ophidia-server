@@ -52,13 +52,17 @@ Ophidia WS-I\
 //Thread_unsafe
 int oph_mkdir(const char *name)
 {
+	return oph_mkdir2(name, 0755);
+}
+int oph_mkdir2(const char *name, mode_t mode)
+{
 	struct stat st;
 	int res = stat(name, &st);
 	if (!res)
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Session directory '%s' already exist\n", name);
 	else if (res == -1) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session directory creation: '%s'\n", name);
-		if (mkdir(name, 0755)) {
+		if (mkdir(name, mode)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Session directory cannot be created\n");
 			return OPH_SERVER_IO_ERROR;
 		}
