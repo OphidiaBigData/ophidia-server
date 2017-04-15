@@ -54,6 +54,7 @@ int oph_mkdir(const char *name)
 {
 	return oph_mkdir2(name, 0755);
 }
+
 int oph_mkdir2(const char *name, mode_t mode)
 {
 	struct stat st;

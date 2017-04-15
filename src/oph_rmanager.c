@@ -515,9 +515,14 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 
 	int len = 0;
 	if (oph_subm_ssh)
-		len = strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
+		len =
+		    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) +
+		    1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
 	else {
-		len = strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_username) + 1 + strlen(orm->subm_group) + 1 +  + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
+		len =
+		    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_username) + 1 + strlen(orm->subm_group) + 1 + +1 + strlen(orm->subm_ncores) + 1 +
+		    strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 +
+		    strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
 		if (username)
 			len += strlen(username);
 		else if (oph_subm_user) {
@@ -528,7 +533,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			return RMANAGER_NULL_PARAM;
 		}
 	}
-	len += 128;	// 128 is a very big number to include the number of cores and the name of the ophidia application client
+	len += 128;		// 128 is a very big number to include the number of cores and the name of the ophidia application client
 
 	if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -541,13 +546,16 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile,
 					orm->subm_stderror, outfile, oph_operator_client, request);
 			else
-				sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile,
-					orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+				sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput,
+					outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
 		} else {
 			if (interactive_subm)
-				sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group, orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
+				sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group, orm->subm_ncores, ncores,
+					orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 			else
-				sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+				sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group,
+					orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX,
+					jobid, oph_operator_client, request, orm->subm_postfix);
 		}
 	} else {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
