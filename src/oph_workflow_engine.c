@@ -769,7 +769,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	}
 
 	int res = OPH_SERVER_OK;
-	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
+	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *cdd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
 	for (i = 0; i < task->arguments_num; ++i) {
 		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
 			src_path_key = task->arguments_keys[i];
@@ -782,6 +782,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			measure = task->arguments_values[i];
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CWD))
 			cwd_value = task->arguments_values[i];
+		else if (!strcmp(task->arguments_keys[i], OPH_ARG_CDD))
+			cdd_value = task->arguments_values[i];
 	}
 
 	char target_base[OPH_WORKFLOW_MAX_STRING];	// measure_base[OPH_WORKFLOW_MAX_STRING], cwd_base[OPH_WORKFLOW_MAX_STRING];
@@ -805,7 +807,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		unsigned int number = 0;
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: parsing task '%s' for massive operations\n", ttype, jobid, task->name);
-		if ((res = oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB, query)))
+		if ((res = oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB, query)))
 			return res;
 
 		if (datacube_inputs) {
