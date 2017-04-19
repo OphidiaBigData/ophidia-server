@@ -23,6 +23,8 @@
 
 #include <mysql.h>
 
+#define OPH_NULL_FILENAME "/dev/null"
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
@@ -724,12 +726,15 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	}
 
 	char outfile[OPH_MAX_STRING_SIZE];
-	char code[OPH_MAX_STRING_SIZE];
-	if (oph_get_session_code(sessionid, code)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
-		return OPH_SERVER_ERROR;
-	}
-	snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+	if (get_debug_level() == LOG_DEBUG) {
+		char code[OPH_MAX_STRING_SIZE];
+		if (oph_get_session_code(sessionid, code)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
+			return OPH_SERVER_ERROR;
+		}
+		snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+	} else
+		snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
 
 #ifdef LOCAL_FRAMEWORK
 	char command[OPH_MAX_STRING_SIZE];
