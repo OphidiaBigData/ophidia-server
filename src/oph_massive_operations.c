@@ -148,7 +148,8 @@ int openDir(const char *path, int recursive, unsigned int *counter, char **buffe
 	return OPH_SERVER_OK;
 }
 
-int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **_query, pthread_mutex_t * flag)
+int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB,
+		     char **_query, pthread_mutex_t * flag)
 {
 	if (!task_string || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
 		return OPH_SERVER_NULL_POINTER;
@@ -430,7 +431,8 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	return OPH_SERVER_OK;
 }
 
-int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query, pthread_mutex_t * flag)
+int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+			ophidiadb * oDB, char **query, pthread_mutex_t * flag)
 {
 	if (!datacube_input || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
 		return OPH_SERVER_NULL_POINTER;
@@ -480,7 +482,9 @@ int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned 
 		}
 		snprintf(_task_string, end_task - task_string + 2, "%s", task_string);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extract '%s'\n", _task_string);
-		if ((result = _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, cdd ? cdd : OPH_MF_ROOT_FOLDER, sessionid, &running_, is_src_path, oDB, query, flag))) {
+		if ((result =
+		     _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, cdd ? cdd : OPH_MF_ROOT_FOLDER, sessionid, &running_, is_src_path,
+				      oDB, query, flag))) {
 			if (result != OPH_SERVER_NO_RESPONSE) {
 				freeBlock(datacube_inputs, *counter);
 				freeBlock(measure_name, *counter);
@@ -630,12 +634,14 @@ int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned 
 	return OPH_SERVER_OK;
 }
 
-int oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query)
+int oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+		       ophidiadb * oDB, char **query)
 {
 	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, &global_flag);
 }
 
-int oph_mf_parse_query_unsafe(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query)
+int oph_mf_parse_query_unsafe(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+			      ophidiadb * oDB, char **query)
 {
 	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, NULL);
 }

@@ -19,12 +19,14 @@
 #include "oph_auth.h"
 #include "oph_plugin.h"
 #include "oph_workflow_engine.h"
+#include "oph_json_library.h"
 
 #ifdef INTERFACE_TYPE_IS_GSI
 #include "gsi.h"
 #endif
 
 extern char *oph_user_notifier;
+extern char *oph_json_location;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -87,6 +89,43 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	pthread_mutex_lock(&global_flag);
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
+
+	while (output_json) {
+
+		oph_json *oper_json = NULL;
+		if (oph_json_from_json_string(&oper_json, output_json)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);
+			break;
+		}
+
+		char session_code[OPH_MAX_STRING_SIZE];
+		*session_code = 0;
+		if (oper_json->source && oper_json->source->values && oper_json->source->values[0])
+			strcpy(session_code, oper_json->source->values[0]);
+		else {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: session code cannot be extracted\n", jobid);
+			break;
+		}
+
+		char str_markerid[OPH_SHORT_STRING_SIZE];
+		*str_markerid = 0;
+		if (oper_json->source && oper_json->source->values && oper_json->source->values[2])
+			strcpy(str_markerid, oper_json->source->values[2]);
+		else {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: marker id cannot be extracted\n", jobid);
+			break;
+		}
+
+		char filename[OPH_MAX_STRING_SIZE];
+		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
+		if (_oph_json_to_json_file(oper_json, filename, &global_flag)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in saving JSON Response\n", jobid);
+			break;
+		}
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
+		break;
+	}
 
 	return oph_workflow_notify(state, 'N', jobid, data, output_json, (int *) response);
 }

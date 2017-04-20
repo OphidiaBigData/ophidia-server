@@ -807,7 +807,9 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		unsigned int number = 0;
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: parsing task '%s' for massive operations\n", ttype, jobid, task->name);
-		if ((res = oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB, query)))
+		if ((res =
+		     oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB,
+					       query)))
 			return res;
 
 		if (datacube_inputs) {
