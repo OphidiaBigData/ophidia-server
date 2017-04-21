@@ -34,6 +34,7 @@
 #define OPH_ARG_USERROLE "userrole"
 #define OPH_ARG_CUBE "cube"
 #define OPH_ARG_CWD "cwd"
+#define OPH_ARG_CDD "cdd"
 #define OPH_ARG_SRC_PATH "src_path"
 #define OPH_ARG_MEASURE "measure"
 #define OPH_ARG_KEY "key"

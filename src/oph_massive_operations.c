@@ -148,8 +148,8 @@ int openDir(const char *path, int recursive, unsigned int *counter, char **buffe
 	return OPH_SERVER_OK;
 }
 
-int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **_query,
-		     pthread_mutex_t * flag)
+int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB,
+		     char **_query, pthread_mutex_t * flag)
 {
 	if (!task_string || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
 		return OPH_SERVER_NULL_POINTER;
@@ -230,7 +230,7 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	cube *datacube = NULL;
 	if (is_src_path)	// In case of src_path only the parameter OPH_MF_ARG_PATH is considered
 	{
-		char _path[PATH_MAX];
+		char _path[PATH_MAX], _path2[PATH_MAX];
 		char *path = hashtbl_get(task_tbl, OPH_MF_ARG_PATH);
 		while (path && (*path == ' '))
 			path++;
@@ -238,12 +238,43 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to parse '%s'.\n", task_string);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			return OPH_SERVER_SYSTEM_ERROR;
+			return OPH_SERVER_ERROR;
 		}
-		if ((*path != '/') && oph_base_src_path && strlen(oph_base_src_path)) {
-			snprintf(_path, PATH_MAX, "%s/%s", oph_base_src_path, path);
+		if (strstr(path, "..")) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "The use of '..' in '%s' is forbidden.\n", path);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_ERROR;
+		}
+		if (*path != OPH_MF_ROOT_FOLDER[0]) {
+			if (!cdd) {
+				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter '%s'.\n", OPH_ARG_CDD);
+				if (task_tbl)
+					hashtbl_destroy(task_tbl);
+				return OPH_SERVER_ERROR;
+			}
+			if (*cdd != OPH_MF_ROOT_FOLDER[0]) {
+				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' must begin with '/'.\n", OPH_ARG_CDD);
+				if (task_tbl)
+					hashtbl_destroy(task_tbl);
+				return OPH_SERVER_ERROR;
+			}
+			if (strlen(cdd) > 1) {
+				if (strstr(cdd, "..")) {
+					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "The use of '..' in '%s' is forbidden.\n", OPH_ARG_CDD);
+					if (task_tbl)
+						hashtbl_destroy(task_tbl);
+					return OPH_SERVER_ERROR;;
+				}
+				snprintf(_path2, PATH_MAX, "%s/%s", cdd + 1, path);
+				path = _path2;
+			}
+		}
+		if (oph_base_src_path && strlen(oph_base_src_path)) {
+			snprintf(_path, PATH_MAX, "%s%s%s", oph_base_src_path, *path != OPH_MF_ROOT_FOLDER[0] ? OPH_MF_ROOT_FOLDER : "", path);
 			path = _path;
 		}
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Path to files for massive operation: %s.\n", path);
 
 		int recursive = 0;
 		running_value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE);
@@ -305,7 +336,7 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong path name '%s'\n", path);
 				if (task_tbl)
 					hashtbl_destroy(task_tbl);
-				return OPH_SERVER_SYSTEM_ERROR;
+				return OPH_SERVER_ERROR;
 			}
 
 			char *arg_file = hashtbl_get(task_tbl, OPH_MF_ARG_FILE);
@@ -354,6 +385,10 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	}
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Found %d implicit objects which the massive operation will be applied on\n", *counter);
 
+	size_t base_src_size = 0;
+	if (is_src_path && oph_base_src_path)
+		base_src_size = strlen(oph_base_src_path);
+
 	char *base_name, *measure, *savepointer = NULL;
 	*datacube_inputs = (char **) malloc((*counter) * sizeof(char *));
 	if (is_src_path) {
@@ -365,7 +400,7 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	}
 	for (i = 0; i < *counter; ++i) {
 		if (is_src_path) {
-			snprintf(query, OPH_MAX_STRING_SIZE, "%s", running_value);
+			snprintf(query, OPH_MAX_STRING_SIZE, "%s", running_value + base_src_size);
 			running_value = strtok_r(NULL, OPH_SEPARATOR_PARAM, &savepointer);
 		} else
 			snprintf(query, OPH_MAX_STRING_SIZE, "%s/%d/%d", oph_web_server, datacube[i].id_container, datacube[i].id_datacube);
@@ -396,8 +431,8 @@ int _oph_mf_parse_KV(char ***datacube_inputs, char ***measure_name, unsigned int
 	return OPH_SERVER_OK;
 }
 
-int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB,
-			char **query, pthread_mutex_t * flag)
+int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+			ophidiadb * oDB, char **query, pthread_mutex_t * flag)
 {
 	if (!datacube_input || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
 		return OPH_SERVER_NULL_POINTER;
@@ -447,7 +482,9 @@ int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned 
 		}
 		snprintf(_task_string, end_task - task_string + 2, "%s", task_string);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extract '%s'\n", _task_string);
-		if ((result = _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, sessionid, &running_, is_src_path, oDB, query, flag))) {
+		if ((result =
+		     _oph_mf_parse_KV(&datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, cdd ? cdd : OPH_MF_ROOT_FOLDER, sessionid, &running_, is_src_path,
+				      oDB, query, flag))) {
 			if (result != OPH_SERVER_NO_RESPONSE) {
 				freeBlock(datacube_inputs, *counter);
 				freeBlock(measure_name, *counter);
@@ -597,14 +634,14 @@ int _oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned 
 	return OPH_SERVER_OK;
 }
 
-int oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB,
-		       char **query)
+int oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+		       ophidiadb * oDB, char **query)
 {
-	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, sessionid, running, is_src_path, oDB, query, &global_flag);
+	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, &global_flag);
 }
 
-int oph_mf_parse_query_unsafe(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB,
-			      char **query)
+int oph_mf_parse_query_unsafe(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
+			      ophidiadb * oDB, char **query)
 {
-	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, sessionid, running, is_src_path, oDB, query, NULL);
+	return _oph_mf_parse_query(datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, NULL);
 }
