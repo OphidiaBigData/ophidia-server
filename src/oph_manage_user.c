@@ -23,6 +23,7 @@
 #include "hashtbl.h"
 #include "oph_ophidiadb.h"
 #include "oph_auth.h"
+#include "oph_utils.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -66,13 +67,18 @@ void cleanup()
 
 int oph_mkdir(const char *name)
 {
+	return oph_mkdir2(name, 0755);
+}
+
+int oph_mkdir2(const char *name, mode_t mode)
+{
 	struct stat st;
 	int res = stat(name, &st);
 	if (!res)
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Directory '%s' already exist\n", name);
 	else if (res == -1) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Directory creation: '%s'\n", name);
-		if (mkdir(name, 0755)) {
+		if (mkdir(name, mode)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory '%s' cannot be created\n", name);
 			return OPH_SERVER_IO_ERROR;
 		}
@@ -385,7 +391,7 @@ int main(int argc, char *argv[])
 		// log data
 		if (log) {
 			snprintf(filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, user_string);
-			if (oph_mkdir(filename)) {
+			if (oph_mkdir2(filename, 0775)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory cannot be opened!\n");
 				cleanup();
 				return 1;
