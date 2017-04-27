@@ -383,11 +383,13 @@ int main(int argc, char *argv[])
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 
 		// log data
-		snprintf(filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, user_string);
-		if (oph_mkdir(filename)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory cannot be opened!\n");
-			cleanup();
-			return 1;
+		if (log) {
+			snprintf(filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, user_string);
+			if (oph_mkdir(filename)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory cannot be opened!\n");
+				cleanup();
+				return 1;
+			}
 		}
 	} else if (!strcasecmp(action, "del") || !strcasecmp(action, "delete") || !strcasecmp(action, "rm") || !strcasecmp(action, "remove")) {
 		if (!username) {
