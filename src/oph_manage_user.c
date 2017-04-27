@@ -41,6 +41,7 @@ char *oph_server_location = 0;
 HASHTBL *oph_server_params = 0;
 int oph_server_timeout = OPH_SERVER_TIMEOUT;
 char *oph_auth_location = 0;
+char *oph_txt_location = 0;
 char *oph_web_server = 0;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
@@ -68,15 +69,15 @@ int oph_mkdir(const char *name)
 	struct stat st;
 	int res = stat(name, &st);
 	if (!res)
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "Session directory '%s' already exist\n", name);
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Directory '%s' already exist\n", name);
 	else if (res == -1) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Session directory creation: '%s'\n", name);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Directory creation: '%s'\n", name);
 		if (mkdir(name, 0755)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Session directory cannot be created\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory '%s' cannot be created\n", name);
 			return OPH_SERVER_IO_ERROR;
 		}
 	} else {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Session directory cannot be created\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory '%s' cannot be created\n", name);
 		return OPH_SERVER_IO_ERROR;
 	}
 
@@ -135,6 +136,11 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR, tmp);
 		oph_auth_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR);
 	}
+	if (!(oph_txt_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TXT_DIR))) {
+		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_TXT_LOCATION, oph_server_location);
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_TXT_DIR, tmp);
+		oph_txt_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TXT_DIR);
+	}
 	if (!(oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER))) {
 		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_WEB_SERVER);
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER, tmp);
@@ -148,9 +154,9 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&global_flag, NULL);
 #endif
 	int ch, msglevel = LOG_ERROR;
-	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no";
+	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0;
 	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, black_listed = 0, update = 0;
-	while ((ch = getopt(argc, argv, "a:bc:e:f:hm:n:p:r:s:t:u:vw")) != -1) {
+	while ((ch = getopt(argc, argv, "a:bc:e:f:hlm:n:p:r:s:t:u:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				action = optarg;
@@ -166,6 +172,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'f':
 				country = optarg;
+				break;
+			case 'l':
+				log = 1;
 				break;
 			case 'm':
 				max_sessions = (unsigned int) strtol(optarg, NULL, 10);
@@ -221,6 +230,7 @@ int main(int argc, char *argv[])
 				fprintf(stdout, "-c <maximum number of cores per task>\n");
 				fprintf(stdout, "-e <email>\n");
 				fprintf(stdout, "-f <country>\n");
+				fprintf(stdout, "-l is used in case a specific folder for user log data has to be created (valid only for type 'add')\n");
 				fprintf(stdout, "-m <maximum number of opened sessions>\n");
 				fprintf(stdout, "-n <name>\n");
 #ifdef INTERFACE_TYPE_IS_GSI
@@ -371,6 +381,14 @@ int main(int argc, char *argv[])
 			return 1;
 		} else
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+
+		// log data
+		snprintf(filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, user_string);
+		if (oph_mkdir(filename)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Directory cannot be opened!\n");
+			cleanup();
+			return 1;
+		}
 	} else if (!strcasecmp(action, "del") || !strcasecmp(action, "delete") || !strcasecmp(action, "rm") || !strcasecmp(action, "remove")) {
 		if (!username) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad input parameters. Username is mandatory!\n");
