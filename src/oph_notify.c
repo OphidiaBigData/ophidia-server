@@ -90,9 +90,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
+	oph_json *oper_json = NULL;
 	while (output_json) {
 
-		oph_json *oper_json = NULL;
 		if (oph_json_from_json_string(&oper_json, output_json)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);
 			break;
@@ -118,7 +118,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 
 		char filename[OPH_MAX_STRING_SIZE];
 		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
-		if (_oph_json_to_json_file(oper_json, filename, &global_flag)) {
+		if (oph_json_to_json_file(oper_json, filename)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in saving JSON Response\n", jobid);
 			break;
 		}
@@ -126,6 +126,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
 		break;
 	}
+	oph_json_free(oper_json);
 
 	return oph_workflow_notify(state, 'N', jobid, data, output_json, (int *) response);
 }
