@@ -154,7 +154,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			strcpy(_host, "NONE");
 	} else
 		snprintf(_host, OPH_SHORT_STRING_SIZE, "%s", soap->host);
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R0: received a request from %s:%d sent by user '%s'\n", _host, soap->port, soap->userid ? soap->userid : "NONE");
+
+	char *userid = (char *) soap->userid;
+	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R0: received a request from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
 
 	if (!request || !response) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R0: null pointer\n");
@@ -189,16 +191,27 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		response->error = OPH_SERVER_SYSTEM_ERROR;
 		return SOAP_OK;
 	}
-	soap->userid = data->client_identity;
+	userid = data->client_identity;
 #endif
 
 #ifdef INTERFACE_TYPE_IS_SSL
+	int free_userid = 0;
+	char __userid[OPH_MAX_STRING_SIZE];
 	state->authorization = OPH_AUTH_WRITE;
 	pthread_mutex_lock(&global_flag);
-	result = oph_auth_user(soap->userid, soap->passwd, _host);
+	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
+		result = oph_auth_token(soap->passwd, _host, &userid);
+		free_userid = 1;
+	} else
+		result = oph_auth_user(userid, soap->passwd, _host);
 	pthread_mutex_unlock(&global_flag);
+	if (free_userid && userid) {
+		snprintf(__userid, OPH_MAX_STRING_SIZE, "%s", userid);
+		free(userid);
+		userid = __userid;
+	}
 	if (result) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong credentials: %s %s (errno %d)\n", jobid, soap->userid, soap->passwd ? soap->passwd : "NONE", result);
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong credentials: %s %s (errno %d)\n", jobid, userid ? userid : OPH_AUTH_TOKEN, soap->passwd ? soap->passwd : "NONE", result);
 		response->error = OPH_SERVER_AUTH_ERROR;
 		return SOAP_OK;
 	}
@@ -206,7 +219,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Convert dn to user
 	char _userid[OPH_MAX_STRING_SIZE];
-	snprintf(_userid, OPH_MAX_STRING_SIZE, "%s", soap->userid);
+	snprintf(_userid, OPH_MAX_STRING_SIZE, "%s", userid);
 	j = strlen(_userid);
 	for (i = 0; i < j; ++i)
 		if ((_userid[i] == '/') || (_userid[i] == ' ') || (_userid[i] == '='))
@@ -214,7 +227,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Load workflow
 	oph_workflow *wf = NULL;
-	if (oph_workflow_load(request, soap->userid, &wf)) {
+	if (oph_workflow_load(request, userid, &wf)) {
 #ifdef COMMAND_TO_JSON
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for JSON conversion\n", jobid);
 		char *json = NULL;
@@ -224,7 +237,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			return SOAP_OK;
 		}
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: generated the following JSON request:\n%s\n", jobid, json);
-		if (oph_workflow_load(json, soap->userid, &wf)) {
+		if (oph_workflow_load(json, userid, &wf)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong data\n", jobid);
 			if (json)
 				free(json);
@@ -328,7 +341,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	}
 	if (save_in_odb)	// Save the entry in OphDB
 	{
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: saving reference to '%s' in system catalog\n", jobid, soap->userid);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: saving reference to '%s' in system catalog\n", jobid, userid);
 		ophidiadb oDB;
 		oph_odb_initialize_ophidiadb(&oDB);
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
@@ -347,8 +360,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			response->error = OPH_SERVER_IO_ERROR;
 			return SOAP_OK;
 		}
-		if (oph_odb_insert_user(&oDB, soap->userid)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in saving reference to '%s' in system catalog\n", jobid, soap->userid);
+		if (oph_odb_insert_user(&oDB, userid)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in saving reference to '%s' in system catalog\n", jobid, userid);
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			oph_cleanup_args(&user_args);
 			oph_workflow_free(wf);
@@ -508,11 +521,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: JSON alloc error\n", jobid);
 				break;
 			}
-			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", soap->userid)) {
+			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", userid)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: SET SOURCE error\n", jobid);
 				break;
 			}
-			if (oph_json_add_consumer(oper_json, soap->userid)) {
+			if (oph_json_add_consumer(oper_json, userid)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD CONSUMER error\n", jobid);
 				break;
 			}
@@ -1150,11 +1163,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: JSON alloc error\n", jobid);
 				break;
 			}
-			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", soap->userid)) {
+			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", userid)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: SET SOURCE error\n", jobid);
 				break;
 			}
-			if (oph_json_add_consumer(oper_json, soap->userid)) {
+			if (oph_json_add_consumer(oper_json, userid)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD CONSUMER error\n", jobid);
 				break;
 			}
@@ -1768,7 +1781,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: JSON alloc error\n", jobid);
 					break;
 				}
-				if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", soap->userid)) {
+				if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", userid)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: SET SOURCE error\n", jobid);
 					break;
 				}
@@ -1788,7 +1801,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD SOURCE DETAIL error\n", jobid);
 					break;
 				}
-				if (oph_json_add_consumer(oper_json, soap->userid)) {
+				if (oph_json_add_consumer(oper_json, userid)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD CONSUMER error\n", jobid);
 					break;
 				}
@@ -2213,7 +2226,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									return SOAP_OK;
 								}
 								if (level < 3) {
-									if (!oph_workflow_load(buffer, soap->userid, &old_wf)) {
+									if (!oph_workflow_load(buffer, userid, &old_wf)) {
 										if (level == 1) {
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
@@ -2618,7 +2631,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: JSON alloc error\n", jobid);
 						break;
 					}
-					if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", soap->userid)) {
+					if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", userid)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: SET SOURCE error\n", jobid);
 						break;
 					}
@@ -2640,7 +2653,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD SOURCE DETAIL error\n", jobid);
 						break;
 					}
-					if (oph_json_add_consumer(oper_json, soap->userid)) {
+					if (oph_json_add_consumer(oper_json, userid)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD CONSUMER error\n", jobid);
 						break;
 					}
@@ -4659,7 +4672,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							oph_workflow *old_wf = NULL;
 							submission_string = NULL;
-							if (!oph_workflow_load(jstring, soap->userid, &old_wf)) {
+							if (!oph_workflow_load(jstring, userid, &old_wf)) {
 								if (level == 1) {
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
@@ -4843,7 +4856,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 			pthread_mutex_lock(&global_flag);
 			if (oph_save_user(_userid, user_args)) {
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save user data of '%s'\n", jobid, soap->userid);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save user data of '%s'\n", jobid, userid);
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&user_args);
 				oph_workflow_free(wf);

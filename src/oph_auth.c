@@ -297,12 +297,89 @@ char *oph_sha(char *to, const char *passwd)
 }
 #endif
 
-int oph_auth_user(const char *userid, const char *passwd, const char *host)
+int oph_auth_get_user_from_token(const char *token, char **userid)
 {
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+	// TODO
+	if (!(*userid = strdup("oph-prova"))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_token(const char *token, const char *host, char **userid)
+{
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+	char oph_token_file[OPH_MAX_STRING_SIZE], deadline[OPH_MAX_STRING_SIZE], found = 0;
+	snprintf(oph_token_file, OPH_MAX_STRING_SIZE, OPH_TOKEN_FILE, oph_auth_location);
+
 	int result = OPH_SERVER_ERROR;
 	FILE *file;
 	short count;
 
+	if ((file = fopen(oph_token_file, "r+"))) {
+		char buffer[OPH_MAX_STRING_SIZE], *username, *password, *savepointer = NULL;
+		while (fgets(buffer, OPH_MAX_STRING_SIZE, file)) {
+			if (strlen(buffer) && (buffer[strlen(buffer) - 1] == '\n'))
+				buffer[strlen(buffer) - 1] = 0;	// Skip the last '\n'
+			if (strlen(buffer)) {
+				password = strtok_r(buffer, OPH_SEPARATOR_BASIC, &savepointer);
+				if (!password) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_token_file);
+					result = OPH_SERVER_IO_ERROR;
+					break;
+				}
+				if (strcmp(password, token))
+					continue;
+				username = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
+				if (!username) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_token_file);
+					result = OPH_SERVER_IO_ERROR;
+				}
+				else if (!(*userid = strdup(username)))
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				else
+					found = 1;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
+					result = OPH_SERVER_OK;
+				break;
+			}
+		}
+		if (!found) {
+			if ((count = oph_is_in_bl(OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
+				result = OPH_SERVER_AUTH_ERROR;
+			} else {
+				fseek(file, 0, SEEK_END);
+				if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from '%s'\n", token);
+					if (!count)
+						oph_add_to_bl(OPH_AUTH_TOKEN, host);
+				} else {
+					fprintf(file, "%s%s%s\n", token, OPH_SEPARATOR_BASIC, *userid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
+				}
+			}
+		}
+		fclose(file);
+	} else {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to open '%s'\n", oph_token_file);
+		result = OPH_SERVER_IO_ERROR;
+	}
+
+	return result;
+}
+
+int oph_auth_user(const char *userid, const char *passwd, const char *host)
+{
 	if (!userid || !passwd)
 		return OPH_SERVER_NULL_POINTER;
 
@@ -313,6 +390,10 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 	char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
 	oph_sha(sha_passwd, passwd);
 #endif
+
+	int result = OPH_SERVER_ERROR;
+	FILE *file;
+	short count;
 
 	if ((file = fopen(oph_auth_file, "r"))) {
 		char buffer[OPH_MAX_STRING_SIZE], *username, *password, *savepointer = NULL;

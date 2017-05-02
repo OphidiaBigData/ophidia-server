@@ -42,7 +42,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 			strcpy(_host, "NONE");
 	} else
 		snprintf(_host, OPH_SHORT_STRING_SIZE, "%s", soap->host);
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "N0: received a notification from %s:%d sent by user '%s'\n", _host, soap->port, soap->userid ? soap->userid : "NONE");
+
+	char *userid = (char *) soap->userid;
+	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "N0: received a notification from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
 
 	if (!response) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: null pointer\n");
@@ -58,21 +60,21 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 		*response = OPH_SERVER_SYSTEM_ERROR;
 		return SOAP_OK;
 	}
-	soap->userid = gsi_data->client_identity;
+	userid = gsi_data->client_identity;
 #endif
 
-	if (!soap->userid || strcasecmp(soap->userid, oph_user_notifier)) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: the user '%s' cannot send any notification\n", soap->userid ? soap->userid : "");
+	if (!userid || strcasecmp(userid, oph_user_notifier)) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: the user '%s' cannot send any notification\n", userid ? userid : "");
 		*response = OPH_SERVER_AUTH_ERROR;
 		return SOAP_OK;
 	}
 #ifdef INTERFACE_TYPE_IS_SSL
 	int res;
 	pthread_mutex_lock(&global_flag);
-	res = oph_auth_user(soap->userid, soap->passwd, _host);
+	res = oph_auth_user(userid, soap->passwd, _host);
 	pthread_mutex_unlock(&global_flag);
 	if (res) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: received wrong credentials: %s %s\n", soap->userid, soap->passwd ? soap->passwd : "NONE");
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: received wrong credentials: %s %s\n", userid, soap->passwd ? soap->passwd : "NONE");
 		*response = OPH_SERVER_AUTH_ERROR;
 		return SOAP_OK;
 	}

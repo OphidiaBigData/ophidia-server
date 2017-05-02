@@ -31,6 +31,8 @@
 #define OPH_SESSION_REAL_DIR "%s/sessions/%s"
 #define OPH_SESSION_REAL_FILE "%s/%s.session"
 #define OPH_USER_SESSION_FILE "%s/users/%s/sessions/%s.user"
+#define OPH_TOKEN_FILE "%s/tokens.dat"
+#define OPH_AUTH_TOKEN "__token__"
 
 // User parameters
 #define OPH_USER_OPENED_SESSIONS "OPH_OPENED_SESSIONS"
@@ -121,6 +123,7 @@ typedef struct _oph_auth_user_bl {
 
 int oph_load_file(const char *filename, oph_argument ** args);
 int oph_load_file2(const char *filename, oph_argument ** args);
+int oph_auth_token(const char *token, const char *host, char **userid);
 int oph_auth_user(const char *userid, const char *passwd, const char *host);
 int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb);
 int oph_save_user(const char *userid, oph_argument * args);
