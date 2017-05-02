@@ -34,8 +34,10 @@
 
 extern char *oph_auth_location;
 extern char *oph_web_server;
-extern oph_auth_user_bl *bl_head;
 extern int oph_server_timeout;
+
+oph_auth_user_bl *bl_head = NULL;
+oph_auth_user_bl *tokens = NULL;
 
 int oph_get_session_code(const char *sessionid, char *code)
 {
@@ -167,9 +169,9 @@ int oph_load_file2(const char *filename, oph_argument ** args)
 	return result;
 }
 
-int oph_add_to_bl(const char *userid, const char *host)
+int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
 {
-	if (!userid || !host)
+	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
 
 	struct timeval tv;
@@ -180,37 +182,41 @@ int oph_add_to_bl(const char *userid, const char *host)
 	bl_item->host = strdup(host);
 	bl_item->count = 1;
 	bl_item->timestamp = tv.tv_sec;
-	bl_item->next = bl_head;
-	bl_head = bl_item;
+	bl_item->next = *head;
+	*head = bl_item;
 
 	return OPH_SERVER_OK;
 }
 
-short oph_is_in_bl(const char *userid, const char *host, char *deadline)
+short oph_is_in_bl(oph_auth_user_bl ** head, const char *userid, const char *host, char *deadline)
 {
+	if (!head || !userid || !host)
+		return OPH_SERVER_NULL_POINTER;
+
 	time_t deadtime;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
-	oph_auth_user_bl *bl_item = bl_head, *bl_prev = NULL;
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
-				bl_head = bl_item->next;
+				*head = bl_item->next;
 			if (bl_item->userid)
 				free(bl_item->userid);
 			if (bl_item->host)
 				free(bl_item->host);
 			free(bl_item);
-			bl_item = bl_prev ? bl_prev->next : bl_head;
+			bl_item = bl_prev ? bl_prev->next : *head;
 		} else if (!strcmp(bl_item->userid, userid) && !strcmp(bl_item->host, host)) {
 			struct tm nowtm;
 			if (!localtime_r(&deadtime, &nowtm))
 				return -1;
-			strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
+			if (deadline)
+				strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
 			bl_item->count++;
 			return bl_item->count;
 		} else {
@@ -222,9 +228,45 @@ short oph_is_in_bl(const char *userid, const char *host, char *deadline)
 	return 0;
 }
 
-int oph_drop_from_bl(const char *userid, const char *host)
+int oph_get_by_host(oph_auth_user_bl ** head, const char *host, char **userid)
 {
-	if (!userid || !host)
+	if (!head || !userid || !host)
+		return OPH_SERVER_NULL_POINTER;
+
+	time_t deadtime;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
+	while (bl_item) {
+		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
+		if (tv.tv_sec > deadtime) {
+			if (bl_prev)
+				bl_prev->next = bl_item->next;
+			else
+				*head = bl_item->next;
+			if (bl_item->userid)
+				free(bl_item->userid);
+			if (bl_item->host)
+				free(bl_item->host);
+			free(bl_item);
+			bl_item = bl_prev ? bl_prev->next : *head;
+		} else if (!strcmp(bl_item->host, host)) {
+			if (userid)
+				*userid = strdup(bl_item->userid);
+			return 0;
+		} else {
+			bl_prev = bl_item;
+			bl_item = bl_item->next;
+		}
+	}
+
+	return 1;
+}
+
+int oph_drop_from_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+{
+	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
 
 	int found = 0;
@@ -232,14 +274,14 @@ int oph_drop_from_bl(const char *userid, const char *host)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
-	oph_auth_user_bl *bl_item = bl_head, *bl_prev = NULL;
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if ((found = !strcmp(bl_item->userid, userid) && !strcmp(bl_item->host, host)) || (tv.tv_sec > deadtime)) {
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
-				bl_head = bl_item->next;
+				*head = bl_item->next;
 			if (bl_item->userid)
 				free(bl_item->userid);
 			if (bl_item->host)
@@ -248,7 +290,7 @@ int oph_drop_from_bl(const char *userid, const char *host)
 			if (found)
 				return OPH_SERVER_OK;
 			else
-				bl_item = bl_prev ? bl_prev->next : bl_head;
+				bl_item = bl_prev ? bl_prev->next : *head;
 		} else {
 			bl_prev = bl_item;
 			bl_item = bl_item->next;
@@ -256,6 +298,27 @@ int oph_drop_from_bl(const char *userid, const char *host)
 	}
 
 	return OPH_SERVER_OK;
+}
+
+int oph_free_bl(oph_auth_user_bl ** head)
+{
+	oph_auth_user_bl *bl_item = *head;
+	while (bl_item) {
+		*head = bl_item->next;
+		if (bl_item->userid)
+			free(bl_item->userid);
+		if (bl_item->host)
+			free(bl_item->host);
+		free(bl_item);
+		bl_item = *head;
+	}
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_free()
+{
+	oph_free_bl(&bl_head);
+	oph_free_bl(&tokens);
 }
 
 #ifdef INTERFACE_TYPE_IS_SSL
@@ -318,60 +381,29 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-	char oph_token_file[OPH_MAX_STRING_SIZE], deadline[OPH_MAX_STRING_SIZE], found = 0;
-	snprintf(oph_token_file, OPH_MAX_STRING_SIZE, OPH_TOKEN_FILE, oph_auth_location);
-
-	int result = OPH_SERVER_ERROR;
-	FILE *file;
-	short count;
-
-	if ((file = fopen(oph_token_file, "r+"))) {
-		char buffer[OPH_MAX_STRING_SIZE], *username, *password, *savepointer = NULL;
-		while (fgets(buffer, OPH_MAX_STRING_SIZE, file)) {
-			if (strlen(buffer) && (buffer[strlen(buffer) - 1] == '\n'))
-				buffer[strlen(buffer) - 1] = 0;	// Skip the last '\n'
-			if (strlen(buffer)) {
-				password = strtok_r(buffer, OPH_SEPARATOR_BASIC, &savepointer);
-				if (!password) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_token_file);
-					result = OPH_SERVER_IO_ERROR;
-					break;
-				}
-				if (strcmp(password, token))
-					continue;
-				username = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
-				if (!username) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_token_file);
-					result = OPH_SERVER_IO_ERROR;
-				} else if (!(*userid = strdup(username)))
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-				else
-					found = 1;
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
-				result = OPH_SERVER_OK;
-				break;
-			}
+	int result = OPH_SERVER_OK;
+	if (oph_get_by_host(&tokens, token, userid)) {
+		short count;
+		char deadline[OPH_MAX_STRING_SIZE];
+		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
+			result = OPH_SERVER_AUTH_ERROR;
+		} else if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from '%s'\n", token);
+			if (!count)
+				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
+		} else {
+			oph_add_to_bl(&tokens, *userid, token);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
 		}
-		if (!found) {
-			if ((count = oph_is_in_bl(OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
-				result = OPH_SERVER_AUTH_ERROR;
-			} else {
-				fseek(file, 0, SEEK_END);
-				if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from '%s'\n", token);
-					if (!count)
-						oph_add_to_bl(OPH_AUTH_TOKEN, host);
-				} else {
-					fprintf(file, "%s%s%s\n", token, OPH_SEPARATOR_BASIC, *userid);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
-				}
-			}
-		}
-		fclose(file);
-	} else {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to open '%s'\n", oph_token_file);
-		result = OPH_SERVER_IO_ERROR;
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
+	if (!result) {
+		if (!*userid) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error");
+			result = OPH_SERVER_ERROR;
+		} else
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
 	}
 
 	return result;
@@ -408,7 +440,7 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 				}
 				if (strcmp(userid, username))
 					continue;
-				if ((count = oph_is_in_bl(userid, host, deadline)) > OPH_AUTH_MAX_COUNT) {
+				if ((count = oph_is_in_bl(&bl_head, userid, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "Access of user '%s' from %s has been blocked until %s since too access attemps have been received\n", userid, host,
 					      deadline);
 					result = OPH_SERVER_AUTH_ERROR;
@@ -420,18 +452,18 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 					result = OPH_SERVER_IO_ERROR;
 				} else if (!strcmp(passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
-					oph_drop_from_bl(userid, host);
+					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #ifdef INTERFACE_TYPE_IS_SSL
 				else if (!strcmp(sha_passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
-					oph_drop_from_bl(userid, host);
+					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #endif
 				else if (!count)
-					oph_add_to_bl(userid, host);
+					oph_add_to_bl(&bl_head, userid, host);
 				break;
 			}
 		}

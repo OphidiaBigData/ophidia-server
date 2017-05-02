@@ -31,7 +31,6 @@
 #define OPH_SESSION_REAL_DIR "%s/sessions/%s"
 #define OPH_SESSION_REAL_FILE "%s/%s.session"
 #define OPH_USER_SESSION_FILE "%s/users/%s/sessions/%s.user"
-#define OPH_TOKEN_FILE "%s/tokens.dat"
 #define OPH_AUTH_TOKEN "__token__"
 
 // User parameters
@@ -131,6 +130,7 @@ int oph_auth_session(const char *userid, const char *sessionid, const char *serv
 int oph_save_session(const char *userid, const char *sessionid, oph_argument * args, int type);
 int oph_save_user_session(const char *userid, const char *sessionid, oph_argument * args);
 int oph_get_session_code(const char *sessionid, char *code);
+int oph_auth_free();
 
 oph_auth_user_role oph_string_to_role(const char *role);
 oph_auth_user_role oph_code_role(const char *role);

@@ -94,7 +94,6 @@ unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 int oph_service_status = 1;
-oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
@@ -303,6 +302,7 @@ void cleanup()
 		free_oph_rmanager(orm);
 	if (ophDB)
 		oph_odb_free_ophidiadb(ophDB);
+	oph_auth_free();
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);
