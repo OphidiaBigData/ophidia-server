@@ -211,7 +211,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		userid = __userid;
 	}
 	if (result) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong credentials: %s %s (errno %d)\n", jobid, userid ? userid : OPH_AUTH_TOKEN, soap->passwd ? soap->passwd : "NONE", result);
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong credentials: %s %s (errno %d)\n", jobid, userid ? userid : OPH_AUTH_TOKEN,
+			   soap->passwd ? soap->passwd : "NONE", result);
 		response->error = OPH_SERVER_AUTH_ERROR;
 		return SOAP_OK;
 	}

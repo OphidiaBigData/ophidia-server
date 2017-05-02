@@ -343,13 +343,12 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 				if (!username) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_token_file);
 					result = OPH_SERVER_IO_ERROR;
-				}
-				else if (!(*userid = strdup(username)))
+				} else if (!(*userid = strdup(username)))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 				else
 					found = 1;
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
-					result = OPH_SERVER_OK;
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
+				result = OPH_SERVER_OK;
 				break;
 			}
 		}
