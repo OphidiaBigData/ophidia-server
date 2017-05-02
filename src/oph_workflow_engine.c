@@ -535,12 +535,12 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 		}
 		char mk_user_dir = oph_subm_user && strcmp(wf->username, oph_subm_user);
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir2(name, mk_user_dir  ? 0775 : 0755)) {
+		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_EXPORT_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir2(name, mk_user_dir  ? 0775 : 0755)) {
+		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
