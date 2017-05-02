@@ -124,7 +124,6 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 				free(value);
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		} else if (return_error > 0) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "The key '%s' will be not substituted in workflow '%s'\n", target_value, workflow->name);
 			offset = p - submit_string + 1;
 			if (skip_until < offset)
 				skip_until = offset;
@@ -138,6 +137,8 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%d%s", return_error ? index : var->ivalue, ep);
 		else
 			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : var->svalue, ep);
+		if (*p == OPH_WORKFLOW_VARIABLE_PREFIX)
+			skip_until = 0;
 		strcpy(submit_string, replaced_value);
 		if (value) {
 			free(value);
