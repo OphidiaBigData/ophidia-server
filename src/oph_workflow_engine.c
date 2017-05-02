@@ -43,7 +43,7 @@ extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
-extern char oph_subm_ssh;
+extern char oph_subm_user;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -533,13 +533,14 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
+		char mk_user_dir = oph_subm_user && strcmp(wf->username, oph_subm_user);
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir2(name, oph_subm_ssh ? 0755 : 0775)) {
+		if (oph_mkdir2(name, mk_user_dir  ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_EXPORT_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir2(name, oph_subm_ssh ? 0755 : 0775)) {
+		if (oph_mkdir2(name, mk_user_dir  ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
