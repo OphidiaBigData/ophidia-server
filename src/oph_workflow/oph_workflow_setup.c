@@ -430,7 +430,7 @@ int oph_workflow_is_child_of(oph_workflow * wf, int p, int c)
 	int i, j;
 	for (i = 0; i < wf->tasks[p].dependents_indexes_num; ++i) {
 		j = wf->tasks[p].dependents_indexes[i];
-		if (oph_workflow_is_child_of(wf, j, c))
+		if ((j != p) && oph_workflow_is_child_of(wf, j, c))
 			return 1;
 	}
 	return 0;
