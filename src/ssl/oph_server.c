@@ -35,6 +35,7 @@
 #include <mysql.h>
 
 #define OPH_STATUS_LOG_PERIOD 1
+#define OPH_STATUS_LOG_ALPHA 0.5
 
 /******************************************************************************\
  *
@@ -287,6 +288,10 @@ void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
+	if (statuslogfile) {
+		fclose(statuslogfile);
+		statuslogfile = 0;
+	}
 	sleep(1);
 	mysql_library_end();
 	soap_destroy(psoap);
@@ -297,10 +302,6 @@ void cleanup()
 		fclose(logfile);
 		fclose(stdout);
 		fclose(stderr);
-	}
-	if (statuslogfile) {
-		fclose(statuslogfile);
-		statuslogfile = 0;
 	}
 	if (oph_server_params)
 		hashtbl_destroy(oph_server_params);
@@ -530,6 +531,57 @@ void *process_request(struct soap *soap)
 	return NULL;
 }
 
+typedef struct _oph_status_user {
+	char *username;
+	unsigned long number_of_wf;
+	struct _oph_status_user *next;
+} oph_status_user;
+
+int oph_status_add(oph_status_user ** list, const char *username, unsigned long *un)
+{
+	if (!list || !username)
+		return 1;
+
+	oph_status_user *tmp;
+	for (tmp = *list; tmp; tmp = tmp->next)
+		if (tmp->username && !strcmp(tmp->username, username)) {
+			tmp->number_of_wf++;
+			return 0;
+		}
+
+	tmp = (oph_status_user *) malloc(sizeof(oph_status_user));
+	if (!tmp)
+		return 2;
+	tmp->username = strdup(username);
+	if (!tmp->username)
+		return 3;
+	tmp->number_of_wf = 0;
+	tmp->next = *list;
+	*list = tmp;
+
+	if (un)
+		++ * un;
+
+	return 0;
+}
+
+int oph_status_destroy(oph_status_user ** list)
+{
+	if (!list)
+		return 1;
+
+	oph_status_user *tmp, *next;
+	for (tmp = *list; tmp; tmp = next) {
+		next = tmp->next;
+		if (tmp->username)
+			free(tmp->username);
+		free(tmp);
+	}
+	*list = NULL;
+
+	return 0;
+}
+
 void *status_logger(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -550,68 +602,89 @@ void *status_logger(struct soap *soap)
 	unsigned long rt;	// Number of running tasks
 	unsigned long ct;	// Number of completed tasks
 	unsigned long ft;	// Number of failed tasks
+	unsigned long un;	// Number of users
 
 	oph_job_list *job_info;
 	oph_job_info *temp;
 	oph_workflow *wf;
-	time_t t1;
-	char *now = NULL;
+	struct timeval tv, tv2;
 	int i;
+	oph_status_user *users;
+	unsigned long prev;
+	long tau = 0, eps = 0, _eps;
 
 	while (statuslogfile) {
 
-		pw = ww = rw = pt = wt = rt = ct = ft = 0;	// Initialization
+		if (tau)
+			prev = tv.tv_sec + (tv.tv_usec > 500000);
+		gettimeofday(&tv, NULL);
+		if (tau) {
+			_eps = tv.tv_usec + (tv.tv_sec - OPH_STATUS_LOG_PERIOD - prev) * 1000000;
+			eps = eps ? (long) (OPH_STATUS_LOG_ALPHA * eps + (1.0 - OPH_STATUS_LOG_ALPHA) * _eps) : _eps;
+		}
+
+		pw = ww = rw = pt = wt = rt = ct = ft = un = 0;	// Initialization
+		users = NULL;
+
+		pthread_mutex_lock(&global_flag);
 
 		job_info = state->job_info;
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
 			if (!(wf = temp->wf))
 				continue;
-			if (wf->status == (int)OPH_ODB_STATUS_PENDING)
+			if (wf->username)
+				oph_status_add(&users, wf->username, &un);
+			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
-			else if (wf->status == (int)OPH_ODB_STATUS_WAIT)
+			else if (wf->status == (int) OPH_ODB_STATUS_WAIT)
 				ww++;
-			else if ((wf->status > (int)OPH_ODB_STATUS_WAIT) && (wf->status < (int)OPH_ODB_STATUS_COMPLETED))
+			else if ((wf->status > (int) OPH_ODB_STATUS_WAIT) && (wf->status < (int) OPH_ODB_STATUS_COMPLETED))
 				rw++;
-			if ((wf->status > (int)OPH_ODB_STATUS_PENDING) && (wf->status < (int)OPH_ODB_STATUS_COMPLETED)) {	// Loop on tasks
+			if ((wf->status > (int) OPH_ODB_STATUS_PENDING) && (wf->status < (int) OPH_ODB_STATUS_COMPLETED)) {	// Loop on tasks
 				for (i = 0; i < wf->tasks_num; ++i) {
-					if (wf->tasks[i].status == (int)OPH_ODB_STATUS_PENDING)
+					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
 						pt++;
-					else if (wf->tasks[i].status == (int)OPH_ODB_STATUS_WAIT)
+					else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_WAIT)
 						wt++;
-					else if ((wf->tasks[i].status > (int)OPH_ODB_STATUS_WAIT) && (wf->tasks[i].status < (int)OPH_ODB_STATUS_COMPLETED))
+					else if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_WAIT) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED))
 						rt++;
-					else if (wf->tasks[i].status == (int)OPH_ODB_STATUS_COMPLETED)
+					else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_COMPLETED)
 						ct++;
-					else if ((wf->tasks[i].status > (int)OPH_ODB_STATUS_COMPLETED) && (wf->tasks[i].status < (int)OPH_ODB_STATUS_UNSELECTED))
+					else if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_UNSELECTED))
 						ft++;
 				}
 			}
 		}
 
-		t1 = time(NULL);
-		now = ctime(&t1);
-		if (now) {
-			now[strlen(now) - 1] = 0;
-			if (statuslogfile) {
-				fprintf(statuslogfile, "[%s][Pending workflows]#%ld\n", now, pw);
-				fprintf(statuslogfile, "[%s][Waiting workflows]#%ld\n", now, ww);
-				fprintf(statuslogfile, "[%s][Running workflows]#%ld\n", now, rw);
-				fprintf(statuslogfile, "[%s][Pending tasks]#%ld\n", now, pt);
-				fprintf(statuslogfile, "[%s][Waiting tasks]#%ld\n", now, wt);
-				fprintf(statuslogfile, "[%s][Running tasks]#%ld\n", now, rt);
-				fprintf(statuslogfile, "[%s][Completed tasks]#%ld\n", now, ct);
-				fprintf(statuslogfile, "[%s][Failed tasks]#%ld\n", now, ft);
-			}
+		pthread_mutex_unlock(&global_flag);
+
+		if (statuslogfile) {
+			double now = tv.tv_sec + tv.tv_usec / 1000000.0;
+			fprintf(statuslogfile, "[%f][Pending workflows]#%ld\n", now, pw);
+			fprintf(statuslogfile, "[%f][Waiting workflows]#%ld\n", now, ww);
+			fprintf(statuslogfile, "[%f][Running workflows]#%ld\n", now, rw);
+			fprintf(statuslogfile, "[%f][Pending tasks]#%ld\n", now, pt);
+			fprintf(statuslogfile, "[%f][Waiting tasks]#%ld\n", now, wt);
+			fprintf(statuslogfile, "[%f][Running tasks]#%ld\n", now, rt);
+			fprintf(statuslogfile, "[%f][Completed tasks]#%ld\n", now, ct);
+			fprintf(statuslogfile, "[%f][Failed tasks]#%ld\n", now, ft);
+			fprintf(statuslogfile, "[%f][Users]#%ld\n", now, un);
+			fflush(statuslogfile);
 		}
 
-		if (statuslogfile)
-			fflush(statuslogfile);
+		oph_status_destroy(&users);
 
-		sleep(OPH_STATUS_LOG_PERIOD);
+		gettimeofday(&tv2, NULL);
+		tau = (OPH_STATUS_LOG_PERIOD - (tv2.tv_sec - tv.tv_sec)) * 1000000 - tv2.tv_usec + tv.tv_usec - eps;
+		while (tau < 0)
+			tau += OPH_STATUS_LOG_PERIOD;
+		usleep(tau);
 	}
 
 	if (statuslogfile) {
-		fprintf(statuslogfile, "[%s][END]\n");
+		gettimeofday(&tv, NULL);
+		double now = tv.tv_sec + tv.tv_usec / 1000000.0;
+		fprintf(statuslogfile, "[%f][END]\n", now);
 		fflush(statuslogfile);
 	}
 
