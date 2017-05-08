@@ -531,50 +531,52 @@ void *process_request(struct soap *soap)
 	return NULL;
 }
 
-typedef struct _oph_status_user {
-	char *username;
-	unsigned long number_of_wf;
-	struct _oph_status_user *next;
-} oph_status_user;
+typedef struct _oph_status_object {
+	char *key;
+	unsigned long value;
+	struct _oph_status_object *next;
+} oph_status_object;
 
-int oph_status_add(oph_status_user ** list, const char *username, unsigned long *un)
+int oph_status_add(oph_status_object ** list, const char *key, unsigned long new_value, unsigned long *old_value)
 {
-	if (!list || !username)
+	if (!list || !key)
 		return 1;
 
-	oph_status_user *tmp;
-	for (tmp = *list; tmp; tmp = tmp->next)
-		if (tmp->username && !strcmp(tmp->username, username)) {
-			tmp->number_of_wf++;
-			return 0;
-		}
+	oph_status_object *tmp;
+	if (!new_value) {
+		for (tmp = *list; tmp; tmp = tmp->next)
+			if (tmp->key && !strcmp(tmp->key, key)) {
+				tmp->value++;
+				return 0;
+			}
+	}
 
-	tmp = (oph_status_user *) malloc(sizeof(oph_status_user));
+	tmp = (oph_status_object *) malloc(sizeof(oph_status_object));
 	if (!tmp)
 		return 2;
-	tmp->username = strdup(username);
-	if (!tmp->username)
+	tmp->key = strdup(key);
+	if (!tmp->key)
 		return 3;
-	tmp->number_of_wf = 0;
+	tmp->value = new_value;
 	tmp->next = *list;
 	*list = tmp;
 
-	if (un)
-		++ * un;
+	if (old_value)
+		++ * old_value;
 
 	return 0;
 }
 
-int oph_status_destroy(oph_status_user ** list)
+int oph_status_destroy(oph_status_object ** list)
 {
 	if (!list)
 		return 1;
 
-	oph_status_user *tmp, *next;
+	oph_status_object *tmp, *next;
 	for (tmp = *list; tmp; tmp = next) {
 		next = tmp->next;
-		if (tmp->username)
-			free(tmp->username);
+		if (tmp->key)
+			free(tmp->key);
 		free(tmp);
 	}
 	*list = NULL;
@@ -603,15 +605,22 @@ void *status_logger(struct soap *soap)
 	unsigned long ct;	// Number of completed tasks
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
+	unsigned long pr;	// Progress ratio
 
 	oph_job_list *job_info;
 	oph_job_info *temp;
 	oph_workflow *wf;
 	struct timeval tv, tv2;
 	int i;
-	oph_status_user *users;
+	oph_status_object *users, *workflows, *tmp;
 	unsigned long prev;
 	long tau = 0, eps = 0, _eps;
+
+	if (statuslogfile) {
+		gettimeofday(&tv, NULL);
+		fprintf(statuslogfile, "service,status=up value=0 %d000000000\n", (int) tv.tv_sec);
+		fflush(statuslogfile);
+	}
 
 	while (statuslogfile) {
 
@@ -624,7 +633,7 @@ void *status_logger(struct soap *soap)
 		}
 
 		pw = ww = rw = pt = wt = rt = ct = ft = un = 0;	// Initialization
-		users = NULL;
+		users = workflows = NULL;
 
 		pthread_mutex_lock(&global_flag);
 
@@ -632,8 +641,10 @@ void *status_logger(struct soap *soap)
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
 			if (!(wf = temp->wf))
 				continue;
+			pr = (unsigned long) ((wf->tasks_num - wf->residual_tasks_num) * 100.0 / wf->tasks_num);
+			oph_status_add(&workflows, wf->name, pr, NULL);
 			if (wf->username)
-				oph_status_add(&users, wf->username, &un);
+				oph_status_add(&users, wf->username, 0, &un);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
 			else if (wf->status == (int) OPH_ODB_STATUS_WAIT)
@@ -659,20 +670,23 @@ void *status_logger(struct soap *soap)
 		pthread_mutex_unlock(&global_flag);
 
 		if (statuslogfile) {
-			double now = tv.tv_sec + tv.tv_usec / 1000000.0;
-			fprintf(statuslogfile, "[%f][Pending workflows]#%ld\n", now, pw);
-			fprintf(statuslogfile, "[%f][Waiting workflows]#%ld\n", now, ww);
-			fprintf(statuslogfile, "[%f][Running workflows]#%ld\n", now, rw);
-			fprintf(statuslogfile, "[%f][Pending tasks]#%ld\n", now, pt);
-			fprintf(statuslogfile, "[%f][Waiting tasks]#%ld\n", now, wt);
-			fprintf(statuslogfile, "[%f][Running tasks]#%ld\n", now, rt);
-			fprintf(statuslogfile, "[%f][Completed tasks]#%ld\n", now, ct);
-			fprintf(statuslogfile, "[%f][Failed tasks]#%ld\n", now, ft);
-			fprintf(statuslogfile, "[%f][Users]#%ld\n", now, un);
+			fprintf(statuslogfile, "workflow,status=pending value=%ld %d000000000\n", pw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=waiting value=%ld %d000000000\n", ww, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=running value=%ld %d000000000\n", rw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=pending value=%ld %d000000000\n", pt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=waiting value=%ld %d000000000\n", wt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=running value=%ld %d000000000\n", rt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=completed value=%ld %d000000000\n", ct, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=failed value=%ld %d000000000\n", ft, (int) tv.tv_sec);
+			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
+			for (tmp = workflows; tmp; tmp = tmp->next)
+				if (tmp->key)
+					fprintf(statuslogfile, "_progress_ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value, (int) tv.tv_sec);
 			fflush(statuslogfile);
 		}
 
 		oph_status_destroy(&users);
+		oph_status_destroy(&workflows);
 
 		gettimeofday(&tv2, NULL);
 		tau = (OPH_STATUS_LOG_PERIOD - (tv2.tv_sec - tv.tv_sec)) * 1000000 - tv2.tv_usec + tv.tv_usec - eps;
@@ -683,8 +697,7 @@ void *status_logger(struct soap *soap)
 
 	if (statuslogfile) {
 		gettimeofday(&tv, NULL);
-		double now = tv.tv_sec + tv.tv_usec / 1000000.0;
-		fprintf(statuslogfile, "[%f][END]\n", now);
+		fprintf(statuslogfile, "service,status=down value=0 %d000000000\n", (int) tv.tv_sec);
 		fflush(statuslogfile);
 	}
 
