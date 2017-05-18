@@ -43,7 +43,7 @@ extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
-extern char oph_subm_user;
+extern char *oph_subm_user;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
