@@ -78,6 +78,7 @@ oph_job_info *oph_find_job_in_job_list(oph_job_list * list, int jobid, oph_job_i
 			list->counter--;
 
 			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
 				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
 				pthread_cond_broadcast(&termination_flag);
 			} else
@@ -192,6 +193,7 @@ oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid,
 			list->counter--;
 
 			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
 				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
 				pthread_cond_broadcast(&termination_flag);
 			} else
@@ -240,6 +242,7 @@ oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const c
 			list->counter--;
 
 			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
 				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
 				pthread_cond_broadcast(&termination_flag);
 			} else
@@ -305,6 +308,7 @@ oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessi
 			list->counter--;
 
 			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
 				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
 				pthread_cond_broadcast(&termination_flag);
 			} else
@@ -356,6 +360,7 @@ oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list)
 			list->counter--;
 
 			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
 				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
 				pthread_cond_broadcast(&termination_flag);
 			} else

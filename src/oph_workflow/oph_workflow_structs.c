@@ -529,6 +529,10 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 	}
 	if (s->vars && !((d->vars = hashtbl_duplicate(s->vars))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->on_error && !((s->on_error = strdup(s->on_error))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->on_exit && !((s->on_exit = strdup(s->on_exit))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
