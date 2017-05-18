@@ -340,17 +340,14 @@ int oph_ssh_submit(const char *cmd)
 
 		char rcmd[25 + strlen(oph_ip_target_host) + j];
 		sprintf(rcmd, OPH_LIBSSH_SYSTEM_COMMAND, oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
 
-		pthread_mutex_lock(&libssh2_flag);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
 		result = _system(rcmd);
-		pthread_mutex_unlock(&libssh2_flag);
 
 	} else {
 
-		pthread_mutex_lock(&libssh2_flag);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", cmd);
 		result = _system(cmd);
-		pthread_mutex_unlock(&libssh2_flag);
 	}
 
 	if (result) {
