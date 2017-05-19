@@ -117,7 +117,7 @@ int openDir(const char *path, int recursive, unsigned int *counter, char **buffe
 
 	int result;
 	while (!readdir_r(dirp, &save_entry, &entry) && entry) {
-		if (*entry->d_name == OPH_SERVER_HPREFIX) {
+		if (*entry->d_name != OPH_SERVER_HPREFIX) {
 			snprintf(full_filename, OPH_MAX_STRING_SIZE, "%s/%s", path, entry->d_name);
 			lstat(full_filename, &file_stat);
 			if (!file && S_ISREG(file_stat.st_mode)) {
