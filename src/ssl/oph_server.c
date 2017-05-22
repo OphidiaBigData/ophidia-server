@@ -681,7 +681,7 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
 			for (tmp = workflows; tmp; tmp = tmp->next)
 				if (tmp->key)
-					fprintf(statuslogfile, "_progress_ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value, (int) tv.tv_sec);
+					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value, (int) tv.tv_sec);
 			fflush(statuslogfile);
 		}
 
