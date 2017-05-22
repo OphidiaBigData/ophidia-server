@@ -616,6 +616,8 @@ void *status_logger(struct soap *soap)
 	unsigned long prev;
 	long tau = 0, eps = 0, _eps;
 
+	int nofile = fileno(statuslogfile);
+
 	if (statuslogfile) {
 		gettimeofday(&tv, NULL);
 		fprintf(statuslogfile, "service,status=up value=0 %d000000000\n", (int) tv.tv_sec);
@@ -693,6 +695,8 @@ void *status_logger(struct soap *soap)
 		while (tau < 0)
 			tau += OPH_STATUS_LOG_PERIOD;
 		usleep(tau);
+
+		ftruncate(nofile, 0);
 	}
 
 	if (statuslogfile) {
