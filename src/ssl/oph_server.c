@@ -531,22 +531,32 @@ void *process_request(struct soap *soap)
 	return NULL;
 }
 
+#define OPH_SERVER_MAX_WF_LOG_PARAM 10
+
 typedef struct _oph_status_object {
 	char *key;
-	unsigned long value;
+	unsigned long value[OPH_SERVER_MAX_WF_LOG_PARAM];
 	struct _oph_status_object *next;
 } oph_status_object;
 
-int oph_status_add(oph_status_object ** list, const char *key, unsigned long new_value, unsigned long *old_value)
+int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, unsigned long *new_value, size_t number_of_new_values)
 {
-	if (!list || !key)
+	if (!list || !key || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
 		return 1;
+
+	size_t i, j, key_size = strlen(key);
+	char _key[1 + 2 * key_size];
+	for (i = j = 0; i <= key_size; ++i, ++j) {
+		if (key[i] == ' ')
+			_key[j++] = '\\';
+		_key[j] = key[i];
+	}
 
 	oph_status_object *tmp;
 	if (!new_value) {
 		for (tmp = *list; tmp; tmp = tmp->next)
-			if (tmp->key && !strcmp(tmp->key, key)) {
-				tmp->value++;
+			if (tmp->key && !strcmp(tmp->key, _key)) {
+				tmp->value[0]++;
 				return 0;
 			}
 	}
@@ -554,10 +564,13 @@ int oph_status_add(oph_status_object ** list, const char *key, unsigned long new
 	tmp = (oph_status_object *) malloc(sizeof(oph_status_object));
 	if (!tmp)
 		return 2;
-	tmp->key = strdup(key);
+	tmp->key = strdup(_key);
 	if (!tmp->key)
 		return 3;
-	tmp->value = new_value;
+	if (!new_value)
+		return 4;
+	for (i = 0; i < number_of_new_values; ++i)
+		tmp->value[i] = new_value[i];
 	tmp->next = *list;
 	*list = tmp;
 
@@ -596,25 +609,36 @@ void *status_logger(struct soap *soap)
 		return NULL;
 	}
 
+	unsigned long aw;	// Number of active workflows
 	unsigned long pw;	// Number of pending workflows
 	unsigned long ww;	// Number of waiting workflows
 	unsigned long rw;	// Number of running workflows
+	unsigned long at;	// Number of active tasks
 	unsigned long pt;	// Number of pending tasks
 	unsigned long wt;	// Number of waiting tasks
 	unsigned long rt;	// Number of running tasks
+	unsigned long mt;	// Number of massive tasks
+	unsigned long lt;	// Number of active light tasks
+	unsigned long plt;	// Number of pending light tasks
+	unsigned long rlt;	// Number of running light tasks
 	unsigned long ct;	// Number of completed tasks
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
-	unsigned long pr;	// Progress ratio
+	unsigned long cn;	// Number of active cores
+	// Progress ratio of a workflow
+	// Number of workflow tasks
+	// Progress ratio of a massive task
+	// Number of light tasks of a massive task
 
 	oph_job_list *job_info;
 	oph_job_info *temp;
 	oph_workflow *wf;
 	struct timeval tv, tv2;
-	int i;
-	oph_status_object *users, *workflows, *tmp;
-	unsigned long prev;
+	int i, j;
+	oph_status_object *users, *workflows, *massives, *tmp;
+	unsigned long prev, _value[10];
 	long tau = 0, eps = 0, _eps;
+	char name[OPH_MAX_STRING_SIZE];
 
 	int nofile = fileno(statuslogfile);
 
@@ -634,8 +658,8 @@ void *status_logger(struct soap *soap)
 			eps = eps ? (long) (OPH_STATUS_LOG_ALPHA * eps + (1.0 - OPH_STATUS_LOG_ALPHA) * _eps) : _eps;
 		}
 
-		pw = ww = rw = pt = wt = rt = ct = ft = un = 0;	// Initialization
-		users = workflows = NULL;
+		aw = pw = ww = rw = at = pt = wt = rt = mt = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
+		users = workflows = massives = NULL;
 
 		pthread_mutex_lock(&global_flag);
 
@@ -643,10 +667,13 @@ void *status_logger(struct soap *soap)
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
 			if (!(wf = temp->wf))
 				continue;
-			pr = (unsigned long) ((wf->tasks_num - wf->residual_tasks_num) * 100.0 / wf->tasks_num);
-			oph_status_add(&workflows, wf->name, pr, NULL);
+			aw++;
+			_value[1] = wf->tasks_num - wf->residual_tasks_num;
+			_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);
+			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
+			oph_status_add(&workflows, name, NULL, _value, 2);
 			if (wf->username)
-				oph_status_add(&users, wf->username, 0, &un);
+				oph_status_add(&users, wf->username, &un, NULL, 0);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
 			else if (wf->status == (int) OPH_ODB_STATUS_WAIT)
@@ -654,14 +681,36 @@ void *status_logger(struct soap *soap)
 			else if ((wf->status > (int) OPH_ODB_STATUS_WAIT) && (wf->status < (int) OPH_ODB_STATUS_COMPLETED))
 				rw++;
 			if ((wf->status > (int) OPH_ODB_STATUS_PENDING) && (wf->status < (int) OPH_ODB_STATUS_COMPLETED)) {	// Loop on tasks
+				at += wf->tasks_num;
 				for (i = 0; i < wf->tasks_num; ++i) {
+					if (wf->tasks[i].light_tasks_num) {
+						mt++;
+						lt += wf->tasks[i].light_tasks_num;
+						for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
+							if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING)
+								plt++;
+							else if (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)
+								rlt++;
+						}
+						_value[1] = wf->tasks[i].light_tasks_num - wf->tasks[i].residual_light_tasks_num;
+						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);
+						snprintf(name, OPH_MAX_STRING_SIZE, "%s.%s #%d?%d", wf->name, wf->tasks[i].name, wf->workflowid, wf->tasks[i].markerid);
+						oph_status_add(&massives, name, NULL, _value, 2);
+					}
 					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
 						pt++;
 					else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_WAIT)
 						wt++;
-					else if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_WAIT) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED))
+					else if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_WAIT) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 						rt++;
-					else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_COMPLETED)
+						if (wf->tasks[i].light_tasks_num)
+							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
+								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_WAIT)
+								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
+									cn += wf->tasks[i].light_tasks[j].ncores;
+						} else
+							cn += wf->tasks[i].ncores;
+					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_COMPLETED)
 						ct++;
 					else if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_UNSELECTED))
 						ft++;
@@ -672,23 +721,38 @@ void *status_logger(struct soap *soap)
 		pthread_mutex_unlock(&global_flag);
 
 		if (statuslogfile) {
+			fprintf(statuslogfile, "workflow,status=active value=%ld %d000000000\n", aw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=pending value=%ld %d000000000\n", pw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=waiting value=%ld %d000000000\n", ww, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=running value=%ld %d000000000\n", rw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=active value=%ld %d000000000\n", at, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=pending value=%ld %d000000000\n", pt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=waiting value=%ld %d000000000\n", wt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=running value=%ld %d000000000\n", rt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=massive value=%ld %d000000000\n", mt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=completed value=%ld %d000000000\n", ct, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=failed value=%ld %d000000000\n", ft, (int) tv.tv_sec);
+			fprintf(statuslogfile, "light\\ task,status=active value=%ld %d000000000\n", lt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "light\\ task,status=pending value=%ld %d000000000\n", plt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "light\\ task,status=running value=%ld %d000000000\n", rlt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
+			fprintf(statuslogfile, "core,status=active value=%ld %d000000000\n", cn, (int) tv.tv_sec);
 			for (tmp = workflows; tmp; tmp = tmp->next)
-				if (tmp->key)
-					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value, (int) tv.tv_sec);
+				if (tmp->key) {
+					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
+					fprintf(statuslogfile, "workflow\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
+				}
+			for (tmp = massives; tmp; tmp = tmp->next)
+				if (tmp->key) {
+					fprintf(statuslogfile, "massive\\ progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
+					fprintf(statuslogfile, "massive\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
+				}
 			fflush(statuslogfile);
 		}
 
 		oph_status_destroy(&users);
 		oph_status_destroy(&workflows);
+		oph_status_destroy(&massives);
 
 		gettimeofday(&tv2, NULL);
 		tau = (OPH_STATUS_LOG_PERIOD - (tv2.tv_sec - tv.tv_sec)) * 1000000 - tv2.tv_usec + tv.tv_usec - eps;
