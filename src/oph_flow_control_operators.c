@@ -87,12 +87,10 @@ void *_oph_wait(oph_notify_data * data)
 				curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "CURL options set\n");
 				strcpy(_filename, pointer);
-			} else if (*pointer == '/')
-				strcpy(_filename, pointer);
-			else if (oph_base_src_path && strlen(oph_base_src_path))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_base_src_path, pointer);
+			} else if (oph_base_src_path && strlen(oph_base_src_path))
+				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s%s%s", oph_base_src_path, *pointer == '/' ? "" : "/", pointer);
 			else if (!oph_get_session_code(wf->sessionid, tmp))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "/%s", oph_web_server_location, tmp, pointer);
+				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "%s%s", oph_web_server_location, tmp, *pointer == '/' ? "" : "/", pointer);
 			else {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
 				success = 0;
