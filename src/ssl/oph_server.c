@@ -567,10 +567,9 @@ int oph_status_add(oph_status_object ** list, const char *key, unsigned long *ol
 	tmp->key = strdup(_key);
 	if (!tmp->key)
 		return 3;
-	if (!new_value)
-		return 4;
-	for (i = 0; i < number_of_new_values; ++i)
-		tmp->value[i] = new_value[i];
+	if (new_value)
+		for (i = 0; i < number_of_new_values; ++i)
+			tmp->value[i] = new_value[i];
 	tmp->next = *list;
 	*list = tmp;
 
