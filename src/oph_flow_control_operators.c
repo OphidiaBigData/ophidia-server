@@ -307,6 +307,8 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
 						if (wf->tasks[i].deps[j].task_index == task_index)
 							wf->tasks[i].deps[j].task_index = parent;
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE))
+						*exit_output = 0;
 				}
 				continue;
 			}
