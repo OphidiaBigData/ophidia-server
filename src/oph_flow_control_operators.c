@@ -315,6 +315,7 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 			gparent = oph_gparent_of(wf, parent);
 			if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE) && (wf->tasks[i].parent == gparent)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				wf->tasks[parent].dependents_indexes[nk] = i;
 				wf->tasks[gparent].dependents_indexes[nk] = i;
 				found = 0;
 				for (j = 0; j < wf->tasks[i].deps_num; ++j)
@@ -1312,6 +1313,11 @@ int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * t
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				} else
 					wf->residual_tasks_num += tasks_num;
+
+				if (oph_workflow_disable_deps(wf, wf->tasks[p].dependents_indexes, wf->tasks[p].dependents_indexes_num, p, i)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to disable dependencies task data from '%s'.", wf->tasks[p].name);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				}
 
 				if (wf->tasks[p].outputs_num) {
 					oph_output_data_free(wf->tasks[p].outputs_keys, wf->tasks[p].outputs_num);

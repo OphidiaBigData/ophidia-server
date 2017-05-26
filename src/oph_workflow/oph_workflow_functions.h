@@ -49,6 +49,12 @@ int oph_workflow_indexing(oph_workflow_task * tasks, int tasks_num);
  */
 int oph_workflow_validate(oph_workflow * workflow);
 
+/* \brief Function for parallel for check
+ * \param workflow Input OPH_WORKFLOW to be validated
+ * \return 0 if successful
+ */
+int oph_workflow_validate_fco(oph_workflow * wf);
+
 /* \brief Function for the setup of the initial array of independent tasks
  * \param tasks Array of tasks
  * \param tasks_num Number of tasks
