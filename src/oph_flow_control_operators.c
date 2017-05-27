@@ -303,12 +303,17 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 						wf->tasks[i].residual_deps_num--;
 				} else {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Set dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE)) {
+						for (j = 0; j < wf->tasks[parent].dependents_indexes_num; ++j)
+							if (wf->tasks[parent].dependents_indexes[j] == i)
+								break;
+						if (j >= wf->tasks[parent].dependents_indexes_num)
+							*exit_output = 0;
+					}
 					wf->tasks[parent].dependents_indexes[nk] = i;
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
 						if (wf->tasks[i].deps[j].task_index == task_index)
 							wf->tasks[i].deps[j].task_index = parent;
-					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE))
-						*exit_output = 0;
 				}
 				continue;
 			}
