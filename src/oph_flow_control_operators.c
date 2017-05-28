@@ -362,12 +362,13 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 					break;
 				condition = arg_value;
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FORWARD)) {
-				snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
-				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg))
+				char forward_value[OPH_MAX_STRING_SIZE];
+				snprintf(forward_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
+				if (oph_workflow_var_substitute(wf, i, -1, forward_value, &error_msg))
 					break;
-				if (!strcasecmp(arg_value, OPH_COMMON_YES))
+				if (!strcasecmp(forward_value, OPH_COMMON_YES))
 					wf->tasks[i].forward = 1;
-				else if (strcasecmp(arg_value, OPH_COMMON_NO)) {
+				else if (strcasecmp(forward_value, OPH_COMMON_NO)) {
 					error_msg = strdup("Wrong parameter 'forward'!");
 					break;
 				}
