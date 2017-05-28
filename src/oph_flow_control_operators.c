@@ -287,7 +287,8 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 				nk = k;
 			i = wf->tasks[task_index].dependents_indexes[k];
 			if (wf->tasks[i].parent == parent) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' child of task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' child of task '%s' of workflow '%s' with %d branches\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name,
+				      wf->tasks[i].branch_num);
 				if (strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))
 					wf->tasks[i].is_skipped = skip_the_next;
 				else if (wf->tasks[i].branch_num > 1) {
@@ -307,7 +308,7 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
 						if (wf->tasks[i].deps[j].task_index == task_index)
 							wf->tasks[i].deps[j].task_index = parent;
-					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) && !wf->tasks[i].forward)
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) && !wf->tasks[parent].forward)
 						*exit_output = 0;
 				}
 				continue;

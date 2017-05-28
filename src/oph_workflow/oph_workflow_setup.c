@@ -261,10 +261,6 @@ int oph_workflow_validate(oph_workflow * workflow)
 	graph = NULL;
 	workflow_s_nodes_free(&S);
 
-	// Check for flow control operators
-	if (oph_workflow_validate_fco(workflow))
-		return OPH_WORKFLOW_EXIT_FLOW_CONTROL_ERROR;
-
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
