@@ -303,17 +303,12 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 						wf->tasks[i].residual_deps_num--;
 				} else {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Set dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
-					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE)) {
-						for (j = 0; j < wf->tasks[parent].dependents_indexes_num; ++j)
-							if (wf->tasks[parent].dependents_indexes[j] == i)
-								break;
-						if (j >= wf->tasks[parent].dependents_indexes_num)
-							*exit_output = 0;
-					}
 					wf->tasks[parent].dependents_indexes[nk] = i;
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
 						if (wf->tasks[i].deps[j].task_index == task_index)
 							wf->tasks[i].deps[j].task_index = parent;
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) && !wf->tasks[i].forward)
+						*exit_output = 0;
 				}
 				continue;
 			}
@@ -366,7 +361,16 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg))
 					break;
 				condition = arg_value;
-				break;
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FORWARD)) {
+				snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
+				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg))
+					break;
+				if (!strcasecmp(arg_value, OPH_COMMON_YES))
+					wf->tasks[i].forward = 1;
+				else if (strcasecmp(arg_value, OPH_COMMON_NO)) {
+					error_msg = strdup("Wrong parameter 'forward'!");
+					break;
+				}
 			}
 		if (error_msg) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", error_msg);

@@ -276,6 +276,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			wf->tasks[i].residual_retry_num = wf->tasks[i].retry_num;
 			wf->tasks[i].residual_auto_retry_num = 0;
 			wf->tasks[i].is_marked_for_auto_retry = 0;
+			wf->tasks[i].forward = 0;
 			if (wf->tasks[i].arguments_keys) {
 				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
 					if (wf->tasks[i].arguments_keys[j]) {
