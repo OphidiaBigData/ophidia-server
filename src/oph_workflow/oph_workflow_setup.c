@@ -490,8 +490,10 @@ int oph_workflow_validate_fco(oph_workflow * wf)
 	char flag[wf->tasks_num];
 	unsigned int number;
 
-	for (k = 0; k < wf->tasks_num; k++)
+	for (k = 0; k < wf->tasks_num; k++) {
 		wf->tasks[k].parent = wf->tasks[k].child = -1;
+		wf->tasks[k].branch_num = wf->tasks[k].nesting_level = 0;
+	}
 
 	for (k = 0; k < wf->tasks_num; k++) {
 		if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
