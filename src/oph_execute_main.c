@@ -261,14 +261,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 	// Indexing
-	if (oph_workflow_indexing(wf->tasks, wf->tasks_num)) {
+	if (oph_workflow_indexing(wf->tasks, i = wf->tasks_num)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to indexing tasks of workflow '%s'\n", jobid, wf->name);
 		response->error = OPH_SERVER_SYSTEM_ERROR;
 		oph_workflow_free(wf);
 		return SOAP_OK;
 	}
 	// Validate the workflow
-	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf) || oph_workflow_parallel_fco(wf, 0) || oph_workflow_validate_fco(wf)) {	// Double check is correct
+	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf) || oph_workflow_parallel_fco(wf, 0) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: workflow '%s' is not valid\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		oph_workflow_free(wf);
