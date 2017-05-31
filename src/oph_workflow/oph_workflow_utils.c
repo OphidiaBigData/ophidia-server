@@ -66,37 +66,48 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 
 int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error)
 {
-	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset;
+	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, parse_embedded_variable;
 	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL;
 	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
 	oph_workflow_var *var;
 	int index;
 
 	while (((p = strchr(submit_string, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
-		firstc = 1;
-		lastc = lastcc = 0;
-		for (ep = p + 1; *ep; ep++)	// assuming compliance with IEEE Std 1003.1-2001 conventions
-		{
-			if (firstc) {
-				firstc = 0;
-				if (*ep == OPH_WORKFLOW_BRACKET[0]) {
-					lastc = 1;
-					continue;
+
+		parse_embedded_variable = 0;
+		do {
+			firstc = 1;
+			lastc = lastcc = 0;
+			for (ep = p + 1; *ep; ep++)	// assuming compliance with IEEE Std 1003.1-2001 conventions
+			{
+				if (firstc) {
+					firstc = 0;
+					if (*ep == OPH_WORKFLOW_BRACKET[0]) {
+						lastc = 1;
+						continue;
+					}
 				}
-			}
-			if (lastc && (*ep == OPH_WORKFLOW_BRACKET[1])) {
-				lastcc = 1;
-				break;
-			}
-			for (i = 0; i < l; ++i)
-				if (*ep == OPH_WORKFLOW_SEPARATORS[i])
+				if (lastc && (*ep == OPH_WORKFLOW_BRACKET[1])) {
+					lastcc = 1;
 					break;
-			if (i < l)
+				}
+				for (i = 0; i < l; ++i)
+					if (*ep == OPH_WORKFLOW_SEPARATORS[i]) {
+						if ((*ep == OPH_WORKFLOW_VARIABLE_PREFIX) || (*ep == OPH_WORKFLOW_INDEX_PREFIX)) {	// Embedded variable
+							p = ep;
+							parse_embedded_variable = 1;
+						}
+						break;
+					}
+				if (i < l)
+					break;
+				if (lastc || (*ep == '_') || ((*ep >= 'A') && (*ep <= 'Z')) || ((*ep >= 'a') && (*ep <= 'z')) || ((ep - p > 1) && (*ep >= '0') && (*ep <= '9')))
+					continue;
 				break;
-			if (lastc || (*ep == '_') || ((*ep >= 'A') && (*ep <= 'Z')) || ((*ep >= 'a') && (*ep <= 'z')) || ((ep - p > 1) && (*ep >= '0') && (*ep <= '9')))
-				continue;
-			break;
+			}
 		}
+		while (parse_embedded_variable);
+
 		strncpy(target_value, p, ep - p);
 		target_value[ep - p] = 0;
 		if (lastcc)
