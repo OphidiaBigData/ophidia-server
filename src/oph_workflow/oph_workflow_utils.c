@@ -66,18 +66,17 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 
 int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error)
 {
-	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, parse_embedded_variable;
-	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL;
+	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset;
+	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable;
 	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
 	oph_workflow_var *var;
 	int index;
 
 	while (((p = strchr(submit_string, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
-		parse_embedded_variable = 0;
 		do {
 			firstc = 1;
-			lastc = lastcc = 0;
+			lastc = lastcc = parse_embedded_variable = 0;
 			for (ep = p + 1; *ep; ep++)	// assuming compliance with IEEE Std 1003.1-2001 conventions
 			{
 				if (firstc) {
