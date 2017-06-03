@@ -681,7 +681,11 @@ void *status_logger(struct soap *soap)
 				rw++;
 			if ((wf->status > (int) OPH_ODB_STATUS_PENDING) && (wf->status < (int) OPH_ODB_STATUS_COMPLETED)) {	// Loop on tasks
 				at += wf->tasks_num;
-				for (i = 0; i < wf->tasks_num; ++i) {
+				if (wf->tasks[wf->tasks_num].name)	// Final task
+					at++;
+				for (i = 0; i <= wf->tasks_num; ++i) {
+					if (!wf->tasks[i].name)
+						continue;
 					if (wf->tasks[i].light_tasks_num) {
 						mt++;
 						lt += wf->tasks[i].light_tasks_num;
