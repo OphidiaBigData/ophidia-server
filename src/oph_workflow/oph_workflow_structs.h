@@ -118,6 +118,7 @@ typedef struct _oph_workflow_dep {
  * \param is_skipped Flag used to skip task execution
  * \param branch_num Number of selection blocks which the task is involved in
  * \param isknown Flag set only for known operators
+ * \param forward Flag set only for selection interface
  */
 typedef struct _oph_workflow_task {
 	int idjob;
@@ -159,6 +160,7 @@ typedef struct _oph_workflow_task {
 	int is_skipped;
 	int branch_num;
 	char isknown;
+	char forward;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

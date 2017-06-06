@@ -51,7 +51,6 @@ int workflow_s_add(workflow_s_nodes * s, workflow_node * node);
 int workflow_s_remove(workflow_s_nodes * s, workflow_node ** node);
 int workflow_s_nodes_free(workflow_s_nodes * s);
 int workflow_node_free(workflow_node * node);
-int workflow_validate_fco(oph_workflow * wf);
 int oph_get_session_code(char *session_id, char *session_code);
 
 // API functions
@@ -261,10 +260,6 @@ int oph_workflow_validate(oph_workflow * workflow)
 	free(graph);
 	graph = NULL;
 	workflow_s_nodes_free(&S);
-
-	// Check for flow control operators
-	if (workflow_validate_fco(workflow))
-		return OPH_WORKFLOW_EXIT_FLOW_CONTROL_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -484,7 +479,7 @@ unsigned int workflow_number_of(oph_workflow * wf, int k, int p, int gp, const c
 	return res;
 }
 
-int workflow_validate_fco(oph_workflow * wf)
+int oph_workflow_validate_fco(oph_workflow * wf)
 {
 	if (!wf) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer!\n");
@@ -495,8 +490,10 @@ int workflow_validate_fco(oph_workflow * wf)
 	char flag[wf->tasks_num];
 	unsigned int number;
 
-	for (k = 0; k < wf->tasks_num; k++)
+	for (k = 0; k < wf->tasks_num; k++) {
 		wf->tasks[k].parent = wf->tasks[k].child = -1;
+		wf->tasks[k].branch_num = wf->tasks[k].nesting_level = 0;
+	}
 
 	for (k = 0; k < wf->tasks_num; k++) {
 		if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
