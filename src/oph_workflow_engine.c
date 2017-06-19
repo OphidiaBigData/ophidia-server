@@ -5682,3 +5682,77 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
+
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr)
+{
+	if (!wf || !wpr) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*wpr = 0.0;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information\n");
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	int i, j, k, n = 0, try_in_list = list.size, nfound;
+	for (i = 0; i <= wf->tasks_num; ++i)
+		if (wf->tasks[i].name) {
+			if (wf->tasks[i].light_tasks_num) {
+				n += wf->tasks[i].light_tasks_num;
+				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
+					nfound = 1;
+					if (try_in_list) {
+						for (k = 0; k < list.size; ++k)
+							if (list.id[k] && (list.id[k] == wf->tasks[i].light_tasks[j].idjob)) {
+								*wpr += (double) list.pid[k] / (double) list.wid[k];
+								list.id[k] = nfound = 0;
+								try_in_list--;
+								break;
+							}
+					}
+					if (nfound && (wf->tasks[i].light_tasks[j].status >= (int) OPH_ODB_STATUS_COMPLETED))
+						++ * wpr;
+				}
+			} else {
+				n++;
+				nfound = 1;
+				if (try_in_list) {
+					for (k = 0; k < list.size; ++k)
+						if (list.id[k] && (list.id[k] == wf->tasks[i].idjob)) {
+							*wpr += (double) list.pid[k] / (double) list.wid[k];
+							list.id[k] = nfound = 0;
+							try_in_list--;
+							break;
+						}
+				}
+				if (nfound && (wf->tasks[i].status >= (int) OPH_ODB_STATUS_COMPLETED))
+					++ * wpr;
+			}
+		}
+	*wpr /= n;
+
+	oph_odb_free_ophidiadb_list(&list);
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}

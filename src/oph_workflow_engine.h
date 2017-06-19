@@ -44,4 +44,6 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state);
 int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB);
 int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB);
 
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr);
+
 #endif				/* OPH_WORKFLOW_ENGINE_H */
