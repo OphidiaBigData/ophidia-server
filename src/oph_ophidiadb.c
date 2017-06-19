@@ -333,16 +333,16 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 
 	int j = 0;
 	while ((row = mysql_fetch_row(res)) != NULL) {
-		list->id[j] = (int) strtol(row[0], NULL, 10);
-		list->ctime[j] = strndup(row[1], OPH_MAX_STRING_SIZE);
-		list->name[j] = strndup(row[2], OPH_MAX_STRING_SIZE);
+		list->id[j] = row[0] ? (int) strtol(row[0], NULL, 10) : 0;
+		list->ctime[j] = row[1] ? strndup(row[1], OPH_MAX_STRING_SIZE) : NULL;
+		list->name[j] = row[2] ? strndup(row[2], OPH_MAX_STRING_SIZE) : NULL;
 		list->wid[j] = row[3] ? (int) strtol(row[3], NULL, 10) : 0;
-		if (mysql_field_count(oDB->conn) > 4)
-			list->pid[j] = row[4] ? (int) strtol(row[4], NULL, 10) : 0;
+		if ((mysql_field_count(oDB->conn) > 4) && row[4])
+			list->pid[j] = (int) strtol(row[4], NULL, 10);
 		else
 			list->pid[j] = 0;
-		if (mysql_field_count(oDB->conn) > 5)
-			list->max_status[j] = row[5] ? strndup(row[5], OPH_MAX_STRING_SIZE) : NULL;
+		if ((mysql_field_count(oDB->conn) > 5) && row[5])
+			list->max_status[j] = strndup(row[5], OPH_MAX_STRING_SIZE);
 		else
 			list->max_status[j] = NULL;
 		j++;

@@ -18,13 +18,12 @@
 
 #include "oph.nsmap"
 
-#include "oph_plugin.h"
 #include "oph_utils.h"
 #include "hashtbl.h"
 #include "oph_rmanager.h"
 #include "oph_ophidiadb.h"
-#include "oph_auth.h"
 #include "oph_task_parser_library.h"
+#include "oph_workflow_engine.h"
 
 #include <unistd.h>
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -624,7 +623,7 @@ void *status_logger(struct soap *soap)
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
 	unsigned long cn;	// Number of active cores
-	// Progress ratio of a workflow
+	double wpr;		// Progress ratio of a workflow
 	// Number of workflow tasks
 	// Progress ratio of a massive task
 	// Number of light tasks of a massive task
@@ -658,6 +657,7 @@ void *status_logger(struct soap *soap)
 		}
 
 		aw = pw = ww = rw = at = pt = wt = rt = mt = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
+		wpr = 0.0;
 		users = workflows = massives = NULL;
 
 		pthread_mutex_lock(&global_flag);
@@ -667,8 +667,11 @@ void *status_logger(struct soap *soap)
 			if (!(wf = temp->wf))
 				continue;
 			aw++;
-			_value[1] = wf->tasks_num - wf->residual_tasks_num;
-			_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);
+			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
+			if (oph_get_progress_ratio_of(wf, &wpr))
+				_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);	// Workflow progress ratio
+			else
+				_value[0] = (unsigned long) (wpr * 100.0);
 			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
 			oph_status_add(&workflows, name, NULL, _value, 2);
 			if (wf->username)
@@ -695,8 +698,8 @@ void *status_logger(struct soap *soap)
 							else if (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)
 								rlt++;
 						}
-						_value[1] = wf->tasks[i].light_tasks_num - wf->tasks[i].residual_light_tasks_num;
-						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);
+						_value[1] = wf->tasks[i].light_tasks_num - wf->tasks[i].residual_light_tasks_num;	// Completed/failed light tasks
+						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);	// Task progress ratio
 						snprintf(name, OPH_MAX_STRING_SIZE, "%s.%s #%d?%d", wf->name, wf->tasks[i].name, wf->workflowid, wf->tasks[i].markerid);
 						oph_status_add(&massives, name, NULL, _value, 2);
 					}
