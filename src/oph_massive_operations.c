@@ -32,6 +32,8 @@
 #include <glob.h>
 #include <libgen.h>
 
+#define OPH_SERVER_HPREFIX '.'
+
 extern char *oph_web_server;
 extern char *oph_base_src_path;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -115,7 +117,7 @@ int openDir(const char *path, int recursive, unsigned int *counter, char **buffe
 
 	int result;
 	while (!readdir_r(dirp, &save_entry, &entry) && entry) {
-		if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
+		if (*entry->d_name != OPH_SERVER_HPREFIX) {
 			snprintf(full_filename, OPH_MAX_STRING_SIZE, "%s/%s", path, entry->d_name);
 			lstat(full_filename, &file_stat);
 			if (!file && S_ISREG(file_stat.st_mode)) {

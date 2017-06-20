@@ -186,6 +186,7 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
+	(*workflow)->run = 1;	// Default value (yes)
 	if (run && strlen(run)) {
 		if (!strcmp(run, OPH_WORKFLOW_NO))
 			(*workflow)->run = 0;
@@ -196,8 +197,8 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'run'\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
-	} else
-		(*workflow)->run = 1;	// Default value (yes)
+	}
+	(*workflow)->output_format = 0;
 	if (output_format && strlen(output_format)) {
 		if (!strcmp(output_format, OPH_WORKFLOW_COMPACT))
 			(*workflow)->output_format = 1;
@@ -484,6 +485,7 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			}
 		}
 		// Set the retry number
+		(*workflow)->tasks[i].retry_num = 1;	// Default value
 		if (!on_error_task)
 			on_error_task = on_error;
 		else if (strlen(on_error_task)) {
@@ -520,11 +522,11 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'on_error'\n");
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
-		} else
-			(*workflow)->tasks[i].retry_num = 1;	// Default value
+		}
 		(*workflow)->tasks[i].residual_retry_num = (*workflow)->tasks[i].retry_num;
 
 		// Set the exit code
+		(*workflow)->tasks[i].exit_action = 0;	// Default value (no operation)
 		if (!on_exit_task)
 			on_exit_task = on_exit;
 		else if (strlen(on_exit_task)) {
@@ -549,9 +551,9 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'on_exit'\n");
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
-		} else
-			(*workflow)->tasks[i].exit_action = 0;	// Default value (no operation)
+		}
 
+		(*workflow)->tasks[i].run = 1;	// Default value (yes)
 		if (!run_task)
 			run_task = run;
 		if (run_task && strlen(run_task)) {
@@ -564,14 +566,14 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'run'\n");
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
-		} else
-			(*workflow)->tasks[i].run = 1;	// Default value (yes)
+		}
 
 		(*workflow)->tasks[i].parent = (*workflow)->tasks[i].child = -1;
 		(*workflow)->tasks[i].nesting_level = (*workflow)->tasks[i].parallel_mode = 0;
 	}
 
 	// Final task
+	(*workflow)->tasks[(*workflow)->tasks_num].run = 1;	// Default value (yes)
 	if (run && strlen(run)) {
 		if (!strcmp(run, OPH_WORKFLOW_NO))
 			(*workflow)->tasks[(*workflow)->tasks_num].run = 0;
@@ -582,8 +584,7 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'run'\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
-	} else
-		(*workflow)->tasks[(*workflow)->tasks_num].run = 1;	// Default value (yes)
+	}
 	(*workflow)->tasks[(*workflow)->tasks_num].retry_num = (*workflow)->tasks[(*workflow)->tasks_num].parent = (*workflow)->tasks[(*workflow)->tasks_num].child = -1;
 	(*workflow)->tasks[(*workflow)->tasks_num].exit_action = (*workflow)->tasks[(*workflow)->tasks_num].nesting_level = (*workflow)->tasks[(*workflow)->tasks_num].parallel_mode = 0;
 
