@@ -5683,18 +5683,20 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr)
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 {
 	if (!wf || !wpr) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	*wpr = 0.0;
+	if (cdate)
+		*cdate = NULL;
 
 	ophidiadb oDB;
 	oph_odb_initialize_ophidiadb(&oDB);
 	if (oph_odb_read_config_ophidiadb(&oDB)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
 	if (oph_odb_connect_to_ophidiadb(&oDB)) {
@@ -5708,7 +5710,7 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr)
 	char query[OPH_MAX_STRING_SIZE];
 	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid);
 	if (oph_odb_retrieve_list(&oDB, query, &list)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
 		oph_odb_free_ophidiadb_list(&list);
 		oph_odb_disconnect_from_ophidiadb(&oDB);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -5750,6 +5752,98 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr)
 			}
 		}
 	*wpr /= n;
+
+	oph_odb_free_ophidiadb_list(&list);
+
+	if (cdate) {
+		oph_odb_initialize_ophidiadb_list(&list);
+
+		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+		if (oph_odb_retrieve_list(&oDB, query, &list)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		if (!list.size || (list.size > 1)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		*cdate = strdup(list.ctime[0]);
+		if (!*cdate) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+
+		oph_odb_free_ophidiadb_list(&list);
+	}
+
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate)
+{
+
+	if (!sessionid || !workflowid || !status || !cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*status = 0;
+	*cdate = NULL;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, sessionid, workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	if (!list.size || (list.size > 1)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	*status = strdup(list.name[0]);
+	if (!*status) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	*cdate = strdup(list.ctime[0]);
+	if (!*cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
 
 	oph_odb_free_ophidiadb_list(&list);
 	oph_odb_disconnect_from_ophidiadb(&oDB);

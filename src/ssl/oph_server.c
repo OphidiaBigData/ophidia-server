@@ -668,7 +668,7 @@ void *status_logger(struct soap *soap)
 				continue;
 			aw++;
 			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
-			if (oph_get_progress_ratio_of(wf, &wpr))
+			if (oph_get_progress_ratio_of(wf, &wpr, NULL))
 				_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);	// Workflow progress ratio
 			else
 				_value[0] = (unsigned long) (wpr * 100.0);
