@@ -49,6 +49,11 @@ border:2px solid #ccc;
 padding:10px 40px 25px;
 margin-top:70px
 }
+#token {
+margin-left:30px;
+margin-top:74px;
+display:inline-block;
+}
 input[type=text],input[type=password] {
 width:99.5%;
 padding:10px;
