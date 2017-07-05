@@ -30,6 +30,25 @@
 #include <openssl/sha.h>
 #endif
 
+#ifdef OPH_OPENID_ENDPOINT
+
+#include "hashtbl.h"
+#include <curl/curl.h>
+#include <jansson.h>
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_mutex_t global_flag;
+#endif
+
+typedef struct _oph_auth_clip {
+	char *memory;
+	size_t size;
+} oph_auth_clip;
+
+HASHTBL *usersinfo = NULL;
+
+#endif
+
 #define OPH_AUTH_MAX_COUNT 5
 
 extern char *oph_auth_location;
@@ -319,6 +338,10 @@ int oph_auth_free()
 {
 	oph_free_bl(&bl_head);
 	oph_free_bl(&tokens);
+#ifdef OPH_OPENID_ENDPOINT
+	if (usersinfo)
+		hashtbl_destroy(usersinfo);
+#endif
 }
 
 #ifdef INTERFACE_TYPE_IS_SSL
@@ -360,17 +383,230 @@ char *oph_sha(char *to, const char *passwd)
 }
 #endif
 
+int oph_auth_check_token(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+	return OPH_SERVER_OK;
+}
+
+size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+	size_t bytec = size * nmemb;
+	oph_auth_clip *mem = (oph_auth_clip *) stream;
+	mem->memory = (char *) realloc(mem->memory, mem->size + bytec + 1);
+	if (mem->memory == NULL)
+		return 0;
+	memcpy(&(mem->memory[mem->size]), ptr, bytec);
+	mem->size += bytec;
+	mem->memory[mem->size] = 0;
+	return nmemb;
+}
+
 int oph_auth_get_user_from_token(const char *token, char **userid)
 {
 	if (!token || !userid)
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-	// TODO
-	if (!(*userid = strdup("oph-prova"))) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+#ifndef OPH_OPENID_ENDPOINT
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+	return OPH_SERVER_AUTH_ERROR;
+
+#else
+
+	if (!strlen(OPH_OPENID_ENDPOINT)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	oph_auth_clip chunk;
+	chunk.memory = (char *) malloc(1);
+	chunk.size = 0;
+	char header[OPH_MAX_STRING_SIZE];
+	snprintf(header, OPH_MAX_STRING_SIZE, "Authorization: Bearer %s", token);
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: waiting...\n");
+
+	pthread_mutex_unlock(&global_flag);	// Release lock to improve performance
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, OPH_OPENID_ENDPOINT "/userinfo");
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_slist_append(NULL, header));
+	CURLcode res = curl_easy_perform(curl);
+	curl_easy_cleanup(curl);
+
+	pthread_mutex_lock(&global_flag);
+
+	if (res || !chunk.memory) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get userinfo: %s\n", curl_easy_strerror(res));
+		if (chunk.memory)
+			free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: completed\n%s\n", chunk.memory);
+
+	json_t *userinfo = json_loads(chunk.memory, 0, NULL);
+	if (!userinfo) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		free(chunk.memory);
 		return OPH_SERVER_ERROR;
 	}
+
+	char *error = NULL, *email = NULL;
+	json_unpack(userinfo, "{s?s,s?s}", "error", &error, "email", &email);
+	if (error) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "GET returns an error code\n");
+		free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (!email) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "GET does not contain email address\n");
+		free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	if (!(*userid = strdup(email))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		free(chunk.memory);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!usersinfo) {
+		usersinfo = hashtbl_create(strlen(token), NULL);
+		if (!usersinfo)
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+	}
+	if (usersinfo)
+		hashtbl_insert(usersinfo, token, chunk.memory);
+
+	free(chunk.memory);
+
+	return OPH_SERVER_OK;
+
+#endif
+}
+
+int oph_auth_read_token(const char *token, oph_argument ** args)
+{
+	if (!token || !args)
+		return OPH_SERVER_NULL_POINTER;
+	*args = NULL;
+
+#ifdef OPH_OPENID_ENDPOINT
+
+	if (!usersinfo)
+		return OPH_SERVER_AUTH_ERROR;
+
+	char *userinfo = hashtbl_get(usersinfo, token);
+	if (!userinfo)
+		return OPH_SERVER_AUTH_ERROR;
+
+	json_t *info = json_loads(userinfo, 0, NULL);
+	if (!info) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	char *organisation_name = NULL;
+	json_unpack(info, "{s?s}", "organisation_name", &organisation_name);
+
+	oph_argument *tmp, *tail = NULL;
+
+	tmp = (oph_argument *) malloc(sizeof(oph_argument));
+	tmp->key = strdup("organisation_name");
+	if (!(tmp->value = strdup(organisation_name))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of userinfo structure\n");
+		oph_cleanup_args(args);
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
+	tmp->next = NULL;
+	if (tail)
+		tail->next = tmp;
+	else
+		*args = tmp;
+	tail = tmp;
+
+#endif
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_is_user_black_listed(const char *userid)
+{
+	if (!userid)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef BLACK_LIST_FILE
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s' in black list '%s'\n", userid, BLACK_LIST_FILE);
+	int result = OPH_SERVER_OK;
+	char buf[OPH_MAX_STRING_SIZE];
+	FILE *fd = fopen(BLACK_LIST_FILE, "r");
+	if (fd) {
+		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
+			if (strlen(buf))
+				buf[strlen(buf) - 1] = '\0';
+			if (strlen(buf) && !strcmp(userid, buf)) {
+				result = OPH_SERVER_AUTH_ERROR;
+				break;
+			}
+		}
+		fclose(fd);
+	}
+
+	if (result)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' in the black list\n", userid);
+
+	return result;
+
+#endif
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_vo(oph_argument * args)
+{
+	if (!args)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef AUTHORIZED_VO_FILE
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s=%s' in VO list '%s'\n", args->key, args->value, AUTHORIZED_VO_FILE);
+	int result = OPH_SERVER_AUTH_ERROR;
+	char buf[OPH_MAX_STRING_SIZE];
+	FILE *fd = fopen(AUTHORIZED_VO_FILE, "r");
+	if (fd) {
+		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
+			if (strlen(buf))
+				buf[strlen(buf) - 1] = '\0';
+			if (strlen(buf) && !strcmp(args->value, buf)) {
+				result = OPH_SERVER_OK;
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
+				break;
+			}
+		}
+		fclose(fd);
+	}
+
+	if (result)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to find any VO in list of the authorized VO\n");
+
+	return result;
+
+#else
+
+	return OPH_SERVER_AUTH_ERROR;
+
+#endif
 
 	return OPH_SERVER_OK;
 }
@@ -388,8 +624,12 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
 			result = OPH_SERVER_AUTH_ERROR;
+		} else if (oph_auth_check_token(token)) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' is not valid\n", token);
+			if (!count)
+				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
 		} else if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from '%s'\n", token);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
 		} else {

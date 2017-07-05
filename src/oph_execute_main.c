@@ -200,7 +200,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	state->authorization = OPH_AUTH_WRITE;
 	pthread_mutex_lock(&global_flag);
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
-		result = oph_auth_token(soap->passwd, _host, &userid);
+		if (!(result = oph_auth_token(soap->passwd, _host, &userid))) {
+			// Token is valid: check local authorization
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
+			if (oph_auth_is_user_black_listed(userid)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
+				result = OPH_SERVER_AUTH_ERROR;
+			} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host))) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
+				oph_argument *token_args = NULL;
+				if (!(result = oph_auth_read_token(soap->passwd, &token_args)) && !(result = oph_auth_vo(token_args)))
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized globally\n", jobid, userid);
+				else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized globally\n", jobid, userid);
+				oph_cleanup_args(&token_args);
+			} else
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
+		}
 		free_userid = 1;
 	} else
 		result = oph_auth_user(userid, soap->passwd, _host);

@@ -317,6 +317,8 @@ AC_ARG_WITH(openid_client_secret, [ --with-openid-client-secret=secret	Client Se
 OPH_OPENID_CLIENT_SECRET=${openid_client_secret}
 AC_SUBST(OPH_OPENID_CLIENT_SECRET)
 
+AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid_endpoint" != "x"])
+
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,
 	   [  --with-libxml-header-path=PATH 		Location of libxml2 includes directory],
