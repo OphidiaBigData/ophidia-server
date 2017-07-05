@@ -2,7 +2,7 @@
 
 /*
     Ophidia Server
-    Copyright (C) 2012-2016 CMCC Foundation
+    Copyright (C) 2012-2017 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,8 @@
 */
 
 	include('env.php');
-	if (empty($_SERVER['HTTPS'])) header('Location: '.$oph_web_server_secure.'/index.php');
+	if (empty($_SERVER['HTTPS']))
+		header('Location: '.$oph_web_server_secure.'/index.php');
 	else 
 	{
 		$error='';
@@ -73,7 +74,7 @@
 ?>
 <!--
     Ophidia Server
-    Copyright (C) 2012-2016 CMCC Foundation
+    Copyright (C) 2012-2017 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -93,6 +94,12 @@
 	<HEAD>
 		<TITLE>Ophidia Server</TITLE>
 		<LINK href="style.css" rel="stylesheet" type="text/css" />
+		<SCRIPT type="text/javascript">
+			function login_with_openid() {
+				document.getElementById("error").textContent = "Wait for the request to be processed";
+				location.href = '<?php echo $oph_web_server_secure; ?>/openid.php?submit=Login';
+            }
+		</SCRIPT>
 	</HEAD>
 	<BODY>
 <?php
@@ -157,6 +164,13 @@
 				<LABEL>Password :</LABEL>
 				<INPUT id="password" name="password" placeholder="**********" type="password" />
 				<INPUT name="submit" type="submit" value=" Login " />
+<?php
+			if (!empty($oph_openid_endpoint)) {
+?>
+				<INPUT name="openid" type="button" value=" Login with OpenId " onclick="login_with_openid()"/>
+<?php
+			}
+?>
 				<SPAN id="error"><?php echo $error; ?></SPAN>
 			</FORM>
 		</DIV></DIV>

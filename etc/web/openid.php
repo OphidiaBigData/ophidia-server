@@ -19,7 +19,10 @@
 */
 
 	include('env.php');
-	if (empty($_SERVER['HTTPS'])) header('Location: '.$oph_web_server_secure.'/openid.php');
+	if (empty($oph_openid_endpoint))
+		header('Location: '.$oph_web_server_secure);
+	if (empty($_SERVER['HTTPS']))
+		header('Location: '.$oph_web_server_secure.'/openid.php');
 	else 
 	{
 		session_start();
@@ -64,7 +67,7 @@
 				session_destroy();
 			}
 		}
-		else if (isset($_POST['submit']))
+		else if (isset($_GET['submit']) || isset($_POST['submit']))
 		{
 			$continue = true;
 			$nonce = openssl_random_pseudo_bytes(10);
@@ -112,16 +115,16 @@
 				</FORM>
 			</DIV>
 		</DIV>
-		<?php
-			if (isset($token)) {
-		?>
+<?php
+		if (isset($token)) {
+?>
 		<DIV id="token">
 			<H5>Access token</H5>
 			<TEXTAREA rows="4" cols="133"><?php echo $token; ?></TEXTAREA>
 		</DIV>
-		<?php
-			}
-		?>
+<?php
+		}
+?>
 	</BODY>
 </HTML>
 <?php

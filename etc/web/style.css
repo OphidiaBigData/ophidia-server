@@ -4,7 +4,9 @@ margin:50px auto;
 font-family:serif
 }
 #error {
-color:red
+color:red;
+margin-top:15px;
+display:inline-block
 }
 h2 {
 background-color:#FEFFED;
@@ -52,7 +54,7 @@ margin-top:70px
 #token {
 margin-left:30px;
 margin-top:74px;
-display:inline-block;
+display:inline-block
 }
 input[type=text],input[type=password] {
 width:99.5%;
@@ -72,7 +74,18 @@ padding:10px;
 font-size:20px;
 cursor:pointer;
 border-radius:5px;
-margin-bottom:15px
+margin-top:15px
+}
+input[type=button] {
+width:100%;
+background-color:#FFBC00;
+color:#fff;
+border:2px solid #FFCB00;
+padding:10px;
+font-size:20px;
+cursor:pointer;
+border-radius:5px;
+margin-top:15px
 }
 #profile {
 padding:50px;
