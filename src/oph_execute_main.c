@@ -1646,7 +1646,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_ARG_LEVEL, OPH_MAX_STRING_SIZE)) {
 				if (level < 0) {
 					level = strtol(wf->tasks[0].arguments_values[i], NULL, 10);
-					if ((level < 1) || (level > 5)) {
+					if ((level < 0) || (level > 5)) {
 						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong parameter '%s'\n", jobid, OPH_ARG_LEVEL);
 						response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 						oph_workflow_free(wf);
@@ -1697,6 +1697,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			level = 1;
 		if (save < 0)
 			save = 0;
+
+		if (!level && document_type)	// Options level == 0 and level == 1 are equivalent in case of JSON Requests
+			level = 1;
 
 		if (level > 4)
 			document_type = 2;
@@ -1783,6 +1786,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		char **jsonkeys = NULL;
 		char **fieldtypes = NULL;
 		char **jsonvalues = NULL;
+
+		double wpr;
 
 		if (!id)	// Return a JSON Response with the list of oph_jobid submitted within the target session
 		{
@@ -1923,7 +1928,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							}
 						}
 						jjj++;
-						jsonkeys[jjj] = strdup("EXIT STATUS");
+						if (level)
+							jsonkeys[jjj] = strdup("EXIT STATUS");
+						else
+							jsonkeys[jjj] = strdup("PROGRESS RATIO");
 						if (!jsonkeys[jjj]) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 							for (iii = 0; iii < jjj; iii++)
@@ -2089,7 +2097,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							}
 						}
 						jjj++;
-						fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						if (level)
+							fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						else
+							fieldtypes[jjj] = strdup(OPH_JSON_DOUBLE);
 						if (!fieldtypes[jjj]) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 							for (iii = 0; iii < num_fields; iii++)
@@ -2376,13 +2387,36 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								}
 							}
 							jjj++;
-							if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_RUNNING_STR) && !strcmp(list.max_status[i], OPH_ODB_STATUS_WAIT_STR))
-								jsonvalues[jjj] = strdup(list.max_status[i]);
-							else if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_ERROR_STR) && strcmp(list.max_status[i], OPH_ODB_STATUS_COMPLETED_STR)
-								 && !strstr(list.max_status[i], "ERROR"))
-								jsonvalues[jjj] = strdup(OPH_ODB_STATUS_RUNNING_ERROR_STR);
-							else
-								jsonvalues[jjj] = strdup(list.name[i]);
+							if (level) {
+								if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_RUNNING_STR) && !strcmp(list.max_status[i], OPH_ODB_STATUS_WAIT_STR))
+									jsonvalues[jjj] = strdup(list.max_status[i]);
+								else if (list.max_status[i] && !strcmp(list.name[i], OPH_ODB_STATUS_ERROR_STR)
+									 && strcmp(list.max_status[i], OPH_ODB_STATUS_COMPLETED_STR)
+									 && !strstr(list.max_status[i], "ERROR"))
+									jsonvalues[jjj] = strdup(OPH_ODB_STATUS_RUNNING_ERROR_STR);
+								else
+									jsonvalues[jjj] = strdup(list.name[i]);
+							} else {
+								wpr = 1.0;
+								oph_job_info *item = NULL;
+								pthread_mutex_lock(&global_flag);
+								item =
+								    id_type ? oph_find_marker_in_job_list(state->job_info, session, list.id[i], NULL,
+													  NULL) : oph_find_workflow_in_job_list(state->job_info, session, list.wid[i]);
+								if (item && oph_get_progress_ratio_of(item->wf, &wpr, NULL)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+									pthread_mutex_unlock(&global_flag);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								pthread_mutex_unlock(&global_flag);
+								snprintf(tmp, OPH_SHORT_STRING_SIZE, "%f", wpr);
+								jsonvalues[jjj] = strdup(tmp);
+							}
 							if (!jsonvalues[jjj]) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 								for (iii = 0; iii < jjj; iii++)
@@ -2963,7 +2997,303 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							    id_type ? oph_find_marker_in_job_list(state->job_info, session, marker, &task_index,
 												  &light_task_index) : oph_find_workflow_in_job_list(state->job_info, session, workflow);
 
-						if (item)	// Found a workflow in memory
+						if (!level) {	// Get the progress ratio
+
+							char error_message[OPH_MAX_STRING_SIZE];
+							*error_message = 0;
+
+							char *sessionid = session, *username = wf->username, *name = NULL, *cstatus = NULL, *cdate = NULL;
+							int workflowid = workflow, markerid = marker, status = -1;
+							char ttype = 'R';
+
+							if (item) {
+								sessionid = item->wf->sessionid;
+								workflowid = item->wf->workflowid;
+								markerid = item->wf->markerid;
+								username = item->wf->username;
+								name = item->wf->name;
+								status = item->wf->status;
+							} else {
+								// Get workflow status and creation date
+								if (oph_get_info_of(sessionid, workflowid, &cstatus, &cdate)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to get workflow info\n", ttype, jobid);
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining workflow info!");
+									break;
+								}
+							}
+
+							char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE];
+
+							snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER,
+								 markerid);
+							snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", workflowid);
+							snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", markerid);
+
+							// Save JSON related to parent job
+							oph_json *oper_json = NULL;
+							int success = 0;
+
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON initialization\n", ttype, jobid);
+
+							while (!success) {
+								if (oph_json_alloc_unsafe(&oper_json)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: JSON alloc error\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_set_source_unsafe(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: SET SOURCE error\n", ttype, jobid);
+									break;
+								}
+								if (oph_get_session_code(sessionid, session_code)) {
+									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_add_source_detail_unsafe(oper_json, "Session Code", session_code)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_add_source_detail_unsafe(oper_json, "Workflow", str_workflowid)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_add_source_detail_unsafe(oper_json, "Marker", str_markerid)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_add_source_detail_unsafe(oper_json, "JobID", str_jobid)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+									break;
+								}
+								if (oph_json_add_consumer_unsafe(oper_json, username)) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+									break;
+								}
+								success = 1;
+							}
+
+							if (!success)
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
+
+							if (success) {
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: starting to format JSON file\n", ttype, jobid);
+
+								int num_fields, iii, jjj = 0;
+
+								char **jsonkeys = NULL;
+								char **fieldtypes = NULL;
+								char **jsonvalues = NULL;
+								char jsontmp[OPH_MAX_STRING_SIZE];
+
+								success = 0;
+								while (!success) {
+									if (oph_json_add_text_unsafe
+									    (oper_json, OPH_JSON_OBJKEY_WORKFLOW_STATUS, "Workflow Status",
+									     cstatus ? cstatus : oph_odb_convert_status_to_str(status))) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+										break;
+									}
+									// Progress
+									num_fields = 2;
+									jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+									if (!jsonkeys) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										break;
+									}
+									jsonkeys[jjj] = strdup("CREATION DATE");
+									if (!jsonkeys[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										break;
+									}
+									jjj++;
+									jsonkeys[jjj] = strdup("PROGRESS RATIO");
+									if (!jsonkeys[jjj]) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										break;
+									}
+									jjj = 0;
+									fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+									if (!fieldtypes) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										break;
+									}
+									fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+									if (!fieldtypes[jjj]) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										for (iii = 0; iii < jjj; iii++)
+											if (fieldtypes[iii])
+												free(fieldtypes[iii]);
+										if (fieldtypes)
+											free(fieldtypes);
+										break;
+									}
+									jjj++;
+									fieldtypes[jjj] = strdup(OPH_JSON_DOUBLE);
+									if (!fieldtypes[jjj]) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										for (iii = 0; iii < jjj; iii++)
+											if (fieldtypes[iii])
+												free(fieldtypes[iii]);
+										if (fieldtypes)
+											free(fieldtypes);
+										break;
+									}
+									if (oph_json_add_grid
+									    (oper_json, OPH_JSON_OBJKEY_WORKFLOW_PROGRESS, "Workflow Progress Ratio", NULL, jsonkeys, num_fields, fieldtypes,
+									     num_fields)) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										for (iii = 0; iii < num_fields; iii++)
+											if (fieldtypes[iii])
+												free(fieldtypes[iii]);
+										if (fieldtypes)
+											free(fieldtypes);
+										break;
+									}
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+
+									wpr = 1.0;
+									if (item && oph_get_progress_ratio_of(item->wf, &wpr, &cdate)) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error evaluationg progress ratio\n", ttype, jobid);
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining progress ratio!");
+										break;
+									}
+
+									jjj = 0;
+									jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+									if (!jsonvalues) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										break;
+									}
+
+									jsonvalues[jjj] = cdate ? cdate : strdup("-");
+									cdate = NULL;
+									if (!jsonvalues[jjj]) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									snprintf(jsontmp, OPH_MAX_STRING_SIZE, "%f", wpr);
+									jsonvalues[jjj] = strdup(jsontmp);
+									if (!jsonvalues[jjj]) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+
+									if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_WORKFLOW_PROGRESS, jsonvalues)) {
+										pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+
+									success = 1;
+								}
+							}
+
+							if (cdate)
+								free(cdate);
+							if (cstatus)
+								free(cstatus);
+
+							if (success) {
+								if (item && (item->wf->status == OPH_ODB_STATUS_ERROR)) {
+									int ii, num_errors;
+									for (ii = num_errors = 0; ii < item->wf->tasks_num; ++ii)
+										if ((item->wf->tasks[ii].status >= (int) OPH_ODB_STATUS_ERROR)
+										    && (item->wf->tasks[ii].status < (int) OPH_ODB_STATUS_ABORTED))
+											num_errors++;
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "%d task%s failed!", num_errors, num_errors == 1 ? "" : "s");
+								}
+							}
+
+							if (oper_json) {
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: finalizing JSON file\n", ttype, jobid);
+
+								int return_code = 0;
+								if (!success) {
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reporting error into JSON file\n", ttype, jobid);
+									if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
+										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+										return_code = -1;
+									} else if (oph_json_to_json_string_unsafe(oper_json, &jstring))
+										return_code = -1;
+								} else {
+									if (strlen(error_message)) {
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reporting warning into JSON file\n", ttype, jobid);
+										if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_WORKFLOW_SUMMARY, "WARNING", error_message)) {
+											pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+											return_code = -1;
+										}
+									}
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reporting success into JSON file\n", ttype, jobid);
+									if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_STATUS, "SUCCESS", NULL)) {
+										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+										return_code = -1;
+									} else if (oph_json_to_json_string_unsafe(oper_json, &jstring))
+										return_code = -1;
+								}
+								if (!return_code)
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output for workflow '%s' has been written\n", ttype, jobid,
+									      name ? name : "No-name");
+							}
+							oph_json_free(oper_json);
+						} else if (item)	// Found a workflow in memory
 						{
 							snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
 								 session_code, marker);
@@ -4615,7 +4945,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 						pthread_mutex_unlock(&global_flag);
 
-						if (!item)	// Check for the file
+						if (level && !item)	// Check for the file
 						{
 							if (document_type) {
 								struct stat s;
