@@ -359,8 +359,11 @@ int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int de
 
 			for (j = 0; j < wf->tasks[i].deps_num; ++j) {
 				h = wf->tasks[i].deps[j].task_index;
-				if ((h != first_task) && (wf->tasks[h].status >= (int) OPH_ODB_STATUS_COMPLETED))
+				if ((h >= 0) && (h != first_task) && (wf->tasks[h].status >= (int) OPH_ODB_STATUS_COMPLETED)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Dependency of '%s' from '%s' of workflow '%s' will be considered as 'satisfied'.\n", wf->tasks[i].name, wf->tasks[h].name,
+					      wf->name);
 					wf->tasks[i].residual_deps_num--;
+				}
 			}
 
 			if ((i != last_task) && (res = oph_workflow_disable_deps(wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, first_task, last_task)))
