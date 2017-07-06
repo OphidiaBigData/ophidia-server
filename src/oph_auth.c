@@ -561,7 +561,8 @@ int oph_auth_is_user_black_listed(const char *userid)
 			}
 		}
 		fclose(fd);
-	}
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No black list configured as '%s'\n", BLACK_LIST_FILE);
 
 	if (result)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' in the black list\n", userid);
@@ -595,7 +596,8 @@ int oph_auth_vo(oph_argument * args)
 			}
 		}
 		fclose(fd);
-	}
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No VO found in '%s'\n", AUTHORIZED_VO_FILE);
 
 	if (result)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to find any VO in list of the authorized VO\n");

@@ -101,7 +101,9 @@
 		<LINK href="style.css" rel="stylesheet" type="text/css" />
 		<SCRIPT type="text/javascript">
 			function show_wait() {
-				document.getElementById("error").textContent = "Wait for the request to be processed";
+				var error_label = document.getElementById("error");
+				error_label.style.color = "green";
+				error_label.textContent = "Wait for the request to be processed";
             }
 		</SCRIPT>
 	</HEAD>
@@ -120,7 +122,7 @@
 ?>
 		<DIV id="token">
 			<H5>Access token</H5>
-			<TEXTAREA rows="4" cols="133"><?php echo $token; ?></TEXTAREA>
+			<TEXTAREA rows="4" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $token; ?></TEXTAREA>
 		</DIV>
 <?php
 		}

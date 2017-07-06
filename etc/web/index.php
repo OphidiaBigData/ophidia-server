@@ -96,7 +96,9 @@
 		<LINK href="style.css" rel="stylesheet" type="text/css" />
 		<SCRIPT type="text/javascript">
 			function login_with_openid() {
-				document.getElementById("error").textContent = "Wait for the request to be processed";
+				var error_label = document.getElementById("error");
+				error_label.style.color = "green";
+				error_label.textContent = "Wait for the request to be processed";
 				location.href = '<?php echo $oph_web_server_secure; ?>/openid.php?submit=Login';
             }
 		</SCRIPT>
