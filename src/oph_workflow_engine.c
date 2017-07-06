@@ -277,6 +277,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			wf->tasks[i].residual_retry_num = wf->tasks[i].retry_num;
 			wf->tasks[i].residual_auto_retry_num = 0;
 			wf->tasks[i].is_marked_for_auto_retry = 0;
+			wf->tasks[i].forward = 0;
 			if (wf->tasks[i].arguments_keys) {
 				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
 					if (wf->tasks[i].arguments_keys[j]) {
@@ -338,6 +339,35 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 				(*tasks_num)++;
 
 			if ((i != last_task) && (res = oph_workflow_reset_task(wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, last_task, stack, tasks_num)))
+				return res;
+		}
+	}
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int first_task, int last_task)
+{
+	if (dependents_indexes_num) {
+		if (!dependents_indexes) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+		int i, j, k, h, res;
+		for (k = 0; k < dependents_indexes_num; ++k) {
+			i = dependents_indexes[k];
+			if (wf->tasks[i].status)
+				continue;
+
+			for (j = 0; j < wf->tasks[i].deps_num; ++j) {
+				h = wf->tasks[i].deps[j].task_index;
+				if ((h >= 0) && (h != first_task) && (wf->tasks[h].status >= (int) OPH_ODB_STATUS_COMPLETED)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Dependency of '%s' from '%s' of workflow '%s' will be considered as 'satisfied'.\n", wf->tasks[i].name, wf->tasks[h].name,
+					      wf->name);
+					wf->tasks[i].residual_deps_num--;
+				}
+			}
+
+			if ((i != last_task) && (res = oph_workflow_disable_deps(wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, first_task, last_task)))
 				return res;
 		}
 	}
@@ -5654,6 +5684,174 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 
 	if (oph_odb_destroy_hp(oDB, wf->host_partition))
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
+{
+	if (!wf || !wpr) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*wpr = 0.0;
+	if (cdate)
+		*cdate = NULL;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	int i, j, k, n = 0, try_in_list = list.size, nfound;
+	for (i = 0; i <= wf->tasks_num; ++i)
+		if (wf->tasks[i].name) {
+			if (wf->tasks[i].light_tasks_num) {
+				n += wf->tasks[i].light_tasks_num;
+				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
+					nfound = 1;
+					if (try_in_list) {
+						for (k = 0; k < list.size; ++k)
+							if (list.id[k] && (list.id[k] == wf->tasks[i].light_tasks[j].idjob)) {
+								*wpr += (double) list.pid[k] / (double) list.wid[k];
+								list.id[k] = nfound = 0;
+								try_in_list--;
+								break;
+							}
+					}
+					if (nfound && (wf->tasks[i].light_tasks[j].status >= (int) OPH_ODB_STATUS_COMPLETED))
+						++ * wpr;
+				}
+			} else {
+				n++;
+				nfound = 1;
+				if (try_in_list) {
+					for (k = 0; k < list.size; ++k)
+						if (list.id[k] && (list.id[k] == wf->tasks[i].idjob)) {
+							*wpr += (double) list.pid[k] / (double) list.wid[k];
+							list.id[k] = nfound = 0;
+							try_in_list--;
+							break;
+						}
+				}
+				if (nfound && (wf->tasks[i].status >= (int) OPH_ODB_STATUS_COMPLETED))
+					++ * wpr;
+			}
+		}
+	*wpr /= n;
+
+	oph_odb_free_ophidiadb_list(&list);
+
+	if (cdate) {
+		oph_odb_initialize_ophidiadb_list(&list);
+
+		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+		if (oph_odb_retrieve_list(&oDB, query, &list)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		if (!list.size || (list.size > 1)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		*cdate = strdup(list.ctime[0]);
+		if (!*cdate) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+
+		oph_odb_free_ophidiadb_list(&list);
+	}
+
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate)
+{
+
+	if (!sessionid || !workflowid || !status || !cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*status = 0;
+	*cdate = NULL;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, sessionid, workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	if (!list.size || (list.size > 1)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	*status = strdup(list.name[0]);
+	if (!*status) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	*cdate = strdup(list.ctime[0]);
+	if (!*cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	oph_odb_free_ophidiadb_list(&list);
+	oph_odb_disconnect_from_ophidiadb(&oDB);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

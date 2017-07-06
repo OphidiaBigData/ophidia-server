@@ -26,6 +26,7 @@
 #include "oph_workflow_library.h"
 
 int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack * stack, int *tasks_num);
+int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int first_task, int last_task);
 
 int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *initial_tasks_indexes, int initial_tasks_indexes_num, ophidiadb * oDB, char **jobid_response);
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *json, int *response);
@@ -42,5 +43,8 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state);
 
 int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB);
 int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB);
+
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate);
+int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate);
 
 #endif				/* OPH_WORKFLOW_ENGINE_H */

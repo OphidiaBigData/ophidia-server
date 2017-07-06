@@ -87,12 +87,10 @@ void *_oph_wait(oph_notify_data * data)
 				curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "CURL options set\n");
 				strcpy(_filename, pointer);
-			} else if (*pointer == '/')
-				strcpy(_filename, pointer);
-			else if (oph_base_src_path && strlen(oph_base_src_path))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s/%s", oph_base_src_path, pointer);
+			} else if (oph_base_src_path && strlen(oph_base_src_path))
+				snprintf(_filename, OPH_MAX_STRING_SIZE, "%s%s%s", oph_base_src_path, *pointer == '/' ? "" : "/", pointer);
 			else if (!oph_get_session_code(wf->sessionid, tmp))
-				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "/%s", oph_web_server_location, tmp, pointer);
+				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "%s%s", oph_web_server_location, tmp, *pointer == '/' ? "" : "/", pointer);
 			else {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
 				success = 0;
@@ -289,7 +287,8 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 				nk = k;
 			i = wf->tasks[task_index].dependents_indexes[k];
 			if (wf->tasks[i].parent == parent) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' child of task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' child of task '%s' of workflow '%s' with %d branches\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name,
+				      wf->tasks[i].branch_num);
 				if (strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))
 					wf->tasks[i].is_skipped = skip_the_next;
 				else if (wf->tasks[i].branch_num > 1) {
@@ -309,12 +308,15 @@ int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum op
 					for (j = 0; j < wf->tasks[i].deps_num; ++j)
 						if (wf->tasks[i].deps[j].task_index == task_index)
 							wf->tasks[i].deps[j].task_index = parent;
+					if (exit_output && !strncasecmp(wf->tasks[parent].operator, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) && !wf->tasks[parent].forward)
+						*exit_output = 0;
 				}
 				continue;
 			}
 			gparent = oph_gparent_of(wf, parent);
 			if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE) && (wf->tasks[i].parent == gparent)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop dependence to '%s' from task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->tasks[parent].name, wf->name);
+				wf->tasks[parent].dependents_indexes[nk] = i;
 				wf->tasks[gparent].dependents_indexes[nk] = i;
 				found = 0;
 				for (j = 0; j < wf->tasks[i].deps_num; ++j)
@@ -360,7 +362,17 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg))
 					break;
 				condition = arg_value;
-				break;
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FORWARD)) {
+				char forward_value[OPH_MAX_STRING_SIZE];
+				snprintf(forward_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
+				if (oph_workflow_var_substitute(wf, i, -1, forward_value, &error_msg))
+					break;
+				if (!strcasecmp(forward_value, OPH_COMMON_YES))
+					wf->tasks[i].forward = 1;
+				else if (strcasecmp(forward_value, OPH_COMMON_NO)) {
+					error_msg = strdup("Wrong parameter 'forward'!");
+					break;
+				}
 			}
 		if (error_msg) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", error_msg);
@@ -1312,6 +1324,11 @@ int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * t
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				} else
 					wf->residual_tasks_num += tasks_num;
+
+				if (oph_workflow_disable_deps(wf, wf->tasks[p].dependents_indexes, wf->tasks[p].dependents_indexes_num, p, i)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to disable dependencies task data from '%s'.", wf->tasks[p].name);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				}
 
 				if (wf->tasks[p].outputs_num) {
 					oph_output_data_free(wf->tasks[p].outputs_keys, wf->tasks[p].outputs_num);
