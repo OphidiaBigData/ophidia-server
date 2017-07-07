@@ -247,9 +247,9 @@ short oph_is_in_bl(oph_auth_user_bl ** head, const char *userid, const char *hos
 	return 0;
 }
 
-int oph_get_by_host(oph_auth_user_bl ** head, const char *host, char **userid)
+int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **userid)
 {
-	if (!head || !userid || !host)
+	if (!head || !userid || !token)
 		return OPH_SERVER_NULL_POINTER;
 
 	time_t deadtime;
@@ -260,6 +260,7 @@ int oph_get_by_host(oph_auth_user_bl ** head, const char *host, char **userid)
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
+			hashtbl_remove(usersinfo, bl_item->host);
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
@@ -270,7 +271,7 @@ int oph_get_by_host(oph_auth_user_bl ** head, const char *host, char **userid)
 				free(bl_item->host);
 			free(bl_item);
 			bl_item = bl_prev ? bl_prev->next : *head;
-		} else if (!strcmp(bl_item->host, host)) {
+		} else if (!strcmp(bl_item->host, token)) {
 			if (userid)
 				*userid = strdup(bl_item->userid);
 			return 0;
@@ -620,7 +621,7 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 	*userid = NULL;
 
 	int result = OPH_SERVER_OK;
-	if (oph_get_by_host(&tokens, token, userid)) {
+	if (oph_get_user_by_token(&tokens, token, userid)) {
 		short count;
 		char deadline[OPH_MAX_STRING_SIZE];
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
