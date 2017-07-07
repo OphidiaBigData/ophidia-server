@@ -47,7 +47,7 @@ dist_sessions_DATA =
 
 if OPH_WEB_ACCESS
 webdir = $(OPH_WEB_SERVER_LOCATION)/
-dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/openid.php etc/web/style.css etc/web/.htaccess
+dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/openid.php etc/web/userinfo.php etc/web/style.css etc/web/.htaccess
 endif
 
 AM_DEFAULT_VERBOSITY = 1

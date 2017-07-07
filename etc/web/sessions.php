@@ -43,7 +43,7 @@
 		);
 	}
 	include('env.php');
-	session_start();
+	include('userinfo.php');
 	if (!isset($_SESSION['userid']))
 	{
 		$_SESSION['url'] = $_SERVER['PATH_INFO'].'?'.$_SERVER['QUERY_STRING'];

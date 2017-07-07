@@ -26,7 +26,7 @@
 	</HEAD>
 	<BODY>
 <?php
-	session_start();
+	include('userinfo.php');
 	if(isset($_SESSION['userid']) && !empty($_SESSION['userid']))
 	{
 ?>
@@ -35,8 +35,16 @@
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php?logout=yes">Log Out</A></B>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php">Session List</A></B>
 <?php
-			if (isset($download) && !empty($download)) print '<B class="activelink"><A href="?download=yes">Download</A></B>';
-			else print '<B class="inactivelink">Download</B>';
+		if (isset($download) && !empty($download)) print '<B class="activelink"><A href="?download=yes">Download</A></B>';
+		else print '<B class="inactivelink">Download</B>';
+?>
+<?php
+		if (isset($_SESSION['token']))
+		{
+?>
+			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/openid.php">Get token</A></B>
+<?php
+		}
 ?>
 		</DIV>
 		<HR/>

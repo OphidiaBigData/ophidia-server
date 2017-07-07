@@ -31,47 +31,72 @@
 		if (isset($_GET['error']))
 		{
 			$error = $_GET['error_description'];
-			unset($_SESSION['code']);
 			session_destroy();
 		}
-		if (!isset($_SESSION['code']) && (isset($_GET['code']) || isset($_POST['code'])))
+		if (isset($_GET['code']) || isset($_POST['code']))
 		{
 			if (isset($_GET['code'])) $code = $_GET['code'];
 			else if (isset($_POST['code'])) $code = $_POST['code'];
-			$_SESSION['code'] = $code;
 		}
-		if (isset($_SESSION['code']))
-		{
+		if (isset($code) || isset($_SESSION['token']))
 			$message = 'Get token';
-			if (isset($code) || (isset($_POST['submit']) && ($_POST['submit'] == $message)))
+		if (isset($code))
+		{
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
+			curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
+			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=authorization_code&code='.$code.'&redirect_uri='.$oph_web_server_secure.'/openid.php');
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded')); 
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			$json = curl_exec($ch);
+			curl_close($ch);
+			$output = json_decode($json, 1);
+			if (isset($output['error']))
 			{
-				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
-				curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
-				curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-				curl_setopt($ch, CURLOPT_POST, 1);
-				curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=authorization_code&code='.$_SESSION['code'].'&redirect_uri='.$oph_web_server_secure.'/openid.php');
-				curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded')); 
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-				$json = curl_exec($ch);
-				curl_close($ch);
-				$output = json_decode($json, 1);
-				if (isset($output['error']))
-				{
-					$error = $output['error_description'];
-					$message = 'Login';
-				}
-				else
-					$token = $output['access_token'];
-				unset($_SESSION['code']);
-				session_destroy();
+				$error = $output['error_description'];
+				$message = 'Login';
 			}
+			else
+			{
+				$_SESSION['token'] = $output['access_token'];
+				if (isset($output['refresh_token']))
+					$_SESSION['refresh_token'] = $output['refresh_token'];
+			}
+			if (isset($output['error']))
+				session_destroy();
+		}
+		else if (isset($_SESSION['refresh_token']))
+		{
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
+			curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
+			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=refresh_token&refresh_token='.$_SESSION['refresh_token']);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			$json = curl_exec($ch);
+			curl_close($ch);
+			$output = json_decode($json, 1);
+			if (isset($output['error']))
+			{
+				$error = $output['error_description'];
+				$message = 'Login';
+			}
+			else
+			{
+				$_SESSION['token'] = $output['access_token'];
+				$_SESSION['refresh_token'] = $output['refresh_token'];
+			}
+			if (isset($output['error']))
+				session_destroy();
 		}
 		else if (isset($_GET['submit']) || isset($_POST['submit']))
 		{
 			$continue = true;
 			$nonce = openssl_random_pseudo_bytes(10);
-			header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+email&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce=123');
+			header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+email+offline_access&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce=',$nonce);
 		}
 	}
 	if (!isset($continue))
@@ -108,6 +133,21 @@
 		</SCRIPT>
 	</HEAD>
 	<BODY>
+<?php
+		include('userinfo.php');
+		if(isset($_SESSION['userid']) && !empty($_SESSION['userid'])) {
+?>
+		<DIV id="profile">
+			<B id="welcome">Welcome : <I><?php echo $_SESSION['userid']; ?></I></B>
+			<B class="activelink"><A href="index.php?logout=yes">Log Out</A></B>
+			<B class="activelink"><A href="sessions.php">Session List</A></B>
+			<B class="inactivelink">Download</B>
+			<B class="inactivelink">Get token</B>
+		</DIV>
+		<HR/>
+<?php
+		}
+?>
 		<DIV id="main">
 			<DIV id="login">
 				<H2>OpenId Connect</H2>
@@ -118,11 +158,11 @@
 			</DIV>
 		</DIV>
 <?php
-		if (isset($token)) {
+		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
 ?>
 		<DIV id="token">
 			<H5>Access token</H5>
-			<TEXTAREA rows="4" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $token; ?></TEXTAREA>
+			<TEXTAREA rows="5" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $_SESSION['token']; ?></TEXTAREA>
 		</DIV>
 <?php
 		}

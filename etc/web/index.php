@@ -31,11 +31,11 @@
 		}
 		else if (isset($_POST['submit']))
 		{
-			$error = 'Username or Password is invalid';
+			$error = 'Username or Password are not valid';
 			if (!empty($_POST['username']) && !empty($_POST['password'])) 
 			{
-				$username=$_POST['username'];
-				$password=$_POST['password'];
+				$username = $_POST['username'];
+				$password = $_POST['password'];
 
 				// User security check
 				$result = false;
@@ -58,7 +58,7 @@
 				if ($result)
 				{
 					session_start();
-					$_SESSION['userid']=$username;
+					$_SESSION['userid'] = $username;
 					if (isset($_SESSION['url']))
 					{
 						header('Location: '.$oph_web_server.'/sessions.php'.$_SESSION['url']);
@@ -105,7 +105,7 @@
 	</HEAD>
 	<BODY>
 <?php
-		session_start();
+		include('userinfo.php');
 		if(isset($_SESSION['userid']) && !empty($_SESSION['userid'])) {
 ?>
 		<DIV id="profile">
@@ -113,6 +113,14 @@
 			<B class="activelink"><A href="index.php?logout=yes">Log Out</A></B>
 			<B class="inactivelink">Session List</B>
 			<B class="inactivelink">Download</B>
+<?php
+		if (isset($_SESSION['token']))
+		{
+?>
+			<B class="activelink"><A href="openid.php">Get token</A></B>
+<?php
+		}
+?>
 		</DIV>
 		<HR/>
 <?php
