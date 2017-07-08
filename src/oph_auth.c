@@ -260,7 +260,9 @@ int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **us
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
+#ifdef OPH_OPENID_ENDPOINT
 			hashtbl_remove(usersinfo, bl_item->host);
+#endif
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
@@ -392,6 +394,7 @@ int oph_auth_check_token(const char *token)
 	return OPH_SERVER_OK;
 }
 
+#ifdef OPH_OPENID_ENDPOINT
 size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 {
 	size_t bytec = size * nmemb;
@@ -404,6 +407,7 @@ size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 	mem->memory[mem->size] = 0;
 	return nmemb;
 }
+#endif
 
 int oph_auth_get_user_from_token(const char *token, char **userid)
 {
