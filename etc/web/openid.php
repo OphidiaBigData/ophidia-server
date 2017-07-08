@@ -67,36 +67,39 @@
 			if (isset($output['error']))
 				session_destroy();
 		}
-		else if (isset($_SESSION['refresh_token']))
+		else if (isset($_GET['submit']) || isset($_POST['submit']))
 		{
-			$ch = curl_init();
-			curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
-			curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
-			curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-			curl_setopt($ch, CURLOPT_POST, 1);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=refresh_token&refresh_token='.$_SESSION['refresh_token']);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-			$json = curl_exec($ch);
-			curl_close($ch);
-			$output = json_decode($json, 1);
-			if (isset($output['error']))
+			if (isset($_SESSION['refresh_token']))
 			{
-				$error = $output['error_description'];
-				$message = 'Login';
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
+				curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
+				curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=refresh_token&refresh_token='.$_SESSION['refresh_token']);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				$json = curl_exec($ch);
+				curl_close($ch);
+				$output = json_decode($json, 1);
+				if (isset($output['error']))
+				{
+					$error = $output['error_description'];
+					$message = 'Login';
+				}
+				else
+				{
+					$_SESSION['token'] = $output['access_token'];
+					$_SESSION['refresh_token'] = $output['refresh_token'];
+				}
+				if (isset($output['error']))
+					session_destroy();
 			}
 			else
 			{
-				$_SESSION['token'] = $output['access_token'];
-				$_SESSION['refresh_token'] = $output['refresh_token'];
+				$continue = true;
+				$nonce = openssl_random_pseudo_bytes(10);
+				header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+email+offline_access&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce=',$nonce);
 			}
-			if (isset($output['error']))
-				session_destroy();
-		}
-		else if (isset($_GET['submit']) || isset($_POST['submit']))
-		{
-			$continue = true;
-			$nonce = openssl_random_pseudo_bytes(10);
-			header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+email+offline_access&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce=',$nonce);
 		}
 	}
 	if (!isset($continue))
