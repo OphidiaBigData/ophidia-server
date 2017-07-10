@@ -319,6 +319,13 @@ AC_SUBST(OPH_OPENID_CLIENT_SECRET)
 
 AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid_endpoint" != "x"])
 
+if test "x$openid_endpoint" != "x"; then
+PKG_CHECK_MODULES(CJOSE, cjose >= 0.4.1)
+AC_SUBST(CJOSE_CFLAGS)
+AC_SUBST(CJOSE_LIBS)
+AC_MSG_NOTICE("OpenId support enabled")
+fi
+
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,
 	   [  --with-libxml-header-path=PATH 		Location of libxml2 includes directory],

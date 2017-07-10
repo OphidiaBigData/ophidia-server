@@ -45,6 +45,11 @@ char *oph_web_server = 0;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 oph_argument *args = 0;
+#ifdef OPH_OPENID_ENDPOINT
+char *oph_openid_endpoint = 0;
+char *oph_openid_client_id = 0;
+char *oph_openid_client_secret = 0;
+#endif
 
 void cleanup()
 {

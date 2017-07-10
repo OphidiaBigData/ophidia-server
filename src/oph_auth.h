@@ -126,6 +126,8 @@ int oph_auth_token(const char *token, const char *host, char **userid);
 int oph_auth_read_token(const char *token, oph_argument ** args);
 int oph_auth_is_user_black_listed(const char *userid);
 int oph_auth_vo(oph_argument * args);
+int oph_auth_user_enabling(const char *userid, int *result);
+int oph_auth_enable_user(const char *userid, int result);
 int oph_auth_user(const char *userid, const char *passwd, const char *host);
 int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb);
 int oph_save_user(const char *userid, oph_argument * args);
