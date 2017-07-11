@@ -41,6 +41,8 @@
 extern pthread_mutex_t global_flag;
 #endif
 
+#define AUTH_CONNECTTIMEOUT 30
+
 typedef struct _oph_auth_clip {
 	char *memory;
 	size_t size;
@@ -72,6 +74,8 @@ typedef struct _auth_jwt_payload {
 
 extern char *oph_openid_endpoint;
 extern char *oph_openid_client_id;
+
+char *oph_openid_endpoint_public_key = NULL;
 
 #endif
 
@@ -411,6 +415,8 @@ int oph_auth_free()
 	oph_free_bl(&tokens);
 	oph_free_bl(&auth_users);
 #ifdef OPH_OPENID_ENDPOINT
+	if (oph_openid_endpoint_public_key)
+		free(oph_openid_endpoint_public_key);
 	if (usersinfo)
 		hashtbl_destroy(usersinfo);
 #endif
@@ -692,39 +698,6 @@ int extract_payload(cjose_jws_t * jwt, auth_jwt_payload * payload)
 	return OPH_SERVER_OK;
 }
 
-int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload * payload)
-{
-	if (!token || (!header && !payload))
-		return OPH_SERVER_NULL_POINTER;
-
-	cjose_jws_t *jwt = cjose_jws_import(token, strlen(token), NULL);
-	if (!jwt)
-		return OPH_SERVER_ERROR;
-
-	if (header && extract_header(jwt, header)) {
-		cjose_jws_release(jwt);
-		return OPH_SERVER_ERROR;
-	}
-
-	if (payload && extract_payload(jwt, payload)) {
-		cjose_jws_release(jwt);
-		if (header)
-			header_free(header);
-		return OPH_SERVER_ERROR;
-	}
-
-/*
-	const char s_json[228] = "{\"keys\":[{\"kty\":\"RSA\",\"e\":\"AQAB\",\"kid\":\"rsa1\",\"n\":\"ltbEgpxovUDJvRGGcCCvhRV8IRuNoUkiK4SNohPDXOKr_pnnO3Vdi9rh5RvWx4tGpw4trPE4eEebPexwrXfWDMJdJn2iAN7nXNRDbGQysWyeEZqmCImFD23kVmgn6vCn8qHfxEc6fE8z9ndU0o4Snj5XwlIip3EWCMzkDim_FRE\"}]}";
-	cjose_jwk_t *cjose_jwk = cjose_jwk_import(s_json, strlen(s_json), NULL);
-	if (!cjose_jws_verify(jwt, cjose_jwk, NULL)) {
-		return OPH_SERVER_ERROR;
-	}
-*/
-
-	cjose_jws_release(jwt);
-	return OPH_SERVER_OK;
-}
-
 size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 {
 	size_t bytec = size * nmemb;
@@ -737,6 +710,116 @@ size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 	mem->memory[mem->size] = 0;
 	return bytec;
 }
+
+int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload * payload)
+{
+	if (!token || (!header && !payload))
+		return OPH_SERVER_NULL_POINTER;
+
+	cjose_jws_t *jwt = cjose_jws_import(token, strlen(token), NULL);
+	if (!jwt) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be processed\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	if (header && extract_header(jwt, header)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Header cannot be extracted\n");
+		cjose_jws_release(jwt);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (payload && extract_payload(jwt, payload)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Payload cannot be extracted\n");
+		cjose_jws_release(jwt);
+		if (header)
+			header_free(header);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!oph_openid_endpoint_public_key) {
+
+		oph_auth_clip chunk;
+		chunk.memory = (char *) malloc(1);
+		*chunk.memory = chunk.size = 0;
+		char url[OPH_MAX_STRING_SIZE];
+		snprintf(url, OPH_MAX_STRING_SIZE, "%s/jwk", oph_openid_endpoint);
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: waiting...\n");
+
+		CURL *curl = curl_easy_init();
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+		CURLcode res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+
+		if (res || !chunk.memory) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			if (chunk.memory)
+				free(chunk.memory);
+			return OPH_SERVER_AUTH_ERROR;
+		}
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: completed\n%s\n", chunk.memory);
+
+		char error = 1;
+		while (error) {
+			char *start = chunk.memory + 1;
+			while (start && *start && (*start != '{'))
+				start++;
+			if (!start || !*start)
+				break;
+			char *stop = start + 1;
+			while (stop && *stop && (*stop != '}'))
+				stop++;
+			if (!stop || !*stop)
+				break;
+			stop[1] = 0;
+			oph_openid_endpoint_public_key = strdup(start);
+			if (!oph_openid_endpoint_public_key)
+				break;
+			error = 0;
+		}
+
+		free(chunk.memory);
+
+		if (error) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			return OPH_SERVER_AUTH_ERROR;
+		} else
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key: %s\n", oph_openid_endpoint_public_key);
+	}
+
+	cjose_jwk_t *jwk = cjose_jwk_import(oph_openid_endpoint_public_key, strlen(oph_openid_endpoint_public_key), NULL);
+	if (!jwk) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key cannot be processed\n");
+		cjose_jws_release(jwt);
+		if (header)
+			header_free(header);
+		if (payload)
+			payload_free(payload);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!cjose_jws_verify(jwt, jwk, NULL)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Signature is not correct\n");
+		//cjose_jws_release(jwt);
+		cjose_jwk_release(jwk);
+		if (header)
+			header_free(header);
+		if (payload)
+			payload_free(payload);
+		return OPH_SERVER_ERROR;
+	}
+
+	cjose_jws_release(jwt);
+	cjose_jwk_release(jwk);
+
+	return OPH_SERVER_OK;
+}
+
 #endif
 
 int oph_auth_check_token(const char *token)
@@ -746,7 +829,7 @@ int oph_auth_check_token(const char *token)
 
 	auth_jwt_payload *payload = (auth_jwt_payload *) calloc(1, sizeof(auth_jwt_payload));
 	if (auth_jwt_import(token, NULL, payload)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Payload cannot be extracted from token or signature is not correct\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be verified\n");
 		payload_free(payload);
 		free(payload);
 		return OPH_SERVER_AUTH_ERROR;
@@ -808,7 +891,7 @@ int oph_auth_get_user_from_token(const char *token, char **userid)
 	CURL *curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
 	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
@@ -1009,8 +1092,8 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
 			result = OPH_SERVER_AUTH_ERROR;
-		} else if (oph_auth_check_token(token)) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' is not valid\n", token);
+		} else if ((result = oph_auth_check_token(token))) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
 		} else if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
@@ -1025,7 +1108,7 @@ int oph_auth_token(const char *token, const char *host, char **userid)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
 	if (!result) {
 		if (!*userid) {
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error");
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
 			result = OPH_SERVER_ERROR;
 		} else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
