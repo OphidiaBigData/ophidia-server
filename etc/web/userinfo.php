@@ -19,8 +19,7 @@
 */
 
 	session_start();
-	if (isset($_SESSION['token']) && !empty($_SESSION['token']) && (!isset($_SESSION['userid']) || empty($_SESSION['userid'])))
-	{
+	if (isset($_SESSION['token']) && !empty($_SESSION['token']) && (!isset($_SESSION['userid']) || empty($_SESSION['userid']))) {
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/userinfo');
 		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer '.$_SESSION['token'])); 
@@ -28,12 +27,10 @@
 		$json = curl_exec($ch);
 		curl_close($ch);
 		$output = json_decode($json, 1);
-		if (isset($output['error']))
-		{
+		if (isset($output['error'])) {
 			unset($_SESSION['token']);
 			session_destroy();
-		}
-		else
+		} else
 			$_SESSION['userid'] = $output['email'];
 	}
 ?>

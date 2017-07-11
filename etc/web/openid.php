@@ -23,25 +23,21 @@
 		header('Location: '.$oph_web_server_secure);
 	if (empty($_SERVER['HTTPS']))
 		header('Location: '.$oph_web_server_secure.'/openid.php');
-	else 
-	{
+	else {
 		session_start();
 		$error = '';
 		$message = 'Login';
-		if (isset($_GET['error']))
-		{
+		if (isset($_GET['error'])) {
 			$error = $_GET['error_description'];
 			session_destroy();
 		}
-		if (isset($_GET['code']) || isset($_POST['code']))
-		{
+		if (isset($_GET['code']) || isset($_POST['code'])) {
 			if (isset($_GET['code'])) $code = $_GET['code'];
 			else if (isset($_POST['code'])) $code = $_POST['code'];
 		}
 		if (isset($code) || isset($_SESSION['token']))
 			$message = 'Get token';
-		if (isset($code))
-		{
+		if (isset($code)) {
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
 			curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
@@ -53,24 +49,18 @@
 			$json = curl_exec($ch);
 			curl_close($ch);
 			$output = json_decode($json, 1);
-			if (isset($output['error']))
-			{
+			if (isset($output['error'])) {
 				$error = $output['error_description'];
 				$message = 'Login';
-			}
-			else
-			{
+			} else {
 				$_SESSION['token'] = $output['access_token'];
 				if (isset($output['refresh_token']))
 					$_SESSION['refresh_token'] = $output['refresh_token'];
 			}
 			if (isset($output['error']))
 				session_destroy();
-		}
-		else if (isset($_GET['submit']) || isset($_POST['submit']))
-		{
-			if (isset($_SESSION['refresh_token']))
-			{
+		} else if (isset($_GET['submit']) || isset($_POST['submit'])) {
+			if (isset($_SESSION['refresh_token'])) {
 				$ch = curl_init();
 				curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/token');
 				curl_setopt($ch, CURLOPT_USERPWD, $oph_openid_client_id.':'.$oph_openid_client_secret);
@@ -81,29 +71,23 @@
 				$json = curl_exec($ch);
 				curl_close($ch);
 				$output = json_decode($json, 1);
-				if (isset($output['error']))
-				{
+				if (isset($output['error'])) {
 					$error = $output['error_description'];
 					$message = 'Login';
-				}
-				else
-				{
+				} else {
 					$_SESSION['token'] = $output['access_token'];
 					$_SESSION['refresh_token'] = $output['refresh_token'];
 				}
 				if (isset($output['error']))
 					session_destroy();
-			}
-			else
-			{
+			} else {
 				$continue = true;
 				$nonce = openssl_random_pseudo_bytes(10);
 				header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+email+offline_access&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce=',$nonce);
 			}
 		}
 	}
-	if (!isset($continue))
-	{
+	if (!isset($continue)) {
 ?>
 <!--
     Ophidia Server
@@ -168,6 +152,17 @@
 			<TEXTAREA rows="5" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $_SESSION['token']; ?></TEXTAREA>
 		</DIV>
 <?php
+			if (isset($_SESSION['refresh_token'])) {
+?>
+		<SCRIPT type="text/javascript">
+			setInterval(
+				function() {
+					show_wait();
+					location.href = '<?php echo $oph_web_server_secure; ?>/openid.php?submit=Get token';
+				}, 1000000);
+		</SCRIPT>
+<?php
+			}
 		}
 ?>
 	</BODY>
