@@ -535,13 +535,19 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		return RMANAGER_MEMORY_ERROR;
 	}
 
+	char subm_username[1 + strlen(orm->subm_username) + strlen(username)];
+	if (strlen(orm->subm_username) > 0)
+		sprintf(subm_username, "%s%s", orm->subm_username, username);
+	else			// Skip username for backward compatibility
+		*subm_username = 0;
+
 	if (!strcasecmp(orm->name, "slurm")) {
 		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group, orm->subm_ncores, ncores,
-				orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
+			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores, orm->subm_interact,
+				orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, orm->subm_username, username, orm->subm_group, orm->subm_ncores,
-				ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client,
+			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores,
+				orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client,
 				request, orm->subm_postfix);
 	} else {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
