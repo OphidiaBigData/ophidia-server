@@ -23,6 +23,7 @@
 #include "oph_server_error.h"
 
 int oph_mkdir(const char *name);
+int oph_mkdir2(const char *name, mode_t mode);
 int oph_http_get(struct soap *soap);
 
 #endif				/* OPH_UTILS_H */

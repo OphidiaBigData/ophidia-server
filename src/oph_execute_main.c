@@ -182,7 +182,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	oph_argument *args = NULL;
 
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
 
 #ifdef INTERFACE_TYPE_IS_GSI
 	struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);

@@ -44,6 +44,7 @@
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t libssh2_flag;
 extern char *oph_ip_target_host;
+extern char oph_subm_ssh;
 extern char *oph_subm_user;
 extern char *oph_subm_user_publk;
 extern char *oph_subm_user_privk;
@@ -323,23 +324,31 @@ int oph_ssh_submit(const char *cmd)
 
 #else
 
-	size_t i, j, size_cmd = strlen(cmd);
-	char scmd[2 * size_cmd];
-	for (i = j = 0; i < size_cmd; ++i, ++j) {
-		if (cmd[i] == OPH_LIBSSH_SEPARATOR) {
-			scmd[j++] = OPH_LIBSSH_ESCAPE;
+	int result = 0;
+
+	if (oph_subm_ssh) {
+
+		size_t i, j, size_cmd = strlen(cmd);
+		char scmd[2 * size_cmd];
+		for (i = j = 0; i < size_cmd; ++i, ++j) {
+			if (cmd[i] == OPH_LIBSSH_SEPARATOR) {
+				scmd[j++] = OPH_LIBSSH_ESCAPE;
+			}
+			scmd[j] = cmd[i];
 		}
-		scmd[j] = cmd[i];
+		scmd[j] = 0;
+
+		char rcmd[25 + strlen(oph_ip_target_host) + j];
+		sprintf(rcmd, OPH_LIBSSH_SYSTEM_COMMAND, oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
+		result = _system(rcmd);
+
+	} else {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", cmd);
+		result = _system(cmd);
 	}
-	scmd[j] = 0;
-
-	char rcmd[25 + strlen(oph_ip_target_host) + j];
-	sprintf(rcmd, OPH_LIBSSH_SYSTEM_COMMAND, oph_ip_target_host, OPH_LIBSSH_SEPARATOR, scmd, OPH_LIBSSH_SEPARATOR);
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute:\n%s\n", rcmd);
-
-	pthread_mutex_lock(&libssh2_flag);
-	int result = _system(rcmd);
-	pthread_mutex_unlock(&libssh2_flag);
 
 	if (result) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to submit the command %s\n", cmd);
