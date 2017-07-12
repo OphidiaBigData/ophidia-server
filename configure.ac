@@ -254,6 +254,16 @@ AC_ARG_WITH(ws-protocol,
 PLUGIN_DEFAULT_PROTOCOL=$ws_protocol
 AC_SUBST(PLUGIN_DEFAULT_PROTOCOL)
 
+ws_notifier="framework"
+AC_ARG_WITH(ws-notifier,
+	   [  --with-ws-notifier=username     Set notifier user (default: framework)],
+	   [
+	    ws_notifier="$withval"
+           ]
+           )
+OPH_NOTIFIER=$ws_notifier
+AC_SUBST(OPH_NOTIFIER)
+
 AUTHORIZATION="$prefix/authz/dn.dat"
 AC_SUBST(AUTHORIZATION) 
 AUTHORIZATION_FILE="$prefix/authz/dn.dat"

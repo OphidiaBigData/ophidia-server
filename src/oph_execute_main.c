@@ -196,11 +196,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 #ifdef INTERFACE_TYPE_IS_SSL
 	int free_userid = 0;
-	char __userid[OPH_MAX_STRING_SIZE];
+	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL;
 	state->authorization = OPH_AUTH_WRITE;
 	pthread_mutex_lock(&global_flag);
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
-		if (!(result = oph_auth_token(soap->passwd, _host, &userid))) {
+		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token))) {
 			// Token is valid: check local authorization
 			if (oph_auth_user_enabling(userid, &result)) {	// New user
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);

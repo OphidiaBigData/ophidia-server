@@ -40,6 +40,7 @@ pthread_mutex_t global_flag;
 
 char *oph_server_location = 0;
 HASHTBL *oph_server_params = 0;
+char *oph_server_host = 0;
 int oph_server_timeout = OPH_SERVER_TIMEOUT;
 char *oph_auth_location = 0;
 char *oph_txt_location = 0;
@@ -51,6 +52,7 @@ oph_argument *args = 0;
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
+unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 #endif
 
 void cleanup()

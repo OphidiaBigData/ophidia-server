@@ -342,6 +342,7 @@ install-exec-hook:
 	echo "//gsoap oph service location:      ${PLUGIN_DEFAULT_PROTOCOL}://${PLUGIN_DEFAULT_HOSTNAME}:${PLUGIN_DEFAULT_PORT}/" >> oph_wsdl.h && \
 	cat ../oph_execute_main.h >> oph_wsdl.h && \
 	$(SOAPCPP2_PROG) -c -x oph_wsdl.h && \
+	cp -f *.wsdl $(OPH_WEB_SERVER_LOCATION)/ && \
 	mv -f *.wsdl $(DESTDIR)$(sysconfdir)
 	rm -rf wsdl
 

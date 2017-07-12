@@ -56,6 +56,10 @@
 #define OPH_ARG_LEVEL "level"
 #define OPH_ARG_LINK "link"
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
+#ifdef OPH_OPENID_ENDPOINT
+#define OPH_ARG_ACCESS_TOKEN "access_token"
+#define OPH_ARG_REFRESH_TOKEN "refresh_token"
+#endif
 
 #define OPH_ARG_MODE_SYNC "sync"
 #define OPH_ARG_MODE_ASYNC "async"

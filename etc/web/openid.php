@@ -18,6 +18,36 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+	function send_message($message) {
+		include('env.php');
+		$soap_message = '<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope
+xmlns:ns0 = "urn:oph"
+xmlns:ns1 = "http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header/>
+<ns1:Body>
+<ns0:oph-notify>
+<oph-notify-data>'.$message.'</oph-notify-data>
+<oph-notify-json></oph-notify-json>
+</ns0:oph-notify>
+</ns1:Body>
+</SOAP-ENV:Envelope>';
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $oph_ws_protocol.'://'.$oph_ws_host);
+		curl_setopt($ch, CURLOPT_PORT, $oph_ws_port);
+		curl_setopt($ch, CURLOPT_USERPWD, $oph_notifier);
+		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $soap_message);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml')); 
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		$xml = curl_exec($ch);
+		curl_close($ch);
+	}
+
 	include('env.php');
 	if (empty($oph_openid_endpoint))
 		header('Location: '.$oph_web_server_secure);
@@ -54,8 +84,11 @@
 				$message = 'Login';
 			} else {
 				$_SESSION['token'] = $output['access_token'];
-				if (isset($output['refresh_token']))
+				if (isset($output['refresh_token'])) {
 					$_SESSION['refresh_token'] = $output['refresh_token'];
+					send_message('access_token='. $_SESSION['token'] . ';refresh_token='. $_SESSION['refresh_token'] .';');
+				} else
+					send_message('access_token='. $_SESSION['token'] . ';');
 			}
 			if (isset($output['error']))
 				session_destroy();
@@ -77,6 +110,7 @@
 				} else {
 					$_SESSION['token'] = $output['access_token'];
 					$_SESSION['refresh_token'] = $output['refresh_token'];
+					send_message('access_token='. $_SESSION['token'] . ';refresh_token='. $_SESSION['refresh_token'] .';');
 				}
 				if (isset($output['error']))
 					session_destroy();
@@ -152,17 +186,6 @@
 			<TEXTAREA rows="5" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $_SESSION['token']; ?></TEXTAREA>
 		</DIV>
 <?php
-			if (isset($_SESSION['refresh_token'])) {
-?>
-		<SCRIPT type="text/javascript">
-			setInterval(
-				function() {
-					show_wait();
-					location.href = '<?php echo $oph_web_server_secure; ?>/openid.php?submit=Get token';
-				}, 1000000);
-		</SCRIPT>
-<?php
-			}
 		}
 ?>
 	</BODY>
