@@ -723,9 +723,11 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
 			return OPH_SERVER_ERROR;
 		}
-		if (username && oph_subm_user && strcmp(username, oph_subm_user))
+		if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
+			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+			oph_mkdir(outfile);
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
-		else
+		} else
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 	} else
 		snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
