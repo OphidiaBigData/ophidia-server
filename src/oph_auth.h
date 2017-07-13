@@ -112,6 +112,15 @@ typedef int oph_auth_user_role;
 #define OPH_AUTH_READ_FORCE 3
 #define OPH_AUTH_WRITE 4
 
+#define OPH_AUTH_TOKEN_JSON "    \"extra\": {\n\
+        \"keys\": [\n\
+            \"access_token\"\n\
+        ],\n\
+        \"values\": [\n\
+            \"%s\"\n\
+        ]\n\
+    }"
+
 typedef struct _oph_auth_user_bl {
 	char *userid;
 	char *host;

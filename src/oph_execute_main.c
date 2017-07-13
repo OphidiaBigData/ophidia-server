@@ -5616,11 +5616,20 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_cleanup_args(&session_args);
 			}
 
-			if (strlen(new_token)) {
-				
+			char copy = 1;
+			if (strlen(_new_token)) {
+				char _response[OPH_MAX_STRING_SIZE + strlen(wf->response)];
+				strcpy(_response, wf->response);
+				char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
+				if (last_bracket) {
+					snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
+					response->response = soap_strdup(soap, _response);
+					copy = 0;
+				}
 			}
+			if (copy)
+				response->response = soap_strdup(soap, wf->response);
 
-			response->response = soap_strdup(soap, wf->response);
 			oph_workflow_free(wf);
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
