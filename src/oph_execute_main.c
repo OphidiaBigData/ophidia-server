@@ -1145,7 +1145,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			if (!return_code)
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: JSON output created\n", jobid);
 			if (jstring) {
-				response->response = soap_strdup(soap, jstring);
+				if (strlen(_new_token)) {
+					char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
+					strcpy(_response, jstring);
+					char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
+					if (last_bracket) {
+						snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
+						response->response = soap_strdup(soap, _response);
+					}
+				}
+				if (!response->response)
+					response->response = soap_strdup(soap, jstring);
 				free(jstring);
 			}
 		}
@@ -1573,7 +1583,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			if (!return_code)
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: JSON output created\n", jobid);
 			if (jstring) {
-				response->response = soap_strdup(soap, jstring);
+				if (strlen(_new_token)) {
+					char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
+					strcpy(_response, jstring);
+					char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
+					if (last_bracket) {
+						snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
+						response->response = soap_strdup(soap, _response);
+					}
+				}
+				if (!response->response)
+					response->response = soap_strdup(soap, jstring);
 				free(jstring);
 			}
 		}
@@ -5202,7 +5222,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			return SOAP_OK;
 		}
 
-		response->response = soap_strdup(soap, jstring);
+		if (strlen(_new_token)) {
+			char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
+			strcpy(_response, jstring);
+			char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
+			if (last_bracket) {
+				snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
+				response->response = soap_strdup(soap, _response);
+			}
+		}
+		if (!response->response)
+			response->response = soap_strdup(soap, jstring);
 		free(jstring);
 
 		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d has been processed\n", jobid);
@@ -5616,7 +5646,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_cleanup_args(&session_args);
 			}
 
-			char copy = 1;
 			if (strlen(_new_token)) {
 				char _response[OPH_MAX_STRING_SIZE + strlen(wf->response)];
 				strcpy(_response, wf->response);
@@ -5624,10 +5653,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				if (last_bracket) {
 					snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
 					response->response = soap_strdup(soap, _response);
-					copy = 0;
 				}
 			}
-			if (copy)
+			if (!response->response)
 				response->response = soap_strdup(soap, wf->response);
 
 			oph_workflow_free(wf);
