@@ -18,7 +18,23 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+	function get_password() {
+		include('env.php');
+		$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
+		if ($handle) {
+			while (($buffer = fgets($handle, 4096)))
+				if (!strcmp($oph_notifier, strtok($buffer, ":\n"))) {
+					fclose($handle);
+					return strtok(":\n");
+			}
+			fclose($handle);
+		}
+		return NULL;
+	}
+
 	function send_message($message) {
+		if (!($password = get_password()))
+			return NULL;
 		include('env.php');
 		$soap_message = '<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope
@@ -37,7 +53,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $oph_ws_protocol.'://'.$oph_ws_host);
 		curl_setopt($ch, CURLOPT_PORT, $oph_ws_port);
-		curl_setopt($ch, CURLOPT_USERPWD, $oph_notifier);
+		curl_setopt($ch, CURLOPT_USERPWD, $oph_notifier .':'. $password);
 		curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 		curl_setopt($ch, CURLOPT_POST, 1);
@@ -46,6 +62,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		$xml = curl_exec($ch);
 		curl_close($ch);
+		return $xml;
 	}
 
 	include('env.php');
@@ -84,11 +101,12 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 				$message = 'Login';
 			} else {
 				$_SESSION['token'] = $output['access_token'];
+				include('userinfo.php');
 				if (isset($output['refresh_token'])) {
 					$_SESSION['refresh_token'] = $output['refresh_token'];
-					send_message('access_token='. $_SESSION['token'] . ';refresh_token='. $_SESSION['refresh_token'] .';');
+					send_message('access_token='. $_SESSION['token'] . ';userinfo='. $_SESSION['userinfo'] .';refresh_token='. $_SESSION['refresh_token'] .';');
 				} else
-					send_message('access_token='. $_SESSION['token'] . ';');
+					send_message('access_token='. $_SESSION['token'] . ';userinfo='. $_SESSION['userinfo'] .';');
 			}
 			if (isset($output['error']))
 				session_destroy();
@@ -110,7 +128,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 				} else {
 					$_SESSION['token'] = $output['access_token'];
 					$_SESSION['refresh_token'] = $output['refresh_token'];
-					send_message('access_token='. $_SESSION['token'] . ';refresh_token='. $_SESSION['refresh_token'] .';');
+					send_message('access_token='. $_SESSION['token'] . ';userinfo='. $_SESSION['userinfo'] .';refresh_token='. $_SESSION['refresh_token'] .';');
 				}
 				if (isset($output['error']))
 					session_destroy();

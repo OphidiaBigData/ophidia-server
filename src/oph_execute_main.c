@@ -196,7 +196,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 #ifdef INTERFACE_TYPE_IS_SSL
 	int free_userid = 0;
-	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL;
+	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE];
+	*_new_token = 0;
 	state->authorization = OPH_AUTH_WRITE;
 	pthread_mutex_lock(&global_flag);
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
@@ -220,6 +221,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_auth_enable_user(userid, result);
 			} else
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized (cached authorization)\n", jobid, userid, result ? "not " : "");
+		}
+		if (new_token) {
+			snprintf(_new_token, OPH_MAX_STRING_SIZE, "%s", new_token);
+			free(new_token);
+			new_token = NULL;
 		}
 		free_userid = 1;
 	} else
@@ -5608,6 +5614,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&session_args);
+			}
+
+			if (strlen(new_token)) {
+				
 			}
 
 			response->response = soap_strdup(soap, wf->response);

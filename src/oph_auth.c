@@ -51,6 +51,8 @@ typedef struct _oph_auth_clip {
 typedef struct _oph_refresh_token {
 	char *access_token;
 	char *refresh_token;
+	char *userid;
+	char *userinfo;
 } oph_refresh_token;
 
 HASHTBL *usersinfo = NULL;
@@ -807,7 +809,7 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 			return OPH_SERVER_AUTH_ERROR;
 		}
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: completed\n%s\n", chunk.memory);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: completed\n");
 
 		char error = 1;
 		while (error) {
@@ -871,7 +873,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	pthread_detach(pthread_self());
 #endif
 
-	if (!refresh || !refresh->access_token || !refresh->refresh_token) {
+	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid || !refresh->userinfo) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 		return;
 	}
@@ -882,6 +884,8 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	snprintf(credentials, OPH_MAX_STRING_SIZE, "%s:%s", oph_openid_client_id, oph_openid_client_secret);
 	int count;
 	oph_auth_user_bl *target;
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Start token refreshing procedure\n");
 
 	while (1) {
 
@@ -894,11 +898,8 @@ void *_oph_refresh(oph_refresh_token * refresh)
 			pthread_mutex_unlock(&global_flag);
 			break;
 		}
-		if (count) {
+		if (count)
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Access token has not been used\n");
-			pthread_mutex_unlock(&global_flag);
-			break;
-		}
 
 		chunk.memory = (char *) malloc(1);
 		*chunk.memory = chunk.size = 0;
@@ -931,7 +932,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 			break;
 		}
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: completed\n%s\n", chunk.memory);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: completed\n");
 
 		json_t *response = json_loads(chunk.memory, 0, NULL);
 		if (!response) {
@@ -989,11 +990,16 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		if (target) {
 			if (target->value)
 				free(target->value);
-			if (!(target->value = strdup(refresh->access_token))) {
+			if (!(target->value = strdup(refresh->access_token)))
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-				pthread_mutex_unlock(&global_flag);
-			}
 		}
+
+		if (oph_get_user_by_token(&tokens, refresh->access_token, NULL, NULL)) {
+			oph_add_to_bl(&tokens, refresh->userid, refresh->access_token);
+			oph_auth_cache_userinfo(refresh->access_token, refresh->userinfo);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+		} else
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Token found in active token list\n");	// Warning: the token should not be already buffered
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: processed\n");
 
@@ -1006,11 +1012,68 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		free(refresh->access_token);
 	if (refresh->refresh_token)
 		free(refresh->refresh_token);
+	if (refresh->userid)
+		free(refresh->userid);
+	if (refresh->userinfo)
+		free(refresh->userinfo);
 	free(refresh);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
+}
+
+int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
+{
+	if (!userinfo || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+	json_t *userinfo_json = json_loads(userinfo, 0, NULL);
+	if (!userinfo_json) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	char *error = NULL, *email = NULL;
+	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "email", &email);
+
+	if (error) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET returns an error code\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (!email) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET does not contain email address\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	if (!(*userid = strdup(email))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_ERROR;
+	}
+
+	json_decref(userinfo_json);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
+{
+	if (!access_token || !userinfo)
+		return OPH_SERVER_NULL_POINTER;
+
+	if (!usersinfo) {
+		usersinfo = hashtbl_create(strlen(access_token), NULL);
+		if (!usersinfo)
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+	}
+	if (usersinfo)
+		hashtbl_insert(usersinfo, access_token, (char *) userinfo);
+
+	return OPH_SERVER_OK;
 }
 
 #endif
@@ -1103,47 +1166,15 @@ int oph_auth_get_user_from_token(const char *token, char **userid)
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: completed\n%s\n", chunk.memory);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: completed\n");
 
-	json_t *userinfo = json_loads(chunk.memory, 0, NULL);
-	if (!userinfo) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+	int result;
+	if ((result = oph_auth_get_user_from_userinfo(chunk.memory, userid)) || !*userid) {
 		free(chunk.memory);
-		return OPH_SERVER_ERROR;
+		return result;
 	}
 
-	char *error = NULL, *email = NULL;
-	json_unpack(userinfo, "{s?s,s?s}", "error", &error, "email", &email);
-
-	if (error) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "GET returns an error code\n");
-		json_decref(userinfo);
-		free(chunk.memory);
-		return OPH_SERVER_AUTH_ERROR;
-	}
-	if (!email) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "GET does not contain email address\n");
-		json_decref(userinfo);
-		free(chunk.memory);
-		return OPH_SERVER_AUTH_ERROR;
-	}
-
-	if (!(*userid = strdup(email))) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-		json_decref(userinfo);
-		free(chunk.memory);
-		return OPH_SERVER_ERROR;
-	}
-
-	json_decref(userinfo);
-
-	if (!usersinfo) {
-		usersinfo = hashtbl_create(strlen(token), NULL);
-		if (!usersinfo)
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
-	}
-	if (usersinfo)
-		hashtbl_insert(usersinfo, token, chunk.memory);
+	oph_auth_cache_userinfo(token, chunk.memory);
 
 	free(chunk.memory);
 
@@ -1275,9 +1306,10 @@ int oph_auth_vo(oph_argument * args)
 
 int oph_auth_token(const char *token, const char *host, char **userid, char **new_token)
 {
-	if (!token || !userid)
+	if (!token)
 		return OPH_SERVER_NULL_POINTER;
-	*userid = NULL;
+	if (userid)
+		*userid = NULL;
 	if (new_token)
 		*new_token = NULL;
 
@@ -1313,7 +1345,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 	return result;
 }
 
-int oph_auth_save_token(char *access_token, char *refresh_token)
+int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinfo)
 {
 	if (!access_token)
 		return OPH_SERVER_NULL_POINTER;
@@ -1322,13 +1354,18 @@ int oph_auth_save_token(char *access_token, char *refresh_token)
 	pthread_mutex_lock(&global_flag);
 
 	char *userid = NULL;
-	if (oph_auth_token(access_token, oph_server_host, &userid, NULL) || !userid) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token will be discarded\n");
-		if (userid)
-			free(userid);
-		return OPH_SERVER_ERROR;
-	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token for user '%s' will be buffered\n", userid);
+	if (oph_auth_get_user_from_userinfo(userinfo, &userid) || !userid) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Userinfo has to be retrieved\n");
+		if (oph_auth_token(access_token, oph_server_host, &userid, NULL) || !userid) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token will be discarded\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else if (oph_get_user_by_token(&tokens, access_token, NULL, NULL)) {
+		oph_add_to_bl(&tokens, userid, access_token);
+		oph_auth_cache_userinfo(access_token, userinfo);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+	} else
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Token found in active token list\n");	// Warning: the token should not be already buffered
 
 	pthread_mutex_unlock(&global_flag);
 
@@ -1339,6 +1376,8 @@ int oph_auth_save_token(char *access_token, char *refresh_token)
 		if (refresh_tokens) {
 			refresh_tokens->access_token = strdup(access_token);
 			refresh_tokens->refresh_token = strdup(refresh_token);
+			refresh_tokens->userid = strdup(userid);
+			refresh_tokens->userinfo = strdup(userinfo);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 			pthread_t tid;
@@ -1347,9 +1386,10 @@ int oph_auth_save_token(char *access_token, char *refresh_token)
 		} else
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Memory error\n");
 	}
-
-	free(userid);
 #endif
+
+	if (userid)
+		free(userid);
 
 	return OPH_SERVER_OK;
 }

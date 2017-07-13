@@ -201,6 +201,11 @@ int oph_parse_query(oph_argument ** args, unsigned int *counter, const char *tas
 			if (!ptr3)
 				return OPH_SERVER_ERROR;
 			ptr2 = strchr(ptr3, OPH_SEPARATOR_PARAM[0]);
+		} else if (*ptr1 == OPH_SEPARATOR_BRACKET_OPEN) {
+			ptr3 = strchr(ptr1, OPH_SEPARATOR_BRACKET_CLOSE);
+			if (!ptr3)
+				return OPH_SERVER_ERROR;
+			ptr2 = strchr(ptr3, OPH_SEPARATOR_PARAM[0]);
 		} else
 			ptr2 = strchr(ptr1, OPH_SEPARATOR_PARAM[0]);
 		if (ptr2)
@@ -229,6 +234,11 @@ int oph_parse_query(oph_argument ** args, unsigned int *counter, const char *tas
 			ptr1++;
 			if (*ptr1 == OPH_SEPARATOR_SUBPARAM_OPEN) {
 				ptr3 = strchr(ptr1, OPH_SEPARATOR_SUBPARAM_CLOSE);
+				if (!ptr3)
+					return OPH_SERVER_ERROR;
+				ptr2 = strchr(ptr3, OPH_SEPARATOR_PARAM[0]);
+			} else if (*ptr1 == OPH_SEPARATOR_BRACKET_OPEN) {
+				ptr3 = strchr(ptr1, OPH_SEPARATOR_BRACKET_CLOSE);
 				if (!ptr3)
 					return OPH_SERVER_ERROR;
 				ptr2 = strchr(ptr3, OPH_SEPARATOR_PARAM[0]);

@@ -24,13 +24,14 @@
 		curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/userinfo');
 		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer '.$_SESSION['token'])); 
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		$json = curl_exec($ch);
+		$userinfo_json = curl_exec($ch);
 		curl_close($ch);
-		$output = json_decode($json, 1);
-		if (isset($output['error'])) {
-			unset($_SESSION['token']);
+		$userinfo = json_decode($userinfo_json, 1);
+		if (strlen($userinfo['error']) > 0)
 			session_destroy();
-		} else
-			$_SESSION['userid'] = $output['email'];
+		else {
+			$_SESSION['userid'] = $userinfo['email'];
+			$_SESSION['userinfo'] = $userinfo_json;
+		}
 	}
 ?>
