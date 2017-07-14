@@ -1306,7 +1306,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						free(jsonvalues);
 				}
 				// OPH_SERVER_CONF_BASE_SRC_PATH
-				if (!key || !strncasecmp(key, OPH_OPERATOR_GET_CONFIG_PARAMETER_ALL, OPH_MAX_STRING_SIZE) || !strncasecmp(key, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_MAX_STRING_SIZE)) {
+				if (!key || !strncasecmp(key, OPH_OPERATOR_GET_CONFIG_PARAMETER_ALL, OPH_MAX_STRING_SIZE)
+				    || !strncasecmp(key, "OPH_" OPH_SERVER_CONF_BASE_SRC_PATH, OPH_MAX_STRING_SIZE)) {
 					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonvalues) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
