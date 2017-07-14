@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
 				cleanup();
 				return 1;
 			}
-		const char allowedchars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@_-.";
+		const char allowedchars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@_.-/:= ";
 		for (iiii = 0; iiii < jjjj; ++iiii)
 			if (!strchr(allowedchars, username[iiii]))
 				break;
