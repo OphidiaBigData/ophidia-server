@@ -44,6 +44,7 @@ extern char *oph_log_file_name;
 extern char *oph_xml_operators;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
+extern char *oph_base_src_path;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -1279,6 +1280,51 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					}
 					jjj++;
 					jsonvalues[jjj] = strdup(oph_xml_operators);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					//jjj++;
+					if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_GET_CONFIG, jsonvalues)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD GRID ROW error\n", jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+				}
+				// OPH_SERVER_CONF_BASE_SRC_PATH
+				if (!key || !strncasecmp(key, OPH_OPERATOR_GET_CONFIG_PARAMETER_ALL, OPH_MAX_STRING_SIZE) || !strncasecmp(key, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_MAX_STRING_SIZE)) {
+					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+					if (!jsonvalues) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+						break;
+					}
+					jjj = 0;
+					jsonvalues[jjj] = strdup("OPH_" OPH_SERVER_CONF_BASE_SRC_PATH);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					jjj++;
+					jsonvalues[jjj] = strdup(oph_base_src_path);
 					if (!jsonvalues[jjj]) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 						for (iii = 0; iii < jjj; iii++)
