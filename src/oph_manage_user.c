@@ -322,6 +322,16 @@ int main(int argc, char *argv[])
 				cleanup();
 				return 1;
 			}
+		const char allowedchars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@_.-/:= ";
+		for (iiii = 0; iiii < jjjj; ++iiii)
+			if (!strchr(allowedchars, username[iiii]))
+				break;
+		if (iiii < jjjj) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Char '%c' is not allowed!\n", username[iiii]);
+			return 1;
+		}
+		if (strchr(username, '@'))
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Char '@' is not recommended!\n");
 
 		char *_password = password;
 #ifdef INTERFACE_TYPE_IS_SSL

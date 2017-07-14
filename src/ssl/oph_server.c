@@ -87,7 +87,7 @@ char *oph_web_server = 0;
 char *oph_web_server_location = 0;
 char *oph_operator_client = 0;
 char *oph_ip_target_host = 0;
-char oph_subm_ssh = 1;
+char oph_subm_ssh = 0;
 char *oph_subm_user = 0;
 char *oph_subm_user_publk = 0;
 char *oph_subm_user_privk = 0;
@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
 				oph_log_file_name = optarg;
 				break;
 			case 'm':
-				oph_subm_ssh = 0;
+				oph_subm_ssh = 1;
 				break;
 			case 'p':
 				oph_server_port = optarg;
