@@ -48,6 +48,7 @@ extern char *oph_subm_user;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -840,8 +841,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: parsing task '%s' for massive operations\n", ttype, jobid, task->name);
 		if ((res =
-		     oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB,
-					       query)))
+		     oph_mf_parse_query_unsafe(state, wf, task_index, &datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running,
+					       src_path ? 1 : 0, oDB, query)))
 			return res;
 
 		if (datacube_inputs) {
@@ -2571,6 +2572,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
+	*response = OPH_SERVER_OK;
 
 	if (!state) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: state not specified. Skipping the notification\n", ttype, jobid);
@@ -2720,6 +2722,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 	wf = item->wf;
+
+	if (!wf->tasks[task_index].idjob) {	// A massive operation is waiting a response
+		if (status == OPH_ODB_STATUS_COMPLETED) {
+			if (wf->tasks[task_index].response)
+				free(wf->tasks[task_index].response);
+			wf->tasks[task_index].response = strdup(output_json);
+		}
+		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
+			pthread_cond_broadcast(&waiting_flag);
+		pthread_mutex_unlock(&global_flag);
+		oph_output_data_free(outputs_keys, outputs_num);
+		oph_output_data_free(outputs_values, outputs_num);
+		return SOAP_OK;
+	}
+
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 

@@ -20,13 +20,15 @@
 #define OPH_MASSIVE_OP_H
 
 #include "oph_ophidiadb.h"
+#include "oph_plugin.h"
+#include "oph_workflow_library.h"
 
 // Parameters
-#define OPH_MASSIVE_OPERATOR "OPH_MASSIVE"
+#define OPH_MASSIVE_OPERATOR	"OPH_MASSIVE"
 
-int oph_mf_parse_query(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
-		       ophidiadb * oDB, char **query);
-int oph_mf_parse_query_unsafe(char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd, char *cdd, char *sessionid, int *running, int is_src_path,
-			      ophidiadb * oDB, char **query);
+int oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
+		       char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query);
+int oph_mf_parse_query_unsafe(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input,
+			      char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query);
 
 #endif				/* OPH_MASSIVE_OP_H */
