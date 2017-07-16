@@ -2595,8 +2595,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 
-	char *ctmp;
-	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, outputs_num = 0;
+	char *ctmp, *sessionid = NULL;
+	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
 	char **outputs_keys = NULL;
 	char **outputs_values = NULL;
 	short outputs_index[counter];
@@ -2620,14 +2620,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			task_index = strtol(ctmp, NULL, 10);
 		else if (!strncmp(aitem->key, OPH_ARG_LIGHTTASKINDEX, OPH_MAX_STRING_SIZE))
 			light_task_index = strtol(ctmp, NULL, 10);
+		else if (!strncmp(aitem->key, OPH_ARG_SESSIONID, OPH_MAX_STRING_SIZE))
+			sessionid = strdup(ctmp);
+		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
+			marker_id = strtol(ctmp, NULL, 10);
 		else {
 			outputs_num++;
 			outputs_index[ii] = 1;
 		}
 	}
-	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0)) {
+	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0) || (marker_id < 0)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: missing mandatory parameters in '%s'\n", ttype, jobid, data);
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		if (sessionid)
+			free(sessionid);
 		oph_cleanup_args(&args);
 		return SOAP_OK;
 	}
@@ -2638,6 +2644,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!outputs_keys) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: error in alloc memory for output keys\n", ttype, jobid);
 			*response = OPH_SERVER_SYSTEM_ERROR;
+			if (sessionid)
+				free(sessionid);
 			oph_cleanup_args(&args);
 			return SOAP_OK;
 		}
@@ -2645,6 +2653,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!outputs_keys) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: error in alloc memory for output values\n", ttype, jobid);
 			*response = OPH_SERVER_SYSTEM_ERROR;
+			if (sessionid)
+				free(sessionid);
 			oph_cleanup_args(&args);
 			if (outputs_keys)
 				free(outputs_keys);
@@ -2706,6 +2716,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 			oph_output_data_free(outputs_keys, outputs_num);
 			oph_output_data_free(outputs_values, outputs_num);
+			if (sessionid)
+				free(sessionid);
 			return SOAP_OK;
 	}
 
@@ -2724,9 +2736,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);
+		if (sessionid)
+			free(sessionid);
 		return SOAP_OK;
 	}
 	wf = item->wf;
+	if (strcmp(wf->sessionid, sessionid))
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: sessionid in memory is different from sessionid in notification\n", ttype, jobid);
+	if (sessionid)
+		free(sessionid);
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 

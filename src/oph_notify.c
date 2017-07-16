@@ -92,26 +92,50 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 
 	oph_json *oper_json = NULL;
 	while (output_json) {
-
+		size_t value_size;
+		char session_code[OPH_MAX_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], *start_pointer, *stop_pointer, error;
+		*session_code = *str_markerid = 0;
 		if (oph_json_from_json_string(&oper_json, output_json)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);
 			break;
 		}
 
-		char session_code[OPH_MAX_STRING_SIZE];
-		*session_code = 0;
-		if (oper_json->source && oper_json->source->values && oper_json->source->values[0])
+		error = 1;
+		if (oper_json->source && oper_json->source->values && oper_json->source->values[0]) {
 			strcpy(session_code, oper_json->source->values[0]);
-		else {
+			error = 0;
+		} else if (data) {
+			if ((start_pointer = strstr(data, OPH_ARG_SESSIONID))) {
+				start_pointer += 1 + strlen(OPH_ARG_SESSIONID);
+				stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
+				value_size = stop_pointer - start_pointer;
+				if (value_size < OPH_MAX_STRING_SIZE) {
+					snprintf(session_code, 1 + value_size, "%s", start_pointer);
+					error = 0;
+				}
+			}
+		}
+		if (error) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: session code cannot be extracted\n", jobid);
 			break;
 		}
 
-		char str_markerid[OPH_SHORT_STRING_SIZE];
-		*str_markerid = 0;
-		if (oper_json->source && oper_json->source->values && oper_json->source->values[2])
+		error = 1;
+		if (oper_json->source && oper_json->source->values && oper_json->source->values[2]) {
 			strcpy(str_markerid, oper_json->source->values[2]);
-		else {
+			error = 0;
+		} else if (data) {
+			if ((start_pointer = strstr(data, OPH_ARG_MARKERID))) {
+				start_pointer += 1 + strlen(OPH_ARG_MARKERID);
+				stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
+				value_size = stop_pointer - start_pointer;
+				if (value_size < OPH_SHORT_STRING_SIZE) {
+					snprintf(str_markerid, 1 + value_size, "%s", start_pointer);
+					error = 0;
+				}
+			}
+		}
+		if (error) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: marker id cannot be extracted\n", jobid);
 			break;
 		}
@@ -122,7 +146,6 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in saving JSON Response\n", jobid);
 			break;
 		}
-
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
 		break;
 	}
