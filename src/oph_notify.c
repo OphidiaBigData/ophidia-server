@@ -90,8 +90,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
+	int save_flag = !data || !strstr(data, OPH_SERVER_REQUEST_FLAG);	// Skip internal oph_server request
 	oph_json *oper_json = NULL;
-	while (output_json) {
+	while (save_flag && output_json) {
 
 		if (oph_json_from_json_string(&oper_json, output_json)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);

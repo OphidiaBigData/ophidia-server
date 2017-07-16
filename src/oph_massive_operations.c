@@ -26,13 +26,18 @@
 #include "oph_filters.h"
 #include "oph_odb_job.h"
 #include "oph_rmanager.h"
+#include "oph_json_library.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libgen.h>
 
-#define OPH_SERVER_HPREFIX '.'
-#define OPH_MF_COMMAND "operator=oph_fs;command=ls;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;jobid=%d;parentid=%d;"
+#define OPH_MF_COMMAND "operator=oph_fs;command=ls;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
+#define OPH_MF_GRID_CLASS "grid"
+#define OPH_MF_GRID_NAME "fs"
+#define OPH_MF_GRID_TYPE "T"
+#define OPH_MF_GRID_OBJECT "OBJECT"
+#define OPH_MF_TYPE_FILE "f"
 
 extern char *oph_web_server;
 extern char *oph_base_src_path;
@@ -129,10 +134,9 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 	if (running_value && !strncasecmp(running_value, OPH_MF_ARG_VALUE_NO, OPH_MAX_STRING_SIZE))
 		*running = 0;
 
-	char *tbuffer = NULL, *pbuffer;
-
 	unsigned int i;
 	cube *datacube = NULL;
+	char **filenames = NULL;
 	if (is_src_path)	// In case of src_path only the parameter OPH_MF_ARG_PATH is considered
 	{
 		char _path[PATH_MAX], _path2[PATH_MAX];
@@ -179,7 +183,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			snprintf(_path, PATH_MAX, "%s%s%s", oph_base_src_path, *path != OPH_MF_ROOT_FOLDER[0] ? OPH_MF_ROOT_FOLDER : "", path);
 			path = _path;
 		}
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Path to files for massive operation: %s.\n", path);
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Path to files for massive operation: %s\n", path);
 
 		char dpath[OPH_MAX_STRING_SIZE];
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_PATH) && strlen(hashtbl_get(task_tbl, OPH_MF_ARG_PATH)))
@@ -202,8 +206,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		else
 			*depth = 0;
 		char command[OPH_MAX_STRING_SIZE];
-		snprintf(command, OPH_MAX_STRING_SIZE, OPH_MF_COMMAND, dpath, file, recursive, depth, cdd, sessionid, wf->workflowid, wf->tasks[task_index].markerid, task_index, wf->username,
-			 wf->userrole, wf->tasks[task_index].idjob, wf->idjob);
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_MF_COMMAND "" OPH_SERVER_REQUEST_FLAG, dpath, file, recursive, depth, cdd, sessionid, wf->workflowid, wf->tasks[task_index].markerid,
+			 task_index, wf->username, wf->userrole, wf->idjob);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Command to scan file system: %s\n", command);
 
 		char markerid[OPH_SHORT_STRING_SIZE];
@@ -235,12 +239,43 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		while (!flag && !wf->tasks[task_index].response) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for scanning report\n");
 			pthread_cond_wait(&waiting_flag, &global_flag);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Arrived a file scanning report\n");
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A file scanning report is arrived\n");
 		}
 
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Scanning report:\n%s\n", wf->tasks[task_index].response ? wf->tasks[task_index].response : "empty");
+		unsigned int j;
+		oph_json *oper_json = NULL;
+		oph_json_obj_grid *grid_json = NULL;
+		while (wf->tasks[task_index].response) {
+			if (oph_json_from_json_string(&oper_json, wf->tasks[task_index].response)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing JSON Response\n");
+				break;
+			}
+			for (i = 0; i < oper_json->responseKeyset_num; ++i)
+				if (!strcmp(oper_json->responseKeyset[i], OPH_MF_GRID_NAME))
+					break;
+			if ((i >= oper_json->responseKeyset_num) || (i >= oper_json->response_num) || strcmp(oper_json->response[i].objclass, OPH_MF_GRID_CLASS)
+			    || strcmp(oper_json->response[i].objkey, OPH_MF_GRID_NAME)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Grid '%s' not found in JSON Response\n", OPH_MF_GRID_NAME);
+				break;
+			}
+			grid_json = (oph_json_obj_grid *) oper_json->response[i].objcontent;
+			if ((grid_json->keys_num != 2) || (grid_json->values_num2 != 2) || strcmp(grid_json->keys[0], OPH_MF_GRID_TYPE) || strcmp(grid_json->keys[1], OPH_MF_GRID_OBJECT)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Grid '%s' is not correct in JSON Response\n", OPH_MF_GRID_NAME);
+				break;
+			}
+			for (j = 0; j < grid_json->values_num1; ++j)
+				if (!strcmp(grid_json->values[j][0], OPH_MF_TYPE_FILE) && grid_json->values[j][1])
+					++ * counter;
+			filenames = (char **) calloc(*counter, sizeof(char *));
+			for (i = j = 0; j < grid_json->values_num1; ++j)
+				if (!strcmp(grid_json->values[j][0], OPH_MF_TYPE_FILE) && grid_json->values[j][1])
+					filenames[i++] = strdup(grid_json->values[j][1]);
+			break;
+		}
+		oph_json_free(oper_json);
 
 	} else {
+
 		if (oph_odb_extract_datacube_ids(oDB, query, &datacube, (int *) counter)) {
 			pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Unable to extract datacube PIDs.\n");
 			if (task_tbl)
@@ -259,28 +294,16 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 	if (task_tbl)
 		hashtbl_destroy(task_tbl);
 
-	int lbuffer = 0;
-	if (tbuffer)
-		lbuffer = strlen(tbuffer);
-	char buffer[1 + lbuffer];
-	if (tbuffer) {
-		strcpy(buffer, tbuffer);
-		free(tbuffer);
-	} else
-		*buffer = 0;
-
 	// Outputing
 	if (!(*counter)) {
 		pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "No object found.\n");
 		if (datacube)
 			free(datacube);
+		if (filenames)
+			free(filenames);
 		return OPH_SERVER_NO_RESPONSE;
 	}
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Found %d implicit objects which the massive operation will be applied on\n", *counter);
-
-	size_t base_src_size = 0;
-	if (is_src_path && oph_base_src_path)
-		base_src_size = strlen(oph_base_src_path);
 
 	char *base_name, *measure, *savepointer = NULL;
 	*datacube_inputs = (char **) malloc((*counter) * sizeof(char *));
@@ -289,13 +312,11 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			*measure_name = (char **) malloc((*counter) * sizeof(char *));
 			memset(*measure_name, 0, (*counter) * sizeof(char *));
 		}
-		running_value = strtok_r(buffer, OPH_SEPARATOR_PARAM, &savepointer);
 	}
 	for (i = 0; i < *counter; ++i) {
-		if (is_src_path) {
-			snprintf(query, OPH_MAX_STRING_SIZE, "%s", running_value + base_src_size);
-			running_value = strtok_r(NULL, OPH_SEPARATOR_PARAM, &savepointer);
-		} else
+		if (is_src_path)
+			snprintf(query, OPH_MAX_STRING_SIZE, "%s", filenames[i]);
+		else
 			snprintf(query, OPH_MAX_STRING_SIZE, "%s/%d/%d", oph_web_server, datacube[i].id_container, datacube[i].id_datacube);
 		(*datacube_inputs)[i] = strdup(query);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Object name: %s\n", (*datacube_inputs)[i]);
@@ -320,6 +341,12 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 	if (datacube)
 		free(datacube);
+	if (filenames) {
+		for (i = 0; i < *counter; ++i)
+			if (filenames[i])
+				free(filenames[i]);
+		free(filenames);
+	}
 
 	return OPH_SERVER_OK;
 }
