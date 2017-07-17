@@ -114,8 +114,10 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 				stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
 				value_size = stop_pointer - start_pointer;
 				if (value_size < OPH_MAX_STRING_SIZE) {
-					snprintf(session_code, 1 + value_size, "%s", start_pointer);
-					error = 0;
+					char sessionid[OPH_MAX_STRING_SIZE];
+					snprintf(sessionid, 1 + value_size, "%s", start_pointer);
+					if (!oph_get_session_code(sessionid, session_code))
+						error = 0;
 				}
 			}
 		}
