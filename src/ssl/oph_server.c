@@ -773,7 +773,7 @@ void *status_logger(struct soap *soap)
 			tau += OPH_STATUS_LOG_PERIOD;
 		usleep(tau);
 
-		ftruncate(nofile, 0);
+		i = ftruncate(nofile, 0);
 	}
 
 	if (statuslogfile) {

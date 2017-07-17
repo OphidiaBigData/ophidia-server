@@ -187,22 +187,22 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 		char dpath[OPH_MAX_STRING_SIZE];
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_PATH) && strlen(hashtbl_get(task_tbl, OPH_MF_ARG_PATH)))
-			snprintf(dpath, OPH_MAX_STRING_SIZE, "dpath=%s;", hashtbl_get(task_tbl, OPH_MF_ARG_PATH));
+			snprintf(dpath, OPH_MAX_STRING_SIZE, "dpath=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_PATH));
 		else
 			*dpath = 0;
 		char file[OPH_MAX_STRING_SIZE];
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_FILE) && strlen(hashtbl_get(task_tbl, OPH_MF_ARG_FILE)))
-			snprintf(file, OPH_MAX_STRING_SIZE, "file=%s;", hashtbl_get(task_tbl, OPH_MF_ARG_FILE));
+			snprintf(file, OPH_MAX_STRING_SIZE, "file=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_FILE));
 		else
 			*file = 0;
 		char recursive[OPH_MAX_STRING_SIZE];
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE))
-			snprintf(recursive, OPH_MAX_STRING_SIZE, "recursive=%s;", hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE));
+			snprintf(recursive, OPH_MAX_STRING_SIZE, "recursive=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE));
 		else
 			*recursive = 0;
 		char depth[OPH_MAX_STRING_SIZE];
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH))
-			snprintf(depth, OPH_MAX_STRING_SIZE, "depth=%s;", hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH));
+			snprintf(depth, OPH_MAX_STRING_SIZE, "depth=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH));
 		else
 			*depth = 0;
 		char command[OPH_MAX_STRING_SIZE];
