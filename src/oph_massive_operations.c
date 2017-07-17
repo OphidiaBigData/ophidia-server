@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <libgen.h>
 
-#define OPH_MF_COMMAND "operator=oph_fs;command=ls;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
+#define OPH_MF_COMMAND "operator=oph_fs;command=ls;realpath=yes;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
 #define OPH_MF_GRID_CLASS "grid"
 #define OPH_MF_GRID_NAME "fs"
 #define OPH_MF_GRID_TYPE "T"
