@@ -92,8 +92,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
+	int save_flag = !data || !strstr(data, OPH_SERVER_REQUEST_FLAG);	// Skip internal oph_server request
 	oph_json *oper_json = NULL;
-	while (output_json && strlen(output_json)) {
+	while (save_flag && output_json && strlen(output_json)) {
 
 		size_t value_size;
 		char session_code[OPH_MAX_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], *start_pointer, *stop_pointer, error;
