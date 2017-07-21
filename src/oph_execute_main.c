@@ -28,6 +28,7 @@
 #include "oph_workflow_engine.h"
 #include "oph_task_parser_library.h"
 #include "oph_session_report.h"
+#include "oph_service_info.h"
 #include "hashtbl.h"
 
 #ifdef INTERFACE_TYPE_IS_GSI
@@ -45,6 +46,7 @@ extern char *oph_xml_operators;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_base_src_path;
+extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -147,6 +149,11 @@ int oph_check_status_mask(enum oph__oph_odb_job_status status, char *smask)
 
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->incoming_requests++;
+	pthread_mutex_unlock(&global_flag);
+
 	char _host[OPH_SHORT_STRING_SIZE];
 	if (!soap->host || !strlen(soap->host)) {
 		if (soap->ip)
@@ -183,6 +190,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
 
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->accepted_requests++;
+	pthread_mutex_unlock(&global_flag);
+
 #ifdef INTERFACE_TYPE_IS_GSI
 	struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
 	if (!data) {
@@ -204,6 +216,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 #endif
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->authorized_requests++;
+	pthread_mutex_unlock(&global_flag);
 
 	// Convert dn to user
 	char _userid[OPH_MAX_STRING_SIZE];
@@ -5235,6 +5252,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->incoming_workflows++;
+	pthread_mutex_unlock(&global_flag);
+
 	// Test user data
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_OPENED_SESSIONS);
 	int num_sessions = oph_get_arg(user_args, OPH_USER_OPENED_SESSIONS, tmp);
@@ -5386,6 +5408,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: command added to session report\n", jobid);
 	if (submission_string)
 		free(submission_string);
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->accepted_workflows++;
+	pthread_mutex_unlock(&global_flag);
 
 	if (wf->parallel_mode) {
 		// Save the extended JSON request
@@ -5625,6 +5652,12 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			response->response = soap_strdup(soap, wf->response);
 			oph_workflow_free(wf);
+
+			pthread_mutex_lock(&global_flag);
+			if (service_info)
+				service_info->outcoming_responses++;
+			pthread_mutex_unlock(&global_flag);
+
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
 			oph_workflow_free(wf);

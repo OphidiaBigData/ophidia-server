@@ -24,6 +24,7 @@
 #include "oph_ophidiadb.h"
 #include "oph_task_parser_library.h"
 #include "oph_workflow_engine.h"
+#include "oph_service_info.h"
 
 #include <unistd.h>
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -106,6 +107,7 @@ ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
+oph_service_info *service_info = NULL;
 
 void set_global_values(const char *configuration_file)
 {
@@ -299,6 +301,8 @@ void cleanup()
 	soap_end(psoap);
 	soap_done(psoap);
 	CRYPTO_thread_cleanup();
+	if (service_info)
+		free(service_info);
 	if (logfile) {
 		fclose(logfile);
 		fclose(stdout);
@@ -401,6 +405,8 @@ int main(int argc, char *argv[])
 	snprintf(configuration_file, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, oph_server_location);
 	set_global_values(configuration_file);
 
+	service_info = (oph_service_info *) calloc(1, sizeof(oph_service_info));
+
 	if (oph_log_file_name) {
 		if (logfile)
 			fclose(logfile);
@@ -421,6 +427,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
 			return 1;
 		}
+		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected status log file '%s'\n", oph_status_log_file_name);
 	}
 
 	int int_port = strtol(oph_server_port, NULL, 10);
@@ -618,11 +625,13 @@ void *status_logger(struct soap *soap)
 	unsigned long pw;	// Number of pending workflows
 	unsigned long ww;	// Number of waiting workflows
 	unsigned long rw;	// Number of running workflows
+	unsigned long sw;	// Number of incoming workflows from last snapshoot
 	unsigned long at;	// Number of active tasks
 	unsigned long pt;	// Number of pending tasks
 	unsigned long wt;	// Number of waiting tasks
 	unsigned long rt;	// Number of running tasks
 	unsigned long mt;	// Number of massive tasks
+	unsigned long st;	// Number of submmitted tasks from last snapshoot
 	unsigned long lt;	// Number of active light tasks
 	unsigned long plt;	// Number of pending light tasks
 	unsigned long rlt;	// Number of running light tasks
@@ -645,6 +654,8 @@ void *status_logger(struct soap *soap)
 	long tau = 0, eps = 0, _eps;
 	char name[OPH_MAX_STRING_SIZE];
 
+	unsigned last_sw = 0, last_st = 0;	// Initialization
+
 	int nofile = fileno(statuslogfile);
 
 	if (statuslogfile) {
@@ -663,11 +674,18 @@ void *status_logger(struct soap *soap)
 			eps = eps ? (long) (OPH_STATUS_LOG_ALPHA * eps + (1.0 - OPH_STATUS_LOG_ALPHA) * _eps) : _eps;
 		}
 
-		aw = pw = ww = rw = at = pt = wt = rt = mt = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
+		aw = pw = ww = rw = sw = at = pt = wt = rt = mt = st = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
 		wpr = 0.0;
 		users = workflows = massives = NULL;
 
 		pthread_mutex_lock(&global_flag);
+
+		if (service_info) {
+			sw = service_info->incoming_workflows - last_sw;
+			st = service_info->submitted_tasks - last_st;
+			last_sw = service_info->incoming_workflows;
+			last_st = service_info->submitted_tasks;
+		}
 
 		job_info = state->job_info;
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
@@ -738,11 +756,13 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "workflow,status=pending value=%ld %d000000000\n", pw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=waiting value=%ld %d000000000\n", ww, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=running value=%ld %d000000000\n", rw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=incoming value=%ld %d000000000\n", sw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=active value=%ld %d000000000\n", at, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=pending value=%ld %d000000000\n", pt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=waiting value=%ld %d000000000\n", wt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=running value=%ld %d000000000\n", rt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=massive value=%ld %d000000000\n", mt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=submitted value=%ld %d000000000\n", st, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=completed value=%ld %d000000000\n", ct, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=failed value=%ld %d000000000\n", ft, (int) tv.tv_sec);
 			fprintf(statuslogfile, "light\\ task,status=active value=%ld %d000000000\n", lt, (int) tv.tv_sec);

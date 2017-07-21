@@ -20,6 +20,7 @@
 
 #include "oph_auth.h"
 #include "oph_known_operators.h"
+#include "oph_service_info.h"
 
 #include <mysql.h>
 
@@ -35,6 +36,7 @@ extern char *oph_json_location;
 extern char *oph_server_port;
 extern oph_rmanager *orm;
 extern char *oph_subm_user;
+extern oph_service_info *service_info;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -102,6 +104,12 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->submitted_tasks++;
+	pthread_mutex_unlock(&global_flag);
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_command_data *data = (oph_command_data *) malloc(sizeof(oph_command_data));
 	if (!data)
@@ -684,6 +692,11 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->incoming_tasks++;
+	pthread_mutex_unlock(&global_flag);
 
 	if (exit_code)
 		*exit_code = OPH_ODB_STATUS_COMPLETED;
