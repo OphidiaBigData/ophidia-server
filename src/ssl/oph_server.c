@@ -36,6 +36,7 @@
 
 #define OPH_STATUS_LOG_PERIOD 1
 #define OPH_STATUS_LOG_ALPHA 0.5
+#define OPH_STATUS_LOG_AVG_PERIOD 60
 
 /******************************************************************************\
  *
@@ -609,6 +610,21 @@ int oph_status_destroy(oph_status_object ** list)
 	return 0;
 }
 
+void reset_load_average(unsigned int *load_average)
+{
+	unsigned int i;
+	for (i = 0; i < OPH_STATUS_LOG_AVG_PERIOD; i++)
+		load_average[i] = 0;
+}
+
+unsigned int eval_load_average(unsigned int *load_average)
+{
+	unsigned int result = 0, i;
+	for (i = 0; i < OPH_STATUS_LOG_AVG_PERIOD; i++)
+		result += load_average[i];
+	return result;
+}
+
 void *status_logger(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -643,6 +659,7 @@ void *status_logger(struct soap *soap)
 	// Number of workflow tasks
 	// Progress ratio of a massive task
 	// Number of light tasks of a massive task
+	unsigned long msw;	// Mean number of incoming workflows in average period
 
 	oph_job_list *job_info;
 	oph_job_info *temp;
@@ -657,6 +674,9 @@ void *status_logger(struct soap *soap)
 	unsigned last_sw = 0, last_st = 0;	// Initialization
 
 	int nofile = fileno(statuslogfile);
+
+	unsigned int load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
+	reset_load_average(load_average);
 
 	if (statuslogfile) {
 		gettimeofday(&tv, NULL);
@@ -686,6 +706,10 @@ void *status_logger(struct soap *soap)
 			last_sw = service_info->incoming_workflows;
 			last_st = service_info->submitted_tasks;
 		}
+
+		load_average[current_load++] = sw;
+		current_load %= OPH_STATUS_LOG_AVG_PERIOD;
+		msw = eval_load_average(load_average);
 
 		job_info = state->job_info;
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
@@ -757,6 +781,7 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "workflow,status=waiting value=%ld %d000000000\n", ww, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=running value=%ld %d000000000\n", rw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=incoming value=%ld %d000000000\n", sw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=load value=%ld %d000000000\n", msw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=active value=%ld %d000000000\n", at, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=pending value=%ld %d000000000\n", pt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=waiting value=%ld %d000000000\n", wt, (int) tv.tv_sec);
