@@ -2730,14 +2730,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if ((get_debug_level() == LOG_DEBUG) && (status == OPH_ODB_STATUS_ERROR)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json ? output_json : "No JSON Response");
 		char outfile[OPH_MAX_STRING_SIZE], code[OPH_MAX_STRING_SIZE], buffer[OPH_MAX_STRING_SIZE];
-		if (!oph_get_session_code(sessionid, code)) {
-			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, marker_id);	// multi user approach is not supported
+		if (sessionid && !oph_get_session_code(sessionid, code)) {
+			snprintf(buffer, OPH_MAX_STRING_SIZE, "%d", marker_id);
+			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, buffer);	// multi user approach is not supported
 			FILE *log = fopen(outfile, "r");
 			if (log) {
 				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
 				fclose(log);
-			}
+			} else
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found\n", ttype, jobid, outfile);
 		}
 	}
 
