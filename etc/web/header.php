@@ -1,6 +1,6 @@
 <!--
     Ophidia Server
-    Copyright (C) 2012-2016 CMCC Foundation
+    Copyright (C) 2012-2017 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,17 +26,25 @@
 	</HEAD>
 	<BODY>
 <?php
-	session_start();
-	if(isset($_SESSION['userid']) && !empty($_SESSION['userid']))
-	{
+	include('userinfo.php');
+	if (isset($_SESSION['userid']) && !empty($_SESSION['userid'])) {
 ?>
 		<DIV id="profile">
 			<B id="welcome">Welcome : <I><?php echo $_SESSION['userid']; ?></I></B>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php?logout=yes">Log Out</A></B>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php">Session List</A></B>
 <?php
-			if (isset($download) && !empty($download)) print '<B class="activelink"><A href="?download=yes">Download</A></B>';
-			else print '<B class="inactivelink">Download</B>';
+		if (isset($download) && !empty($download))
+			print '<B class="activelink"><A href="?download=yes">Download</A></B>';
+		else
+			print '<B class="inactivelink">Download</B>';
+?>
+<?php
+		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
+?>
+			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/openid.php">Get token</A></B>
+<?php
+		}
 ?>
 		</DIV>
 		<HR/>

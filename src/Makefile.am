@@ -31,6 +31,17 @@ LIBSSH2_CFLAGS =
 LIBSSH2_LIBS =
 endif
 
+if OPENID_SUPPORT
+ADDITIONAL_CFLAGS += -DOPH_OPENID_ENDPOINT=\"@OPH_OPENID_ENDPOINT@\" -DOPH_OPENID_CLIENT_ID=\"@OPH_OPENID_CLIENT_ID@\" -DBLACK_LIST_FILE=\"@BLACK_LIST_FILE@\" -DAUTHORIZED_VO_FILE=\"@AUTHORIZED_VO_FILE@\"
+OPENID_CFLAGS = ${LIBCURL_INCLUDE} $(JANSSON_CFLAGS) $(CJOSE_CFLAGS)
+OPENID_LDFLAGS = -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
+OPENID_LIBS = ${LIBCURL_LIB} $(JANSSON_LIBS) $(CJOSE_LIBS)
+else
+OPENID_CFLAGS =
+OPENID_LDFLAGS =
+OPENID_LIBS =
+endif
+
 if INTERFACE_TYPE_IS_SSL
 ADDITIONAL_CFLAGS += -DWITH_OPENSSL -DHAVE_OPENSSL_SSL_H -DINTERFACE_TYPE_IS_SSL
 ADDITIONAL_LIBS += $(LIBSSL_LIB)
@@ -167,9 +178,9 @@ liboph_parser_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = oph_auth.c
-liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-liboph_auth_la_LDFLAGS = -shared
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser
+liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(OPENID_CFLAGS)
+liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS)
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) -L. -loph_parser -lhashtbl
 
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
@@ -331,6 +342,7 @@ install-exec-hook:
 	echo "//gsoap oph service location:      ${PLUGIN_DEFAULT_PROTOCOL}://${PLUGIN_DEFAULT_HOSTNAME}:${PLUGIN_DEFAULT_PORT}/" >> oph_wsdl.h && \
 	cat ../oph_execute_main.h >> oph_wsdl.h && \
 	$(SOAPCPP2_PROG) -c -x oph_wsdl.h && \
+	cp -f *.wsdl $(OPH_WEB_SERVER_LOCATION)/ && \
 	mv -f *.wsdl $(DESTDIR)$(sysconfdir)
 	rm -rf wsdl
 

@@ -66,13 +66,13 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 
 int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error)
 {
-	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset;
+	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
 	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable;
 	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
 	oph_workflow_var *var;
 	int index;
 
-	while (((p = strchr(submit_string, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
+	while (((p = strchr(submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
 		do {
 			firstc = 1;
@@ -124,7 +124,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		else
 			return_error = 1;
 		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
-		if ((return_error > 0) || (prefix && (return_error < 0) && (index < 0))) {
+		if (((return_error > 0) && (*p != OPH_WORKFLOW_VARIABLE_PREFIX)) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];
 			snprintf(_error, OPH_WORKFLOW_MAX_STRING, "Bad variable '%s' in task '%s'", target_value, workflow->tasks[task_index].name);
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "%s of workflow '%s'\n", _error, workflow->name);
@@ -133,6 +133,11 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			if (value)
 				free(value);
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		} else if (return_error > 0) {
+			offset = p - submit_string + 1;
+			if (skip_until < offset)
+				skip_until = offset;
+			continue;
 		}
 		offset = p - submit_string;
 		*replaced_value = 0;

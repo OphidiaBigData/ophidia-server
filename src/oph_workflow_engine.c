@@ -2603,6 +2603,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	char *ctmp, *sessionid = NULL;
 	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
+#ifdef OPH_OPENID_ENDPOINT
+	char *access_token = NULL, *refresh_token = NULL, *userinfo = NULL;
+#endif
 	char **outputs_keys = NULL;
 	char **outputs_values = NULL;
 	short outputs_index[counter];
@@ -2630,12 +2633,31 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			sessionid = strdup(ctmp);
 		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
 			marker_id = strtol(ctmp, NULL, 10);
+#ifdef OPH_OPENID_ENDPOINT
+		else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
+			access_token = ctmp;
+		else if (!strncmp(aitem->key, OPH_ARG_REFRESH_TOKEN, OPH_MAX_STRING_SIZE))
+			refresh_token = ctmp;
+		else if (!strncmp(aitem->key, OPH_ARG_USERINFO, OPH_MAX_STRING_SIZE))
+			userinfo = ctmp;
+#endif
 		else {
 			outputs_num++;
 			outputs_index[ii] = 1;
 		}
 	}
-	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0) || (marker_id < 0)) {
+
+#ifdef OPH_OPENID_ENDPOINT
+	if (access_token) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: found tokens to be saved\n", ttype, jobid);
+		oph_auth_save_token(access_token, refresh_token, userinfo);
+		*response = OPH_SERVER_OK;
+		oph_cleanup_args(&args);
+		return SOAP_OK;
+	}
+#endif
+
+	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0) || (marker_id < 0) || !sessionid) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: missing mandatory parameters in '%s'\n", ttype, jobid, data);
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		if (sessionid)

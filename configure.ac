@@ -254,6 +254,16 @@ AC_ARG_WITH(ws-protocol,
 PLUGIN_DEFAULT_PROTOCOL=$ws_protocol
 AC_SUBST(PLUGIN_DEFAULT_PROTOCOL)
 
+ws_notifier="framework"
+AC_ARG_WITH(ws-notifier,
+	   [  --with-ws-notifier=username     Set notifier user (default: framework)],
+	   [
+	    ws_notifier="$withval"
+           ]
+           )
+OPH_NOTIFIER=$ws_notifier
+AC_SUBST(OPH_NOTIFIER)
+
 AUTHORIZATION="$prefix/authz/dn.dat"
 AC_SUBST(AUTHORIZATION) 
 AUTHORIZATION_FILE="$prefix/authz/dn.dat"
@@ -304,6 +314,27 @@ AC_ARG_WITH(web_server_path,
 	   ])
 OPH_WEB_SERVER_LOCATION=${web_server_path}
 AC_SUBST(OPH_WEB_SERVER_LOCATION)
+
+AC_ARG_WITH(openid_endpoint, [ --with-openid-endpoint=URL	Endpoint], [ openid_endpoint="$withval" ])
+OPH_OPENID_ENDPOINT=${openid_endpoint}
+AC_SUBST(OPH_OPENID_ENDPOINT)
+
+AC_ARG_WITH(openid_client_id, [ --with-openid-client-id=id	Client ID], [ openid_client_id="$withval" ])
+OPH_OPENID_CLIENT_ID=${openid_client_id}
+AC_SUBST(OPH_OPENID_CLIENT_ID)
+
+AC_ARG_WITH(openid_client_secret, [ --with-openid-client-secret=secret	Client Secret], [ openid_client_secret="$withval" ])
+OPH_OPENID_CLIENT_SECRET=${openid_client_secret}
+AC_SUBST(OPH_OPENID_CLIENT_SECRET)
+
+AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid_endpoint" != "x"])
+
+if test "x$openid_endpoint" != "x"; then
+PKG_CHECK_MODULES(CJOSE, cjose >= 0.4.1)
+AC_SUBST(CJOSE_CFLAGS)
+AC_SUBST(CJOSE_LIBS)
+AC_MSG_NOTICE("OpenId support enabled")
+fi
 
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,

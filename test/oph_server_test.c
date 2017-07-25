@@ -65,7 +65,6 @@ unsigned int oph_server_queue_size = 0;
 unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
-oph_auth_user_bl *bl_head = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
@@ -423,7 +422,7 @@ int _check_oph_server(const char *function, int option)
 				break;
 #endif
 			case 8:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@condition' in task 'IF'")) {
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Too variables in the expression '@condition'!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}
@@ -1212,15 +1211,21 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 12:
-			case 13:
-			case 14:
-			case 15:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'FOR'")) {
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}
 				break;
 
+			case 13:
+			case 14:
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Arguments 'values' and 'counter' have different sizes.")) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
+					goto _EXIT_3;
+				}
+				break;
+
+			case 15:
 			case 29:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Generic error in parsing arguments of task 'FOR'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
@@ -2459,7 +2464,6 @@ int _check_oph_server(const char *function, int option)
 
 				case 27:
 				case 28:
-				case 30:
 					if (res != OPH_SERVER_SYSTEM_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						goto _EXIT_1;
@@ -2487,7 +2491,7 @@ int _check_oph_server(const char *function, int option)
 						goto _EXIT_1;
 					}
 					if (query) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Expected return query\n");
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "No query expected\n");
 						goto _EXIT_1;
 					}
 					break;
@@ -3199,13 +3203,6 @@ int _check_oph_server(const char *function, int option)
 
 		switch (option) {
 
-			case 2:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'SET'")) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					goto _EXIT_3;
-				}
-				break;
-
 			default:
 				if (res || strlen(error_message)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\nError message: %s\n", res, error_message);
@@ -3416,13 +3413,6 @@ int _check_oph_server(const char *function, int option)
 
 		switch (option) {
 
-			case 2:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'INPUT'")) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					goto _EXIT_3;
-				}
-				break;
-
 			case 3:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Invalid task name, task not found or ambiguous!")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
@@ -3452,7 +3442,7 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 12:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'INPUT'")) {
+				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad argument 'key'.")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}
@@ -3794,12 +3784,6 @@ int _check_oph_server(const char *function, int option)
 				break;
 			case 7:
 				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Wrong type 'wrong'!")) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
-					goto _EXIT_3;
-				}
-				break;
-			case 9:
-				if ((res != OPH_SERVER_ERROR) || strcmp(error_message, "Bad variable '@badvariable' in task 'WAIT'")) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error message: %s\n", error_message);
 					goto _EXIT_3;
 				}

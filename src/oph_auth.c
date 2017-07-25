@@ -30,12 +30,74 @@
 #include <openssl/sha.h>
 #endif
 
+#ifdef OPH_OPENID_ENDPOINT
+
+#include "hashtbl.h"
+#include <curl/curl.h>
+#include <jansson.h>
+#include <cjose/cjose.h>
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_mutex_t global_flag;
+#endif
+
+#define AUTH_CONNECTTIMEOUT 30
+
+typedef struct _oph_auth_clip {
+	char *memory;
+	size_t size;
+} oph_auth_clip;
+
+typedef struct _oph_refresh_token {
+	char *access_token;
+	char *refresh_token;
+	char *userid;
+	char *userinfo;
+} oph_refresh_token;
+
+HASHTBL *usersinfo = NULL;
+
+typedef struct _auth_jwt_hdr {
+	json_t *cnt;
+	char *str;
+	char *alg;
+	char *kid;
+	char *enc;
+} auth_jwt_hdr;
+
+typedef struct _auth_jwt_payload {
+	json_t *cnt;
+	char *str;
+	char *iss;
+	char *sub;
+	char *jti;
+	char *nonce;
+	char *aud;
+	char *kid;
+	double auth_time;
+	double exp;
+	double iat;
+} auth_jwt_payload;
+
+extern char *oph_server_host;
+extern char *oph_openid_endpoint;
+extern char *oph_openid_client_id;
+extern char *oph_openid_client_secret;
+extern unsigned int oph_openid_token_timeout;
+
+char *oph_openid_endpoint_public_key = NULL;
+
+#endif
+
 #define OPH_AUTH_MAX_COUNT 5
 
 extern char *oph_auth_location;
 extern char *oph_web_server;
-extern oph_auth_user_bl *bl_head;
 extern int oph_server_timeout;
+
+oph_auth_user_bl *bl_head = NULL;
+oph_auth_user_bl *tokens = NULL;
+oph_auth_user_bl *auth_users = NULL;
 
 int oph_get_session_code(const char *sessionid, char *code)
 {
@@ -167,9 +229,9 @@ int oph_load_file2(const char *filename, oph_argument ** args)
 	return result;
 }
 
-int oph_add_to_bl(const char *userid, const char *host)
+int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
 {
-	if (!userid || !host)
+	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
 
 	struct timeval tv;
@@ -178,39 +240,52 @@ int oph_add_to_bl(const char *userid, const char *host)
 	oph_auth_user_bl *bl_item = (oph_auth_user_bl *) malloc(sizeof(oph_auth_user_bl));
 	bl_item->userid = strdup(userid);
 	bl_item->host = strdup(host);
+	bl_item->value = NULL;
 	bl_item->count = 1;
 	bl_item->timestamp = tv.tv_sec;
-	bl_item->next = bl_head;
-	bl_head = bl_item;
+	bl_item->next = *head;
+	*head = bl_item;
 
 	return OPH_SERVER_OK;
 }
 
-short oph_is_in_bl(const char *userid, const char *host, char *deadline)
+void oph_delete_item_in_bl(oph_auth_user_bl * bl_item)
 {
+	if (bl_item->userid)
+		free(bl_item->userid);
+	if (bl_item->host)
+		free(bl_item->host);
+	if (bl_item->value)
+		free(bl_item->value);
+	free(bl_item);
+}
+
+short oph_is_in_bl(oph_auth_user_bl ** head, const char *userid, const char *host, char *deadline)
+{
+	if (!head || !userid || !host)
+		return OPH_SERVER_NULL_POINTER;
+
 	time_t deadtime;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
-	oph_auth_user_bl *bl_item = bl_head, *bl_prev = NULL;
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
-				bl_head = bl_item->next;
-			if (bl_item->userid)
-				free(bl_item->userid);
-			if (bl_item->host)
-				free(bl_item->host);
-			free(bl_item);
-			bl_item = bl_prev ? bl_prev->next : bl_head;
+				*head = bl_item->next;
+			oph_delete_item_in_bl(bl_item);
+			bl_item = bl_prev ? bl_prev->next : *head;
 		} else if (!strcmp(bl_item->userid, userid) && !strcmp(bl_item->host, host)) {
-			struct tm nowtm;
-			if (!localtime_r(&deadtime, &nowtm))
-				return -1;
-			strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
+			if (deadline) {
+				struct tm nowtm;
+				if (!localtime_r(&deadtime, &nowtm))
+					return -1;
+				strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
+			}
 			bl_item->count++;
 			return bl_item->count;
 		} else {
@@ -222,9 +297,88 @@ short oph_is_in_bl(const char *userid, const char *host, char *deadline)
 	return 0;
 }
 
-int oph_drop_from_bl(const char *userid, const char *host)
+char *oph_get_host_by_user_in_bl(oph_auth_user_bl ** head, const char *userid, char *deadline)
 {
-	if (!userid || !host)
+	if (!head || !userid)
+		return NULL;
+
+	time_t deadtime;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
+	while (bl_item) {
+		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
+		if (tv.tv_sec > deadtime) {
+			if (bl_prev)
+				bl_prev->next = bl_item->next;
+			else
+				*head = bl_item->next;
+			oph_delete_item_in_bl(bl_item);
+			bl_item = bl_prev ? bl_prev->next : *head;
+		} else if (!strcmp(bl_item->userid, userid)) {
+			if (deadline) {
+				struct tm nowtm;
+				if (!localtime_r(&deadtime, &nowtm))
+					return NULL;
+				strftime(deadline, OPH_MAX_STRING_SIZE, "%H:%M:%S", &nowtm);
+			}
+			return bl_item->host;
+		} else {
+			bl_prev = bl_item;
+			bl_item = bl_item->next;
+		}
+	}
+
+	return NULL;
+}
+
+int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **userid, char **new_token)
+{
+	if (!head || !token)
+		return OPH_SERVER_NULL_POINTER;
+
+	if (userid)
+		*userid = NULL;
+	if (new_token)
+		*new_token = NULL;
+
+	time_t deadtime;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
+	while (bl_item) {
+		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
+		if (tv.tv_sec > deadtime) {
+#ifdef OPH_OPENID_ENDPOINT
+			hashtbl_remove(usersinfo, bl_item->host);
+#endif
+			if (bl_prev)
+				bl_prev->next = bl_item->next;
+			else
+				*head = bl_item->next;
+			oph_delete_item_in_bl(bl_item);
+			bl_item = bl_prev ? bl_prev->next : *head;
+		} else if (!strcmp(bl_item->host, token)) {
+			if (userid)
+				*userid = strdup(bl_item->userid);
+			bl_item->count = 0;	// Hit
+			if (new_token && bl_item->value && strcmp(bl_item->value, token))
+				*new_token = strdup(bl_item->value);
+			return OPH_SERVER_OK;
+		} else {
+			bl_prev = bl_item;
+			bl_item = bl_item->next;
+		}
+	}
+
+	return OPH_SERVER_ERROR;
+}
+
+int oph_drop_from_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+{
+	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
 
 	int found = 0;
@@ -232,24 +386,80 @@ int oph_drop_from_bl(const char *userid, const char *host)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 
-	oph_auth_user_bl *bl_item = bl_head, *bl_prev = NULL;
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if ((found = !strcmp(bl_item->userid, userid) && !strcmp(bl_item->host, host)) || (tv.tv_sec > deadtime)) {
 			if (bl_prev)
 				bl_prev->next = bl_item->next;
 			else
-				bl_head = bl_item->next;
-			if (bl_item->userid)
-				free(bl_item->userid);
-			if (bl_item->host)
-				free(bl_item->host);
-			free(bl_item);
+				*head = bl_item->next;
+			oph_delete_item_in_bl(bl_item);
 			if (found)
 				return OPH_SERVER_OK;
 			else
-				bl_item = bl_prev ? bl_prev->next : bl_head;
+				bl_item = bl_prev ? bl_prev->next : *head;
 		} else {
+			bl_prev = bl_item;
+			bl_item = bl_item->next;
+		}
+	}
+
+	return OPH_SERVER_OK;
+}
+
+int oph_free_bl(oph_auth_user_bl ** head)
+{
+	oph_auth_user_bl *bl_item = *head;
+	while (bl_item) {
+		*head = bl_item->next;
+		oph_delete_item_in_bl(bl_item);
+		bl_item = *head;
+	}
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_free()
+{
+	oph_free_bl(&bl_head);
+	oph_free_bl(&tokens);
+	oph_free_bl(&auth_users);
+#ifdef OPH_OPENID_ENDPOINT
+	if (oph_openid_endpoint_public_key)
+		free(oph_openid_endpoint_public_key);
+	if (usersinfo)
+		hashtbl_destroy(usersinfo);
+#endif
+}
+
+int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid, const char *access_token)
+{
+	if (!head || !userid || !access_token)
+		return OPH_SERVER_NULL_POINTER;
+
+	time_t deadtime;
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	oph_auth_user_bl *bl_item = *head, *bl_prev = NULL;
+	while (bl_item) {
+		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
+		if (tv.tv_sec > deadtime) {
+#ifdef OPH_OPENID_ENDPOINT
+			hashtbl_remove(usersinfo, bl_item->host);
+#endif
+			if (bl_prev)
+				bl_prev->next = bl_item->next;
+			else
+				*head = bl_item->next;
+			oph_delete_item_in_bl(bl_item);
+			bl_item = bl_prev ? bl_prev->next : *head;
+		} else {
+			if (!strcmp(bl_item->userid, userid)) {
+				if (bl_item->value)
+					free(bl_item->value);
+				bl_item->value = strdup(access_token);
+			}
 			bl_prev = bl_item;
 			bl_item = bl_item->next;
 		}
@@ -297,12 +507,872 @@ char *oph_sha(char *to, const char *passwd)
 }
 #endif
 
+#ifdef OPH_OPENID_ENDPOINT
+char *mystrdup(const char *s, size_t len)
+{
+	char *new = (char *) calloc(1 + len, sizeof(char));
+	if (new == NULL)
+		return NULL;
+
+	return (char *) memcpy(new, s, len);
+}
+
+void header_free(auth_jwt_hdr * header)
+{
+	if (header->cnt != NULL)
+		json_decref(header->cnt);
+
+	if (header->str != NULL)
+		free(header->str);
+
+	if (header->alg != NULL)
+		free(header->alg);
+
+	if (header->kid != NULL)
+		free(header->kid);
+
+	if (header->enc != NULL)
+		free(header->enc);
+
+	header->cnt = NULL;
+	header->str = NULL;
+	header->alg = NULL;
+	header->kid = NULL;
+	header->enc = NULL;
+}
+
+void payload_free(auth_jwt_payload * payload)
+{
+	if (payload->cnt != NULL)
+		json_decref(payload->cnt);
+
+	if (payload->str != NULL)
+		free(payload->str);
+
+	if (payload->iss != NULL)
+		free(payload->iss);
+
+	if (payload->sub != NULL)
+		free(payload->sub);
+
+	if (payload->jti != NULL)
+		free(payload->jti);
+
+	if (payload->nonce != NULL)
+		free(payload->nonce);
+
+	if (payload->aud != NULL)
+		free(payload->aud);
+
+	if (payload->kid != NULL)
+		free(payload->kid);
+
+	payload->exp = 0;
+	payload->iat = 0;
+	payload->auth_time = 0;
+	payload->cnt = NULL;
+	payload->str = NULL;
+	payload->iss = NULL;
+	payload->sub = NULL;
+	payload->jti = NULL;
+	payload->nonce = NULL;
+	payload->aud = NULL;
+	payload->kid = NULL;
+}
+
+int get_json_string(const json_t * json, const char *key, char **str)
+{
+	if (!str)
+		return OPH_SERVER_NULL_POINTER;
+	*str = NULL;
+
+	json_t *obj = json_object_get(json, key);
+	if (!obj)
+		return OPH_SERVER_OK;
+
+	if (!json_is_string(obj))
+		return OPH_SERVER_ERROR;
+
+	const char *tmpstr = json_string_value(obj);
+	if (!tmpstr)
+		return OPH_SERVER_ERROR;
+
+	*str = strdup(tmpstr);
+	if (!*str)
+		return OPH_SERVER_ERROR;
+
+	return OPH_SERVER_OK;
+}
+
+int get_json_number(const json_t * json, const char *key, double *num)
+{
+	if (!num)
+		return OPH_SERVER_NULL_POINTER;
+	*num = 0;
+
+	json_t *obj = json_object_get(json, key);
+	if (!obj)
+		return OPH_SERVER_OK;
+
+	if (!json_is_number(obj))
+		return OPH_SERVER_ERROR;
+
+	*num = json_number_value(obj);
+
+	return OPH_SERVER_OK;
+}
+
+int get_json_boolean(const json_t * json, const char *key, bool * value)
+{
+	if (!value)
+		return OPH_SERVER_NULL_POINTER;
+	*value = 0;
+
+	json_t *obj = json_object_get(json, key);
+	if (!obj)
+		return OPH_SERVER_OK;
+
+	if (!json_is_boolean(obj))
+		return OPH_SERVER_ERROR;
+
+	*value = json_is_true(obj);
+
+	return OPH_SERVER_OK;
+}
+
+int read_values(const json_t * json, const char **char_arg, char ***char_ptr, int n_char_arg, const char **num_arg, double **num_ptr, int n_num_arg, const char **bool_arg, bool ** bool_ptr,
+		int n_bool_arg)
+{
+	int i, j;
+
+	for (i = 0; i < n_num_arg; i++)
+		if (get_json_number(json, num_arg[i], num_ptr[i]))
+			return OPH_SERVER_ERROR;
+
+	for (i = 0; i < n_bool_arg; i++)
+		if (get_json_boolean(json, bool_arg[i], bool_ptr[i]))
+			return OPH_SERVER_ERROR;
+
+	for (i = 0; i < n_char_arg; i++)
+		if (get_json_string(json, char_arg[i], char_ptr[i])) {
+			for (j = 0; j < i; j++)
+				free(*(char_ptr[j]));
+			return OPH_SERVER_ERROR;
+		}
+
+	return OPH_SERVER_OK;
+}
+
+int extract_header(cjose_jws_t * jwt, auth_jwt_hdr * header)
+{
+	cjose_header_t *hdr = cjose_jws_get_protected(jwt);
+
+	char *hdr_str = json_dumps((json_t *) hdr, 0);
+	if (!hdr_str)
+		return OPH_SERVER_ERROR;
+	header->str = hdr_str;
+
+	json_t *json = json_deep_copy((json_t *) hdr);
+	if (!json) {
+		free(header->str);
+		return OPH_SERVER_ERROR;
+	}
+	header->cnt = json;
+
+	const char arg_alg[4] = "alg";
+	const char arg_kid[4] = "kid";
+	const char arg_enc[4] = "enc";
+
+	const char *char_arg[3] = { arg_alg, arg_kid, arg_enc };
+	char **char_ptr[3] = { &(header->alg), &(header->kid), &(header->enc) };
+
+	if (read_values(json, char_arg, char_ptr, 3, NULL, NULL, 0, NULL, NULL, 0)) {
+		free(header->str);
+		json_decref(json);
+		return OPH_SERVER_ERROR;
+	}
+
+	return OPH_SERVER_OK;
+}
+
+int extract_payload(cjose_jws_t * jwt, auth_jwt_payload * payload)
+{
+	char *payload_ptr = NULL;
+	size_t payload_length;
+	if (!cjose_jws_get_plaintext(jwt, (uint8_t **) & payload_ptr, &payload_length, NULL))
+		return OPH_SERVER_ERROR;
+
+	payload->str = mystrdup(payload_ptr, payload_length);
+	if (!payload->str)
+		return OPH_SERVER_ERROR;
+
+	json_t *json = json_loads(payload->str, 0, NULL);
+	if (!json) {
+		if (payload->str)
+			free(payload->str);
+		return OPH_SERVER_ERROR;
+	} else if (!json_is_object(json)) {
+		if (payload->str)
+			free(payload->str);
+		json_decref(json);
+		return OPH_SERVER_ERROR;
+	}
+	payload->cnt = json;
+
+	const char arg_iss[4] = "iss";
+	const char arg_sub[4] = "sub";
+	const char arg_exp[4] = "exp";
+	const char arg_iat[4] = "iat";
+	const char arg_jti[4] = "jti";
+	const char arg_nonce[6] = "nonce";
+	const char arg_aud[4] = "aud";
+	const char arg_kid[4] = "kid";
+	const char arg_at[10] = "auth_time";
+
+	const char *char_arg[6] = { arg_iss, arg_sub, arg_jti, arg_nonce, arg_aud, arg_kid };
+	char **char_ptr[6] = { &(payload->iss), &(payload->sub), &(payload->jti), &(payload->nonce), &(payload->aud), &(payload->kid) };
+	const char *num_arg[3] = { arg_exp, arg_iat, arg_at };
+	double *num_ptr[3] = { &(payload->exp), &(payload->iat), &(payload->auth_time) };
+
+	if (read_values(json, char_arg, char_ptr, 6, num_arg, num_ptr, 3, NULL, NULL, 0)) {
+		if (payload->str)
+			free(payload->str);
+		json_decref(json);
+		return OPH_SERVER_ERROR;
+	}
+
+	return OPH_SERVER_OK;
+}
+
+size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+	size_t bytec = size * nmemb;
+	oph_auth_clip *mem = (oph_auth_clip *) stream;
+	mem->memory = (char *) realloc(mem->memory, mem->size + bytec + 1);
+	if (mem->memory == NULL)
+		return 0;
+	memcpy(mem->memory + mem->size, ptr, bytec);
+	mem->size += bytec;
+	mem->memory[mem->size] = 0;
+	return bytec;
+}
+
+int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload * payload)
+{
+	if (!token || (!header && !payload))
+		return OPH_SERVER_NULL_POINTER;
+
+	cjose_jws_t *jwt = cjose_jws_import(token, strlen(token), NULL);
+	if (!jwt) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be processed\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	if (header && extract_header(jwt, header)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Header cannot be extracted\n");
+		cjose_jws_release(jwt);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (payload && extract_payload(jwt, payload)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Payload cannot be extracted\n");
+		cjose_jws_release(jwt);
+		if (header)
+			header_free(header);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!oph_openid_endpoint_public_key) {
+
+		oph_auth_clip chunk;
+		chunk.memory = (char *) malloc(1);
+		*chunk.memory = chunk.size = 0;
+		char url[OPH_MAX_STRING_SIZE];
+		snprintf(url, OPH_MAX_STRING_SIZE, "%s/jwk", oph_openid_endpoint);
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: waiting...\n");
+
+		CURL *curl = curl_easy_init();
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+		CURLcode res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+
+		if (res || !chunk.memory) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			if (chunk.memory)
+				free(chunk.memory);
+			return OPH_SERVER_AUTH_ERROR;
+		}
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: completed\n");
+
+		char error = 1;
+		while (error) {
+			char *start = chunk.memory + 1;
+			while (start && *start && (*start != '{'))
+				start++;
+			if (!start || !*start)
+				break;
+			char *stop = start + 1;
+			while (stop && *stop && (*stop != '}'))
+				stop++;
+			if (!stop || !*stop)
+				break;
+			stop[1] = 0;
+			oph_openid_endpoint_public_key = strdup(start);
+			if (!oph_openid_endpoint_public_key)
+				break;
+			error = 0;
+		}
+
+		free(chunk.memory);
+
+		if (error) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			return OPH_SERVER_AUTH_ERROR;
+		} else
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key: %s\n", oph_openid_endpoint_public_key);
+	}
+
+	cjose_jwk_t *jwk = cjose_jwk_import(oph_openid_endpoint_public_key, strlen(oph_openid_endpoint_public_key), NULL);
+	if (!jwk) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key cannot be processed\n");
+		cjose_jws_release(jwt);
+		if (header)
+			header_free(header);
+		if (payload)
+			payload_free(payload);
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!cjose_jws_verify(jwt, jwk, NULL)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Signature is not correct\n");
+		//cjose_jws_release(jwt);
+		cjose_jwk_release(jwk);
+		if (header)
+			header_free(header);
+		if (payload)
+			payload_free(payload);
+		return OPH_SERVER_ERROR;
+	}
+
+	cjose_jws_release(jwt);
+	cjose_jwk_release(jwk);
+
+	return OPH_SERVER_OK;
+}
+
+void *_oph_refresh(oph_refresh_token * refresh)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+
+	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid || !refresh->userinfo) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return;
+	}
+
+	oph_auth_clip chunk;
+	char url[OPH_MAX_STRING_SIZE], credentials[OPH_MAX_STRING_SIZE], fields[OPH_MAX_STRING_SIZE];
+	snprintf(url, OPH_MAX_STRING_SIZE, "%s/token", oph_openid_endpoint);
+	snprintf(credentials, OPH_MAX_STRING_SIZE, "%s:%s", oph_openid_client_id, oph_openid_client_secret);
+	int count;
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Start token refreshing procedure\n");
+
+	while (1) {
+
+		sleep(oph_openid_token_timeout);
+
+		pthread_mutex_lock(&global_flag);
+
+		chunk.memory = (char *) malloc(1);
+		*chunk.memory = chunk.size = 0;
+		snprintf(fields, OPH_MAX_STRING_SIZE, "grant_type=refresh_token&refresh_token=%s", refresh->refresh_token);
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: waiting...\n");
+
+		CURL *curl = curl_easy_init();
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
+		curl_easy_setopt(curl, CURLOPT_POST, 1);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+		curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		CURLcode res = curl_easy_perform(curl);
+		curl_easy_cleanup(curl);
+
+		if (res || !chunk.memory) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get new token: %s\n", curl_easy_strerror(res));
+			pthread_mutex_unlock(&global_flag);
+			if (chunk.memory)
+				free(chunk.memory);
+			break;
+		}
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: completed\n");
+
+		json_t *response = json_loads(chunk.memory, 0, NULL);
+		if (!response) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+			pthread_mutex_unlock(&global_flag);
+			free(chunk.memory);
+			break;
+		}
+
+		char *error = NULL, *refresh_token = NULL, *access_token = NULL;
+		json_unpack(response, "{s?s,s?s,s?s}", "error", &error, "refresh_token", &refresh_token, "access_token", &access_token);
+
+		if (error) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "GET returns an error code\n");
+			pthread_mutex_unlock(&global_flag);
+			json_decref(response);
+			free(chunk.memory);
+			break;
+		}
+		if (!refresh_token || !access_token) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "GET does not contain the required tokens\n");
+			pthread_mutex_unlock(&global_flag);
+			json_decref(response);
+			free(chunk.memory);
+			break;
+		}
+
+		if (refresh->access_token) {
+			free(refresh->access_token);
+			refresh->access_token = NULL;
+		}
+		if (refresh->refresh_token) {
+			free(refresh->refresh_token);
+			refresh->refresh_token = NULL;
+		}
+
+		if (!(refresh->access_token = strdup(access_token))) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			pthread_mutex_unlock(&global_flag);
+			json_decref(response);
+			free(chunk.memory);
+			break;
+		}
+		if (!(refresh->refresh_token = strdup(refresh_token))) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			pthread_mutex_unlock(&global_flag);
+			json_decref(response);
+			free(chunk.memory);
+			break;
+		}
+
+		json_decref(response);
+		free(chunk.memory);
+
+		oph_auth_update_values_of_user(&tokens, refresh->userid, refresh->access_token);
+
+		if (oph_get_user_by_token(&tokens, refresh->access_token, NULL, NULL)) {
+			oph_add_to_bl(&tokens, refresh->userid, refresh->access_token);
+			oph_auth_cache_userinfo(refresh->access_token, refresh->userinfo);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+		} else
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Token found in active token list\n");	// Warning: the token should not be already buffered
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: processed\n");
+
+		pthread_mutex_unlock(&global_flag);
+	}
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from token refreshing procedure\n");
+
+	if (refresh->access_token)
+		free(refresh->access_token);
+	if (refresh->refresh_token)
+		free(refresh->refresh_token);
+	if (refresh->userid)
+		free(refresh->userid);
+	if (refresh->userinfo)
+		free(refresh->userinfo);
+	free(refresh);
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+}
+
+int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
+{
+	if (!userinfo || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+	json_t *userinfo_json = json_loads(userinfo, 0, NULL);
+	if (!userinfo_json) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	char *error = NULL, *email = NULL;
+	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "email", &email);
+
+	if (error) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET returns an error code\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (!email) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET does not contain email address\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	if (!(*userid = strdup(email))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_ERROR;
+	}
+
+	json_decref(userinfo_json);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
+{
+	if (!access_token || !userinfo)
+		return OPH_SERVER_NULL_POINTER;
+
+	if (!usersinfo) {
+		usersinfo = hashtbl_create(strlen(access_token), NULL);
+		if (!usersinfo)
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+	}
+	if (usersinfo)
+		hashtbl_insert(usersinfo, access_token, (char *) userinfo);
+
+	return OPH_SERVER_OK;
+}
+
+#endif
+
+int oph_auth_check_token(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+	auth_jwt_payload *payload = (auth_jwt_payload *) calloc(1, sizeof(auth_jwt_payload));
+	if (auth_jwt_import(token, NULL, payload)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be verified\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	if (tv.tv_sec < payload->iat) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (tv.tv_sec > payload->exp) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is expired\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is valid\n");
+
+	payload_free(payload);
+	free(payload);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_get_user_from_token(const char *token, char **userid)
+{
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+#ifndef OPH_OPENID_ENDPOINT
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+	return OPH_SERVER_AUTH_ERROR;
+
+#else
+
+	if (!strlen(oph_openid_endpoint)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	oph_auth_clip chunk;
+	chunk.memory = (char *) malloc(1);
+	*chunk.memory = chunk.size = 0;
+
+	char header[OPH_MAX_STRING_SIZE], url[OPH_MAX_STRING_SIZE];
+	snprintf(header, OPH_MAX_STRING_SIZE, "Authorization: Bearer %s", token);
+	snprintf(url, OPH_MAX_STRING_SIZE, "%s/userinfo", oph_openid_endpoint);
+	struct curl_slist *slist = curl_slist_append(NULL, header);
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: waiting...\n");
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+	CURLcode res = curl_easy_perform(curl);
+	curl_slist_free_all(slist);
+	curl_easy_cleanup(curl);
+
+	if (res || !chunk.memory) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get userinfo: %s\n", curl_easy_strerror(res));
+		if (chunk.memory)
+			free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: completed\n");
+
+	int result;
+	if ((result = oph_auth_get_user_from_userinfo(chunk.memory, userid)) || !*userid) {
+		free(chunk.memory);
+		return result;
+	}
+
+	oph_auth_cache_userinfo(token, chunk.memory);
+
+	free(chunk.memory);
+
+	return OPH_SERVER_OK;
+
+#endif
+}
+
+int oph_auth_read_token(const char *token, oph_argument ** args)
+{
+	if (!token || !args)
+		return OPH_SERVER_NULL_POINTER;
+	*args = NULL;
+
+#ifdef OPH_OPENID_ENDPOINT
+
+	if (!usersinfo)
+		return OPH_SERVER_AUTH_ERROR;
+
+	char *userinfo = hashtbl_get(usersinfo, token);
+	if (!userinfo)
+		return OPH_SERVER_AUTH_ERROR;
+
+	json_t *info = json_loads(userinfo, 0, NULL);
+	if (!info) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	char *organisation_name = NULL;
+	json_unpack(info, "{s?s}", "organisation_name", &organisation_name);
+
+	oph_argument *tmp, *tail = NULL;
+
+	tmp = (oph_argument *) malloc(sizeof(oph_argument));
+	tmp->key = strdup("organisation_name");
+	if (!(tmp->value = strdup(organisation_name))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of userinfo structure\n");
+		oph_cleanup_args(args);
+		json_decref(info);
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
+	tmp->next = NULL;
+	if (tail)
+		tail->next = tmp;
+	else
+		*args = tmp;
+	tail = tmp;
+
+	json_decref(info);
+
+#endif
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_is_user_black_listed(const char *userid)
+{
+	if (!userid)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef BLACK_LIST_FILE
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s' in black list '%s'\n", userid, BLACK_LIST_FILE);
+	int result = OPH_SERVER_OK;
+	char buf[OPH_MAX_STRING_SIZE];
+	FILE *fd = fopen(BLACK_LIST_FILE, "r");
+	if (fd) {
+		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
+			if (strlen(buf))
+				buf[strlen(buf) - 1] = '\0';
+			if (strlen(buf) && !strcmp(userid, buf)) {
+				result = OPH_SERVER_AUTH_ERROR;
+				break;
+			}
+		}
+		fclose(fd);
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No black list configured as '%s'\n", BLACK_LIST_FILE);
+
+	if (result)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' in the black list\n", userid);
+
+	return result;
+
+#endif
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_vo(oph_argument * args)
+{
+	if (!args)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef AUTHORIZED_VO_FILE
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s=%s' in VO list '%s'\n", args->key, args->value, AUTHORIZED_VO_FILE);
+	int result = OPH_SERVER_AUTH_ERROR;
+	char buf[OPH_MAX_STRING_SIZE];
+	FILE *fd = fopen(AUTHORIZED_VO_FILE, "r");
+	if (fd) {
+		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
+			if (strlen(buf))
+				buf[strlen(buf) - 1] = '\0';
+			if (strlen(buf) && !strcmp(args->value, buf)) {
+				result = OPH_SERVER_OK;
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
+				break;
+			}
+		}
+		fclose(fd);
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No VO found in '%s'\n", AUTHORIZED_VO_FILE);
+
+	if (result)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to find any VO in list of the authorized VO\n");
+
+	return result;
+
+#else
+
+	return OPH_SERVER_AUTH_ERROR;
+
+#endif
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_token(const char *token, const char *host, char **userid, char **new_token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+	if (userid)
+		*userid = NULL;
+	if (new_token)
+		*new_token = NULL;
+
+	int result = OPH_SERVER_OK;
+	if (oph_get_user_by_token(&tokens, token, userid, new_token)) {
+		short count;
+		char deadline[OPH_MAX_STRING_SIZE];
+		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
+			result = OPH_SERVER_AUTH_ERROR;
+		} else if ((result = oph_auth_check_token(token))) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
+			if (!count)
+				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
+		} else if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
+			if (!count)
+				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
+		} else {
+			oph_add_to_bl(&tokens, *userid, token);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+		}
+	} else
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
+	if (!result) {
+		if (!*userid) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+			result = OPH_SERVER_ERROR;
+		} else
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
+	}
+
+	return result;
+}
+
+int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinfo)
+{
+	if (!access_token)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef OPH_OPENID_ENDPOINT
+	pthread_mutex_lock(&global_flag);
+
+	char *userid = NULL;
+	if (oph_auth_get_user_from_userinfo(userinfo, &userid) || !userid) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Userinfo has to be retrieved\n");
+		if (oph_auth_token(access_token, oph_server_host, &userid, NULL) || !userid) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token will be discarded\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else if (oph_get_user_by_token(&tokens, access_token, NULL, NULL)) {
+		oph_add_to_bl(&tokens, userid, access_token);
+		oph_auth_cache_userinfo(access_token, userinfo);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+	} else
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Token found in active token list\n");	// Warning: the token should not be already buffered
+
+	pthread_mutex_unlock(&global_flag);
+
+	if (refresh_token) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The token will be refreshed after %d sec\n", oph_openid_token_timeout);
+
+		oph_refresh_token *refresh_tokens = (oph_refresh_token *) malloc(sizeof(oph_refresh_token));
+		if (refresh_tokens) {
+			refresh_tokens->access_token = strdup(access_token);
+			refresh_tokens->refresh_token = strdup(refresh_token);
+			refresh_tokens->userid = strdup(userid);
+			refresh_tokens->userinfo = strdup(userinfo);
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_t tid;
+			pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_refresh, refresh_tokens);
+#endif
+		} else
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Memory error\n");
+	}
+#endif
+
+	if (userid)
+		free(userid);
+
+	return OPH_SERVER_OK;
+}
+
 int oph_auth_user(const char *userid, const char *passwd, const char *host)
 {
-	int result = OPH_SERVER_ERROR;
-	FILE *file;
-	short count;
-
 	if (!userid || !passwd)
 		return OPH_SERVER_NULL_POINTER;
 
@@ -313,6 +1383,10 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 	char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
 	oph_sha(sha_passwd, passwd);
 #endif
+
+	int result = OPH_SERVER_ERROR;
+	FILE *file;
+	short count;
 
 	if ((file = fopen(oph_auth_file, "r"))) {
 		char buffer[OPH_MAX_STRING_SIZE], *username, *password, *savepointer = NULL;
@@ -328,7 +1402,7 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 				}
 				if (strcmp(userid, username))
 					continue;
-				if ((count = oph_is_in_bl(userid, host, deadline)) > OPH_AUTH_MAX_COUNT) {
+				if ((count = oph_is_in_bl(&bl_head, userid, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "Access of user '%s' from %s has been blocked until %s since too access attemps have been received\n", userid, host,
 					      deadline);
 					result = OPH_SERVER_AUTH_ERROR;
@@ -340,18 +1414,18 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 					result = OPH_SERVER_IO_ERROR;
 				} else if (!strcmp(passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
-					oph_drop_from_bl(userid, host);
+					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #ifdef INTERFACE_TYPE_IS_SSL
 				else if (!strcmp(sha_passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
-					oph_drop_from_bl(userid, host);
+					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #endif
 				else if (!count)
-					oph_add_to_bl(userid, host);
+					oph_add_to_bl(&bl_head, userid, host);
 				break;
 			}
 		}
@@ -990,5 +2064,32 @@ int oph_auth_check_role(oph_auth_user_role role, oph_auth_user_role permission)
 		return OPH_SERVER_AUTH_ERROR;
 	if ((role & OPH_ROLE_OWNER) && !(permission & OPH_ROLE_OWNER))
 		return OPH_SERVER_AUTH_ERROR;
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_user_enabling(const char *userid, int *result)
+{
+	if (!userid || !result)
+		return OPH_SERVER_NULL_POINTER;
+	*result = -1;
+
+	char *res = oph_get_host_by_user_in_bl(&auth_users, userid, NULL);
+	if (res) {
+		*result = (int) strtol(res, NULL, 10);
+		return OPH_SERVER_OK;
+	}
+
+	return OPH_SERVER_ERROR;
+}
+
+int oph_auth_enable_user(const char *userid, int result)
+{
+	if (!userid)
+		return OPH_SERVER_NULL_POINTER;
+
+	char res[1];
+	snprintf(res, 1, "%d", result);
+	oph_add_to_bl(&auth_users, userid, res);
+
 	return OPH_SERVER_OK;
 }

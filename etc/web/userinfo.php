@@ -18,15 +18,20 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-	$oph_auth_location = '@OPH_SERVER_LOCATION@';
-	$oph_web_server = '@OPH_WEB_SERVER@';
-	$oph_web_server_location = '@OPH_WEB_SERVER_LOCATION@';
-	$oph_web_server_secure = 'https'.strstr($oph_web_server,':');
-	$oph_ws_protocol = '@PLUGIN_DEFAULT_PROTOCOL@';
-	$oph_ws_host = '@PLUGIN_DEFAULT_HOSTNAME@';
-	$oph_ws_port = '@PLUGIN_DEFAULT_PORT@';
-	$oph_openid_endpoint = '@OPH_OPENID_ENDPOINT@';
-	$oph_openid_client_id = '@OPH_OPENID_CLIENT_ID@';
-	$oph_openid_client_secret = '@OPH_OPENID_CLIENT_SECRET@';
-	$oph_notifier = '@OPH_NOTIFIER@';
+	session_start();
+	if (isset($_SESSION['token']) && !empty($_SESSION['token']) && (!isset($_SESSION['userid']) || empty($_SESSION['userid']))) {
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/userinfo');
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer '.$_SESSION['token'])); 
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		$userinfo_json = curl_exec($ch);
+		curl_close($ch);
+		$userinfo = json_decode($userinfo_json, 1);
+		if (strlen($userinfo['error']) > 0)
+			session_destroy();
+		else {
+			$_SESSION['userid'] = $userinfo['email'];
+			$_SESSION['userinfo'] = $userinfo_json;
+		}
+	}
 ?>

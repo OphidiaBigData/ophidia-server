@@ -103,12 +103,17 @@ unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 int oph_service_status = 1;
-oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
 oph_service_info *service_info = NULL;
+#ifdef OPH_OPENID_ENDPOINT
+char *oph_openid_endpoint = 0;
+char *oph_openid_client_id = 0;
+char *oph_openid_client_secret = 0;
+unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
+#endif
 
 void set_global_values(const char *configuration_file)
 {
@@ -278,6 +283,19 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
+#ifdef OPH_OPENID_ENDPOINT
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
+		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
+	if (!(oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT, OPH_OPENID_ENDPOINT);
+		oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
+	}
+	if (!(oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID, OPH_OPENID_CLIENT_ID);
+		oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
+	}
+	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
+#endif
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 }
@@ -319,6 +337,7 @@ void cleanup()
 		free_oph_rmanager(orm);
 	if (ophDB)
 		oph_odb_free_ophidiadb(ophDB);
+	oph_auth_free();
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);

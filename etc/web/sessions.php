@@ -2,7 +2,7 @@
 
 /*
     Ophidia Server
-    Copyright (C) 2012-2016 CMCC Foundation
+    Copyright (C) 2012-2017 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-	function make_links_blank($text)
-	{
+	function make_links_blank($text) {
 		return preg_replace(
 		     array(
 			'/(?(?=<a[^>]*>.+<\/a>)
@@ -43,32 +42,26 @@
 		);
 	}
 	include('env.php');
-	session_start();
-	if (!isset($_SESSION['userid']))
-	{
+	include('userinfo.php');
+	if (!isset($_SESSION['userid'])) {
 		$_SESSION['url'] = $_SERVER['PATH_INFO'].'?'.$_SERVER['QUERY_STRING'];
-		if (!empty($_SERVER['HTTPS']) && !isset($_GET['logout']) && isset($_POST['submit']) && !empty($_POST['username']) && !empty($_POST['password']))
-		{
+		if (!empty($_SERVER['HTTPS']) && !isset($_GET['logout']) && isset($_POST['submit']) && !empty($_POST['username']) && !empty($_POST['password'])) {
 			$continue = true;
 			include('index.php');
-		}
-		else header('Location: '.$oph_web_server_secure.'/index.php');
+		} else
+			header('Location: '.$oph_web_server_secure.'/index.php');
 	}
-	if (isset($_SESSION['userid']))
-	{
-		if (isset($_SESSION['url']))
-		{
+	if (isset($_SESSION['userid'])) {
+		if (isset($_SESSION['url'])) {
 			$target = $_SESSION['url'];
 			unset($_SESSION['url']);
-		}
-		else $target = $_SERVER['PATH_INFO'];
+		} else
+			$target = $_SERVER['PATH_INFO'];
 
 		$session_code = strtok($target,"/");
-		if (isset($session_code) && !empty($session_code) && $session_code)
-		{
+		if (isset($session_code) && !empty($session_code) && $session_code) {
 			$handle = fopen($oph_auth_location . '/authz/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
-			if (!$handle)
-			{
+			if (!$handle) {
 				header('HTTP/1.0 403 Forbidden');
 ?>
 <!DOCTYPE HTML>
@@ -85,22 +78,19 @@
 				exit;
 			}
 			fclose($handle);
-		}
-		else
-		{
+		} else {
 			header('Location: '.$oph_web_server_secure.'/index.php');
 			exit;
 		}
 
 		$file = $oph_web_server_location.'/sessions'.$target;
-		if (file_exists($file))
-		{
+		if (file_exists($file)) {
 			$ext = substr(strrchr($file,'.'),1);
 			$filename = substr(strrchr($file,'/'),1);
 			$url_to_dir = $oph_web_server.'/sessions'.$target;
-			if ($url_to_dir{strlen($url_to_dir)-1} == '/') $url_to_dir = substr($url_to_dir,0,strlen($url_to_dir)-1);
-			if (is_dir($file))
-			{
+			if ($url_to_dir{strlen($url_to_dir)-1} == '/')
+				$url_to_dir = substr($url_to_dir,0,strlen($url_to_dir)-1);
+			if (is_dir($file)) {
 				$url_to_dir_p = substr($url_to_dir,0,strrpos($url_to_dir,'/'));
 				include('header.php');
 ?>
@@ -108,14 +98,10 @@
 		<HR/>
 <?php
 				if (substr(strrchr($url_to_dir,'/'),1) != $session_code)
-				{
 					print '<B><A href="'.$url_to_dir_p.'">Parent directory</A></B>';
-				}
-				if ($dh = opendir($file))
-				{
+				if ($dh = opendir($file)) {
 					$dirFiles = array();
-					while (($filen = readdir($dh)) !== false)
-					{
+					while (($filen = readdir($dh)) !== false) {
 						if ( ($filen != ".") && ($filen != "..") ) $dirFiles[] = $filen;
 					}
 					closedir($dh);
@@ -123,24 +109,16 @@
 					sort($dirFiles);
 					foreach($dirFiles as $filen) print '<LI><A href="'.$url_to_dir.'/'.$filen.'">'.$filen.'</A></LI>';
 					print '</UL>';
-				}
-				else
-				{
+				} else
 					print '<P>The directory is empty.</P>';
-				}
 				include('tailer.php');
-			}
-			else if ( ( isset($filename) && !empty($filename) && (!isset($ext) || empty($ext)) ) || ($ext == 'htm') || ($ext == 'html') )
-			{
+			} else if ( ( isset($filename) && !empty($filename) && (!isset($ext) || empty($ext)) ) || ($ext == 'htm') || ($ext == 'html') ) {
 				header('Content-Type: text/html');
 				include('header.php');
 				readfile($file);
 				include('tailer.php');
-			}
-			else if ($ext == 'json')
-			{
-				if (isset($_GET['download']))
-				{
+			} else if ($ext == 'json') {
+				if (isset($_GET['download'])) {
 					header('Content-Description: File Transfer');
 					header('Content-Type: application/json');
 					header('Content-Disposition: attachment; filename="'.basename($file).'"');
@@ -149,22 +127,18 @@
 					header('Pragma: no-cache');
 					header('Content-Length: '.filesize($file));
 					readfile($file);
-				}
-				else
-				{
+				} else {
 					$download = 1;
 					header('Content-Type: text/html');
 					include('header.php');
-					if ($file_handle = fopen($file,"r"))
-					{
-						while (!feof($file_handle))
-						{
+					if ($file_handle = fopen($file,"r")) {
+						while (!feof($file_handle)) {
 							$tok = strtok(str_replace(" ","&nbsp;",fgets($file_handle)), "\"");
-							while ($tok)
-							{
+							while ($tok) {
 								print make_links_blank($tok);
 								$tok = strtok("\"");
-								if ($tok) { print "\""; }
+								if ($tok)
+									print "\"";
 							}
 							print "<BR/>";
 						}
@@ -172,9 +146,7 @@
 					}
 					include('tailer.php');
 				}
-			}
-			else if ($ext == 'nc')
-			{
+			} else if ($ext == 'nc') {
 				header('Content-Description: File Transfer');
 				header('Content-Type: application/x-netcdf');
 				header('Content-Disposition: attachment; filename="'.basename($file).'"');
@@ -183,9 +155,7 @@
 				header('Pragma: no-cache');
 				header('Content-Length: '.filesize($file));
 				readfile($file);
-			}
-			else if ($ext == 'csv')
-			{
+			} else if ($ext == 'csv') {
 				header('Content-Description: File Transfer');
 				header('Content-Type: text/csv');
 				header('Content-Disposition: attachment; filename="'.basename($file).'"');
@@ -193,16 +163,12 @@
 				header('Pragma: no-cache');
 				header('Content-Length: '.filesize($file));
 				readfile($file);
-			}
-			else if ($ext == 'png')
-			{
+			} else if ($ext == 'png') {
 				header('Content-Type: image/png');
 				readfile($file);
-			}
-			else header('Location: '.$oph_web_server.'/sessions/'.$session_code.'/experiment');
-		}
-		else
-		{
+			} else
+				header('Location: '.$oph_web_server.'/sessions/'.$session_code.'/experiment');
+		} else {
 			header('HTTP/1.0 404 Not Found');
 ?>
 <!DOCTYPE HTML>

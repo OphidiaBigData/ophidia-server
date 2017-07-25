@@ -31,6 +31,7 @@
 #define OPH_SESSION_REAL_DIR "%s/sessions/%s"
 #define OPH_SESSION_REAL_FILE "%s/%s.session"
 #define OPH_USER_SESSION_FILE "%s/users/%s/sessions/%s.user"
+#define OPH_AUTH_TOKEN "__token__"
 
 // User parameters
 #define OPH_USER_OPENED_SESSIONS "OPH_OPENED_SESSIONS"
@@ -111,9 +112,19 @@ typedef int oph_auth_user_role;
 #define OPH_AUTH_READ_FORCE 3
 #define OPH_AUTH_WRITE 4
 
+#define OPH_AUTH_TOKEN_JSON "    \"extra\": {\n\
+        \"keys\": [\n\
+            \"access_token\"\n\
+        ],\n\
+        \"values\": [\n\
+            \"%s\"\n\
+        ]\n\
+    }"
+
 typedef struct _oph_auth_user_bl {
 	char *userid;
 	char *host;
+	char *value;
 	short count;
 	int timestamp;
 	struct _oph_auth_user_bl *next;
@@ -121,6 +132,13 @@ typedef struct _oph_auth_user_bl {
 
 int oph_load_file(const char *filename, oph_argument ** args);
 int oph_load_file2(const char *filename, oph_argument ** args);
+int oph_auth_token(const char *token, const char *host, char **userid, char **new_token);
+int oph_auth_read_token(const char *token, oph_argument ** args);
+int oph_auth_is_user_black_listed(const char *userid);
+int oph_auth_vo(oph_argument * args);
+int oph_auth_user_enabling(const char *userid, int *result);
+int oph_auth_enable_user(const char *userid, int result);
+int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinifo);
 int oph_auth_user(const char *userid, const char *passwd, const char *host);
 int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb);
 int oph_save_user(const char *userid, oph_argument * args);
@@ -128,6 +146,7 @@ int oph_auth_session(const char *userid, const char *sessionid, const char *serv
 int oph_save_session(const char *userid, const char *sessionid, oph_argument * args, int type);
 int oph_save_user_session(const char *userid, const char *sessionid, oph_argument * args);
 int oph_get_session_code(const char *sessionid, char *code);
+int oph_auth_free();
 
 oph_auth_user_role oph_string_to_role(const char *role);
 oph_auth_user_role oph_code_role(const char *role);
