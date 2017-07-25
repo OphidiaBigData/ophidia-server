@@ -31,6 +31,7 @@
 #include "oph_ophidiadb.h"
 #include "oph_auth.h"
 #include "oph_task_parser_library.h"
+#include "oph_service_info.h"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 #include <threads.h>
@@ -70,7 +71,7 @@ char *oph_web_server = 0;
 char *oph_web_server_location = 0;
 char *oph_operator_client = 0;
 char *oph_ip_target_host = 0;
-char oph_subm_ssh = 1;
+char oph_subm_ssh = 0;
 char *oph_subm_user = 0;
 char *oph_subm_user_publk = 0;
 char *oph_subm_user_privk = 0;
@@ -87,6 +88,7 @@ ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
+oph_service_info *service_info = NULL;
 
 void set_global_values(const char *configuration_file)
 {
@@ -270,6 +272,8 @@ void cleanup()
 	soap_end(psoap);
 	soap_done(psoap);	/* MUST call before CRYPTO_thread_cleanup */
 	globus_module_deactivate(GLOBUS_GSI_GSSAPI_MODULE);
+	if (service_info)
+		free(service_info);
 	if (logfile) {
 		fclose(logfile);
 		fclose(stdout);
@@ -653,7 +657,7 @@ int main(int argc, char **argv)
 				oph_log_file_name = optarg;
 				break;
 			case 'm':
-				oph_subm_ssh = 0;
+				oph_subm_ssh = 1;
 				break;
 			case 'p':
 				oph_server_port = optarg;

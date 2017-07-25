@@ -25,6 +25,7 @@
 #include "oph_plugin.h"
 #include "oph_memory_job.h"
 #include "oph_filters.h"
+#include "oph_service_info.h"
 
 #include <unistd.h>
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -38,6 +39,7 @@
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_cond_t termination_flag;
+pthread_cond_t waiting_flag;
 #endif
 
 char *oph_server_location = 0;
@@ -56,6 +58,7 @@ char *oph_web_server_location = 0;
 char *oph_txt_location = 0;
 char *oph_operator_client = 0;
 char *oph_ip_target_host = 0;
+char oph_subm_ssh = 0;
 char *oph_subm_user = 0;
 char *oph_subm_user_publk = 0;
 char *oph_subm_user_privk = 0;
@@ -68,6 +71,7 @@ oph_rmanager *orm = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
+oph_service_info *service_info = NULL;
 
 void set_global_values(const char *configuration_file)
 {
@@ -119,6 +123,9 @@ void cleanup()
 		free(oph_base_src_path);
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_destroy(&global_flag);
+	pthread_mutex_destroy(&libssh2_flag);
+	pthread_cond_destroy(&termination_flag);
+	pthread_cond_destroy(&waiting_flag);
 #endif
 	oph_tp_end_xml_parser();
 }
@@ -2728,36 +2735,12 @@ int _check_oph_server(const char *function, int option)
 
 			switch (option) {
 
-				case 12:
-				case 13:
-				case 16:
-				case 18:
-				case 20:
-					if (res != OPH_SERVER_NO_RESPONSE) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						goto _EXIT_2;
-					}
-					break;
-
-				case 17:
+				default:
 					if (res != OPH_SERVER_ERROR) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						goto _EXIT_2;
 					}
 					break;
-
-				case 19:
-					if (res != OPH_SERVER_SYSTEM_ERROR) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						goto _EXIT_2;
-					}
-					break;
-
-				default:
-					if (res) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
-						goto _EXIT_2;
-					}
 			}
 
 			if (option < filter_num)
@@ -2770,11 +2753,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 4) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2802,11 +2785,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 7) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2834,11 +2817,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 6) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2866,11 +2849,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 1) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2918,11 +2901,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 3) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2949,11 +2932,11 @@ int _check_oph_server(const char *function, int option)
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
-						if (wf->tasks[0].light_tasks_num != 7) {
+						if (wf->tasks[0].light_tasks_num) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
 							goto _EXIT_2;
 						}
-						if (!wf->tasks[0].light_tasks) {
+						if (wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -2975,8 +2958,8 @@ int _check_oph_server(const char *function, int option)
 						}
 						break;
 
-					case 18:
-						if (!output_list || (output_list_dim != 2)) {
+					default:
+						if (output_list || output_list_dim) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
 							goto _EXIT_2;
 						}
@@ -2985,21 +2968,6 @@ int _check_oph_server(const char *function, int option)
 							goto _EXIT_2;
 						}
 						if (wf->tasks[0].light_tasks) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
-							goto _EXIT_2;
-						}
-						break;
-
-					default:
-						if (output_list || output_list_dim) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Object list is not empty: it contains %d objects\n", output_list_dim);
-							goto _EXIT_2;
-						}
-						if (wf->tasks[0].light_tasks_num != 2) {
-							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad number of objects returned from the function: %d\n", wf->tasks[0].light_tasks_num);
-							goto _EXIT_2;
-						}
-						if (!wf->tasks[0].light_tasks) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad object list returned from the function\n");
 							goto _EXIT_2;
 						}
@@ -4227,30 +4195,18 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 1:
-				res = openDir(NULL, 0, NULL, NULL, NULL, NULL);
-				break;
-
-			case 2:
-				res = openDir("", 0, &c, &buffer, NULL, NULL);
-				break;
-
-			case 3:
-				res = openDir("testdata/a", -1, &c, &buffer, "c*", NULL);
-				break;
-
-			case 4:
 				res = _oph_mf_parse_KV(NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 				break;
 
-			case 5:
+			case 2:
 				res = _oph_mf_parse_query(NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 				break;
 
-			case 6:
+			case 3:
 				_oph_wait(NULL);
 				break;
 
-			case 7:
+			case 4:
 				{
 					oph_notify_data *data = (oph_notify_data *) malloc(sizeof(oph_notify_data));
 					if (!data)
@@ -4277,7 +4233,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 8:
+			case 5:
 				{
 					oph_notify_data *data = (oph_notify_data *) malloc(sizeof(oph_notify_data));
 					if (!data)
@@ -4322,7 +4278,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 9:
+			case 6:
 				{
 					// Tasks
 					wf->tasks_num = wf->residual_tasks_num = 1;
@@ -4347,11 +4303,11 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 10:
+			case 7:
 				res = oph_extract_from_json(NULL, "");
 				break;
 
-			case 11:
+			case 8:
 				{
 					char *key = strdup("");
 					res = oph_extract_from_json(&key, "");
@@ -4360,7 +4316,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 12:
+			case 9:
 				{
 					char *key = strdup("a.b.c.d");
 					res = oph_extract_from_json(&key, "");
@@ -4369,7 +4325,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 13:
+			case 10:
 				{
 					char *key = strdup("a.b.c(d");
 					res = oph_extract_from_json(&key, "");
@@ -4378,7 +4334,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 14:
+			case 11:
 				{
 					char *key = strdup("a(b,c");
 					res = oph_extract_from_json(&key, "");
@@ -4387,7 +4343,7 @@ int _check_oph_server(const char *function, int option)
 				}
 				break;
 
-			case 15:
+			case 12:
 				{
 					char *key = strdup("a(b,c)");
 					res = oph_extract_from_json(&key, "");
@@ -4402,9 +4358,8 @@ int _check_oph_server(const char *function, int option)
 		switch (option) {
 
 			case 0:
-			case 3:
-			case 7:
-			case 8:
+			case 4:
+			case 5:
 				if (res) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 					goto _EXIT_3;
@@ -4450,6 +4405,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
+	pthread_cond_init(&waiting_flag, NULL);
 #endif
 
 	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 1;
@@ -4502,7 +4458,7 @@ int main(int argc, char *argv[])
 	}
 
 	int test_mode_num = 11;
-	int test_num[] = { 12, 2, 32, 6, 13, 53, 3, 15, 14, 46, 16 };
+	int test_num[] = { 12, 2, 32, 6, 13, 53, 3, 15, 14, 46, 13 };
 	char *test_name[] = { "oph_if_impl", "oph_else_impl", "oph_for_impl", "oph_endfor_impl", "oph_serve_flow_control_operator", "oph_check_for_massive_operation", "oph_set_impl", "oph_input_impl",
 		"oph_wait_impl", "oph_filters", "misc"
 	};

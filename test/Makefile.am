@@ -235,7 +235,7 @@ liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_task_parser_library -lop
 
 LIBRARY += liboph_massive_operations.la
 liboph_massive_operations_la_SOURCES = ../src/oph_massive_operations.c
-liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(CODE_COVERAGE_CFLAGS)
 liboph_massive_operations_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
 liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters
 

@@ -1057,8 +1057,6 @@ int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 	return OPH_SERVER_OK;
 }
 
-#endif
-
 int oph_auth_check_token(const char *token)
 {
 	if (!token)
@@ -1094,6 +1092,8 @@ int oph_auth_check_token(const char *token)
 
 	return OPH_SERVER_OK;
 }
+
+#endif
 
 int oph_auth_get_user_from_token(const char *token, char **userid)
 {
@@ -1297,6 +1297,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
 			result = OPH_SERVER_AUTH_ERROR;
+#ifdef OPH_OPENID_ENDPOINT
 		} else if ((result = oph_auth_check_token(token))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
 			if (!count)
@@ -1305,6 +1306,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
+#endif
 		} else {
 			oph_add_to_bl(&tokens, *userid, token);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
@@ -1363,10 +1365,11 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 		} else
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Memory error\n");
 	}
-#endif
 
 	if (userid)
 		free(userid);
+
+#endif
 
 	return OPH_SERVER_OK;
 }
