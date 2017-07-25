@@ -16,14 +16,20 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPH_UTILS_H
-#define OPH_UTILS_H
+#ifndef OPH_SERVICE_INFO_H
+#define OPH_SERVICE_INFO_H
 
-#include "soapStub.h"
-#include "oph_server_error.h"
+typedef struct _oph_service_info {
+	unsigned int incoming_requests;
+	unsigned int accepted_requests;
+	unsigned int authorized_requests;
+	unsigned int incoming_workflows;
+	unsigned int accepted_workflows;
+	unsigned int incoming_tasks;
+	unsigned int submitted_tasks;
+	unsigned int incoming_notifications;
+	unsigned int incoming_responses;
+	unsigned int outcoming_responses;
+} oph_service_info;
 
-int oph_mkdir(const char *name);
-int oph_mkdir2(const char *name, mode_t mode);
-int oph_http_get(struct soap *soap);
-
-#endif				/* OPH_UTILS_H */
+#endif				/* OPH_SERVICE_INFO_H */

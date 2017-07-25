@@ -20,8 +20,11 @@
 
 #include "oph_auth.h"
 #include "oph_known_operators.h"
+#include "oph_service_info.h"
 
 #include <mysql.h>
+
+#define OPH_NULL_FILENAME "/dev/null"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -32,6 +35,8 @@ extern char *oph_operator_client;
 extern char *oph_json_location;
 extern char *oph_server_port;
 extern oph_rmanager *orm;
+extern char *oph_subm_user;
+extern oph_service_info *service_info;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -99,6 +104,12 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->submitted_tasks++;
+	pthread_mutex_unlock(&global_flag);
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_command_data *data = (oph_command_data *) malloc(sizeof(oph_command_data));
 	if (!data)
@@ -210,6 +221,40 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 			}
 			strncpy(orm->subm_args, position + 1, strlen(position + 1) + 1);
 			orm->subm_args[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
+			if (!(orm->subm_username = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_username, position + 1, strlen(position + 1) + 1);
+			orm->subm_username[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
+			if (!(orm->subm_group = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_group, position + 1, strlen(position + 1) + 1);
+			orm->subm_group[strlen(position + 1)] = '\0';
 		}
 
 		fgetc(file);
@@ -382,6 +427,8 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->name = NULL;
 	orm->subm_cmd = NULL;
 	orm->subm_args = NULL;
+	orm->subm_username = NULL;
+	orm->subm_group = NULL;
 	orm->subm_ncores = NULL;
 	orm->subm_interact = NULL;
 	orm->subm_batch = NULL;
@@ -468,7 +515,7 @@ int oph_read_job_queue(int **list, unsigned int *n)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char **cmd)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -476,24 +523,45 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	}
 
 	int len = 0;
-	len = strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request) + 128;	// 128 is a very big number to include the number of cores and the name of the ophidia application client
+	len =
+	    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) +
+	    1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 +
+	    strlen(orm->subm_jobname) + 1 + strlen(request);
+	if (username)
+		len += strlen(username);
+	else if (oph_subm_user) {
+		username = oph_subm_user;
+		len += strlen(username);
+	} else {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "No username selected\n");
+		return RMANAGER_NULL_PARAM;
+	}
+	len += 128;		// 128 is a very big number to include the number of cores and the name of the ophidia application client
 
 	if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 		return RMANAGER_MEMORY_ERROR;
 	}
 
+	char subm_username[1 + strlen(orm->subm_username) + strlen(username)];
+	if (strlen(orm->subm_username) > 0)
+		sprintf(subm_username, "%s%s", orm->subm_username, username);
+	else			// Skip username for backward compatibility
+		*subm_username = 0;
+
 	if (!strcasecmp(orm->name, "slurm")) {
 		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s \"%s\" &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile,
-				orm->subm_stderror, outfile, oph_operator_client, request);
+			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores, orm->subm_interact,
+				orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s &", orm->subm_cmd, orm->subm_args, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile,
-				orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client, request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores,
+				orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client,
+				request, orm->subm_postfix);
 	} else {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
 		return RMANAGER_ERROR;
 	}
+
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 	return RMANAGER_SUCCESS;
@@ -516,6 +584,14 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_args) {
 		free(orm->subm_args);
 		orm->subm_args = NULL;
+	}
+	if (orm->subm_username) {
+		free(orm->subm_username);
+		orm->subm_username = NULL;
+	}
+	if (orm->subm_group) {
+		free(orm->subm_group);
+		orm->subm_group = NULL;
 	}
 	if (orm->subm_ncores) {
 		free(orm->subm_ncores);
@@ -613,9 +689,14 @@ int oph_get_result_from_file_unsafe(char *filename, char **response)
 }
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
-		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output)
+		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
+
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->incoming_tasks++;
+	pthread_mutex_unlock(&global_flag);
 
 	if (exit_code)
 		*exit_code = OPH_ODB_STATUS_COMPLETED;
@@ -649,13 +730,18 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	}
 
 	char outfile[OPH_MAX_STRING_SIZE];
-	char code[OPH_MAX_STRING_SIZE];
-	if (oph_get_session_code(sessionid, code)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
-		return OPH_SERVER_ERROR;
+	snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+	if (get_debug_level() == LOG_DEBUG) {
+		char code[OPH_MAX_STRING_SIZE];
+		if (!oph_get_session_code(sessionid, code)) {
+			if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
+				snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+				oph_mkdir(outfile);
+				snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
+			} else
+				snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+		}
 	}
-	snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
-
 #ifdef LOCAL_FRAMEWORK
 	char command[OPH_MAX_STRING_SIZE];
 #ifdef USE_MPI
@@ -675,7 +761,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if (oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, &cmd)) {
+	if (oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 		if (cmd) {
 			free(cmd);

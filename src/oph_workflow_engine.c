@@ -43,10 +43,13 @@ extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
+extern char *oph_subm_user;
+extern char *oph_txt_location;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -562,13 +565,14 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
+		char mk_user_dir = oph_subm_user && strcmp(wf->username, oph_subm_user);
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir(name)) {
+		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_EXPORT_FOLDER_TEMPLATE, oph_web_server_location, hash);
-		if (oph_mkdir(name)) {
+		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
@@ -838,8 +842,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: parsing task '%s' for massive operations\n", ttype, jobid, task->name);
 		if ((res =
-		     oph_mf_parse_query_unsafe(&datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB,
-					       query)))
+		     oph_mf_parse_query_unsafe(state, wf, task_index, &datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running,
+					       src_path ? 1 : 0, oDB, query)))
 			return res;
 
 		if (datacube_inputs) {
@@ -850,18 +854,21 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation\n", ttype, jobid, task->name);
 				task->light_tasks_num = task->residual_light_tasks_num = number;
 				task->light_tasks = (oph_workflow_light_task *) malloc(number * sizeof(oph_workflow_light_task));
+
+				int add_measure = src_path && !measure_key && measure_name, arguments_num;
 				for (i = 0; i < (int) number; ++i) {
+					arguments_num = task->arguments_num + (add_measure && measure_name[i] ? 1 : 0);
 					task->light_tasks[i].idjob = 0;
 					task->light_tasks[i].markerid = 0;
 					task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
 					task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
-					task->light_tasks[i].arguments_keys = (char **) malloc(task->arguments_num * sizeof(char *));
-					task->light_tasks[i].arguments_values = (char **) malloc(task->arguments_num * sizeof(char *));
-					task->light_tasks[i].arguments_num = task->arguments_num;
+					task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
+					task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
+					task->light_tasks[i].arguments_num = arguments_num;
 					task->light_tasks[i].response = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
 						task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
-						if ((task->arguments_keys[j] == src_path_key) || (task->arguments_keys[j] == datacube_input_key))
+						if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
 							task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
 						else if (task->arguments_keys[j] == measure_key) {
 							if (measure_name && measure_name[i])
@@ -870,6 +877,10 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 								task->light_tasks[i].arguments_values[j] = strdup(measure);
 						} else
 							task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
+					}
+					if (add_measure && measure_name[i]) {
+						task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);
+						task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
 					}
 				}
 				for (i = 0; i < (int) number; ++i)
@@ -1466,7 +1477,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 					if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status);
+					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
+						 wf->tasks[i].markerid);
 
 					request_data_dim[k] = 1;
 					request_data[k] = (oph_request_data *) malloc(sizeof(oph_request_data));
@@ -1496,7 +1508,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 				if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status);
+				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
+					 wf->tasks[i].markerid);
 
 				if (!oph_odb_create_job_unsafe(oDB, sss ? sss : "-", task_tbl, wf->tasks[i].light_tasks_num ? wf->tasks[i].light_tasks_num : -1, &odb_jobid))
 					oph_odb_abort_job_fast(odb_jobid, oDB);
@@ -2123,7 +2136,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k]->output_json = strdup(output_json);
 
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, odb_jobid,
-					 wf->tasks[i].status);
+					 wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
 				request_data[k]->error_notification = strdup(submission_string_ext);
 
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is finished\n", ttype, jobid, wf->tasks[i].name);
@@ -2137,7 +2150,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 				if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status);
+				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
+					 wf->tasks[i].markerid);
 
 				if (submission_string)
 					free(submission_string);
@@ -2182,7 +2196,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 						}
 						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
-							 wf->tasks[i].light_tasks[j].status);
+							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = strdup(submission_string_ext);
@@ -2195,7 +2209,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: anew markerid cannot be created... aborting\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
-							 wf->tasks[i].light_tasks[j].status);
+							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = strdup(submission_string_ext);
@@ -2213,7 +2227,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: submission string cannot be loaded\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
-							 wf->tasks[i].light_tasks[j].status);
+							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						if (!oph_odb_create_job_unsafe(oDB, sss ? sss : "-", task_tbl, -1, &odb_jobid))
 							oph_odb_abort_job_fast(odb_jobid, oDB);
@@ -2237,7 +2251,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save job parameters into OphidiaDB. Check access parameters.\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
-							 wf->tasks[i].light_tasks[j].status);
+							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						if (submission_string)
 							free(submission_string);
@@ -2270,7 +2284,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].delay = 0;
 
 					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
-						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR);
+						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 					request_data[k][j].error_notification = strdup(submission_string_ext);
 
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
@@ -2319,7 +2333,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				}
 
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
-					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR);
+					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
 				request_data[k]->error_notification = strdup(submission_string_ext);
 
 				wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
@@ -2370,7 +2384,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				    if ((response =
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
-							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output)) != OPH_SERVER_OK) {
+							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output, username)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -2569,6 +2583,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
+	*response = OPH_SERVER_OK;
 
 	if (!state) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: state not specified. Skipping the notification\n", ttype, jobid);
@@ -2586,8 +2601,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 
-	char *ctmp;
-	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, outputs_num = 0;
+	char *ctmp, *sessionid = NULL;
+	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
 	char **outputs_keys = NULL;
 	char **outputs_values = NULL;
 	short outputs_index[counter];
@@ -2611,14 +2626,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			task_index = strtol(ctmp, NULL, 10);
 		else if (!strncmp(aitem->key, OPH_ARG_LIGHTTASKINDEX, OPH_MAX_STRING_SIZE))
 			light_task_index = strtol(ctmp, NULL, 10);
+		else if (!strncmp(aitem->key, OPH_ARG_SESSIONID, OPH_MAX_STRING_SIZE))
+			sessionid = strdup(ctmp);
+		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
+			marker_id = strtol(ctmp, NULL, 10);
 		else {
 			outputs_num++;
 			outputs_index[ii] = 1;
 		}
 	}
-	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0)) {
+	if ((odb_jobid < 0) || (odb_status < 0) || (odb_parentid < 0) || (task_index < 0) || (marker_id < 0)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: missing mandatory parameters in '%s'\n", ttype, jobid, data);
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		if (sessionid)
+			free(sessionid);
 		oph_cleanup_args(&args);
 		return SOAP_OK;
 	}
@@ -2629,6 +2650,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!outputs_keys) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: error in alloc memory for output keys\n", ttype, jobid);
 			*response = OPH_SERVER_SYSTEM_ERROR;
+			if (sessionid)
+				free(sessionid);
 			oph_cleanup_args(&args);
 			return SOAP_OK;
 		}
@@ -2636,6 +2659,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!outputs_keys) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: error in alloc memory for output values\n", ttype, jobid);
 			*response = OPH_SERVER_SYSTEM_ERROR;
+			if (sessionid)
+				free(sessionid);
 			oph_cleanup_args(&args);
 			if (outputs_keys)
 				free(outputs_keys);
@@ -2697,7 +2722,25 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 			oph_output_data_free(outputs_keys, outputs_num);
 			oph_output_data_free(outputs_values, outputs_num);
+			if (sessionid)
+				free(sessionid);
 			return SOAP_OK;
+	}
+
+	if ((get_debug_level() == LOG_DEBUG) && (status == OPH_ODB_STATUS_ERROR)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json ? output_json : "No JSON Response");
+		char outfile[OPH_MAX_STRING_SIZE], code[OPH_MAX_STRING_SIZE], buffer[OPH_MAX_STRING_SIZE];
+		if (sessionid && !oph_get_session_code(sessionid, code)) {
+			snprintf(buffer, OPH_MAX_STRING_SIZE, "%d", marker_id);
+			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, buffer);	// multi user approach is not supported
+			FILE *log = fopen(outfile, "r");
+			if (log) {
+				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
+				fclose(log);
+			} else
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found\n", ttype, jobid, outfile);
+		}
 	}
 
 	char session_code[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
@@ -2715,9 +2758,30 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);
+		if (sessionid)
+			free(sessionid);
 		return SOAP_OK;
 	}
 	wf = item->wf;
+	if (strcmp(wf->sessionid, sessionid))
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: sessionid in memory is different from sessionid in notification\n", ttype, jobid);
+	if (sessionid)
+		free(sessionid);
+
+	if (!wf->tasks[task_index].idjob) {	// A massive operation is waiting a response
+		if (status == OPH_ODB_STATUS_COMPLETED) {
+			if (wf->tasks[task_index].response)
+				free(wf->tasks[task_index].response);
+			wf->tasks[task_index].response = strdup(output_json);
+		}
+		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
+			pthread_cond_broadcast(&waiting_flag);
+		pthread_mutex_unlock(&global_flag);
+		oph_output_data_free(outputs_keys, outputs_num);
+		oph_output_data_free(outputs_values, outputs_num);
+		return SOAP_OK;
+	}
+
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 
@@ -5499,7 +5563,8 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 											}
 										if (k >= n) {
 											snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j,
-												 temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED);
+												 temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid,
+												 temp->wf->tasks[i].light_tasks[j].markerid);
 											error_notification[nn++] = strdup(submission_string_ext);
 											if (nn >= OPH_SERVER_POLL_ITEMS)
 												break;
@@ -5515,7 +5580,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 									}
 								if (k >= n) {
 									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
-										 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED);
+										 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid, temp->wf->tasks[i].markerid);
 									error_notification[nn++] = strdup(submission_string_ext);
 									if (nn >= OPH_SERVER_POLL_ITEMS)
 										break;
@@ -5682,6 +5747,174 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 
 	if (oph_odb_destroy_hp(oDB, wf->host_partition))
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
+{
+	if (!wf || !wpr) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*wpr = 0.0;
+	if (cdate)
+		*cdate = NULL;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	int i, j, k, n = 0, try_in_list = list.size, nfound;
+	for (i = 0; i <= wf->tasks_num; ++i)
+		if (wf->tasks[i].name) {
+			if (wf->tasks[i].light_tasks_num) {
+				n += wf->tasks[i].light_tasks_num;
+				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
+					nfound = 1;
+					if (try_in_list) {
+						for (k = 0; k < list.size; ++k)
+							if (list.id[k] && (list.id[k] == wf->tasks[i].light_tasks[j].idjob)) {
+								*wpr += (double) list.pid[k] / (double) list.wid[k];
+								list.id[k] = nfound = 0;
+								try_in_list--;
+								break;
+							}
+					}
+					if (nfound && (wf->tasks[i].light_tasks[j].status >= (int) OPH_ODB_STATUS_COMPLETED))
+						++ * wpr;
+				}
+			} else {
+				n++;
+				nfound = 1;
+				if (try_in_list) {
+					for (k = 0; k < list.size; ++k)
+						if (list.id[k] && (list.id[k] == wf->tasks[i].idjob)) {
+							*wpr += (double) list.pid[k] / (double) list.wid[k];
+							list.id[k] = nfound = 0;
+							try_in_list--;
+							break;
+						}
+				}
+				if (nfound && (wf->tasks[i].status >= (int) OPH_ODB_STATUS_COMPLETED))
+					++ * wpr;
+			}
+		}
+	*wpr /= n;
+
+	oph_odb_free_ophidiadb_list(&list);
+
+	if (cdate) {
+		oph_odb_initialize_ophidiadb_list(&list);
+
+		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+		if (oph_odb_retrieve_list(&oDB, query, &list)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		if (!list.size || (list.size > 1)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		*cdate = strdup(list.ctime[0]);
+		if (!*cdate) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s'.\n", wf->name);
+			oph_odb_free_ophidiadb_list(&list);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+
+		oph_odb_free_ophidiadb_list(&list);
+	}
+
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate)
+{
+
+	if (!sessionid || !workflowid || !status || !cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	*status = 0;
+	*cdate = NULL;
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (oph_odb_read_config_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	if (oph_odb_connect_to_ophidiadb(&oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	ophidiadb_list list;
+	oph_odb_initialize_ophidiadb_list(&list);
+
+	char query[OPH_MAX_STRING_SIZE];
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, sessionid, workflowid);
+	if (oph_odb_retrieve_list(&oDB, query, &list)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	if (!list.size || (list.size > 1)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+
+	*status = strdup(list.name[0]);
+	if (!*status) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	*cdate = strdup(list.ctime[0]);
+	if (!*cdate) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate memory for creation date of workflow '%s#%d'.\n", sessionid, workflowid);
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	oph_odb_free_ophidiadb_list(&list);
+	oph_odb_disconnect_from_ophidiadb(&oDB);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

@@ -43,6 +43,8 @@
 #define MYSQL_RETRIEVE_MARKER_BY_WORKFLOW "SELECT markerid, job.creationdate FROM job INNER JOIN session ON job.idsession = session.idsession WHERE sessionid = '%s' AND workflowid = %d AND idparent IS NULL ORDER BY markerid"
 #define MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS "SELECT jobc.markerid, jobc.creationdate FROM (job AS jobc LEFT JOIN job AS jobp ON jobc.idparent = jobp.idjob) INNER JOIN session ON jobc.idsession = session.idsession WHERE sessionid = '%s' AND jobc.workflowid = %d AND jobp.idparent IS NULL ORDER BY jobc.markerid"
 #define MYSQL_RETRIEVE_WORKFLOW_BY_MARKER "SELECT workflowid, job.creationdate FROM job INNER JOIN session ON job.idsession = session.idsession WHERE sessionid = '%s' AND markerid = %d"
+#define MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW "SELECT job.idjob, job.creationdate, NULL, hostxdatacube*dbmsxhost*dbxdbms*fragmentxdb AS fragment, COUNT(*) AS current FROM session INNER JOIN job ON session.idsession = job.idsession INNER JOIN task ON job.idjob = task.idjob INNER JOIN datacube ON idoutputcube = datacube.iddatacube INNER JOIN fragment ON datacube.iddatacube = fragment.iddatacube WHERE sessionid='%s' AND workflowid=%d GROUP BY fragment.iddatacube;"
+#define MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW "SELECT idjob, job.creationdate, status, workflowid FROM session INNER JOIN job ON session.idsession = job.idsession WHERE sessionid='%s' AND workflowid=%d AND idparent IS NULL;"
 
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "LOCK TABLES session WRITE; UPDATE session SET label = '%s' WHERE idsession = %d; UNLOCK TABLES;"
 

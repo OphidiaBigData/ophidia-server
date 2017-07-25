@@ -57,6 +57,8 @@
 #define OPH_ARG_LINK "link"
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
 
+#define OPH_SERVER_REQUEST_FLAG "jobid=0;"
+
 #define OPH_ARG_MODE_SYNC "sync"
 #define OPH_ARG_MODE_ASYNC "async"
 #define OPH_ARG_MODE_DEFAULT OPH_ARG_MODE_ASYNC

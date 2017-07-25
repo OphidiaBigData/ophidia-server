@@ -46,6 +46,7 @@ struct soap *psoap;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_cond_t termination_flag;
+pthread_cond_t waiting_flag;
 #endif
 
 char *oph_server_location = 0;
@@ -69,6 +70,7 @@ char *oph_web_server = 0;
 char *oph_web_server_location = 0;
 char *oph_operator_client = 0;
 char *oph_ip_target_host = 0;
+char oph_subm_ssh = 1;
 char *oph_subm_user = 0;
 char *oph_subm_user_publk = 0;
 char *oph_subm_user_privk = 0;
@@ -288,6 +290,7 @@ void cleanup()
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);
 	pthread_cond_destroy(&termination_flag);
+	pthread_cond_destroy(&waiting_flag);
 #endif
 	oph_tp_end_xml_parser();
 }
@@ -622,6 +625,7 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
+	pthread_cond_init(&waiting_flag, NULL);
 #endif
 
 	struct soap soap, *tsoap = NULL;
@@ -637,7 +641,7 @@ int main(int argc, char **argv)
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "dhl:p:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "dhl:mp:vwxz")) != -1) {
 		switch (ch) {
 			case 'd':
 				msglevel = LOG_DEBUG;
@@ -647,6 +651,9 @@ int main(int argc, char **argv)
 				return 0;
 			case 'l':
 				oph_log_file_name = optarg;
+				break;
+			case 'm':
+				oph_subm_ssh = 0;
 				break;
 			case 'p':
 				oph_server_port = optarg;
