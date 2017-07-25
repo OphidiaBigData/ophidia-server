@@ -2359,6 +2359,8 @@ int _check_oph_server(const char *function, int option)
 			char **output_list = NULL, *query = NULL;
 			int res, j, output_list_dim = 0;
 
+			pthread_mutex_lock(&global_flag);
+
 			switch (option - filter_num) {
 				case 0:
 					res = oph_check_for_massive_operation(NULL, 'T', 0, NULL, 0, &oDB, &output_list, &output_list_dim, &query);
@@ -2404,6 +2406,8 @@ int _check_oph_server(const char *function, int option)
 				default:
 					res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, &query);
 			}
+
+			pthread_mutex_unlock(&global_flag);
 
 			switch (option) {
 				case 1:
@@ -2731,7 +2735,9 @@ int _check_oph_server(const char *function, int option)
 			char **output_list = NULL;
 			int res, j, output_list_dim = 0;
 
+			pthread_mutex_lock(&global_flag);
 			res = oph_check_for_massive_operation(NULL, 'T', 0, wf, 0, &oDB, &output_list, &output_list_dim, NULL);
+			pthread_mutex_unlock(&global_flag);
 
 			switch (option) {
 
