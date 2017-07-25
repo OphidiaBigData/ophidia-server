@@ -44,6 +44,7 @@ extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
 extern char *oph_subm_user;
+extern char *oph_txt_location;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -2726,8 +2727,19 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			return SOAP_OK;
 	}
 
-	if ((status == OPH_ODB_STATUS_ERROR) && output_json)
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json);
+	if ((get_debug_level() == LOG_DEBUG) && (status == OPH_ODB_STATUS_ERROR)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json ? output_json : "No JSON Response");
+		char outfile[OPH_MAX_STRING_SIZE], code[OPH_MAX_STRING_SIZE], buffer[OPH_MAX_STRING_SIZE];
+		if (!oph_get_session_code(sessionid, code)) {
+			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, marker_id);	// multi user approach is not supported
+			FILE *log = fopen(outfile, "r");
+			if (log) {
+				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
+				fclose(log);
+			}
+		}
+	}
 
 	char session_code[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
 	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 1, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0;
