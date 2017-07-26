@@ -112,7 +112,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 	// Filtering
 	char query[OPH_MAX_STRING_SIZE];
 	if (!is_src_path) {
-		if (oph_filter_unsafe(task_tbl, query, cwd, sessionid, oDB)) {
+		if (oph_filter_unsafe(task_tbl, query, cwd ? cwd : OPH_MF_ROOT_FOLDER, sessionid, oDB)) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create filtering query.\n");
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
@@ -155,13 +155,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_ERROR;
 		}
-		if (*path != OPH_MF_ROOT_FOLDER[0]) {
-			if (!cdd) {
-				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter '%s'.\n", OPH_ARG_CDD);
-				if (task_tbl)
-					hashtbl_destroy(task_tbl);
-				return OPH_SERVER_ERROR;
-			}
+		if (cdd && (*path != OPH_MF_ROOT_FOLDER[0])) {
 			if (*cdd != OPH_MF_ROOT_FOLDER[0]) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' must begin with '/'.\n", OPH_ARG_CDD);
 				if (task_tbl)
@@ -186,25 +180,21 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Path to files for massive operation: %s\n", path);
 
 		char dpath[OPH_MAX_STRING_SIZE];
+		*dpath = 0;
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_PATH) && strlen(hashtbl_get(task_tbl, OPH_MF_ARG_PATH)))
 			snprintf(dpath, OPH_MAX_STRING_SIZE, "dpath=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_PATH));
-		else
-			*dpath = 0;
 		char file[OPH_MAX_STRING_SIZE];
+		*file = 0;
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_FILE) && strlen(hashtbl_get(task_tbl, OPH_MF_ARG_FILE)))
 			snprintf(file, OPH_MAX_STRING_SIZE, "file=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_FILE));
-		else
-			*file = 0;
 		char recursive[OPH_MAX_STRING_SIZE];
+		*recursive = 0;
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE))
 			snprintf(recursive, OPH_MAX_STRING_SIZE, "recursive=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE));
-		else
-			*recursive = 0;
 		char depth[OPH_MAX_STRING_SIZE];
+		*depth = 0;
 		if (hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH))
 			snprintf(depth, OPH_MAX_STRING_SIZE, "depth=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH));
-		else
-			*depth = 0;
 		char command[OPH_MAX_STRING_SIZE];
 		snprintf(command, OPH_MAX_STRING_SIZE, OPH_MF_COMMAND "" OPH_SERVER_REQUEST_FLAG, dpath, file, recursive, depth, cdd, sessionid, wf->workflowid, wf->tasks[task_index].markerid,
 			 task_index, wf->username, wf->userrole, wf->idjob);
@@ -216,11 +206,11 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		char *sessionid = strdup(wf->sessionid);
 		char *username = strdup(wf->username);
 
-		int response = 0;
+		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, username);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, username);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
@@ -402,9 +392,7 @@ int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, 
 		}
 		snprintf(_task_string, end_task - task_string + 2, "%s", task_string);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extract '%s'\n", _task_string);
-		if ((result =
-		     _oph_mf_parse_KV(state, workflow, task_index, &datacube_inputs_, &measure_name_, &counter_, _task_string, cwd ? cwd : OPH_MF_ROOT_FOLDER, cdd ? cdd : OPH_MF_ROOT_FOLDER,
-				      sessionid, &running_, is_src_path, oDB, query, flag))) {
+		if ((result = _oph_mf_parse_KV(state, workflow, task_index, &datacube_inputs_, &measure_name_, &counter_, _task_string, cwd, cdd, sessionid, &running_, is_src_path, oDB, query, flag))) {
 			if (result != OPH_SERVER_NO_RESPONSE) {
 				freeBlock(datacube_inputs, *counter);
 				freeBlock(measure_name, *counter);

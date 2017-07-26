@@ -168,7 +168,7 @@ liboph_ssh_submit_la_LDFLAGS = -shared
 liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${SSH2_LIBS}
 
 LIBRARY += liboph_rmanager.la
-liboph_rmanager_la_SOURCES = ../src/oph_rmanager.c
+liboph_rmanager_la_SOURCES = oph_rmanager_stub.c
 liboph_rmanager_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
 liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS)

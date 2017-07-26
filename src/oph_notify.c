@@ -100,6 +100,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	pthread_mutex_unlock(&global_flag);
 
 	int save_flag = !data || !strstr(data, OPH_SERVER_REQUEST_FLAG);	// Skip internal oph_server request
+	if (!save_flag && output_json && strlen(output_json))
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived the response to an internal request:\n%s\n", jobid, output_json);
+
 	oph_json *oper_json = NULL;
 	while (save_flag && output_json && strlen(output_json)) {
 

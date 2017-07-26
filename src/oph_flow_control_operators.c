@@ -1629,12 +1629,12 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 	UNUSED(jobid_response);
 	UNUSED(exit_output);
 
+	int error = OPH_SERVER_UNKNOWN;
+
 	if (!state) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Workflow list cannot be given\n");
-		return OPH_SERVER_SYSTEM_ERROR;
+		return error;
 	}
-
-	int error = OPH_SERVER_UNKNOWN;
 
 	if (!strncasecmp(operator_name, OPH_OPERATOR_SET, OPH_MAX_STRING_SIZE)) {
 		if (!task_id) {
