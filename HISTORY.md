@@ -1,9 +1,43 @@
 
+## v1.1.0 - 2017-07-28
+
+### Fixed:
+
+- Unit tests
+- Bug [#8](https://github.com/OphidiaBigData/ophidia-server/issues/8)
+- Bug [#7](https://github.com/OphidiaBigData/ophidia-server/issues/7)
+- Limit the allowed characters for 'username'
+- OPH_FOR to avoid to re-check the workflows in case the option "parallel" is not used
+- OPH_WAIT to check files
+- Fix bug in handling on_error flag in loops
+
+### Added:
+
+- Support for OpenId Conncect (INDIGO-DataCloud Project)
+- Add BASE_SRC_PATH in client configuration parameters
+- Fill extra metadata in responses of known operators (INDIGO-DataCloud Project)
+- Multi-user support
+- Add fine progress ratio evaluation based on number of fragments
+- Add status logging and monitoring feature
+
+### Changed:
+
+- Disable SSH for task submission by default
+- Add sessionid and markerid to success notifications
+- Import massive operations based on the operator OPH_FS (INDIGO-DataCloud Project)
+- JSON Response schema (version 1.1): add field 'extra' (INDIGO-DataCloud Project)
+- OPH_RESUME to get workflow progress
+- OPH_IF to forward input cube (INDIGO-DataCloud Project)
+- Allow embedded variables
+- Allow to use @ even if no variable is not set
+- Save JSON Responses on behalf of the framework
+- Trace operator log only in debug mode
+
 ## v1.0.0 - 2017-03-23
 
 ### Fixed:
 
-- localtime function calls to be reentrant
+- Localtime function calls to be reentrant
 
 ## v0.11.0 - 2017-01-31
 
