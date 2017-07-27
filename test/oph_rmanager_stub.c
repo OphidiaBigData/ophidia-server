@@ -87,17 +87,21 @@ extern pthread_cond_t waiting_flag;
     ]\
 }"
 
-void *_oph_sleep(void *data)
+void *_oph_sleep(char **response)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 #endif
 
-	UNUSED(data);
+	if (!response)
+		return NULL;
 
 	sleep(1);
 
 	pthread_mutex_lock(&global_flag);
+	*response = strdup(OPH_DEFAULT_REPLY);
+	if (!*response)
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 	pthread_cond_broadcast(&waiting_flag);
 	pthread_mutex_unlock(&global_flag);
 
@@ -144,17 +148,18 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			return OPH_SERVER_ERROR;
 		}
 		wf = item->wf;
-		if (wf->tasks[*task_id].response)
+		if (wf->tasks[*task_id].response) {
 			free(wf->tasks[*task_id].response);
-		wf->tasks[*task_id].response = strdup(OPH_DEFAULT_REPLY);
+			wf->tasks[*task_id].response = NULL;
+		}
 
 		pthread_mutex_unlock(&global_flag);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 		pthread_t tid;
-		pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_sleep, NULL);
+		pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_sleep, &wf->tasks[*task_id].response);
 #else
-		_oph_sleep(output_json);
+		_oph_sleep(&wf->tasks[*task_id].response);
 #endif
 	}
 

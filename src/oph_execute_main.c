@@ -212,7 +212,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE];
 	*_new_token = 0;
 	state->authorization = OPH_AUTH_WRITE;
+
 	pthread_mutex_lock(&global_flag);
+
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
 		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token))) {
 			// Token is valid: check local authorization
@@ -243,7 +245,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		free_userid = 1;
 	} else
 		result = oph_auth_user(userid, soap->passwd, _host);
+
 	pthread_mutex_unlock(&global_flag);
+
 	if (free_userid && userid) {
 		snprintf(__userid, OPH_MAX_STRING_SIZE, "%s", userid);
 		free(userid);

@@ -1237,9 +1237,11 @@ int oph_auth_is_user_black_listed(const char *userid)
 
 	return result;
 
-#endif
+#else
 
 	return OPH_SERVER_OK;
+
+#endif
 }
 
 int oph_auth_vo(oph_argument * args)
@@ -1277,8 +1279,6 @@ int oph_auth_vo(oph_argument * args)
 	return OPH_SERVER_AUTH_ERROR;
 
 #endif
-
-	return OPH_SERVER_OK;
 }
 
 int oph_auth_token(const char *token, const char *host, char **userid, char **new_token)
@@ -1290,6 +1290,8 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 	if (new_token)
 		*new_token = NULL;
 
+#ifdef OPH_OPENID_ENDPOINT
+
 	int result = OPH_SERVER_OK;
 	if (oph_get_user_by_token(&tokens, token, userid, new_token)) {
 		short count;
@@ -1297,7 +1299,6 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
 			result = OPH_SERVER_AUTH_ERROR;
-#ifdef OPH_OPENID_ENDPOINT
 		} else if ((result = oph_auth_check_token(token))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
 			if (!count)
@@ -1306,7 +1307,6 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
-#endif
 		} else {
 			oph_add_to_bl(&tokens, *userid, token);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
@@ -1322,6 +1322,12 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 	}
 
 	return result;
+
+#else
+
+	return OPH_SERVER_AUTH_ERROR;
+
+#endif
 }
 
 int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinfo)
@@ -1330,6 +1336,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 		return OPH_SERVER_NULL_POINTER;
 
 #ifdef OPH_OPENID_ENDPOINT
+
 	pthread_mutex_lock(&global_flag);
 
 	char *userid = NULL;
