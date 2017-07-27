@@ -310,11 +310,13 @@ void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
+	if (oph_status_log_file_name)
+		oph_status_log_file_name = NULL;
+	sleep(OPH_STATUS_LOG_PERIOD);
 	if (statuslogfile) {
 		fclose(statuslogfile);
-		statuslogfile = 0;
+		statuslogfile = NULL;
 	}
-	sleep(1);
 	mysql_library_end();
 	soap_destroy(psoap);
 	soap_end(psoap);
@@ -440,15 +442,8 @@ int main(int argc, char *argv[])
 	} else
 		oph_log_file_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE);
 
-	if (oph_status_log_file_name) {
-		if (statuslogfile)
-			fclose(statuslogfile);
-		if (!(statuslogfile = fopen(oph_status_log_file_name, "w"))) {
-			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
-			return 1;
-		}
+	if (oph_status_log_file_name)
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected status log file '%s'\n", oph_status_log_file_name);
-	}
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 
@@ -508,7 +503,7 @@ int main(int argc, char *argv[])
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bind successful: socket = %d\n", m);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (statuslogfile) {
+	if (oph_status_log_file_name) {
 		tsoap = soap_copy(&soap);
 		if (tsoap)
 			pthread_create(&tid, NULL, (void *(*)(void *)) &status_logger, tsoap);
@@ -691,19 +686,15 @@ void *status_logger(struct soap *soap)
 	char name[OPH_MAX_STRING_SIZE];
 
 	unsigned last_sw = 0, last_st = 0;	// Initialization
-
-	int nofile = fileno(statuslogfile);
-
 	unsigned int load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
 	reset_load_average(load_average);
 
-	if (statuslogfile) {
-		gettimeofday(&tv, NULL);
-		fprintf(statuslogfile, "service,status=up value=0 %d000000000\n", (int) tv.tv_sec);
-		fflush(statuslogfile);
-	}
+	while (oph_status_log_file_name) {
 
-	while (statuslogfile) {
+		if (!(statuslogfile = fopen(oph_status_log_file_name, "w"))) {
+			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
+			break;
+		}
 
 		if (tau)
 			prev = tv.tv_sec + (tv.tv_usec > 500000);
@@ -824,7 +815,8 @@ void *status_logger(struct soap *soap)
 					fprintf(statuslogfile, "massive\\ progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
 					fprintf(statuslogfile, "massive\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
 				}
-			fflush(statuslogfile);
+			fclose(statuslogfile);
+			statuslogfile = NULL;
 		}
 
 		oph_status_destroy(&users);
@@ -836,14 +828,6 @@ void *status_logger(struct soap *soap)
 		while (tau < 0)
 			tau += OPH_STATUS_LOG_PERIOD;
 		usleep(tau);
-
-		i = ftruncate(nofile, 0);
-	}
-
-	if (statuslogfile) {
-		gettimeofday(&tv, NULL);
-		fprintf(statuslogfile, "service,status=down value=0 %d000000000\n", (int) tv.tv_sec);
-		fflush(statuslogfile);
 	}
 
 	soap_destroy(soap);	/* for C++ */
