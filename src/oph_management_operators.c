@@ -33,6 +33,8 @@ extern pthread_mutex_t global_flag;
 extern char *oph_web_server;
 extern char *oph_log_file_name;
 extern char *oph_auth_location;
+extern unsigned int oph_default_max_sessions;
+extern unsigned int oph_default_session_timeout;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -696,7 +698,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			int timeout_value = oph_get_arg(user_args, OPH_USER_TIMEOUT_SESSION, tmp);
 			if (timeout_value)
-				timeout_value = OPH_DEFAULT_SESSION_TIMEOUT;
+				timeout_value = oph_default_session_timeout;
 			else
 				timeout_value = strtol(tmp, NULL, 10);
 
@@ -807,7 +809,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			int max_sessions = oph_get_arg(user_args, OPH_USER_MAX_SESSIONS, tmp);
 			if (max_sessions)
-				max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+				max_sessions = oph_default_max_sessions;
 			else
 				max_sessions = strtol(tmp, NULL, 10);
 			if (max_sessions && (num_sessions > max_sessions)) {
@@ -999,13 +1001,13 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			int max_sessions = oph_get_arg(user_args, OPH_USER_MAX_SESSIONS, tmp);
 			if (max_sessions)
-				max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+				max_sessions = oph_default_max_sessions;
 			else
 				max_sessions = strtol(tmp, NULL, 10);
 
 			int timeout_value = oph_get_arg(user_args, OPH_USER_TIMEOUT_SESSION, tmp);
 			if (timeout_value)
-				timeout_value = OPH_DEFAULT_SESSION_TIMEOUT;
+				timeout_value = oph_default_session_timeout;
 			else
 				timeout_value = strtol(tmp, NULL, 10);
 

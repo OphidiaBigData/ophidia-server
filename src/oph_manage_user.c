@@ -48,6 +48,10 @@ char *oph_web_server = 0;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 oph_argument *args = 0;
+unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
+unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
+unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 #ifdef OPH_OPENID_ENDPOINT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
@@ -176,8 +180,6 @@ int main(int argc, char *argv[])
 				break;
 			case 'c':
 				max_cores = (unsigned int) strtol(optarg, NULL, 10);
-				if (max_cores <= 0)
-					max_cores = 1;
 				update += 1;
 				break;
 			case 'e':
@@ -191,8 +193,6 @@ int main(int argc, char *argv[])
 				break;
 			case 'm':
 				max_sessions = (unsigned int) strtol(optarg, NULL, 10);
-				if (max_sessions <= 0)
-					max_sessions = 1;
 				update += 2;
 				break;
 			case 'n':
@@ -215,8 +215,6 @@ int main(int argc, char *argv[])
 				break;
 			case 't':
 				timeout_session = (unsigned int) strtol(optarg, NULL, 10);
-				if (timeout_session <= 0)
-					timeout_session = 1;
 				update += 8;
 				break;
 			case 'u':

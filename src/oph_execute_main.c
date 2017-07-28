@@ -47,6 +47,10 @@ extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_base_src_path;
 extern oph_service_info *service_info;
+extern unsigned int oph_default_max_sessions;
+extern unsigned int oph_default_max_cores;
+extern unsigned int oph_default_max_hosts;
+extern unsigned int oph_default_session_timeout;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -5342,28 +5346,28 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_MAX_CORES);
 	int max_cores = oph_get_arg(user_args, OPH_USER_MAX_CORES, tmp);
 	if (max_cores)
-		max_cores = OPH_DEFAULT_USER_MAX_CORES;
+		max_cores = oph_default_max_cores;
 	else
 		max_cores = strtol(tmp, NULL, 10);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_MAX_HOSTS);
 	int max_hosts = oph_get_arg(user_args, OPH_USER_MAX_HOSTS, tmp);
 	if (max_hosts)
-		max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
+		max_hosts = oph_default_max_hosts;
 	else
 		max_hosts = strtol(tmp, NULL, 10);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_MAX_SESSIONS);
 	int max_sessions = oph_get_arg(user_args, OPH_USER_MAX_SESSIONS, tmp);
 	if (max_sessions)
-		max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+		max_sessions = oph_default_max_sessions;
 	else
 		max_sessions = strtol(tmp, NULL, 10);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_TIMEOUT_SESSION);
 	int timeout_value = oph_get_arg(user_args, OPH_USER_TIMEOUT_SESSION, tmp);
 	if (timeout_value)
-		timeout_value = OPH_DEFAULT_SESSION_TIMEOUT;
+		timeout_value = oph_default_session_timeout;
 	else
 		timeout_value = strtol(tmp, NULL, 10);
 

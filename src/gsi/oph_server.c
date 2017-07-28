@@ -89,6 +89,10 @@ char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
 oph_service_info *service_info = NULL;
+unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
+unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
+unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 
 void set_global_values(const char *configuration_file)
 {
@@ -148,6 +152,14 @@ void set_global_values(const char *configuration_file)
 		oph_server_poll_time = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_BACKOFF)))
 		oph_base_backoff = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_MAX_SESSIONS)))
+		oph_default_max_sessions = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_MAX_CORES)))
+		oph_default_max_cores = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_MAX_HOSTS)))
+		oph_default_max_hosts = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_TIMEOUT_SESSION)))
+		oph_default_session_timeout = (unsigned int) strtol(value, NULL, 10);
 	if (!logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE))) {
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 		logfile = fopen(value, "a");

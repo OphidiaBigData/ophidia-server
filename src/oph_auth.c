@@ -94,6 +94,10 @@ char *oph_openid_endpoint_public_key = NULL;
 extern char *oph_auth_location;
 extern char *oph_web_server;
 extern int oph_server_timeout;
+extern unsigned int oph_default_max_sessions;
+extern unsigned int oph_default_max_cores;
+extern unsigned int oph_default_max_hosts;
+extern unsigned int oph_default_session_timeout;
 
 oph_auth_user_bl *bl_head = NULL;
 oph_auth_user_bl *tokens = NULL;
@@ -1492,7 +1496,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tail = tmp;
 		tmp = (oph_argument *) malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_SESSIONS);
-		if (asprintf(&tmp->value, "%d", OPH_DEFAULT_USER_MAX_SESSIONS) <= 0) {
+		if (asprintf(&tmp->value, "%d", oph_default_max_sessions) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -1505,7 +1509,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tail = tmp;
 		tmp = (oph_argument *) malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_TIMEOUT_SESSION);
-		if (asprintf(&tmp->value, "%d", OPH_DEFAULT_SESSION_TIMEOUT) <= 0) {
+		if (asprintf(&tmp->value, "%d", oph_default_session_timeout) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -1518,7 +1522,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tail = tmp;
 		tmp = (oph_argument *) malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_CORES);
-		if (asprintf(&tmp->value, "%d", OPH_DEFAULT_USER_MAX_CORES) <= 0) {
+		if (asprintf(&tmp->value, "%d", oph_default_max_cores) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -1531,7 +1535,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tail = tmp;
 		tmp = (oph_argument *) malloc(sizeof(oph_argument));
 		tmp->key = strdup(OPH_USER_MAX_HOSTS);
-		if (asprintf(&tmp->value, "%d", OPH_DEFAULT_USER_MAX_HOSTS) <= 0) {
+		if (asprintf(&tmp->value, "%d", oph_default_max_hosts) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
