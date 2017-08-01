@@ -117,6 +117,7 @@ char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
+unsigned int oph_openid_token_check_time = 0;
 #endif
 
 void set_global_values(const char *configuration_file)
@@ -298,6 +299,8 @@ void set_global_values(const char *configuration_file)
 #ifdef OPH_OPENID_ENDPOINT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_CHECK_TIME)))
+		oph_openid_token_check_time = (unsigned int) strtol(value, NULL, 10);
 	if (!(oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT))) {
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT, OPH_OPENID_ENDPOINT);
 		oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
@@ -322,6 +325,9 @@ void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
+#ifdef OPH_OPENID_ENDPOINT
+	oph_openid_token_check_time = 0;
+#endif
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
 	sleep(OPH_STATUS_LOG_PERIOD);
@@ -521,6 +527,8 @@ int main(int argc, char *argv[])
 			pthread_create(&tid, NULL, (void *(*)(void *)) &status_logger, tsoap);
 	}
 #endif
+
+	oph_auth_autocheck_tokens();
 
 	for (;;) {
 		SOAP_SOCKET s = soap_accept(&soap);

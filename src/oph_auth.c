@@ -84,6 +84,7 @@ extern char *oph_openid_endpoint;
 extern char *oph_openid_client_id;
 extern char *oph_openid_client_secret;
 extern unsigned int oph_openid_token_timeout;
+extern unsigned int oph_openid_token_check_time;
 
 char *oph_openid_endpoint_public_key = NULL;
 
@@ -1099,7 +1100,7 @@ int oph_auth_check_token(const char *token)
 
 #endif
 
-int oph_auth_get_user_from_token(const char *token, char **userid)
+int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 {
 	if (!token || !userid)
 		return OPH_SERVER_NULL_POINTER;
@@ -1155,7 +1156,8 @@ int oph_auth_get_user_from_token(const char *token, char **userid)
 		return result;
 	}
 
-	oph_auth_cache_userinfo(token, chunk.memory);
+	if (cache)
+		oph_auth_cache_userinfo(token, chunk.memory);
 
 	free(chunk.memory);
 
@@ -1163,6 +1165,56 @@ int oph_auth_get_user_from_token(const char *token, char **userid)
 
 #endif
 }
+
+#ifdef OPH_OPENID_ENDPOINT
+
+void *_oph_check(void *data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+
+	char *userid = NULL;
+	struct timeval tv;
+	oph_auth_user_bl *bl_item, *bl_prev;
+
+	while (oph_openid_token_check_time) {
+
+		sleep(oph_openid_token_check_time);
+
+		pthread_mutex_lock(&global_flag);
+
+		gettimeofday(&tv, NULL);
+		bl_item = tokens;
+		bl_prev = NULL;
+		while (bl_item) {
+			if (oph_auth_get_user_from_token(bl_item->host, &userid, 0) || !userid) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked\n", bl_item->host);
+				if (bl_prev)
+					bl_prev->next = bl_item->next;
+				else
+					tokens = bl_item->next;
+				oph_delete_item_in_bl(bl_item);
+				bl_item = bl_prev ? bl_prev->next : tokens;
+			} else {
+				bl_prev = bl_item;
+				bl_item = bl_item->next;
+			}
+			if (userid) {
+				free(userid);
+				userid = NULL;
+			}
+		}
+
+		pthread_mutex_unlock(&global_flag);
+	}
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+}
+
+#endif
 
 int oph_auth_read_token(const char *token, oph_argument ** args)
 {
@@ -1307,7 +1359,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
-		} else if ((result = oph_auth_get_user_from_token(token, userid)) || !*userid) {
+		} else if ((result = oph_auth_get_user_from_token(token, userid, 1)) || !*userid) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
@@ -2104,6 +2156,21 @@ int oph_auth_enable_user(const char *userid, int result)
 	char res[1];
 	snprintf(res, 1, "%d", result);
 	oph_add_to_bl(&auth_users, userid, res);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_autocheck_tokens()
+{
+
+#ifdef OPH_OPENID_ENDPOINT
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_t tid;
+	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_check, NULL);
+#endif
+
+#endif
 
 	return OPH_SERVER_OK;
 }

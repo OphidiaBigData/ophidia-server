@@ -147,6 +147,7 @@ int oph_save_session(const char *userid, const char *sessionid, oph_argument * a
 int oph_save_user_session(const char *userid, const char *sessionid, oph_argument * args);
 int oph_get_session_code(const char *sessionid, char *code);
 int oph_auth_free();
+int oph_auth_autocheck_tokens();
 
 oph_auth_user_role oph_string_to_role(const char *role);
 oph_auth_user_role oph_code_role(const char *role);
