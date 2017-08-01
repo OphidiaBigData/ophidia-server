@@ -72,6 +72,10 @@ http://www.apache.org/licenses/
 GPLv3</br>
 http://www.gnu.org/copyleft/gpl.html
 
+- cjose</br>
+MIT License</br>
+https://github.com/cisco/cjose/blob/master/LICENSE
+
 <b>Note</b>:</br>
 This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit.
 
