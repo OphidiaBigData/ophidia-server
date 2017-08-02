@@ -127,6 +127,7 @@ typedef struct _oph_auth_user_bl {
 	char *value;
 	short count;
 	int timestamp;
+	int check_time;
 	struct _oph_auth_user_bl *next;
 } oph_auth_user_bl;
 

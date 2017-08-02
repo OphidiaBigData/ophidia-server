@@ -36,6 +36,7 @@
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
+extern pthread_mutex_t curl_flag;
 #endif
 extern char *oph_base_src_path;
 extern char *oph_web_server_location;
@@ -119,8 +120,10 @@ void *_oph_wait(oph_notify_data * data)
 		do {
 			if ((wd->type == 'f') && (status == (int) OPH_ODB_STATUS_WAIT)) {
 				if (curl) {
+					pthread_mutex_lock(&curl_flag);
 					if (curl_easy_perform(curl) == CURLE_OK)
 						success = 0;
+					pthread_mutex_unlock(&curl_flag);
 				} else if (!stat(_filename, &s))
 					success = 0;
 				if (!success) {
@@ -169,8 +172,11 @@ void *_oph_wait(oph_notify_data * data)
 					case 'f':
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check if the object '%s' exists\n", _filename);
 						if (curl) {
-							if ((res = curl_easy_perform(curl)) != CURLE_OK) {
-								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable (errno %d)\n", _filename, res);
+							pthread_mutex_lock(&curl_flag);
+							res = curl_easy_perform(curl);
+							pthread_mutex_unlock(&curl_flag);
+							if (res != CURLE_OK) {
+								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable: %s\n", _filename, curl_easy_strerror(res));
 								break;
 							}
 						} else if (stat(_filename, &s)) {

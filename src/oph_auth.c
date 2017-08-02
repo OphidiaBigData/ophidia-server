@@ -39,6 +39,7 @@
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
+extern pthread_mutex_t curl_flag;
 #endif
 
 #define AUTH_CONNECTTIMEOUT 30
@@ -247,7 +248,7 @@ int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host
 	bl_item->host = strdup(host);
 	bl_item->value = NULL;
 	bl_item->count = 1;
-	bl_item->timestamp = tv.tv_sec;
+	bl_item->timestamp = bl_item->check_time = tv.tv_sec;
 	bl_item->next = *head;
 	*head = bl_item;
 
@@ -803,7 +804,13 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+
+		pthread_mutex_unlock(&global_flag);
+		pthread_mutex_lock(&curl_flag);
 		CURLcode res = curl_easy_perform(curl);
+		pthread_mutex_unlock(&curl_flag);
+		pthread_mutex_lock(&global_flag);
+
 		curl_easy_cleanup(curl);
 
 		if (res || !chunk.memory) {
@@ -912,7 +919,13 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
 		curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+
+		pthread_mutex_unlock(&global_flag);
+		pthread_mutex_lock(&curl_flag);
 		CURLcode res = curl_easy_perform(curl);
+		pthread_mutex_unlock(&curl_flag);
+		pthread_mutex_lock(&global_flag);
+
 		curl_easy_cleanup(curl);
 
 		if (res || !chunk.memory) {
@@ -1137,7 +1150,13 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
 	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, slist);
+
+	pthread_mutex_unlock(&global_flag);
+	pthread_mutex_lock(&curl_flag);
 	CURLcode res = curl_easy_perform(curl);
+	pthread_mutex_unlock(&curl_flag);
+	pthread_mutex_lock(&global_flag);
+
 	curl_slist_free_all(slist);
 	curl_easy_cleanup(curl);
 
@@ -1174,7 +1193,8 @@ void *_oph_check(void *data)
 	pthread_detach(pthread_self());
 #endif
 
-	char *userid = NULL;
+	char *userid = NULL, *token, *user;
+	time_t deadtime;
 	struct timeval tv;
 	oph_auth_user_bl *bl_item, *bl_prev;
 
@@ -1184,27 +1204,36 @@ void *_oph_check(void *data)
 
 		pthread_mutex_lock(&global_flag);
 
-		gettimeofday(&tv, NULL);
-		bl_item = tokens;
-		bl_prev = NULL;
-		while (bl_item) {
-			if (oph_auth_get_user_from_token(bl_item->host, &userid, 0) || !userid) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked\n", bl_item->host);
-				if (bl_prev)
-					bl_prev->next = bl_item->next;
-				else
-					tokens = bl_item->next;
-				oph_delete_item_in_bl(bl_item);
-				bl_item = bl_prev ? bl_prev->next : tokens;
-			} else {
+		do {
+
+			gettimeofday(&tv, NULL);
+			bl_item = tokens;
+			bl_prev = NULL;
+			while (bl_item) {
+				deadtime = (time_t) (bl_item->check_time + oph_openid_token_check_time);
+				if (tv.tv_sec > deadtime) {
+					token = strdup(bl_item->host);
+					user = strdup(bl_item->userid);
+					bl_item->check_time = tv.tv_sec;
+					if (oph_auth_get_user_from_token(token, &userid, 0) || !userid) {	// Release the lock internally
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked\n", token);
+						oph_drop_from_bl(&tokens, user, token);
+					}
+					if (token)
+						free(token);
+					if (user)
+						free(user);
+					break;	// Need to restart since the lock has been released
+				}
 				bl_prev = bl_item;
 				bl_item = bl_item->next;
+				if (userid) {
+					free(userid);
+					userid = NULL;
+				}
 			}
-			if (userid) {
-				free(userid);
-				userid = NULL;
-			}
-		}
+
+		} while (bl_item);
 
 		pthread_mutex_unlock(&global_flag);
 	}

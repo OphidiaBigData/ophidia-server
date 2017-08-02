@@ -50,6 +50,7 @@ extern char *oph_txt_location;
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
 extern pthread_cond_t waiting_flag;
+extern pthread_mutex_t curl_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -5225,15 +5226,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: CURL options set.\n", ttype, jobid);
 
 					// Send notification
+					pthread_mutex_lock(&curl_flag);
 					res = curl_easy_perform(curl);
-
-					// Check for output
-					if (res != CURLE_OK)
-						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to send notification to %s. %s\n", ttype, jobid, real_callback_url,
-							   curl_easy_strerror(res));
+					pthread_mutex_unlock(&curl_flag);
 
 					// Cleanup
 					curl_easy_cleanup(curl);
+
+					// Check for output
+					if (res != CURLE_OK)
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to send notification to %s: %s\n", ttype, jobid, real_callback_url,
+							   curl_easy_strerror(res));
 				}
 			}
 		}

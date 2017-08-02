@@ -36,6 +36,7 @@
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;
+pthread_mutex_t curl_flag;
 #endif
 
 char *oph_server_location = 0;
@@ -74,6 +75,7 @@ void cleanup()
 		oph_odb_free_ophidiadb(ophDB);
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_destroy(&global_flag);
+	pthread_mutex_destroy(&curl_flag);
 #endif
 }
 
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_init(&global_flag, NULL);
+	pthread_mutex_init(&curl_flag, NULL);
 #endif
 	int ch, msglevel = LOG_ERROR;
 	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0;
