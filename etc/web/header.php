@@ -30,7 +30,12 @@
 	if (isset($_SESSION['userid']) && !empty($_SESSION['userid'])) {
 ?>
 		<DIV id="profile">
-			<B id="welcome">Welcome : <I><?php echo $_SESSION['userid']; ?></I></B>
+			<B id="welcome">Welcome : <I><?php
+		if (isset($_SESSION['username']) && !empty($_SESSION['username']))
+			echo $_SESSION['username'];
+		else
+			echo $_SESSION['userid'];
+?></I></B>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php?logout=yes">Log Out</A></B>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/index.php">Session List</A></B>
 <?php

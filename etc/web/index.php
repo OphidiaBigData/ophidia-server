@@ -106,7 +106,12 @@
 		if($isset_userid) {
 ?>
 		<DIV id="profile">
-			<B id="welcome">Welcome : <I><?php echo $_SESSION['userid']; ?></I></B>
+			<B id="welcome">Welcome : <I><?php
+		if (isset($_SESSION['username']) && !empty($_SESSION['username']))
+			echo $_SESSION['username'];
+		else
+			echo $_SESSION['userid'];
+?></I></B>
 			<B class="activelink"><A href="index.php?logout=yes">Log Out</A></B>
 			<B class="inactivelink">Session List</B>
 			<B class="inactivelink">Download</B>

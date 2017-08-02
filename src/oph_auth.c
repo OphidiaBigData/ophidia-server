@@ -1034,21 +1034,21 @@ int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
 		return OPH_SERVER_ERROR;
 	}
 
-	char *error = NULL, *email = NULL;
-	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "email", &email);
+	char *error = NULL, *subject_identifier = NULL;
+	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "sub", &subject_identifier);
 
 	if (error) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET returns an error code\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
-	if (!email) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET does not contain email address\n");
+	if (!subject_identifier) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET does not contain the subject identifier\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
-	if (!(*userid = strdup(email))) {
+	if (!(*userid = strdup(subject_identifier))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_ERROR;
@@ -1203,6 +1203,7 @@ void *_oph_check(void *data)
 		sleep(oph_openid_token_check_time);
 
 		pthread_mutex_lock(&global_flag);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for revoked tokens...\n");
 
 		do {
 
@@ -1211,12 +1212,13 @@ void *_oph_check(void *data)
 			bl_prev = NULL;
 			while (bl_item) {
 				deadtime = (time_t) (bl_item->check_time + oph_openid_token_check_time);
-				if (tv.tv_sec > deadtime) {
+				if (tv.tv_sec >= deadtime) {
 					token = strdup(bl_item->host);
 					user = strdup(bl_item->userid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check validity of token associated with user '%s'\n", user);
 					bl_item->check_time = tv.tv_sec;
 					if (oph_auth_get_user_from_token(token, &userid, 0) || !userid) {	// Release the lock internally
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked\n", token);
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked by the user '%s'\n", token, user);
 						oph_drop_from_bl(&tokens, user, token);
 					}
 					if (token)
@@ -1235,6 +1237,7 @@ void *_oph_check(void *data)
 
 		} while (bl_item);
 
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for revoked tokens... done\n");
 		pthread_mutex_unlock(&global_flag);
 	}
 

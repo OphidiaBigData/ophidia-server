@@ -30,7 +30,8 @@
 		if (strlen($userinfo['error']) > 0)
 			session_destroy();
 		else {
-			$_SESSION['userid'] = $userinfo['email'];
+			$_SESSION['userid'] = $userinfo['sub'];
+			$_SESSION['username'] = $userinfo['name'];
 			$_SESSION['userinfo'] = $userinfo_json;
 		}
 	}
