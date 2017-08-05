@@ -61,6 +61,7 @@ void oph_child_signal_handler(int sig);
 struct soap *psoap;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+pthread_t token_tid = 0;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
@@ -326,16 +327,23 @@ void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
-#ifdef OPH_OPENID_ENDPOINT
-	oph_openid_token_check_time = 0;
-#endif
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
+#ifdef OPH_OPENID_ENDPOINT
+	oph_openid_token_check_time = 0;
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (token_tid)
+		pthread_cancel(token_tid);
+#endif
+#endif
+
 	sleep(OPH_STATUS_LOG_PERIOD);
+
 	if (statuslogfile) {
 		fclose(statuslogfile);
 		statuslogfile = NULL;
 	}
+
 	mysql_library_end();
 	soap_destroy(psoap);
 	soap_end(psoap);

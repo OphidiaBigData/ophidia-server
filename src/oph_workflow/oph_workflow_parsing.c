@@ -65,11 +65,11 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
 	//unpack global vars
-	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cube = NULL, *callback_url = NULL, *on_error = NULL, *command =
-	    NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode", &exec_mode,
-		    "ncores", &ncores, "cwd", &cwd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run, "output_format",
-		    &output_format, "host_partition", &host_partition);
+	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
+		    &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run,
+		    "output_format", &output_format, "host_partition", &host_partition);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -133,6 +133,16 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			if (jansson)
 				json_decref(jansson);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating cwd\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+	}
+	if (cdd && strlen(cdd)) {
+		(*workflow)->cdd = (char *) strdup((const char *) cdd);
+		if (!((*workflow)->cdd)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating cdd\n");
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -622,6 +632,14 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error substituting cwd\n");
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
+	//cdd
+	if (!(*workflow)->cdd)
+		(*workflow)->cdd = strdup(OPH_WORKFLOW_ROOT_FOLDER);
+	if (_oph_workflow_substitute_var("cdd", (*workflow)->cdd, (*workflow)->tasks, (*workflow)->tasks_num)) {
+		oph_workflow_free(*workflow);
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "error substituting cdd\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
 	//cube
 	if ((*workflow)->cube) {
 		if (_oph_workflow_substitute_cube((*workflow)->cube, (*workflow)->tasks, (*workflow)->tasks_num)) {
@@ -673,6 +691,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 	if (!workflow->run && _oph_workflow_add_to_json(request, "run", "no"))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "cwd", workflow->cwd))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (_oph_workflow_add_to_json(request, "cdd", workflow->cdd))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "cube", workflow->cube))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -843,6 +863,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->callback_url = NULL;
 	(*workflow)->cube = NULL;
 	(*workflow)->cwd = NULL;
+	(*workflow)->cdd = NULL;
 	(*workflow)->exec_mode = NULL;
 	(*workflow)->idjob = -1;
 	(*workflow)->markerid = -1;

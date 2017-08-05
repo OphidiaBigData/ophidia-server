@@ -744,41 +744,26 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									pmesg(LOG_INFO, __FILE__, __LINE__, "session '%s' has expired... removing it\n", filename);
 									remove(filename);
 									oph_cleanup_args(&session_args);
-
 									if (num_sessions > 0)
 										num_sessions--;
-									else {
-										closedir(dirp);
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "error in handling session number\n");
-										pthread_mutex_unlock(&global_flag);
-										oph_cleanup_args(&args);
-										oph_cleanup_args(&user_args);
-										if (task_tbl)
-											hashtbl_destroy(task_tbl);
-										oph_cleanup_args_list(&session_args_list);
-										oph_json_free(oper_json);
-										oph_odb_disconnect_from_ophidiadb(&oDB);
-										return OPH_SERVER_SYSTEM_ERROR;
-									}
+									else
+										pmesg(LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
 									save_user = 1;
-
 									continue;
 								}
 							}
 						}
 
 					} else {
-						closedir(dirp);
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "error in opening session file '%s'\n", filename);
-						pthread_mutex_unlock(&global_flag);
-						oph_cleanup_args(&args);
-						oph_cleanup_args(&user_args);
-						if (task_tbl)
-							hashtbl_destroy(task_tbl);
-						oph_cleanup_args_list(&session_args_list);
-						oph_json_free(oper_json);
-						oph_odb_disconnect_from_ophidiadb(&oDB);
-						return OPH_SERVER_SYSTEM_ERROR;
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "found a broken file '%s'... removing it\n", filename);
+						remove(filename);
+						oph_cleanup_args(&session_args);
+						if (num_sessions > 0)
+							num_sessions--;
+						else
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
+						save_user = 1;
+						continue;
 					}
 
 					if (oph_append_args_list(&session_args_list, session_args, last_access_time)) {

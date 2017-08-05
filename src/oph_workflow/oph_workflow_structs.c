@@ -69,6 +69,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->cwd);
 		workflow->cwd = NULL;
 	}
+	if (workflow->cdd) {
+		free(workflow->cdd);
+		workflow->cdd = NULL;
+	}
 	if (workflow->exec_mode) {
 		free(workflow->exec_mode);
 		workflow->exec_mode = NULL;

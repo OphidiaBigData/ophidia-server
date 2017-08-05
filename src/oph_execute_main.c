@@ -5650,6 +5650,41 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pthread_mutex_unlock(&global_flag);
 
 		if (wf->response && (wf->status == OPH_ODB_STATUS_CLOSED)) {
+
+			// Save user data in user.dat
+			if (wf->cdd) {
+				oph_init_args(&user_args);
+				snprintf(filename, OPH_MAX_STRING_SIZE, OPH_USER_FILE, oph_auth_location, _userid);
+				pthread_mutex_lock(&global_flag);
+				if (oph_load_file(filename, &user_args))	// DT_REG
+				{
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to load user data of '%s'\n", jobid, _userid);
+					pthread_mutex_unlock(&global_flag);
+					oph_cleanup_args(&user_args);
+					oph_workflow_free(wf);
+					response->error = OPH_SERVER_SYSTEM_ERROR;
+					return SOAP_OK;
+				}
+				if (oph_set_arg(&user_args, OPH_USER_LAST_CDD, wf->cdd)) {
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save user data of '%s'\n", jobid, _userid);
+					pthread_mutex_unlock(&global_flag);
+					oph_cleanup_args(&user_args);
+					oph_workflow_free(wf);
+					response->error = OPH_SERVER_SYSTEM_ERROR;
+					return SOAP_OK;
+				}
+				if (oph_save_user(_userid, user_args)) {
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save user data of '%s'\n", jobid, _userid);
+					pthread_mutex_unlock(&global_flag);
+					oph_cleanup_args(&user_args);
+					oph_workflow_free(wf);
+					response->error = OPH_SERVER_SYSTEM_ERROR;
+					return SOAP_OK;
+				}
+				pthread_mutex_unlock(&global_flag);
+				oph_cleanup_args(&user_args);
+			}
+
 			int skip = 0;
 			oph_argument *session_args = NULL;
 
@@ -5671,7 +5706,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						return SOAP_OK;
 					}
 				}
-				if (!skip && wf->cube && oph_set_arg(&session_args, OPH_SESSION_CUBE, wf->cube)) {
+				if (!skip && oph_set_arg(&session_args, OPH_SESSION_CUBE, wf->cube)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save session data of '%s'\n", jobid, wf->sessionid);
 					pthread_mutex_unlock(&global_flag);
 					oph_cleanup_args(&session_args);
@@ -5708,7 +5743,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						return SOAP_OK;
 					}
 				}
-				if (!skip && wf->cwd && oph_set_arg(&session_args, OPH_SESSION_CWD, wf->cwd)) {
+				if (!skip && oph_set_arg(&session_args, OPH_SESSION_CWD, wf->cwd)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save user-specific session data of '%s'\n", jobid, wf->sessionid);
 					pthread_mutex_unlock(&global_flag);
 					oph_cleanup_args(&session_args);

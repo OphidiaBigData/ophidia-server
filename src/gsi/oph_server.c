@@ -44,6 +44,7 @@
 struct soap *psoap;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+pthread_t token_tid = 0;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;

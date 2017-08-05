@@ -35,6 +35,7 @@
 #endif
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+pthread_t token_tid;
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
 #endif
@@ -384,7 +385,8 @@ int main(int argc, char *argv[])
 		fprintf(file, "%s%s%d\n", OPH_USER_MAX_CORES, OPH_SEPARATOR_KV, max_cores);
 		fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, 1);
 		fprintf(file, "%s%s%s\n", OPH_USER_IS_ADMIN, OPH_SEPARATOR_KV, is_admin);
-		fprintf(file, "%s%s\n", OPH_USER_LAST_SESSION_ID, OPH_SEPARATOR_KV);
+		fprintf(file, "%s%s%s\n", OPH_USER_LAST_SESSION_ID, OPH_SEPARATOR_KV, "");
+		fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, "/");
 		fclose(file);
 
 		// ophDB

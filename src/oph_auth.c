@@ -38,6 +38,7 @@
 #include <cjose/cjose.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_t token_tid;
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t curl_flag;
 #endif
@@ -2198,8 +2199,7 @@ int oph_auth_autocheck_tokens()
 #ifdef OPH_OPENID_ENDPOINT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_t tid;
-	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_check, NULL);
+	pthread_create(&token_tid, NULL, (void *(*)(void *)) &_oph_check, NULL);
 #endif
 
 #endif

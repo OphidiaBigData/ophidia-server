@@ -2948,7 +2948,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						// Save well-known parameters and publish them on web
 						char linkname[OPH_SHORT_STRING_SIZE];
 						for (i = 0; i < outputs_num; ++i) {
-							if (!strncmp(outputs_keys[i], OPH_ARG_CWD, OPH_MAX_STRING_SIZE)) {
+							if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
+								if (wf->cdd)
+									free(wf->cdd);
+								wf->cdd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
+							} else if (!strncmp(outputs_keys[i], OPH_ARG_CWD, OPH_MAX_STRING_SIZE)) {
 								if (wf->cwd)
 									free(wf->cwd);
 								wf->cwd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
@@ -3827,7 +3831,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					// Save well-known parameters and publish it on web
 					char linkname[OPH_SHORT_STRING_SIZE];
 					for (i = 0; i < outputs_num; ++i) {
-						if (!strncmp(outputs_keys[i], OPH_ARG_CWD, OPH_MAX_STRING_SIZE)) {
+						if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
+							if (wf->cdd)
+								free(wf->cdd);
+							wf->cdd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
+						} else if (!strncmp(outputs_keys[i], OPH_ARG_CWD, OPH_MAX_STRING_SIZE)) {
 							if (wf->cwd)
 								free(wf->cwd);
 							wf->cwd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
