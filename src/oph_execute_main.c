@@ -312,6 +312,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
 
 	// Flush useless variables
+	if (wf->cdd) {
+		free(wf->cdd);
+		wf->cdd = NULL;
+	}
 	if (wf->cwd) {
 		free(wf->cwd);
 		wf->cwd = NULL;
