@@ -437,6 +437,7 @@ int oph_auth_free()
 	if (usersinfo)
 		hashtbl_destroy(usersinfo);
 #endif
+	return OPH_SERVER_OK;
 }
 
 int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid, const char *access_token)
@@ -885,7 +886,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	pthread_detach(pthread_self());
 #endif
 
-	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid || !refresh->userinfo) {
+	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 		return;
 	}
@@ -1122,6 +1123,7 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 
 #ifndef OPH_OPENID_ENDPOINT
 
+	UNUSED(cache);
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
 	return OPH_SERVER_AUTH_ERROR;
 
@@ -1372,7 +1374,7 @@ int oph_auth_vo(oph_argument * args)
 
 int oph_auth_token(const char *token, const char *host, char **userid, char **new_token)
 {
-	if (!token)
+	if (!token || !host)
 		return OPH_SERVER_NULL_POINTER;
 	if (userid)
 		*userid = NULL;
@@ -1421,7 +1423,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 
 int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinfo)
 {
-	if (!access_token)
+	if (!access_token || !userinfo)
 		return OPH_SERVER_NULL_POINTER;
 
 #ifdef OPH_OPENID_ENDPOINT
@@ -1452,7 +1454,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 			refresh_tokens->access_token = strdup(access_token);
 			refresh_tokens->refresh_token = strdup(refresh_token);
 			refresh_tokens->userid = strdup(userid);
-			refresh_tokens->userinfo = strdup(userinfo);
+			refresh_tokens->userinfo = userinfo ? strdup(userinfo) : NULL;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 			pthread_t tid;
@@ -1467,6 +1469,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 
 #endif
 
+	UNUSED(refresh_token);
 	return OPH_SERVER_OK;
 }
 

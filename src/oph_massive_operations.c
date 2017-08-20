@@ -295,7 +295,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 	}
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Found %d implicit objects which the massive operation will be applied on\n", *counter);
 
-	char *base_name, *measure, *savepointer = NULL;
+	char *base_name, *measure;
 	*datacube_inputs = (char **) malloc((*counter) * sizeof(char *));
 	if (is_src_path) {
 		if (strncasecmp(convention, OPH_MF_ARG_VALUE_NO, OPH_MAX_STRING_SIZE)) {

@@ -192,7 +192,7 @@ LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager.c
 liboph_rmanager_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
-liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_ssh_submit
+liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_ssh_submit -lutils
 
 LIBRARY += liboph_subset_library.la
 liboph_subset_library_la_SOURCES = oph_subset_library.c

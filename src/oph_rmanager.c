@@ -21,6 +21,7 @@
 #include "oph_auth.h"
 #include "oph_known_operators.h"
 #include "oph_service_info.h"
+#include "oph_utils.h"
 
 #include <mysql.h>
 
