@@ -57,7 +57,7 @@ void *_oph_wait(oph_notify_data * data)
 	}
 
 	oph_workflow *wf = data->wf;
-	int task_index = data->task_index, idjob, pidjob, status, success = 1;
+	int task_index = data->task_index, idjob = 0, pidjob = 0, status, success = 1;
 	struct oph_plugin_data *state = data->state;
 	char *json_output = data->json_output;
 	oph_wait_data *wd = (oph_wait_data *) data->data;
@@ -159,7 +159,6 @@ void *_oph_wait(oph_notify_data * data)
 				else {
 					wf->waiting_tasks_num++;
 					if (!wf->waiting_tasks_num) {
-						oph_workflow_free(wf);
 						status = OPH_ODB_STATUS_ABORTED;
 						fast_exit = 1;
 					}
@@ -195,26 +194,22 @@ void *_oph_wait(oph_notify_data * data)
 
 		} while (status == (int) OPH_ODB_STATUS_WAIT);
 
-		if (!fast_exit) {
+		pthread_mutex_lock(&global_flag);
 
-			pthread_mutex_lock(&global_flag);
+		idjob = wf->tasks[task_index].idjob;
+		pidjob = wf->idjob;
+		if (status < (int) OPH_ODB_STATUS_COMPLETED)
+			status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
 
-			idjob = wf->tasks[task_index].idjob;
-			pidjob = wf->idjob;
-			if (status < (int) OPH_ODB_STATUS_COMPLETED)
-				status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name, oph_odb_convert_status_to_str(status));
 
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name,
-			      oph_odb_convert_status_to_str(status));
-
-			pthread_mutex_unlock(&global_flag);
-		}
+		pthread_mutex_unlock(&global_flag);
 	}
 	// Finalize
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize waiting procedure\n");
-
 	ophidiadb oDB;
-	while (success) {
+	while (success && idjob && pidjob) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Finalize waiting procedure\n");
 
 		oph_odb_initialize_ophidiadb(&oDB);
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
@@ -232,7 +227,7 @@ void *_oph_wait(oph_notify_data * data)
 
 		oph_odb_disconnect_from_ophidiadb(&oDB);
 
-		if (state && state->jobid) {
+		if (state && state->jobid && !fast_exit) {
 
 			int jobid = 0;
 			pthread_mutex_lock(&global_flag);
@@ -270,6 +265,8 @@ void *_oph_wait(oph_notify_data * data)
 		free(wd);
 	}
 	free(data);
+	if (fast_exit)
+		oph_workflow_free(wf);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
 
