@@ -101,6 +101,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 				$message = 'Login';
 			} else {
 				$_SESSION['token'] = $output['access_token'];
+				$_SESSION['expires_on'] = date('U') + $output['expires_in'];
 				include('userinfo.php');
 				if (isset($output['refresh_token'])) {
 					$_SESSION['refresh_token'] = $output['refresh_token'];
@@ -127,6 +128,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 					$message = 'Login';
 				} else {
 					$_SESSION['token'] = $output['access_token'];
+					$_SESSION['expires_on'] = date('U') + $output['expires_in'];
 					$_SESSION['refresh_token'] = $output['refresh_token'];
 					send_message('access_token='. $_SESSION['token'] . ';userinfo='. $_SESSION['userinfo'] .';refresh_token='. $_SESSION['refresh_token'] .';');
 				}
@@ -205,7 +207,13 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
 ?>
 		<DIV id="token">
-			<H5>Access token</H5>
+			<H5>Access token <?php
+			$residual_time = $_SESSION['expires_on'] - date('U');
+			if ($residual_time > 0)
+				echo '(valid for ' . $residual_time . ' seconds)';
+			else
+				echo '(expired)';
+			?></H5>
 			<TEXTAREA rows="5" cols="133" onclick="this.focus();this.select();" readonly="readonly"><?php echo $_SESSION['token']; ?></TEXTAREA>
 		</DIV>
 <?php
