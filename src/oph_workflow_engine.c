@@ -2786,17 +2786,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 	wf = item->wf;
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: found workflow '%s'\n", ttype, jobid, wf->name);
 	if (strcmp(wf->sessionid, sessionid))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: sessionid in memory is different from sessionid in notification\n", ttype, jobid);
 	if (sessionid)
 		free(sessionid);
 
-	if (!wf->tasks[task_index].idjob) {	// A massive operation is waiting a response
+	if (!wf->tasks[task_index].idjob) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,
+		      oph_odb_convert_status_to_str(status));
 		if (status == OPH_ODB_STATUS_COMPLETED) {
 			if (wf->tasks[task_index].response)
 				free(wf->tasks[task_index].response);
 			wf->tasks[task_index].response = strdup(output_json);
-		}
+		} else
+			wf->tasks[task_index].response = strdup("");
 		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
 			pthread_cond_broadcast(&waiting_flag);
 		pthread_mutex_unlock(&global_flag);

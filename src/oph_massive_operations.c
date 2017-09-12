@@ -232,6 +232,11 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A file scanning report is arrived\n");
 		}
 
+		if (wf->tasks[task_index].response && !strlen(wf->tasks[task_index].response)) {
+			free(wf->tasks[task_index].response);
+			wf->tasks[task_index].response = NULL;
+		}
+
 		unsigned int j;
 		oph_json *oper_json = NULL;
 		oph_json_obj_grid *grid_json = NULL;
