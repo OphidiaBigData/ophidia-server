@@ -78,7 +78,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 #ifdef INTERFACE_TYPE_IS_SSL
 	int res;
 	pthread_mutex_lock(&global_flag);
-	res = oph_auth_user(userid, soap->passwd, _host);
+	res = oph_auth_user(userid, soap->passwd, _host, NULL);
 	pthread_mutex_unlock(&global_flag);
 	if (res) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: received wrong credentials: %s %s\n", userid, soap->passwd ? soap->passwd : "NONE");

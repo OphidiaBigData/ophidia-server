@@ -212,8 +212,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 #endif
 
 #ifdef INTERFACE_TYPE_IS_SSL
-	int free_userid = 0;
-	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE];
+	int free_userid = 0, free_actual_userid = 0;
+	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE], *actual_userid = NULL;
 	*_new_token = 0;
 	state->authorization = OPH_AUTH_WRITE;
 
@@ -222,22 +222,26 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
 		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token))) {
 			// Token is valid: check local authorization
-			if (oph_auth_user_enabling(userid, &result)) {	// New user
+			if (oph_auth_user_enabling(userid, &result, &actual_userid)) {	// New user
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
 				if (oph_auth_is_user_black_listed(userid)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
 					result = OPH_SERVER_AUTH_ERROR;
-				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host))) {
+				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid))) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
 					oph_argument *token_args = NULL;
-					if (!(result = oph_auth_read_token(soap->passwd, &token_args)) && !(result = oph_auth_vo(token_args)))
+					if (!(result = oph_auth_read_token(soap->passwd, &token_args)) && !(result = oph_auth_vo(token_args, &actual_userid))) {
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized globally\n", jobid, userid);
-					else
+					} else
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized globally\n", jobid, userid);
 					oph_cleanup_args(&token_args);
 				} else
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
-				oph_auth_enable_user(userid, result);
+				if (actual_userid)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: cache user '%s' as '%s'\n", jobid, userid, actual_userid);
+				oph_auth_enable_user(userid, result, actual_userid);
+				if (actual_userid)
+					free_actual_userid = 1;
 			} else
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized (cached authorization)\n", jobid, userid, result ? "not " : "");
 		}
@@ -248,15 +252,22 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		free_userid = 1;
 	} else
-		result = oph_auth_user(userid, soap->passwd, _host);
+		result = oph_auth_user(userid, soap->passwd, _host, NULL);
 
 	pthread_mutex_unlock(&global_flag);
 
+	if (!result && actual_userid) {
+		free(userid);
+		userid = strdup(actual_userid);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: the username will be '%s'\n", jobid, userid);
+	}
 	if (free_userid && userid) {
 		snprintf(__userid, OPH_MAX_STRING_SIZE, "%s", userid);
 		free(userid);
 		userid = __userid;
 	}
+	if (free_actual_userid)
+		free(actual_userid);
 	if (result) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong credentials: %s %s (errno %d)\n", jobid, userid ? userid : OPH_AUTH_TOKEN,
 			   soap->passwd ? soap->passwd : "NONE", result);

@@ -105,6 +105,7 @@ extern unsigned int oph_default_session_timeout;
 oph_auth_user_bl *bl_head = NULL;
 oph_auth_user_bl *tokens = NULL;
 oph_auth_user_bl *auth_users = NULL;
+oph_auth_user_bl *actual_users = NULL;
 
 int oph_get_session_code(const char *sessionid, char *code)
 {
@@ -431,6 +432,7 @@ int oph_auth_free()
 	oph_free_bl(&bl_head);
 	oph_free_bl(&tokens);
 	oph_free_bl(&auth_users);
+	oph_free_bl(&actual_users);
 #ifdef OPH_OPENID_ENDPOINT
 	if (oph_openid_endpoint_public_key)
 		free(oph_openid_endpoint_public_key);
@@ -1335,36 +1337,44 @@ int oph_auth_is_user_black_listed(const char *userid)
 #endif
 }
 
-int oph_auth_vo(oph_argument * args)
+int oph_auth_vo(oph_argument * args, char **username)
 {
 	if (!args)
 		return OPH_SERVER_NULL_POINTER;
+
+	if (username)
+		*username = NULL;
 
 #ifdef AUTHORIZED_VO_FILE
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s=%s' in VO list '%s'\n", args->key, args->value, AUTHORIZED_VO_FILE);
 	int result = OPH_SERVER_AUTH_ERROR;
-	char buf[OPH_MAX_STRING_SIZE];
+	char buf[OPH_MAX_STRING_SIZE], *user = NULL;
 	FILE *fd = fopen(AUTHORIZED_VO_FILE, "r");
 	if (fd) {
 		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
 			if (strlen(buf))
 				buf[strlen(buf) - 1] = '\0';
-			if (strlen(buf) && !strcmp(args->value, buf)) {
-				result = OPH_SERVER_OK;
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
-				break;
+			if (strlen(buf)) {
+				if (username && ((user = strstr(buf, OPH_SEPARATOR_BASIC)))) {
+					*user = 0;
+					user++;
+				}
+				if (!strcmp(args->value, buf)) {
+					if (username && user)
+						*username = strdup(user);
+					result = OPH_SERVER_OK;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
+					break;
+				}
 			}
 		}
 		fclose(fd);
 	} else
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No VO found in '%s'\n", AUTHORIZED_VO_FILE);
-
 	if (result)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to find any VO in list of the authorized VO\n");
-
 	return result;
-
 #else
 
 	return OPH_SERVER_AUTH_ERROR;
@@ -1473,7 +1483,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_user(const char *userid, const char *passwd, const char *host)
+int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_username)
 {
 	if (!userid || !passwd)
 		return OPH_SERVER_NULL_POINTER;
@@ -1528,6 +1538,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 #endif
 				else if (!count)
 					oph_add_to_bl(&bl_head, userid, host);
+				if (!result && actual_username)
+					*actual_username = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
 				break;
 			}
 		}
@@ -2169,22 +2181,26 @@ int oph_auth_check_role(oph_auth_user_role role, oph_auth_user_role permission)
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_user_enabling(const char *userid, int *result)
+int oph_auth_user_enabling(const char *userid, int *result, char **actual_userid)
 {
 	if (!userid || !result)
 		return OPH_SERVER_NULL_POINTER;
 	*result = -1;
+	if (actual_userid)
+		*actual_userid = NULL;
 
 	char *res = oph_get_host_by_user_in_bl(&auth_users, userid, NULL);
 	if (res) {
 		*result = (int) strtol(res, NULL, 10);
+		if (actual_userid)
+			*actual_userid = oph_get_host_by_user_in_bl(&actual_users, userid, NULL);
 		return OPH_SERVER_OK;
 	}
 
 	return OPH_SERVER_ERROR;
 }
 
-int oph_auth_enable_user(const char *userid, int result)
+int oph_auth_enable_user(const char *userid, int result, char *actual_userid)
 {
 	if (!userid)
 		return OPH_SERVER_NULL_POINTER;
@@ -2192,6 +2208,8 @@ int oph_auth_enable_user(const char *userid, int result)
 	char res[1];
 	snprintf(res, 1, "%d", result);
 	oph_add_to_bl(&auth_users, userid, res);
+	if (actual_userid)
+		oph_add_to_bl(&actual_users, userid, actual_userid);
 
 	return OPH_SERVER_OK;
 }
