@@ -885,6 +885,11 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->parallel_mode = 0;
 	(*workflow)->host_partition = NULL;
 
+	struct timeval tv;
+	gettimeofday(&tv, 0);
+
+	(*workflow)->timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
+
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 

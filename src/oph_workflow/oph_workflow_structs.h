@@ -305,6 +305,7 @@ typedef struct _oph_workflow {
 	char cancel_type;
 	char *host_partition;
 	int waiting_tasks_num;
+	double timestamp;
 } oph_workflow;
 
 /* Functions for structs cleanup */

@@ -39,6 +39,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#define OPH_EXEC_TIME "execution_time"
+
 extern int oph_service_status;
 extern char *oph_auth_location;
 extern char *oph_log_file_name;
@@ -149,6 +151,48 @@ int oph_check_status_mask(enum oph__oph_odb_job_status status, char *smask)
 			return 0;
 	}
 	return smask[i] == OPH_OPERATOR_RESUME_PARAMETER_MASK_UP;
+}
+
+#define OPH_EXTRA "    \"extra\": {\n\
+        \"keys\": [\n\
+            %s\n\
+        ],\n\
+        \"values\": [\n\
+            %s\n\
+        ]\n\
+    }"
+
+
+int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
+{
+
+	if (!jstring)
+		return OPH_SERVER_ERROR;
+
+	if (!n || !keys || !values)
+		return OPH_SERVER_OK;
+
+	char _response[OPH_MAX_STRING_SIZE + strlen(*jstring)];
+	strcpy(_response, *jstring);
+
+	char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
+	if (last_bracket) {
+
+		unsigned int i, k = 0, v = 0;
+		char _keys[OPH_MAX_STRING_SIZE], _values[OPH_MAX_STRING_SIZE];
+		*_keys = *_values = 0;
+		for (i = 0; i < n; i++) {
+			k += snprintf(_keys + k, OPH_MAX_STRING_SIZE - k, "%s\"%s\"", i ? ", " : "", keys[i]);
+			v += snprintf(_values + v, OPH_MAX_STRING_SIZE - v, "%s\"%s\"", i ? ", " : "", values[i]);
+		}
+
+		snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_EXTRA "\n}", _keys, _values);
+
+		free(*jstring);
+		*jstring = strdup(_response);
+	}
+
+	return OPH_SERVER_OK;
 }
 
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
@@ -1187,13 +1231,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: JSON output created\n", jobid);
 			if (jstring) {
 				if (strlen(_new_token)) {
-					char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
-					strcpy(_response, jstring);
-					char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
-					if (last_bracket) {
-						snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
-						response->response = soap_strdup(soap, _response);
+					char **keys = (char **) malloc(sizeof(char *)), **values = (char **) malloc(sizeof(char *));
+					if (keys && values) {
+						keys[0] = strdup(OPH_AUTH_TOKEN_JSON);
+						values[0] = strdup(_new_token);
+						if (keys[0] && values[0]) {
+							if (oph_add_extra(&jstring, keys, values, 1))
+								response->response = soap_strdup(soap, jstring);
+						}
 					}
+					free_string_vector(keys, 1);
+					free_string_vector(values, 1);
 				}
 				if (!response->response)
 					response->response = soap_strdup(soap, jstring);
@@ -1671,13 +1719,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: JSON output created\n", jobid);
 			if (jstring) {
 				if (strlen(_new_token)) {
-					char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
-					strcpy(_response, jstring);
-					char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
-					if (last_bracket) {
-						snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
-						response->response = soap_strdup(soap, _response);
+					char **keys = (char **) malloc(sizeof(char *)), **values = (char **) malloc(sizeof(char *));
+					if (keys && values) {
+						keys[0] = strdup(OPH_AUTH_TOKEN_JSON);
+						values[0] = strdup(_new_token);
+						if (keys[0] && values[0]) {
+							if (oph_add_extra(&jstring, keys, values, 1))
+								response->response = soap_strdup(soap, jstring);
+						}
 					}
+					free_string_vector(keys, 1);
+					free_string_vector(values, 1);
 				}
 				if (!response->response)
 					response->response = soap_strdup(soap, jstring);
@@ -5310,13 +5362,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 
 		if (strlen(_new_token)) {
-			char _response[OPH_MAX_STRING_SIZE + strlen(jstring)];
-			strcpy(_response, jstring);
-			char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
-			if (last_bracket) {
-				snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
-				response->response = soap_strdup(soap, _response);
+			char **keys = (char **) malloc(sizeof(char *)), **values = (char **) malloc(sizeof(char *));
+			if (keys && values) {
+				keys[0] = strdup(OPH_AUTH_TOKEN_JSON);
+				values[0] = strdup(_new_token);
+				if (keys[0] && values[0]) {
+					if (oph_add_extra(&jstring, keys, values, 1))
+						response->response = soap_strdup(soap, jstring);
+				}
 			}
+			free_string_vector(keys, 1);
+			free_string_vector(values, 1);
 		}
 		if (!response->response)
 			response->response = soap_strdup(soap, jstring);
@@ -5778,25 +5834,44 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_cleanup_args(&session_args);
 			}
 
-			if (strlen(_new_token)) {
-				char _response[OPH_MAX_STRING_SIZE + strlen(wf->response)];
-				strcpy(_response, wf->response);
-				char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
-				if (last_bracket) {
-					snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_AUTH_TOKEN_JSON "\n}", _new_token);
-					response->response = soap_strdup(soap, _response);
+			unsigned int nextra = 1, iextra = 0;
+			if (strlen(_new_token))
+				nextra++;
+
+			struct timeval tv;
+			gettimeofday(&tv, 0);
+			char exec_time[OPH_SHORT_STRING_SIZE];
+			snprintf(exec_time, OPH_SHORT_STRING_SIZE, "%.2f", (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			char **keys = (char **) calloc(nextra, sizeof(char *)), **values = (char **) calloc(nextra, sizeof(char *));
+			while (keys && values) {
+
+				keys[iextra] = strdup(OPH_EXEC_TIME);
+				values[iextra] = strdup(exec_time);
+				if (!keys[iextra] || !values[iextra])
+					break;
+				iextra++;
+				if (strlen(_new_token)) {
+					keys[iextra] = strdup(OPH_AUTH_TOKEN_JSON);
+					values[iextra] = strdup(_new_token);
+					if (!keys[iextra] || !values[iextra])
+						break;
+					iextra++;
 				}
+
+				break;
 			}
+
+			if (oph_add_extra(&wf->response, keys, values, iextra))	// iextra is correct
+				response->response = soap_strdup(soap, wf->response);
+			free_string_vector(keys, nextra);
+			free_string_vector(values, nextra);
 			if (!response->response)
 				response->response = soap_strdup(soap, wf->response);
-
 			oph_workflow_free(wf);
-
 			pthread_mutex_lock(&global_flag);
 			if (service_info)
 				service_info->outcoming_responses++;
 			pthread_mutex_unlock(&global_flag);
-
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
 			oph_workflow_free(wf);
