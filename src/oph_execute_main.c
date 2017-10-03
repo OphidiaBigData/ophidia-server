@@ -39,7 +39,16 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#define OPH_EXTRA "    \"extra\": {\n\
+        \"keys\": [\n\
+            %s\n\
+        ],\n\
+        \"values\": [\n\
+            %s\n\
+        ]\n\
+    }\n"
 #define OPH_EXEC_TIME "execution_time"
+#define OPH_REQUEST_TIME "    \"request_time\": \"%s\"\n"
 
 extern int oph_service_status;
 extern char *oph_auth_location;
@@ -153,16 +162,6 @@ int oph_check_status_mask(enum oph__oph_odb_job_status status, char *smask)
 	return smask[i] == OPH_OPERATOR_RESUME_PARAMETER_MASK_UP;
 }
 
-#define OPH_EXTRA "    \"extra\": {\n\
-        \"keys\": [\n\
-            %s\n\
-        ],\n\
-        \"values\": [\n\
-            %s\n\
-        ]\n\
-    }"
-
-
 int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 {
 
@@ -186,7 +185,7 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 			v += snprintf(_values + v, OPH_MAX_STRING_SIZE - v, "%s\"%s\"", i ? ", " : "", values[i]);
 		}
 
-		snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_EXTRA "\n}", _keys, _values);
+		snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_EXTRA "%c", _keys, _values, OPH_SEPARATOR_BRACKET_CLOSE);
 
 		free(*jstring);
 		*jstring = strdup(_response);
@@ -334,6 +333,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			_userid[i] = '_';
 
 	// Load workflow
+	char input_is_json = 1;
 	oph_workflow *wf = NULL;
 	if (oph_workflow_load(request, userid, &wf)) {
 #ifdef COMMAND_TO_JSON
@@ -358,6 +358,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			free(wf->author);
 			wf->author = NULL;
 		}
+		input_is_json = 0;
 #else
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong data\n", jobid);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -5540,7 +5541,28 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_REQUEST_FILENAME, oph_web_server_location, session_code, str_workflowid);
 	FILE *fil = fopen(filename, "w");
 	if (fil) {
-		fprintf(fil, "%s", request);
+		// Append the timestamp to the request
+		char saved = 0;
+		if (input_is_json) {
+			char _request[1 + strlen(request)];
+			strcpy(_request, request);
+			char *last_bracket = strrchr(_request, OPH_SEPARATOR_BRACKET_CLOSE);
+			if (last_bracket) {
+				*last_bracket = 0;
+				time_t nowtime = (time_t) (wf->timestamp);
+				struct tm nowtm;
+				if (!localtime_r(&nowtime, &nowtm))
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error getting system time\n");
+				else {
+					char _timestamp[OPH_MAX_STRING_SIZE];
+					strftime(_timestamp, OPH_MAX_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+					fprintf(fil, "%s,\n" OPH_REQUEST_TIME "%c", _request, _timestamp, OPH_SEPARATOR_BRACKET_CLOSE);
+					saved = 1;
+				}
+			}
+		}
+		if (!saved)
+			fprintf(fil, "%s", request);
 		fclose(fil);
 	} else
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save the request\n", jobid);
