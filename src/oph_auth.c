@@ -2425,8 +2425,8 @@ int oph_auth_enable_user(const char *userid, int result, char *actual_userid)
 	if (!userid)
 		return OPH_SERVER_NULL_POINTER;
 
-	char res[1];
-	snprintf(res, 1, "%d", result);
+	char res[OPH_SHORT_STRING_SIZE];
+	snprintf(res, OPH_SHORT_STRING_SIZE, "%d", result);
 	oph_add_to_bl(&auth_users, userid, res);
 	if (actual_userid)
 		oph_add_to_bl(&actual_users, userid, actual_userid);
