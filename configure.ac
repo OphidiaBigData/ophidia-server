@@ -315,7 +315,7 @@ AC_ARG_WITH(web_server_path,
 OPH_WEB_SERVER_LOCATION=${web_server_path}
 AC_SUBST(OPH_WEB_SERVER_LOCATION)
 
-AC_ARG_WITH(openid_endpoint, [  --with-openid-endpoint=URL	Endpoint], [ openid_endpoint="$withval" ])
+AC_ARG_WITH(openid_endpoint, [  --with-openid-endpoint=URL Endpoint], [ openid_endpoint="$withval" ])
 OPH_OPENID_ENDPOINT=${openid_endpoint}
 AC_SUBST(OPH_OPENID_ENDPOINT)
 
@@ -328,6 +328,12 @@ OPH_OPENID_CLIENT_SECRET=${openid_client_secret}
 AC_SUBST(OPH_OPENID_CLIENT_SECRET)
 
 AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid_endpoint" != "x"])
+
+AC_ARG_WITH(aaa_endpoint, [  --with-aaa-endpoint=URL Endpoint], [ aaa_endpoint="$withval" ])
+OPH_AAA_ENDPOINT=${aaa_endpoint}
+AC_SUBST(OPH_AAA_ENDPOINT)
+
+AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa_endpoint" != "x"])
 
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,

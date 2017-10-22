@@ -88,6 +88,7 @@
 		$isset_userid = isset($_SESSION['userid']) && !empty($_SESSION['userid']);
 		$isset_token = isset($_SESSION['token']) && !empty($_SESSION['token']);
 		if (!$isset_userid && !$isset_token) {
+			if (!empty($oph_openid_endpoint)) {
 ?>
 		<SCRIPT type="text/javascript">
 			function login_with_openid() {
@@ -98,6 +99,32 @@
             }
 		</SCRIPT>
 <?php
+			}
+			if (!empty($oph_aaa_endpoint)) {
+?>
+		<SCRIPT type="text/javascript">
+			var answer_data;
+			function HandlePopupResult(answer_data) {
+				var error_label = document.getElementById("error");
+				error_label.style.color = "green";
+				error_label.textContent = answer_data;
+			}
+			function openWin(url, w, h) {
+				var left = (screen.width / 2) - (w / 2);
+				var top = (screen.height / 2) - (h / 2);
+				w = window.open(url, '_blank');
+				w.focus();
+			}
+			function login_with_aaa() {
+				var error_label = document.getElementById("error");
+				error_label.style.color = "green";
+				error_label.textContent = "Wait for the request to be processed";
+				openWin('<?php echo $oph_aaa_endpoint; ?>');
+				return false;
+            }
+		</SCRIPT>
+<?php
+			}
 		}
 ?>
 	</HEAD>
@@ -173,6 +200,13 @@
 			if (!empty($oph_openid_endpoint)) {
 ?>
 				<INPUT name="openid" type="button" value=" Login with OpenId " onclick="login_with_openid()"/>
+<?php
+			}
+?>
+<?php
+			if (!empty($oph_aaa_endpoint)) {
+?>
+				<INPUT name="aaa" type="button" value=" Login with AAA " onclick="login_with_aaa()"/>
 <?php
 			}
 ?>
