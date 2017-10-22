@@ -74,6 +74,11 @@
 #define OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT "OPENID_TOKEN_TIMEOUT"
 #define OPH_SERVER_CONF_OPENID_TOKEN_CHECK_TIME "OPENID_TOKEN_CHECK_TIME"
 #endif
+#ifdef OPH_AAA_ENDPOINT
+#define OPH_SERVER_CONF_AAA_ENDPOINT "AAA_ENDPOINT"
+#define OPH_SERVER_CONF_AAA_CATEGORY "AAA_CATEGORY"
+#define OPH_SERVER_CONF_AAA_NAME "AAA_NAME"
+#endif
 
 // Security
 #define OPH_SERVER_CERT "%s/etc/cert/myserver.pem"
@@ -104,6 +109,10 @@
 #define OPH_SERVER_POLL_ITEMS 128	// tasks
 #define OPH_BASE_SRC_PATH ""
 #define OPH_SERVER_DEV_NULL "/dev/null"
+#ifdef OPH_AAA_ENDPOINT
+#define OPH_AAA_CATEGORY "service"
+#define OPH_AAA_NAME "ophidia"
+#endif
 
 // RMS info
 #define OPH_RMANAGER_CONF_FILE "%s/etc/rmanager.conf"

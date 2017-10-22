@@ -121,6 +121,11 @@ char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
 #endif
+#ifdef OPH_AAA_ENDPOINT
+char *oph_aaa_endpoint = 0;
+char *oph_aaa_category = 0;
+char *oph_aaa_name = 0;
+#endif
 
 void set_global_values(const char *configuration_file)
 {
@@ -312,6 +317,20 @@ void set_global_values(const char *configuration_file)
 		oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	}
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
+#endif
+#ifdef OPH_AAA_ENDPOINT
+	if (!(oph_aaa_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_ENDPOINT))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_ENDPOINT, OPH_AAA_ENDPOINT);
+		oph_aaa_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_ENDPOINT);
+	}
+	if (!(oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY, OPH_AAA_CATEGORY);
+		oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY);
+	}
+	if (!(oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_NAME, OPH_AAA_NAME);
+		oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME);
+	}
 #endif
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server

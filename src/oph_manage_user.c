@@ -61,6 +61,11 @@ char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
 #endif
+#ifdef OPH_AAA_ENDPOINT
+char *oph_aaa_endpoint = 0;
+char *oph_aaa_category = 0;
+char *oph_aaa_name = 0;
+#endif
 
 void cleanup()
 {
