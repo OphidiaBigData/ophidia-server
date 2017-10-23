@@ -35,9 +35,14 @@
 #endif
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-pthread_t token_tid;
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
+#ifdef OPH_OPENID_ENDPOINT
+pthread_t token_tid_openid;
+#endif
+#ifdef OPH_AAA_ENDPOINT
+pthread_t token_tid_aaa;
+#endif
 #endif
 
 char *oph_server_location = 0;
@@ -65,6 +70,7 @@ unsigned int oph_openid_token_check_time = 0;
 char *oph_aaa_endpoint = 0;
 char *oph_aaa_category = 0;
 char *oph_aaa_name = 0;
+unsigned int oph_aaa_token_check_time = 0;
 #endif
 
 void cleanup()

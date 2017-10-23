@@ -40,7 +40,7 @@
 #include <cjose/cjose.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-extern pthread_t token_tid;
+extern pthread_t token_tid_openid;
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t curl_flag;
 #endif
@@ -98,6 +98,10 @@ char *oph_openid_endpoint_public_key = NULL;
 
 #ifdef OPH_AAA_ENDPOINT
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_t token_tid_aaa;
+#endif
+
 #ifndef OPH_OPENID_ENDPOINT
 
 #include "hashtbl.h"
@@ -121,6 +125,7 @@ typedef struct _oph_auth_clip {
 extern char *oph_aaa_endpoint;
 extern char *oph_aaa_category;
 extern char *oph_aaa_name;
+extern unsigned int oph_aaa_token_check_time;
 
 #endif
 
@@ -1165,7 +1170,7 @@ int oph_auth_get_user_from_userinfo_aaa(const char *userinfo, char **userid)
 		return OPH_SERVER_AUTH_ERROR;
 	}
 	if (!strcmp(response, "invalid token")) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "AAA: invalid token\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: invalid token\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
@@ -1403,7 +1408,7 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache, s
 
 #ifdef OPH_OPENID_ENDPOINT
 
-void *_oph_check(void *data)
+void *_oph_check_openid(void *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -1454,6 +1459,69 @@ void *_oph_check(void *data)
 		} while (bl_item);
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: check for revoked tokens... done\n");
+		pthread_mutex_unlock(&global_flag);
+	}
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+}
+
+#endif
+
+#ifdef OPH_AAA_ENDPOINT
+
+void *_oph_check_aaa(void *data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+
+	char *userid = NULL, *token, *user;
+	time_t deadtime;
+	struct timeval tv;
+	oph_auth_user_bl *bl_item, *bl_prev;
+
+	while (oph_aaa_token_check_time) {
+
+		sleep(oph_aaa_token_check_time);
+
+		pthread_mutex_lock(&global_flag);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check for revoked tokens...\n");
+
+		do {
+
+			gettimeofday(&tv, NULL);
+			bl_item = tokens_aaa;
+			bl_prev = NULL;
+			while (bl_item) {
+				deadtime = (time_t) (bl_item->check_time + oph_aaa_token_check_time);
+				if (tv.tv_sec >= deadtime) {
+					token = strdup(bl_item->host);
+					user = strdup(bl_item->userid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check validity of token associated with user '%s'\n", user);
+					bl_item->check_time = tv.tv_sec;
+					if (oph_auth_get_user_from_token_aaa(token, &userid, 0) || !userid) {	// Release the lock internally
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: token '%s' has been revoked by the user '%s'\n", token, user);
+						oph_drop_from_bl(&tokens_aaa, user, token);
+					}
+					if (token)
+						free(token);
+					if (user)
+						free(user);
+					break;	// Need to restart since the lock has been released
+				}
+				bl_prev = bl_item;
+				bl_item = bl_item->next;
+				if (userid) {
+					free(userid);
+					userid = NULL;
+				}
+			}
+
+		} while (bl_item);
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check for revoked tokens... done\n");
 		pthread_mutex_unlock(&global_flag);
 	}
 
@@ -1537,10 +1605,10 @@ int oph_auth_check(const char *token, const char *userid)
 	*chunk.memory = chunk.size = 0;
 
 	char url[OPH_MAX_STRING_SIZE], fields[OPH_MAX_STRING_SIZE];
-	snprintf(url, OPH_MAX_STRING_SIZE, "%s/engine/api/use_resource", oph_aaa_endpoint);
+	snprintf(url, OPH_MAX_STRING_SIZE, "%s/engine/api/read_authorisation", oph_aaa_endpoint);
 	snprintf(fields, OPH_MAX_STRING_SIZE, "username=%s&resource_category=%s&resource_name=%s&token=%s", userid, oph_aaa_category, oph_aaa_name, token);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: assing resource: waiting...\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: GET authorization rule: waiting...\n");
 
 	CURL *curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -1561,13 +1629,13 @@ int oph_auth_check(const char *token, const char *userid)
 	curl_easy_cleanup(curl);
 
 	if (res || !chunk.memory) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: unable to assing resource: %s\n", curl_easy_strerror(res));
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: unable to obtaine authorization rule: %s\n", curl_easy_strerror(res));
 		if (chunk.memory)
 			free(chunk.memory);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: assing resource: completed\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: GET authorization rule: completed\n");
 
 	json_t *info = json_loads(chunk.memory, 0, NULL);
 	if (!info) {
@@ -1704,6 +1772,8 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 		_type = 1;
 	else if (!oph_get_user_by_token(&tokens_aaa, token, userid, new_token))
 		_type = 2;
+	if (_type)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
 	else {
 		short count;
 		char deadline[OPH_MAX_STRING_SIZE];
@@ -1733,8 +1803,6 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
 		}
 	}
-	if (_type)
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
 	if (!result) {
 		if (!*userid) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
@@ -2547,7 +2615,14 @@ int oph_auth_autocheck_tokens()
 #ifdef OPH_OPENID_ENDPOINT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_create(&token_tid, NULL, (void *(*)(void *)) &_oph_check, NULL);
+	pthread_create(&token_tid_openid, NULL, (void *(*)(void *)) &_oph_check_openid, NULL);
+#endif
+
+#endif
+#ifdef OPH_AAA_ENDPOINT
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_create(&token_tid_aaa, NULL, (void *(*)(void *)) &_oph_check_aaa, NULL);
 #endif
 
 #endif
