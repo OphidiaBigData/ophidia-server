@@ -103,11 +103,29 @@
 			if (!empty($oph_aaa_endpoint)) {
 ?>
 		<SCRIPT type="text/javascript">
-			var answer_data;
-			function HandlePopupResult(answer_data) {
+			window.addEventListener("message", receiveMessage, false);
+			function receiveMessage(event)
+			{
+				if (event.origin !== "<?php echo $oph_aaa_endpoint; ?>")
+					return;
 				var error_label = document.getElementById("error");
-				error_label.style.color = "green";
-				error_label.textContent = answer_data;
+				var data = event.data;
+				if (!data.success) {
+					error_label.style.color = "red";
+					if (data.error !== "")						
+						error_label.textContent = data.error;
+					else
+						error_label.textContent = "Authorization error";
+					return;
+				}
+				if (data.error !== "") {
+					error_label.style.color = "red";
+					error_label.textContent = data.error;
+					return;
+				}
+				var user_info = data.user_info;
+				error_label.textContent = "";
+				location.href = '<?php echo $oph_web_server_secure; ?>/aaa.php?token=' + user_info.user_token + '&username=' + user_info.user.username + '&fname=' + user_info.user.fname + '&lname=' + user_info.user.lname;
 			}
 			function openWin(url, w, h) {
 				var left = (screen.width / 2) - (w / 2);
