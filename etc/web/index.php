@@ -25,6 +25,15 @@
 		$error='';
 		if (isset($_GET['logout'])) {
 			session_start();
+			if (isset($_SESSION['token']) && !empty($_SESSION['token']) && ($_SESSION['token_type'] == 'aaa')) {
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $oph_aaa_endpoint.'/engine/api/checkout_data');
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, 'token='.$_SESSION['token']);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				$userinfo_json = curl_exec($ch);
+				curl_close($ch);
+			}
 			if (session_destroy()) header('Location: '.$oph_web_server_secure.'/index.php');
 		} else if (isset($_POST['submit'])) {
 			$error = 'Username or Password are not valid';
