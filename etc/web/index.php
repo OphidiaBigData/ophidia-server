@@ -162,9 +162,15 @@
 			<B class="inactivelink">Download</B>
 <?php
 			if ($isset_token) {
+				if ($_SESSION['token_type'] === 'openid') {
 ?>
 			<B class="activelink"><A href="openid.php">Get token</A></B>
 <?php
+				} else if ($_SESSION['token_type'] === 'aaa') {
+?>
+			<B class="activelink"><A href="aaa.php">Get token</A></B>
+<?php
+				}
 			}
 ?>
 		</DIV>
