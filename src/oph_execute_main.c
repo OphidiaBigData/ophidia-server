@@ -163,14 +163,16 @@ int oph_check_status_mask(enum oph__oph_odb_job_status status, char *smask)
 
 int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 {
-
 	if (!jstring)
 		return OPH_SERVER_ERROR;
 
 	if (!n || !keys || !values)
 		return OPH_SERVER_OK;
 
-	char _response[OPH_MAX_STRING_SIZE + strlen(*jstring)];
+	char *_response = (char *) calloc(OPH_MAX_STRING_SIZE + strlen(*jstring), sizeof(char));
+	if (!_response)
+		return OPH_SERVER_ERROR;
+
 	strcpy(_response, *jstring);
 
 	char *last_bracket = strrchr(_response, OPH_SEPARATOR_BRACKET_CLOSE);
@@ -187,8 +189,10 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 		snprintf(last_bracket, OPH_MAX_STRING_SIZE, ",\n" OPH_EXTRA "%c", _keys, _values, OPH_SEPARATOR_BRACKET_CLOSE);
 
 		free(*jstring);
-		*jstring = strdup(_response);
-	}
+		*jstring = _response;
+
+	} else
+		free(_response);
 
 	return OPH_SERVER_OK;
 }
