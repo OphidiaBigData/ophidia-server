@@ -26,6 +26,7 @@
 #include <mysql.h>
 
 #define OPH_NULL_FILENAME "/dev/null"
+#define OPH_NULL_MPITYPE "--mpi=none"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -523,11 +524,15 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		return RMANAGER_NULL_PARAM;
 	}
 
+	char *special_args = NULL;
+	if (ncores == 1)
+		special_args = strdup(OPH_NULL_MPITYPE);
+
 	int len = 0;
 	len =
-	    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 + strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) +
-	    1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 + strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 +
-	    strlen(orm->subm_jobname) + 1 + strlen(request);
+	    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + (special_args ? strlen(special_args) + 1 : 0) + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 +
+	    strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 +
+	    strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
 	if (username)
 		len += strlen(username);
 	else if (oph_subm_user) {
@@ -535,12 +540,16 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		len += strlen(username);
 	} else {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "No username selected\n");
+		if (special_args)
+			free(special_args);
 		return RMANAGER_NULL_PARAM;
 	}
 	len += 128;		// 128 is a very big number to include the number of cores and the name of the ophidia application client
 
 	if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		if (special_args)
+			free(special_args);
 		return RMANAGER_MEMORY_ERROR;
 	}
 
@@ -552,16 +561,21 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 
 	if (!strcasecmp(orm->name, "slurm")) {
 		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores, orm->subm_interact,
-				orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
+			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
+				orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, subm_username, orm->subm_group, orm->subm_ncores, ncores,
-				orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, oph_operator_client,
-				request, orm->subm_postfix);
+			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
+				orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid,
+				oph_operator_client, request, orm->subm_postfix);
 	} else {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
+		if (special_args)
+			free(special_args);
 		return RMANAGER_ERROR;
 	}
+
+	if (special_args)
+		free(special_args);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
