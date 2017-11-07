@@ -26,6 +26,7 @@
 #include <mysql.h>
 
 #define OPH_NULL_FILENAME "/dev/null"
+#define OPH_CHECK_FOR_MPITYPE "operator=oph_script;"
 #define OPH_NULL_MPITYPE "--mpi=none"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -525,7 +526,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	}
 
 	char *special_args = NULL;
-	if (ncores == 1)
+	if ((ncores == 1) && strstr(request, OPH_CHECK_FOR_MPITYPE))
 		special_args = strdup(OPH_NULL_MPITYPE);
 
 	int len = 0;
