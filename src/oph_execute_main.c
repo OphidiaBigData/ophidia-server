@@ -2707,7 +2707,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: CONNECTED to OphidiaDB\n", jobid);
 
-			int n, *markers = NULL;
+			int n = 0, *markers = NULL;
 			char **ctime = NULL;
 			char query[OPH_MAX_STRING_SIZE], *submission_string = NULL, *creation_date = NULL;
 			if (!document_type && !id_type && ((level == 1) || (level == 3)))	// JSON Response for workflow: extract specific outputs
@@ -5282,8 +5282,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							free(jstring);
 					} else if (buffer) {
 						char *pbuffer = buffer;
-						n = asprintf(&buffer, "%s%s", pbuffer, jstring);
-						free(pbuffer);
+						buffer = NULL;
+						if (asprintf(&buffer, "%s%s", pbuffer, jstring) > 0)
+							free(pbuffer);
+						else {
+							pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: Error allocating buffer for response... skipping\n", jobid);
+							if (buffer)
+								free(buffer);
+							buffer = pbuffer;
+						}
 						if (jstring)
 							free(jstring);
 					} else
