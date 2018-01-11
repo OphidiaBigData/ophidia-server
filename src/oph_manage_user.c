@@ -37,10 +37,10 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 pthread_t token_tid_openid;
 #endif
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 pthread_t token_tid_aaa;
 #endif
 #endif
@@ -59,14 +59,14 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
 #endif
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 char *oph_aaa_endpoint = 0;
 char *oph_aaa_category = 0;
 char *oph_aaa_name = 0;

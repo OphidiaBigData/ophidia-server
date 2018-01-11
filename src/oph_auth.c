@@ -32,7 +32,7 @@
 
 
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
 #include <curl/curl.h>
@@ -96,13 +96,13 @@ char *oph_openid_endpoint_public_key = NULL;
 
 
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_t token_tid_aaa;
 #endif
 
-#ifndef OPH_OPENID_ENDPOINT
+#ifndef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
 #include <curl/curl.h>
@@ -119,6 +119,8 @@ typedef struct _oph_auth_clip {
 	char *memory;
 	size_t size;
 } oph_auth_clip;
+
+HASHTBL *usersinfo = NULL;
 
 #endif
 
@@ -399,7 +401,7 @@ int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **us
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 			hashtbl_remove(usersinfo, bl_item->host);
 #endif
 			if (bl_prev)
@@ -474,9 +476,11 @@ int oph_auth_free()
 	oph_free_bl(&tokens_aaa);
 	oph_free_bl(&auth_users);
 	oph_free_bl(&actual_users);
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if (oph_openid_endpoint_public_key)
 		free(oph_openid_endpoint_public_key);
+#endif
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 	if (usersinfo)
 		hashtbl_destroy(usersinfo);
 #endif
@@ -496,7 +500,7 @@ int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid,
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 			hashtbl_remove(usersinfo, bl_item->host);
 #endif
 			if (bl_prev)
@@ -558,7 +562,7 @@ char *oph_sha(char *to, const char *passwd)
 }
 #endif
 
-#if defined(OPH_OPENID_ENDPOINT) || defined(OPH_AAA_ENDPOINT)
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 
 size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 {
@@ -575,7 +579,7 @@ size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 
 #endif
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 char *mystrdup(const char *s, size_t len)
 {
@@ -1147,7 +1151,7 @@ int oph_auth_check_token_openid(const char *token)
 
 #endif
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 
 int oph_auth_get_user_from_userinfo_aaa(const char *userinfo, char **userid)
 {
@@ -1200,6 +1204,8 @@ int oph_auth_check_token_aaa(const char *token)
 
 #endif
 
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
+
 int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 {
 	if (!access_token || !userinfo)
@@ -1216,6 +1222,8 @@ int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 	return OPH_SERVER_OK;
 }
 
+#endif
+
 int oph_auth_check_token(const char *token, short *type)
 {
 	if (!token)
@@ -1223,7 +1231,7 @@ int oph_auth_check_token(const char *token, short *type)
 	if (type)
 		*type = 0;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if (!oph_auth_check_token_openid(token)) {
 		if (type)
 			*type = 1;
@@ -1231,7 +1239,7 @@ int oph_auth_check_token(const char *token, short *type)
 	}
 #endif
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 	if (!oph_auth_check_token_aaa(token)) {
 		if (type)
 			*type = 2;
@@ -1248,7 +1256,7 @@ int oph_auth_get_user_from_token_openid(const char *token, char **userid, char c
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-#ifndef OPH_OPENID_ENDPOINT
+#ifndef OPH_OPENID_SUPPORT
 
 	UNUSED(cache);
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: endpoint is not set\n");
@@ -1321,7 +1329,7 @@ int oph_auth_get_user_from_token_aaa(const char *token, char **userid, char cach
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-#ifndef OPH_AAA_ENDPOINT
+#ifndef OPH_AAA_SUPPORT
 
 	UNUSED(cache);
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
@@ -1393,12 +1401,12 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache, s
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if ((type == 1) && !oph_auth_get_user_from_token_openid(token, userid, cache))
 		return OPH_SERVER_OK;
 #endif
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 	if ((type == 2) && !oph_auth_get_user_from_token_aaa(token, userid, cache))
 		return OPH_SERVER_OK;
 #endif
@@ -1406,7 +1414,7 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache, s
 	return OPH_SERVER_AUTH_ERROR;
 }
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 void *_oph_check_openid(void *data)
 {
@@ -1469,7 +1477,7 @@ void *_oph_check_openid(void *data)
 
 #endif
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 
 void *_oph_check_aaa(void *data)
 {
@@ -1538,7 +1546,7 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 		return OPH_SERVER_NULL_POINTER;
 	*args = NULL;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 	if (!usersinfo)
 		return OPH_SERVER_AUTH_ERROR;
@@ -1593,7 +1601,7 @@ int oph_auth_check(const char *token, const char *userid)
 	if (!token || !userid)
 		return OPH_SERVER_NULL_POINTER;
 
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 
 	if (!strlen(oph_aaa_endpoint)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
@@ -1764,7 +1772,7 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 	if (type)
 		*type = 0;
 
-#if defined(OPH_OPENID_ENDPOINT) || defined(OPH_AAA_ENDPOINT)
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 
 	short _type = 0;
 	int result = OPH_SERVER_OK;
@@ -1827,7 +1835,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	if (!access_token || !userinfo)
 		return OPH_SERVER_NULL_POINTER;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 	pthread_mutex_lock(&global_flag);
 
@@ -2612,14 +2620,14 @@ int oph_auth_enable_user(const char *userid, int result, char *actual_userid)
 int oph_auth_autocheck_tokens()
 {
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_create(&token_tid_openid, NULL, (void *(*)(void *)) &_oph_check_openid, NULL);
 #endif
 
 #endif
-#ifdef OPH_AAA_ENDPOINT
+#ifdef OPH_AAA_SUPPORT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_create(&token_tid_aaa, NULL, (void *(*)(void *)) &_oph_check_aaa, NULL);

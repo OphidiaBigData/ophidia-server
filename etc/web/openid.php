@@ -20,7 +20,7 @@
 
 	function get_password() {
 		include('env.php');
-		$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
+		$handle = fopen($oph_auth_location . '/users.dat', 'r');
 		if ($handle) {
 			while (($buffer = fgets($handle, 4096)))
 				if (!strcmp($oph_notifier, strtok($buffer, ":\n"))) {

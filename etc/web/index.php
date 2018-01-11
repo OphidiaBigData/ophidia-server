@@ -43,7 +43,7 @@
 
 				// User security check
 				$result = false;
-				$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
+				$handle = fopen($oph_auth_location.'/users.dat', 'r');
 				if ($handle) {
 					$sha_password = '*' . strtoupper(sha1(sha1($password, true)));
 					while (($buffer = fgets($handle, 4096))) {
@@ -187,14 +187,14 @@
 <?php
 			// Load sessions
 			print '<H5><TABLE align="center" border="1" width="100%"><TR><TH>Available sessions</TH><TH>Creation time</TH><TH>Active</TH><TH>Label</TH><TH>Number of tasks</TH><TH>Last access time</TH></TR>';
-			$dirFiles = scandir($oph_auth_location.'/authz/users/'.$_SESSION['userid'].'/sessions');
+			$dirFiles = scandir($oph_auth_location.'/users/'.$_SESSION['userid'].'/sessions');
 			rsort($dirFiles);
 			foreach($dirFiles as $filen) {
 				if ( ($filen != ".") && ($filen != "..") ) {
 					$ext = substr(strrchr($filen,'.'),1);
 					if ( $ext == 'session' ) {
 						$sessionn = substr($filen,0,strrpos($filen,'.'));
-						if ($file_handle = fopen($oph_auth_location.'/authz/users/'.$_SESSION['userid'].'/sessions/'.$filen,"r")) {
+						if ($file_handle = fopen($oph_auth_location.'/users/'.$_SESSION['userid'].'/sessions/'.$filen,"r")) {
 							print '<TR>';
 							print '<TD><A href="'.$oph_web_server.'/sessions.php/'.$sessionn.'/experiment">'.$oph_web_server.'/sessions/'.$sessionn.'/experiment</A></TD>';
 							while (!feof($file_handle)) {
