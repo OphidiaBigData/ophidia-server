@@ -33,7 +33,7 @@
  */
 typedef struct _oph_workflow_var {
 	int caller;
-	char svalue[OPH_WORKFLOW_MAX_STRING];
+	char *svalue;
 	int ivalue;
 } oph_workflow_var;
 

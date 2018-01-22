@@ -128,7 +128,7 @@ int hashtbl_insert_with_size(HASHTBL *hashtbl, const char *key, void *data, size
 		return -1;
 	}
 	//node->data=data;
-       	node->data = malloc(size + 1); //added
+	node->data = malloc(size + 1); //added
 	memcpy(node->data,data,size); // added
 	*(char*)(node->data+size) = 0; // added
 

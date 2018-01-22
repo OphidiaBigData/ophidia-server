@@ -123,6 +123,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = -1;
 		else
 			return_error = 1;
+		var->svalue = (char *) (var + sizeof(oph_workflow_var));
 		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
 		if (((return_error > 0) && (*p != OPH_WORKFLOW_VARIABLE_PREFIX)) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];

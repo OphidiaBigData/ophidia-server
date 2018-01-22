@@ -1052,6 +1052,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 	long value;
 	oph_workflow_dep *old_deps = NULL;
 	oph_workflow_var var;
+	void *var_buffer;
+	size_t var_size = sizeof(oph_workflow_var), svalue_size;
 
 	char exploded = 0, found = 0;	// Found a FOR with higher nesting_level
 	for (i = 0; i < wf->tasks_num; ++i) {
@@ -1210,14 +1212,31 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 							var.ivalue = ivalues[0];
 						else
 							var.ivalue = 1;	// Non C-like indexing
-						if (svalues) {
-							strncpy(var.svalue, svalues[0], OPH_WORKFLOW_MAX_STRING);
-							var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
-						} else
-							snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-						if (hashtbl_insert_with_size(wf->tasks[j].vars, name, (void *) &var, sizeof(oph_workflow_var))) {
+						if (svalues)
+							var.svalue = strdup(svalues[0]);
+						else {
+							var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+							if (var.svalue)
+								snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+						}
+						if (!var.svalue) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							break;
+						}
+						svalue_size = strlen(var.svalue) + 1;
+						var_buffer = malloc(var_size + svalue_size);
+						if (!var_buffer) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							free(var.svalue);
+							break;
+						}
+						memcpy(var_buffer, (void *) &var, var_size);
+						memcpy(var_buffer + var_size, var.svalue, svalue_size);
+						if (hashtbl_insert_with_size(wf->tasks[j].vars, name, var_buffer, var_size + svalue_size)) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
 								   name, wf->tasks[j].name);
+							free(var.svalue);
+							free(var_buffer);
 							break;
 						}
 						if (svalues)
@@ -1226,6 +1245,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 						else
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of task '%s'.\n", name, var.ivalue,
 								   wf->tasks[j].name);
+						free(var.svalue);
+						free(var_buffer);
 					}
 				continue;
 			}
@@ -1365,20 +1386,39 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 						var.ivalue = ivalues[k];
 					else
 						var.ivalue = 1 + k;	// Non C-like indexing
-					if (svalues) {
-						strncpy(var.svalue, svalues[k], OPH_WORKFLOW_MAX_STRING);
-						var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
-					} else
-						snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-					if (hashtbl_insert_with_size(wf->tasks[j].vars, name, (void *) &var, sizeof(oph_workflow_var))) {
+					if (svalues)
+						var.svalue = strdup(svalues[k]);
+					else {
+						var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+						if (var.svalue)
+							snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+					}
+					if (!var.svalue) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+						break;
+					}
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					if (!var_buffer) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+						free(var.svalue);
+						break;
+					}
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->tasks[j].vars, name, var_buffer, var_size + svalue_size)) {
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", name,
 							   wf->tasks[j].name);
+						free(var.svalue);
+						free(var_buffer);
 						break;
 					}
 					if (svalues)
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", name, var.svalue, wf->tasks[j].name);
 					else
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of task '%s'.\n", name, var.ivalue, wf->tasks[j].name);
+					free(var.svalue);
+					free(var_buffer);
 				}
 
 			exploded = 1;
