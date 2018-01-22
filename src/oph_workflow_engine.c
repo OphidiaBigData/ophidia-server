@@ -1210,9 +1210,10 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 							var.ivalue = ivalues[0];
 						else
 							var.ivalue = 1;	// Non C-like indexing
-						if (svalues)
-							strcpy(var.svalue, svalues[0]);
-						else
+						if (svalues) {
+							strncpy(var.svalue, svalues[0], OPH_WORKFLOW_MAX_STRING);
+							var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+						} else
 							snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 						if (hashtbl_insert_with_size(wf->tasks[j].vars, name, (void *) &var, sizeof(oph_workflow_var))) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
@@ -1364,9 +1365,10 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 						var.ivalue = ivalues[k];
 					else
 						var.ivalue = 1 + k;	// Non C-like indexing
-					if (svalues)
-						strcpy(var.svalue, svalues[k]);
-					else
+					if (svalues) {
+						strncpy(var.svalue, svalues[k], OPH_WORKFLOW_MAX_STRING);
+						var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+					} else
 						snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 					if (hashtbl_insert_with_size(wf->tasks[j].vars, name, (void *) &var, sizeof(oph_workflow_var))) {
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", name,

@@ -1021,9 +1021,10 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			oph_workflow_var var;
 			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
-			if (svalues)
-				strcpy(var.svalue, svalues[j]);
-			else
+			if (svalues) {
+				strncpy(var.svalue, svalues[j], OPH_WORKFLOW_MAX_STRING);
+				var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+			} else
 				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 
 			if (svalues)
@@ -1223,9 +1224,10 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 				var.ivalue = ivalues[0];
 			else
 				var.ivalue = 1;	// Non C-like indexing
-			if (svalues)
-				strcpy(var.svalue, svalues[0]);
-			else
+			if (svalues) {
+				strncpy(var.svalue, svalues[0], OPH_WORKFLOW_MAX_STRING);
+				var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+			} else
 				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 
 			if (svalues)
@@ -1294,9 +1296,10 @@ int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * t
 				var.ivalue = tmp->ivalues[tmp->index];
 			else
 				var.ivalue = 1 + tmp->index;	// Non C-like indexing
-			if (tmp->svalues)
-				strcpy(var.svalue, tmp->svalues[tmp->index]);
-			else
+			if (tmp->svalues) {
+				strncpy(var.svalue, tmp->svalues[tmp->index], OPH_WORKFLOW_MAX_STRING);
+				var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+			} else
 				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 
 			if (tmp->svalues)
@@ -1569,9 +1572,10 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 
 				var.caller = i;
 				var.ivalue = 1 + j;	// Non C-like indexing
-				if (svalues)
-					strcpy(var.svalue, svalues[j]);
-				else
+				if (svalues) {
+					strncpy(var.svalue, svalues[j], OPH_WORKFLOW_MAX_STRING);
+					var.svalue[OPH_WORKFLOW_MAX_STRING - 1] = 0;
+				} else
 					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
 
 				if (svalues)
