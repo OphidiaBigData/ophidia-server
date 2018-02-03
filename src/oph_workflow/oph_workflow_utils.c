@@ -115,6 +115,8 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		key = target_value + 1 + lastc;
 		if (lastc != lastcc)
 			return_error = 1;
+		else if (!strlen(key))
+			return_error = -1;
 		else if (workflow->tasks[task_index].vars && ((var = hashtbl_get(workflow->tasks[task_index].vars, key))))
 			return_error = 0;
 		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
@@ -123,7 +125,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = -1;
 		else
 			return_error = 1;
-		var->svalue = (char *) (var + sizeof(oph_workflow_var));
+		var->svalue = (char *) var + sizeof(oph_workflow_var);
 		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
 		if (((return_error > 0) && (*p != OPH_WORKFLOW_VARIABLE_PREFIX)) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];
