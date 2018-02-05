@@ -363,13 +363,13 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 		for (j = 0; j < wf->tasks[i].arguments_num; ++j)
 			if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_CONDITION)) {
 				snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
-				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg))
+				if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_CONDITION))
 					break;
 				condition = arg_value;
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FORWARD)) {
 				char forward_value[OPH_MAX_STRING_SIZE];
 				snprintf(forward_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
-				if (oph_workflow_var_substitute(wf, i, -1, forward_value, &error_msg))
+				if (oph_workflow_var_substitute(wf, i, -1, forward_value, &error_msg, OPH_OPERATOR_PARAMETER_FORWARD))
 					break;
 				if (!strcasecmp(forward_value, OPH_COMMON_YES))
 					wf->tasks[i].forward = 1;
@@ -858,7 +858,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", wf->tasks[i].arguments_keys[j], wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
+			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, wf->tasks[i].arguments_keys[j])) {
 				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "%s", error_msg ? error_msg : "Error in variable substitution!");
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) {
@@ -918,7 +918,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
@@ -1111,7 +1111,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", wf->tasks[i].arguments_keys[j], wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
+			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, wf->tasks[i].arguments_keys[j])) {
 				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "%s", error_msg ? error_msg : "Error in variable substitution!");
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) {
@@ -1148,7 +1148,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 		}
 		for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, wf->tasks[i].arguments_keys[j]);
 
 			if (!ivalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				oph_subset *subset_struct = NULL;
@@ -1192,7 +1192,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
 			name = arg_value;
 		}
 
@@ -1464,7 +1464,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", wf->tasks[i].arguments_values[j]);
 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", wf->tasks[i].arguments_keys[j], wf->tasks[i].name);
-			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg)) {
+			if (oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, wf->tasks[i].arguments_keys[j])) {
 				snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "%s", error_msg ? error_msg : "Error in variable substitution!");
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				if (error_msg) {
@@ -1567,7 +1567,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)

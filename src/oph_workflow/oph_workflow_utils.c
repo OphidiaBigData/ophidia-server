@@ -27,7 +27,7 @@
 #include "debug.h"
 #include "oph_auth.h"
 
-int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index)
+int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
 {
 	if (!value || !index)
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -49,6 +49,10 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 	for (i = 0; i < arguments_num; ++i) {
 		len =
 		    snprintf(arg, OPH_WORKFLOW_MAX_STRING, "%s", is_task ? workflow->tasks[task_index].arguments_keys[i] : workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[i]);
+		if (current_arg && !strcmp(arg, current_arg)) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Skip argument '%s' in workflow '%s'\n", arg, workflow->name);
+			continue;
+		}
 		for (j = 0; j < len; ++j)
 			arg[j] = toupper(arg[j]);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, arg, workflow->name);
@@ -64,7 +68,7 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 	return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 }
 
-int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error)
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error, const char *skip_arg)
 {
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
 	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable;
@@ -121,10 +125,32 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = 0;
 		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
 			return_error = 0;
-		else if (!oph_workflow_check_args(workflow, task_index, light_task_index, key, &value, &index))
-			return_error = -1;
-		else
-			return_error = 1;
+		else {
+			char *current_arg = NULL;
+			if (!skip_arg) {
+				char *ck = p;
+				while (ck && (ck > submit_string) && (*ck != OPH_WORKFLOW_KV_SEPARATOR[0]))
+					ck--;
+				if (ck) {
+					if (*ck == OPH_WORKFLOW_KV_SEPARATOR[0])
+						ck++;
+					char *ek = strchr(ck, OPH_WORKFLOW_VALUE_SEPARATOR);
+					if (ek) {
+						size_t key_size = ek - ck;
+						char current_key[1 + key_size];
+						strncpy(current_key, ck, key_size);
+						current_key[key_size] = 0;
+						current_arg = strdup(current_key);
+					}
+				}
+			}
+			if (!oph_workflow_check_args(workflow, task_index, light_task_index, key, &value, &index, skip_arg ? skip_arg : current_arg))
+				return_error = -1;
+			else
+				return_error = 1;
+			if (current_arg)
+				free(current_arg);
+		}
 		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
 		if (((return_error > 0) && (*p != OPH_WORKFLOW_VARIABLE_PREFIX)) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];
@@ -139,6 +165,10 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			offset = p - submit_string + 1;
 			if (skip_until < offset)
 				skip_until = offset;
+			if (value) {
+				free(value);
+				value = NULL;
+			}
 			continue;
 		}
 		offset = p - submit_string;
@@ -250,7 +280,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	}
 
 	// Variable substitution
-	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, long_submit_string, error))
+	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, long_submit_string, error, NULL))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, long_submit_string);
 
@@ -264,8 +294,9 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 
 	if (short_submission_string) {
 		// Variable substitution
-		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, short_submit_string, error))
+		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, short_submit_string, error, NULL))
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Short submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, short_submit_string);
 		*short_submission_string = strdup(short_submit_string);
 		if (!(*short_submission_string)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate submission string\n");
