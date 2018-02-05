@@ -125,7 +125,6 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = -1;
 		else
 			return_error = 1;
-		var->svalue = (char *) var + sizeof(oph_workflow_var);
 		prefix = *target_value == OPH_WORKFLOW_INDEX_PREFIX;
 		if (((return_error > 0) && (*p != OPH_WORKFLOW_VARIABLE_PREFIX)) || (prefix && (return_error < 0) && (index < 0))) {
 			char _error[OPH_WORKFLOW_MAX_STRING];
@@ -149,7 +148,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		if (prefix)
 			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%d%s", return_error ? index : var->ivalue, ep);
 		else
-			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : var->svalue, ep);
+			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
 		strcpy(submit_string, replaced_value);
 		if (value) {
 			free(value);
