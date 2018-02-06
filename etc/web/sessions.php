@@ -60,7 +60,7 @@
 
 		$session_code = strtok($target,"/");
 		if (isset($session_code) && !empty($session_code) && $session_code) {
-			$handle = fopen($oph_auth_location . '/authz/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
+			$handle = fopen($oph_auth_location . '/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
 			if (!$handle) {
 				header('HTTP/1.0 403 Forbidden');
 ?>

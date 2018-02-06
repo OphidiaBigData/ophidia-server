@@ -266,7 +266,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pthread_mutex_lock(&global_flag);
 
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
-		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token))) {
+		short token_type = 0;
+		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token, &token_type))) {
 			// Token is valid: check local authorization
 			if (oph_auth_user_enabling(userid, &result, &actual_userid)) {	// New user
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
@@ -275,12 +276,24 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					result = OPH_SERVER_AUTH_ERROR;
 				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid))) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
-					oph_argument *token_args = NULL;
-					if (!(result = oph_auth_read_token(soap->passwd, &token_args)) && !(result = oph_auth_vo(token_args, &actual_userid))) {
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized globally\n", jobid, userid);
-					} else
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized globally\n", jobid, userid);
-					oph_cleanup_args(&token_args);
+					switch (token_type) {
+						case 1:
+							{
+								oph_argument *token_args = NULL;
+								if (!(result = oph_auth_read_token(soap->passwd, &token_args)))
+									result = oph_auth_vo(token_args, &actual_userid);
+								oph_cleanup_args(&token_args);
+								break;
+							}
+						case 2:
+							{
+								result = oph_auth_check(soap->passwd, userid);
+								break;
+							}
+						default:
+							result = OPH_SERVER_SYSTEM_ERROR;
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized globally\n", jobid, userid, result ? "not " : "");
 				} else
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
 				if (actual_userid)

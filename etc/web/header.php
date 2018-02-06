@@ -46,9 +46,15 @@
 ?>
 <?php
 		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
+			if ($_SESSION['token_type'] === 'openid') {
 ?>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/openid.php">Get token</A></B>
 <?php
+			} else if ($_SESSION['token_type'] === 'aaa') {
+?>
+			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/aaa.php">Get token</A></B>
+<?php
+			}
 		}
 ?>
 		</DIV>

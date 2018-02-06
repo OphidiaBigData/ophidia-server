@@ -20,7 +20,7 @@
 
 	function get_password() {
 		include('env.php');
-		$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
+		$handle = fopen($oph_auth_location . '/users.dat', 'r');
 		if ($handle) {
 			while (($buffer = fgets($handle, 4096)))
 				if (!strcmp($oph_notifier, strtok($buffer, ":\n"))) {
@@ -101,6 +101,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 				$message = 'Login';
 			} else {
 				$_SESSION['token'] = $output['access_token'];
+				$_SESSION['token_type'] = "openid";
 				$_SESSION['expires_on'] = date('U') + $output['expires_in'];
 				include('userinfo.php');
 				if (isset($output['refresh_token'])) {
@@ -128,6 +129,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 					$message = 'Login';
 				} else {
 					$_SESSION['token'] = $output['access_token'];
+					$_SESSION['token_type'] = "openid";
 					$_SESSION['expires_on'] = date('U') + $output['expires_in'];
 					$_SESSION['refresh_token'] = $output['refresh_token'];
 					send_message('access_token='. $_SESSION['token'] . ';userinfo='. $_SESSION['userinfo'] .';refresh_token='. $_SESSION['refresh_token'] .';');
@@ -204,7 +206,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 			</DIV>
 		</DIV>
 <?php
-		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
+		if (isset($_SESSION['token']) && !empty($_SESSION['token']) && ($_SESSION['token_type'] == 'openid')) {
 ?>
 		<DIV id="token">
 			<H5>Access token <?php

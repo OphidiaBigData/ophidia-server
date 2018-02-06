@@ -61,12 +61,17 @@ void oph_child_signal_handler(int sig);
 struct soap *psoap;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-pthread_t token_tid = 0;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
+#ifdef OPH_OPENID_SUPPORT
+pthread_t token_tid_openid = 0;
+#endif
+#ifdef OPH_AAA_SUPPORT
+pthread_t token_tid_aaa = 0;
+#endif
 #endif
 
 char *oph_server_location = 0;
@@ -114,12 +119,18 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
+#endif
+#ifdef OPH_AAA_SUPPORT
+char *oph_aaa_endpoint = 0;
+char *oph_aaa_category = 0;
+char *oph_aaa_name = 0;
+unsigned int oph_aaa_token_check_time = 0;
 #endif
 
 void set_global_values(const char *configuration_file)
@@ -298,20 +309,27 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_CHECK_TIME)))
 		oph_openid_token_check_time = (unsigned int) strtol(value, NULL, 10);
-	if (!(oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT))) {
-		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT, OPH_OPENID_ENDPOINT);
-		oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
-	}
-	if (!(oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID))) {
-		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID, OPH_OPENID_CLIENT_ID);
-		oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
-	}
+	oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
+	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
+#endif
+#ifdef OPH_AAA_SUPPORT
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_TOKEN_CHECK_TIME)))
+		oph_aaa_token_check_time = (unsigned int) strtol(value, NULL, 10);
+	oph_aaa_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_ENDPOINT);
+	if (!(oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY, OPH_AAA_CATEGORY);
+		oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY);
+	}
+	if (!(oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_NAME, OPH_AAA_NAME);
+		oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME);
+	}
 #endif
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
@@ -329,11 +347,18 @@ void cleanup()
 	oph_server_is_running = 0;
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	oph_openid_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid)
-		pthread_cancel(token_tid);
+	if (token_tid_openid)
+		pthread_cancel(token_tid_openid);
+#endif
+#endif
+#ifdef OPH_AAA_SUPPORT
+	oph_aaa_token_check_time = 0;
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (token_tid_aaa)
+		pthread_cancel(token_tid_aaa);
 #endif
 #endif
 
