@@ -35,9 +35,14 @@
 #endif
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-pthread_t token_tid;
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
+#ifdef OPH_OPENID_SUPPORT
+pthread_t token_tid_openid;
+#endif
+#ifdef OPH_AAA_SUPPORT
+pthread_t token_tid_aaa;
+#endif
 #endif
 
 char *oph_server_location = 0;
@@ -54,12 +59,18 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
+#endif
+#ifdef OPH_AAA_SUPPORT
+char *oph_aaa_endpoint = 0;
+char *oph_aaa_category = 0;
+char *oph_aaa_name = 0;
+unsigned int oph_aaa_token_check_time = 0;
 #endif
 
 void cleanup()
@@ -486,6 +497,17 @@ int main(int argc, char *argv[])
 		}
 		// users.dat
 		if (password) {
+			char *_password = password;
+#ifdef INTERFACE_TYPE_IS_SSL
+			char sha_password[2 * SHA_DIGEST_LENGTH + 2];
+			_password = oph_sha(sha_password, password);
+			if (!_password) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "SHA digest cannot be created!\n");
+				cleanup();
+				return 1;
+			}
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Use SHA digest: %s\n", _password);
+#endif
 			file = fopen(filename, "w");
 			if (!file) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' cannot be opened!\n", filename);
@@ -496,7 +518,7 @@ int main(int argc, char *argv[])
 				if (strcmp(username, tmp->key))
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_BASIC, tmp->value);
 				else
-					fprintf(file, "%s%s%s\n", username, OPH_SEPARATOR_BASIC, password);
+					fprintf(file, "%s%s%s\n", username, OPH_SEPARATOR_BASIC, _password);
 			fclose(file);
 		}
 		// user.dat

@@ -60,7 +60,7 @@
 
 		$session_code = strtok($target,"/");
 		if (isset($session_code) && !empty($session_code) && $session_code) {
-			$handle = fopen($oph_auth_location . '/authz/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
+			$handle = fopen($oph_auth_location . '/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
 			if (!$handle) {
 				header('HTTP/1.0 403 Forbidden');
 ?>
@@ -90,8 +90,8 @@
 			$url_to_dir = $oph_web_server.'/sessions'.$target;
 			if ($url_to_dir{strlen($url_to_dir)-1} == '/')
 				$url_to_dir = substr($url_to_dir,0,strlen($url_to_dir)-1);
+			$url_to_dir_p = substr($url_to_dir,0,strrpos($url_to_dir,'/'));
 			if (is_dir($file)) {
-				$url_to_dir_p = substr($url_to_dir,0,strrpos($url_to_dir,'/'));
 				include('header.php');
 ?>
 		<P>Content of directory <A href="<?php echo $url_to_dir; ?>"><?php echo $url_to_dir; ?></A></P>
@@ -115,6 +115,19 @@
 			} else if ( ( isset($filename) && !empty($filename) && (!isset($ext) || empty($ext)) ) || ($ext == 'htm') || ($ext == 'html') ) {
 				header('Content-Type: text/html');
 				include('header.php');
+				if ($filename == 'experiment') {
+?>
+		<P>Command list for <A href="<?php echo $oph_web_server; ?>/sessions/<?php echo $session_code; ?>/experiment"><?php echo $oph_web_server; ?>/sessions/<?php echo $session_code; ?>/experiment</A></P>
+<?php
+				} else {
+?>
+		<P>File <?php echo $filename; ?></P>
+<?php
+				}
+?>
+		<HR/>
+		<B><A href="<?php echo $url_to_dir_p; ?>">Parent directory</A></B>
+<?php
 				readfile($file);
 				include('tailer.php');
 			} else if ($ext == 'json') {
@@ -131,6 +144,11 @@
 					$download = 1;
 					header('Content-Type: text/html');
 					include('header.php');
+?>
+		<P>JSON file <A href="<?php echo $url_to_dir; ?>"><?php echo $url_to_dir; ?></A></P>
+		<HR/>
+		<B><A href="<?php echo $url_to_dir_p; ?>">Parent directory</A></B><P/>
+<?php
 					if ($file_handle = fopen($file,"r")) {
 						while (!feof($file_handle)) {
 							$tok = strtok(str_replace(" ","&nbsp;",fgets($file_handle)), "\"");

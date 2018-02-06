@@ -247,6 +247,7 @@ typedef struct _oph_workflow_stack {
  * \param name Name of the workflow
  * \param author Author of the workflow
  * \param abstract Abstract of the workflow
+ * \param url URL of the workflow
  * \param sessionid SessionID for the entire workflow
  * \param exec_mode Execution mode for the entire workflow
  * \param ncores Number of cores for the entire workflow
@@ -281,6 +282,7 @@ typedef struct _oph_workflow {
 	char *name;
 	char *author;
 	char *abstract;
+	char *url;
 	char *sessionid;
 	char *exec_mode;
 	int ncores;
@@ -305,6 +307,7 @@ typedef struct _oph_workflow {
 	char cancel_type;
 	char *host_partition;
 	int waiting_tasks_num;
+	double timestamp;
 } oph_workflow;
 
 /* Functions for structs cleanup */

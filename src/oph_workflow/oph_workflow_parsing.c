@@ -66,10 +66,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 	}
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
 		    &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run,
-		    "output_format", &output_format, "host_partition", &host_partition);
+		    "output_format", &output_format, "host_partition", &host_partition, "url", &url);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -102,6 +102,16 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			json_decref(jansson);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating abstract\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+	if (url && strlen(url)) {
+		(*workflow)->url = (char *) strdup((const char *) url);
+		if (!((*workflow)->url)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating sessionid\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
 	}
 	if (sessionid && strlen(sessionid)) {
 		(*workflow)->sessionid = (char *) strdup((const char *) sessionid);
@@ -677,6 +687,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "abstract", workflow->abstract))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (_oph_workflow_add_to_json(request, "url", workflow->url))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "sessionid", workflow->sessionid))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "exec_mode", workflow->exec_mode))
@@ -858,6 +870,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 	//init
+	(*workflow)->url = NULL;
 	(*workflow)->abstract = NULL;
 	(*workflow)->author = NULL;
 	(*workflow)->callback_url = NULL;
@@ -884,6 +897,11 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->run = 1;
 	(*workflow)->parallel_mode = 0;
 	(*workflow)->host_partition = NULL;
+
+	struct timeval tv;
+	gettimeofday(&tv, 0);
+
+	(*workflow)->timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

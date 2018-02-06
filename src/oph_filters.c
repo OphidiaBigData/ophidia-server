@@ -329,7 +329,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 			}
 			strncat(tables, ",", s);
 		}
-		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatakey AS metadatakey%d,metadatainstance AS metadatainstance%d", i, i);
+		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance AS metadatainstance%d", i);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= strlen(condition))
 			return OPH_MF_ERROR;
 		strncat(tables, condition, s);
@@ -341,8 +341,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 			}
 			strncat(where_clause, OPH_FILTER_AND1, s);
 		}
-		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatakey%d.idkey=metadatainstance%d.idkey AND metadatainstance%d.iddatacube=%s.iddatacube AND metadatakey%d.label='%s'", i, i, i,
-			 OPH_MF_ARG_DATACUBE, i, key_list[i]);
+		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance%d.iddatacube=%s.iddatacube AND metadatainstance%d.label='%s'", i, OPH_MF_ARG_DATACUBE, i, key_list[i]);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			return OPH_MF_ERROR;
@@ -407,7 +406,7 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 			}
 			strncat(tables, ",", s);
 		}
-		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatakey AS metadatakey%dk%d,metadatainstance AS metadatainstance%dk%d", prefix, i, prefix, i);
+		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance AS metadatainstance%dk%d", prefix, i);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			oph_tp_free_multiple_value_param_list(value_list, value_num);
@@ -424,8 +423,8 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 			strncat(where_clause, OPH_FILTER_AND1, s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE,
-			 "metadatakey%dk%d.idkey=metadatainstance%dk%d.idkey AND metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatakey%dk%d.label='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) LIKE '%%%s%%'",
-			 prefix, i, prefix, i, prefix, i, OPH_MF_ARG_DATACUBE, prefix, i, key_list[i], prefix, i, value_list[i]);
+			 "metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatainstance%dk%d.label='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) LIKE '%%%s%%'", prefix, i,
+			 OPH_MF_ARG_DATACUBE, prefix, i, key_list[i], prefix, i, value_list[i]);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			oph_tp_free_multiple_value_param_list(value_list, value_num);

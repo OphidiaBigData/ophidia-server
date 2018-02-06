@@ -30,7 +30,9 @@
 #include <openssl/sha.h>
 #endif
 
-#ifdef OPH_OPENID_ENDPOINT
+
+
+#ifdef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
 #include <curl/curl.h>
@@ -38,7 +40,7 @@
 #include <cjose/cjose.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-extern pthread_t token_tid;
+extern pthread_t token_tid_openid;
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t curl_flag;
 #endif
@@ -92,6 +94,45 @@ char *oph_openid_endpoint_public_key = NULL;
 
 #endif
 
+
+
+#ifdef OPH_AAA_SUPPORT
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_t token_tid_aaa;
+#endif
+
+#ifndef OPH_OPENID_SUPPORT
+
+#include "hashtbl.h"
+#include <curl/curl.h>
+#include <jansson.h>
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+extern pthread_mutex_t global_flag;
+extern pthread_mutex_t curl_flag;
+#endif
+
+#define AUTH_CONNECTTIMEOUT 30
+
+typedef struct _oph_auth_clip {
+	char *memory;
+	size_t size;
+} oph_auth_clip;
+
+HASHTBL *usersinfo = NULL;
+
+#endif
+
+extern char *oph_aaa_endpoint;
+extern char *oph_aaa_category;
+extern char *oph_aaa_name;
+extern unsigned int oph_aaa_token_check_time;
+
+#endif
+
+
+
 #define OPH_AUTH_MAX_COUNT 5
 
 extern char *oph_auth_location;
@@ -103,8 +144,10 @@ extern unsigned int oph_default_max_hosts;
 extern unsigned int oph_default_session_timeout;
 
 oph_auth_user_bl *bl_head = NULL;
-oph_auth_user_bl *tokens = NULL;
+oph_auth_user_bl *tokens_openid = NULL;
+oph_auth_user_bl *tokens_aaa = NULL;
 oph_auth_user_bl *auth_users = NULL;
+oph_auth_user_bl *actual_users = NULL;
 
 int oph_get_session_code(const char *sessionid, char *code)
 {
@@ -358,7 +401,7 @@ int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **us
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 			hashtbl_remove(usersinfo, bl_item->host);
 #endif
 			if (bl_prev)
@@ -429,11 +472,15 @@ int oph_free_bl(oph_auth_user_bl ** head)
 int oph_auth_free()
 {
 	oph_free_bl(&bl_head);
-	oph_free_bl(&tokens);
+	oph_free_bl(&tokens_openid);
+	oph_free_bl(&tokens_aaa);
 	oph_free_bl(&auth_users);
-#ifdef OPH_OPENID_ENDPOINT
+	oph_free_bl(&actual_users);
+#ifdef OPH_OPENID_SUPPORT
 	if (oph_openid_endpoint_public_key)
 		free(oph_openid_endpoint_public_key);
+#endif
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 	if (usersinfo)
 		hashtbl_destroy(usersinfo);
 #endif
@@ -453,7 +500,7 @@ int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid,
 	while (bl_item) {
 		deadtime = (time_t) (bl_item->timestamp + oph_server_timeout);
 		if (tv.tv_sec > deadtime) {
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 			hashtbl_remove(usersinfo, bl_item->host);
 #endif
 			if (bl_prev)
@@ -515,7 +562,25 @@ char *oph_sha(char *to, const char *passwd)
 }
 #endif
 
-#ifdef OPH_OPENID_ENDPOINT
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
+
+size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+	size_t bytec = size * nmemb;
+	oph_auth_clip *mem = (oph_auth_clip *) stream;
+	mem->memory = (char *) realloc(mem->memory, mem->size + bytec + 1);
+	if (mem->memory == NULL)
+		return 0;
+	memcpy(mem->memory + mem->size, ptr, bytec);
+	mem->size += bytec;
+	mem->memory[mem->size] = 0;
+	return bytec;
+}
+
+#endif
+
+#ifdef OPH_OPENID_SUPPORT
+
 char *mystrdup(const char *s, size_t len)
 {
 	char *new = (char *) calloc(1 + len, sizeof(char));
@@ -752,19 +817,6 @@ int extract_payload(cjose_jws_t * jwt, auth_jwt_payload * payload)
 	return OPH_SERVER_OK;
 }
 
-size_t json_pt(void *ptr, size_t size, size_t nmemb, void *stream)
-{
-	size_t bytec = size * nmemb;
-	oph_auth_clip *mem = (oph_auth_clip *) stream;
-	mem->memory = (char *) realloc(mem->memory, mem->size + bytec + 1);
-	if (mem->memory == NULL)
-		return 0;
-	memcpy(mem->memory + mem->size, ptr, bytec);
-	mem->size += bytec;
-	mem->memory[mem->size] = 0;
-	return bytec;
-}
-
 int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload * payload)
 {
 	if (!token || (!header && !payload))
@@ -772,18 +824,18 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 
 	cjose_jws_t *jwt = cjose_jws_import(token, strlen(token), NULL);
 	if (!jwt) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be processed\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token cannot be processed\n");
 		return OPH_SERVER_ERROR;
 	}
 
 	if (header && extract_header(jwt, header)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Header cannot be extracted\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: header cannot be extracted\n");
 		cjose_jws_release(jwt);
 		return OPH_SERVER_ERROR;
 	}
 
 	if (payload && extract_payload(jwt, payload)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Payload cannot be extracted\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: payload cannot be extracted\n");
 		cjose_jws_release(jwt);
 		if (header)
 			header_free(header);
@@ -798,7 +850,7 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 		char url[OPH_MAX_STRING_SIZE];
 		snprintf(url, OPH_MAX_STRING_SIZE, "%s/jwk", oph_openid_endpoint);
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: waiting...\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET public key: waiting...\n");
 
 		CURL *curl = curl_easy_init();
 		curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -816,13 +868,13 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 		curl_easy_cleanup(curl);
 
 		if (res || !chunk.memory) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: unable to get public key: %s\n", curl_easy_strerror(res));
 			if (chunk.memory)
 				free(chunk.memory);
 			return OPH_SERVER_AUTH_ERROR;
 		}
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET public key: completed\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET public key: completed\n");
 
 		char error = 1;
 		while (error) {
@@ -846,15 +898,15 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 		free(chunk.memory);
 
 		if (error) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get public key: %s\n", curl_easy_strerror(res));
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: unable to get public key: %s\n", curl_easy_strerror(res));
 			return OPH_SERVER_AUTH_ERROR;
 		} else
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key: %s\n", oph_openid_endpoint_public_key);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: public key: %s\n", oph_openid_endpoint_public_key);
 	}
 
 	cjose_jwk_t *jwk = cjose_jwk_import(oph_openid_endpoint_public_key, strlen(oph_openid_endpoint_public_key), NULL);
 	if (!jwk) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Public key cannot be processed\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: public key cannot be processed\n");
 		cjose_jws_release(jwt);
 		if (header)
 			header_free(header);
@@ -864,7 +916,7 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 	}
 
 	if (!cjose_jws_verify(jwt, jwk, NULL)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Signature is not correct\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: signature is not correct\n");
 		//cjose_jws_release(jwt);
 		cjose_jwk_release(jwk);
 		if (header)
@@ -887,7 +939,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 #endif
 
 	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		return;
 	}
 
@@ -897,7 +949,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	snprintf(credentials, OPH_MAX_STRING_SIZE, "%s:%s", oph_openid_client_id, oph_openid_client_secret);
 	int count;
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Start token refreshing procedure\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "OPENID: start token refreshing procedure\n");
 
 	while (1) {
 
@@ -909,7 +961,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		*chunk.memory = chunk.size = 0;
 		snprintf(fields, OPH_MAX_STRING_SIZE, "grant_type=refresh_token&refresh_token=%s", refresh->refresh_token);
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: waiting...\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET new token: waiting...\n");
 
 		CURL *curl = curl_easy_init();
 		curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -931,18 +983,18 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		curl_easy_cleanup(curl);
 
 		if (res || !chunk.memory) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get new token: %s\n", curl_easy_strerror(res));
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: unable to get new token: %s\n", curl_easy_strerror(res));
 			pthread_mutex_unlock(&global_flag);
 			if (chunk.memory)
 				free(chunk.memory);
 			break;
 		}
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: completed\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET new token: completed\n");
 
 		json_t *response = json_loads(chunk.memory, 0, NULL);
 		if (!response) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
 			pthread_mutex_unlock(&global_flag);
 			free(chunk.memory);
 			break;
@@ -952,14 +1004,14 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		json_unpack(response, "{s?s,s?s,s?s}", "error", &error, "refresh_token", &refresh_token, "access_token", &access_token);
 
 		if (error) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "GET returns an error code\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: GET returns an error code\n");
 			pthread_mutex_unlock(&global_flag);
 			json_decref(response);
 			free(chunk.memory);
 			break;
 		}
 		if (!refresh_token || !access_token) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "GET does not contain the required tokens\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: GET does not contain the required tokens\n");
 			pthread_mutex_unlock(&global_flag);
 			json_decref(response);
 			free(chunk.memory);
@@ -976,14 +1028,14 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		}
 
 		if (!(refresh->access_token = strdup(access_token))) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 			pthread_mutex_unlock(&global_flag);
 			json_decref(response);
 			free(chunk.memory);
 			break;
 		}
 		if (!(refresh->refresh_token = strdup(refresh_token))) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 			pthread_mutex_unlock(&global_flag);
 			json_decref(response);
 			free(chunk.memory);
@@ -993,21 +1045,21 @@ void *_oph_refresh(oph_refresh_token * refresh)
 		json_decref(response);
 		free(chunk.memory);
 
-		oph_auth_update_values_of_user(&tokens, refresh->userid, refresh->access_token);
+		oph_auth_update_values_of_user(&tokens_openid, refresh->userid, refresh->access_token);
 
-		if (oph_get_user_by_token(&tokens, refresh->access_token, NULL, NULL)) {
-			oph_add_to_bl(&tokens, refresh->userid, refresh->access_token);
+		if (oph_get_user_by_token(&tokens_openid, refresh->access_token, NULL, NULL)) {
+			oph_add_to_bl(&tokens_openid, refresh->userid, refresh->access_token);
 			oph_auth_cache_userinfo(refresh->access_token, refresh->userinfo);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token added to active token list\n");
 		} else
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Token found in active token list\n");	// Warning: the token should not be already buffered
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: token found in active token list\n");	// Warning: the token should not be already buffered
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET new token: processed\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET new token: processed\n");
 
 		pthread_mutex_unlock(&global_flag);
 	}
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from token refreshing procedure\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "OPENID: exit from token refreshing procedure\n");
 
 	if (refresh->access_token)
 		free(refresh->access_token);
@@ -1024,7 +1076,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 #endif
 }
 
-int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
+int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 {
 	if (!userinfo || !userid)
 		return OPH_SERVER_NULL_POINTER;
@@ -1032,7 +1084,7 @@ int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
 
 	json_t *userinfo_json = json_loads(userinfo, 0, NULL);
 	if (!userinfo_json) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
 		return OPH_SERVER_ERROR;
 	}
 
@@ -1040,18 +1092,18 @@ int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
 	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "sub", &subject_identifier);
 
 	if (error) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET returns an error code\n");
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET returns an error code\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 	if (!subject_identifier) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "GET does not contain the subject identifier\n");
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET does not contain the subject identifier\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
 	if (!(*userid = strdup(subject_identifier))) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_ERROR;
 	}
@@ -1060,6 +1112,99 @@ int oph_auth_get_user_from_userinfo(const char *userinfo, char **userid)
 
 	return OPH_SERVER_OK;
 }
+
+int oph_auth_check_token_openid(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+	auth_jwt_payload *payload = (auth_jwt_payload *) calloc(1, sizeof(auth_jwt_payload));
+	if (auth_jwt_import(token, NULL, payload)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token cannot be verified\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	if (tv.tv_sec < payload->iat) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token is not valid\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (tv.tv_sec > payload->exp) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token is expired\n");
+		payload_free(payload);
+		free(payload);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token is valid\n");
+
+	payload_free(payload);
+	free(payload);
+
+	return OPH_SERVER_OK;
+}
+
+#endif
+
+#ifdef OPH_AAA_SUPPORT
+
+int oph_auth_get_user_from_userinfo_aaa(const char *userinfo, char **userid)
+{
+	if (!userinfo || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+	json_t *userinfo_json = json_loads(userinfo, 0, NULL);
+	if (!userinfo_json) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "AAA: unable to parse JSON string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	char *error = NULL, *response = NULL;
+	json_unpack(userinfo_json, "{s?s}", "response", &response);
+
+	if (!response) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "AAA: GET does not contain the response\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (!strcmp(response, "invalid token")) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: invalid token\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	if (!(*userid = strdup(response))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "AAA: memory error\n");
+		json_decref(userinfo_json);
+		return OPH_SERVER_ERROR;
+	}
+
+	json_decref(userinfo_json);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_auth_check_token_aaa(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+	// Add specific check to token string in order to check validity before sending any request to identity server
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: token is valid\n");
+
+	return OPH_SERVER_OK;
+}
+
+#endif
+
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 
 int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 {
@@ -1077,60 +1222,50 @@ int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_check_token(const char *token)
+#endif
+
+int oph_auth_check_token(const char *token, short *type)
 {
 	if (!token)
 		return OPH_SERVER_NULL_POINTER;
+	if (type)
+		*type = 0;
 
-	auth_jwt_payload *payload = (auth_jwt_payload *) calloc(1, sizeof(auth_jwt_payload));
-	if (auth_jwt_import(token, NULL, payload)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token cannot be verified\n");
-		payload_free(payload);
-		free(payload);
-		return OPH_SERVER_AUTH_ERROR;
+#ifdef OPH_OPENID_SUPPORT
+	if (!oph_auth_check_token_openid(token)) {
+		if (type)
+			*type = 1;
+		return OPH_SERVER_OK;
 	}
-
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	if (tv.tv_sec < payload->iat) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
-		payload_free(payload);
-		free(payload);
-		return OPH_SERVER_AUTH_ERROR;
-	}
-	if (tv.tv_sec > payload->exp) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is expired\n");
-		payload_free(payload);
-		free(payload);
-		return OPH_SERVER_AUTH_ERROR;
-	}
-
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is valid\n");
-
-	payload_free(payload);
-	free(payload);
-
-	return OPH_SERVER_OK;
-}
-
 #endif
 
-int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
+#ifdef OPH_AAA_SUPPORT
+	if (!oph_auth_check_token_aaa(token)) {
+		if (type)
+			*type = 2;
+		return OPH_SERVER_OK;
+	}
+#endif
+
+	return OPH_SERVER_AUTH_ERROR;
+}
+
+int oph_auth_get_user_from_token_openid(const char *token, char **userid, char cache)
 {
 	if (!token || !userid)
 		return OPH_SERVER_NULL_POINTER;
 	*userid = NULL;
 
-#ifndef OPH_OPENID_ENDPOINT
+#ifndef OPH_OPENID_SUPPORT
 
 	UNUSED(cache);
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: endpoint is not set\n");
 	return OPH_SERVER_AUTH_ERROR;
 
 #else
 
 	if (!strlen(oph_openid_endpoint)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Endpoint is not set\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: endpoint is not set\n");
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
@@ -1143,7 +1278,7 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 	snprintf(url, OPH_MAX_STRING_SIZE, "%s/userinfo", oph_openid_endpoint);
 	struct curl_slist *slist = curl_slist_append(NULL, header);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: waiting...\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET userinfo: waiting...\n");
 
 	CURL *curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -1164,16 +1299,16 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 	curl_easy_cleanup(curl);
 
 	if (res || !chunk.memory) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get userinfo: %s\n", curl_easy_strerror(res));
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: unable to get userinfo: %s\n", curl_easy_strerror(res));
 		if (chunk.memory)
 			free(chunk.memory);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "GET userinfo: completed\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: GET userinfo: completed\n");
 
 	int result;
-	if ((result = oph_auth_get_user_from_userinfo(chunk.memory, userid)) || !*userid) {
+	if ((result = oph_auth_get_user_from_userinfo_openid(chunk.memory, userid)) || !*userid) {
 		free(chunk.memory);
 		return result;
 	}
@@ -1188,9 +1323,100 @@ int oph_auth_get_user_from_token(const char *token, char **userid, char cache)
 #endif
 }
 
-#ifdef OPH_OPENID_ENDPOINT
+int oph_auth_get_user_from_token_aaa(const char *token, char **userid, char cache)
+{
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
 
-void *_oph_check(void *data)
+#ifndef OPH_AAA_SUPPORT
+
+	UNUSED(cache);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
+	return OPH_SERVER_AUTH_ERROR;
+
+#else
+
+	if (!strlen(oph_aaa_endpoint)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	oph_auth_clip chunk;
+	chunk.memory = (char *) malloc(1);
+	*chunk.memory = chunk.size = 0;
+
+	char url[OPH_MAX_STRING_SIZE], fields[OPH_MAX_STRING_SIZE];
+	snprintf(url, OPH_MAX_STRING_SIZE, "%s/engine/api/verify_token", oph_aaa_endpoint);
+	snprintf(fields, OPH_MAX_STRING_SIZE, "token=%s", token);
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: VERIFY token: waiting...\n");
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_POST, 1);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+
+	pthread_mutex_unlock(&global_flag);
+	pthread_mutex_lock(&curl_flag);
+	CURLcode res = curl_easy_perform(curl);
+	pthread_mutex_unlock(&curl_flag);
+	pthread_mutex_lock(&global_flag);
+
+	curl_easy_cleanup(curl);
+
+	if (res || !chunk.memory) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: unable to verify token: %s\n", curl_easy_strerror(res));
+		if (chunk.memory)
+			free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: VERIFY token: completed\n");
+
+	int result;
+	if ((result = oph_auth_get_user_from_userinfo_aaa(chunk.memory, userid)) || !*userid) {
+		free(chunk.memory);
+		return result;
+	}
+
+	if (cache)
+		oph_auth_cache_userinfo(token, chunk.memory);
+
+	free(chunk.memory);
+
+	return OPH_SERVER_OK;
+
+#endif
+}
+
+int oph_auth_get_user_from_token(const char *token, char **userid, char cache, short type)
+{
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+	*userid = NULL;
+
+#ifdef OPH_OPENID_SUPPORT
+	if ((type == 1) && !oph_auth_get_user_from_token_openid(token, userid, cache))
+		return OPH_SERVER_OK;
+#endif
+
+#ifdef OPH_AAA_SUPPORT
+	if ((type == 2) && !oph_auth_get_user_from_token_aaa(token, userid, cache))
+		return OPH_SERVER_OK;
+#endif
+
+	return OPH_SERVER_AUTH_ERROR;
+}
+
+#ifdef OPH_OPENID_SUPPORT
+
+void *_oph_check_openid(void *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -1206,23 +1432,23 @@ void *_oph_check(void *data)
 		sleep(oph_openid_token_check_time);
 
 		pthread_mutex_lock(&global_flag);
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for revoked tokens...\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: check for revoked tokens...\n");
 
 		do {
 
 			gettimeofday(&tv, NULL);
-			bl_item = tokens;
+			bl_item = tokens_openid;
 			bl_prev = NULL;
 			while (bl_item) {
 				deadtime = (time_t) (bl_item->check_time + oph_openid_token_check_time);
 				if (tv.tv_sec >= deadtime) {
 					token = strdup(bl_item->host);
 					user = strdup(bl_item->userid);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check validity of token associated with user '%s'\n", user);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: check validity of token associated with user '%s'\n", user);
 					bl_item->check_time = tv.tv_sec;
-					if (oph_auth_get_user_from_token(token, &userid, 0) || !userid) {	// Release the lock internally
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token '%s' has been revoked by the user '%s'\n", token, user);
-						oph_drop_from_bl(&tokens, user, token);
+					if (oph_auth_get_user_from_token_openid(token, &userid, 0) || !userid) {	// Release the lock internally
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token '%s' has been revoked by the user '%s'\n", token, user);
+						oph_drop_from_bl(&tokens_openid, user, token);
 					}
 					if (token)
 						free(token);
@@ -1240,7 +1466,70 @@ void *_oph_check(void *data)
 
 		} while (bl_item);
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for revoked tokens... done\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: check for revoked tokens... done\n");
+		pthread_mutex_unlock(&global_flag);
+	}
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	mysql_thread_end();
+#endif
+}
+
+#endif
+
+#ifdef OPH_AAA_SUPPORT
+
+void *_oph_check_aaa(void *data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+
+	char *userid = NULL, *token, *user;
+	time_t deadtime;
+	struct timeval tv;
+	oph_auth_user_bl *bl_item, *bl_prev;
+
+	while (oph_aaa_token_check_time) {
+
+		sleep(oph_aaa_token_check_time);
+
+		pthread_mutex_lock(&global_flag);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check for revoked tokens...\n");
+
+		do {
+
+			gettimeofday(&tv, NULL);
+			bl_item = tokens_aaa;
+			bl_prev = NULL;
+			while (bl_item) {
+				deadtime = (time_t) (bl_item->check_time + oph_aaa_token_check_time);
+				if (tv.tv_sec >= deadtime) {
+					token = strdup(bl_item->host);
+					user = strdup(bl_item->userid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check validity of token associated with user '%s'\n", user);
+					bl_item->check_time = tv.tv_sec;
+					if (oph_auth_get_user_from_token_aaa(token, &userid, 0) || !userid) {	// Release the lock internally
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: token '%s' has been revoked by the user '%s'\n", token, user);
+						oph_drop_from_bl(&tokens_aaa, user, token);
+					}
+					if (token)
+						free(token);
+					if (user)
+						free(user);
+					break;	// Need to restart since the lock has been released
+				}
+				bl_prev = bl_item;
+				bl_item = bl_item->next;
+				if (userid) {
+					free(userid);
+					userid = NULL;
+				}
+			}
+
+		} while (bl_item);
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: check for revoked tokens... done\n");
 		pthread_mutex_unlock(&global_flag);
 	}
 
@@ -1257,7 +1546,7 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 		return OPH_SERVER_NULL_POINTER;
 	*args = NULL;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 	if (!usersinfo)
 		return OPH_SERVER_AUTH_ERROR;
@@ -1268,20 +1557,26 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 
 	json_t *info = json_loads(userinfo, 0, NULL);
 	if (!info) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to parse JSON string\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
 		return OPH_SERVER_ERROR;
 	}
 
 	char *organisation_name = NULL;
 	json_unpack(info, "{s?s}", "organisation_name", &organisation_name);
 
+	if (!organisation_name) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: organisation name not found\n");
+		json_decref(info);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
 	oph_argument *tmp, *tail = NULL;
 
 	tmp = (oph_argument *) malloc(sizeof(oph_argument));
 	tmp->key = strdup("organisation_name");
 	if (!(tmp->value = strdup(organisation_name))) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of userinfo structure\n");
-		oph_cleanup_args(args);
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
+		oph_cleanup_args(&tmp);
 		json_decref(info);
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
@@ -1294,9 +1589,95 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 
 	json_decref(info);
 
+	return OPH_SERVER_OK;
+
 #endif
 
+	return OPH_SERVER_AUTH_ERROR;
+}
+
+int oph_auth_check(const char *token, const char *userid)
+{
+	if (!token || !userid)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef OPH_AAA_SUPPORT
+
+	if (!strlen(oph_aaa_endpoint)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	oph_auth_clip chunk;
+	chunk.memory = (char *) malloc(1);
+	*chunk.memory = chunk.size = 0;
+
+	char url[OPH_MAX_STRING_SIZE], fields[OPH_MAX_STRING_SIZE];
+	snprintf(url, OPH_MAX_STRING_SIZE, "%s/engine/api/read_authorisation", oph_aaa_endpoint);
+	snprintf(fields, OPH_MAX_STRING_SIZE, "username=%s&resource_category=%s&resource_name=%s&token=%s", userid, oph_aaa_category, oph_aaa_name, token);
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: GET authorization rule: waiting...\n");
+
+	CURL *curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_POST, 1);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, fields);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, AUTH_CONNECTTIMEOUT);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, json_pt);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+	curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+
+	pthread_mutex_unlock(&global_flag);
+	pthread_mutex_lock(&curl_flag);
+	CURLcode res = curl_easy_perform(curl);
+	pthread_mutex_unlock(&curl_flag);
+	pthread_mutex_lock(&global_flag);
+
+	curl_easy_cleanup(curl);
+
+	if (res || !chunk.memory) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: unable to obtaine authorization rule: %s\n", curl_easy_strerror(res));
+		if (chunk.memory)
+			free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: GET authorization rule: completed\n");
+
+	json_t *info = json_loads(chunk.memory, 0, NULL);
+	if (!info) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "AAA: unable to parse JSON string\n");
+		free(chunk.memory);
+		return OPH_SERVER_ERROR;
+	}
+
+	char *success = NULL, *error = NULL;
+	json_unpack(info, "{s?s,s?s}", "success", &success, "error", &error);
+
+	if (error) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "AAA: %s\n", error);
+		json_decref(info);
+		free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+	if (!success) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "AAA: unexpected return message\n");
+		json_decref(info);
+		free(chunk.memory);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: %s\n", success);
+
+	json_decref(info);
+	free(chunk.memory);
+
 	return OPH_SERVER_OK;
+
+#endif
+
+	return OPH_SERVER_AUTH_ERROR;
 }
 
 int oph_auth_is_user_black_listed(const char *userid)
@@ -1335,36 +1716,44 @@ int oph_auth_is_user_black_listed(const char *userid)
 #endif
 }
 
-int oph_auth_vo(oph_argument * args)
+int oph_auth_vo(oph_argument * args, char **username)
 {
 	if (!args)
 		return OPH_SERVER_NULL_POINTER;
+
+	if (username)
+		*username = NULL;
 
 #ifdef AUTHORIZED_VO_FILE
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Search '%s=%s' in VO list '%s'\n", args->key, args->value, AUTHORIZED_VO_FILE);
 	int result = OPH_SERVER_AUTH_ERROR;
-	char buf[OPH_MAX_STRING_SIZE];
+	char buf[OPH_MAX_STRING_SIZE], *user = NULL;
 	FILE *fd = fopen(AUTHORIZED_VO_FILE, "r");
 	if (fd) {
 		while (fgets(buf, OPH_MAX_STRING_SIZE, fd)) {
 			if (strlen(buf))
 				buf[strlen(buf) - 1] = '\0';
-			if (strlen(buf) && !strcmp(args->value, buf)) {
-				result = OPH_SERVER_OK;
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
-				break;
+			if (strlen(buf)) {
+				if (username && ((user = strstr(buf, OPH_SEPARATOR_BASIC)))) {
+					*user = 0;
+					user++;
+				}
+				if (!strcmp(args->value, buf)) {
+					if (username && user)
+						*username = strdup(user);
+					result = OPH_SERVER_OK;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found an authorized VO '%s' for the user\n", buf);
+					break;
+				}
 			}
 		}
 		fclose(fd);
 	} else
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "No VO found in '%s'\n", AUTHORIZED_VO_FILE);
-
 	if (result)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to find any VO in list of the authorized VO\n");
-
 	return result;
-
 #else
 
 	return OPH_SERVER_AUTH_ERROR;
@@ -1372,7 +1761,7 @@ int oph_auth_vo(oph_argument * args)
 #endif
 }
 
-int oph_auth_token(const char *token, const char *host, char **userid, char **new_token)
+int oph_auth_token(const char *token, const char *host, char **userid, char **new_token, short *type)
 {
 	if (!token || !host)
 		return OPH_SERVER_NULL_POINTER;
@@ -1380,30 +1769,48 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 		*userid = NULL;
 	if (new_token)
 		*new_token = NULL;
+	if (type)
+		*type = 0;
 
-#ifdef OPH_OPENID_ENDPOINT
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 
+	short _type = 0;
 	int result = OPH_SERVER_OK;
-	if (oph_get_user_by_token(&tokens, token, userid, new_token)) {
+	if (!oph_get_user_by_token(&tokens_openid, token, userid, new_token))
+		_type = 1;
+	else if (!oph_get_user_by_token(&tokens_aaa, token, userid, new_token))
+		_type = 2;
+	if (_type)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
+	else {
 		short count;
 		char deadline[OPH_MAX_STRING_SIZE];
 		if ((count = oph_is_in_bl(&bl_head, OPH_AUTH_TOKEN, host, deadline)) > OPH_AUTH_MAX_COUNT) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Access with token from %s has been blocked until %s since too access attemps have been received\n", host, deadline);
 			result = OPH_SERVER_AUTH_ERROR;
-		} else if ((result = oph_auth_check_token(token))) {
+		} else if ((result = oph_auth_check_token(token, &_type))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is not valid\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
-		} else if ((result = oph_auth_get_user_from_token(token, userid, 1)) || !*userid) {
+		} else if ((result = oph_auth_get_user_from_token(token, userid, 1, _type)) || !*userid) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to get username from token\n");
 			if (!count)
 				oph_add_to_bl(&bl_head, OPH_AUTH_TOKEN, host);
 		} else {
-			oph_add_to_bl(&tokens, *userid, token);
+			switch (_type) {
+				case 1:
+					oph_add_to_bl(&tokens_openid, *userid, token);
+					break;
+				case 2:
+					oph_add_to_bl(&tokens_aaa, *userid, token);
+					break;
+				default:
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad token type\n");
+					result = OPH_SERVER_SYSTEM_ERROR;
+			}
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
 		}
-	} else
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
+	}
 	if (!result) {
 		if (!*userid) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
@@ -1411,6 +1818,8 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 		} else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token is associated with the user '%s'\n", *userid);
 	}
+	if (type)
+		*type = _type;
 
 	return result;
 
@@ -1426,19 +1835,19 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	if (!access_token || !userinfo)
 		return OPH_SERVER_NULL_POINTER;
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 	pthread_mutex_lock(&global_flag);
 
 	char *userid = NULL;
-	if (oph_auth_get_user_from_userinfo(userinfo, &userid) || !userid) {
+	if (oph_auth_get_user_from_userinfo_openid(userinfo, &userid) || !userid) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Userinfo has to be retrieved\n");
-		if (oph_auth_token(access_token, oph_server_host, &userid, NULL) || !userid) {
+		if (oph_auth_token(access_token, oph_server_host, &userid, NULL, NULL) || !userid) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token will be discarded\n");
 			return OPH_SERVER_ERROR;
 		}
-	} else if (oph_get_user_by_token(&tokens, access_token, NULL, NULL)) {
-		oph_add_to_bl(&tokens, userid, access_token);
+	} else if (oph_get_user_by_token(&tokens_openid, access_token, NULL, NULL)) {
+		oph_add_to_bl(&tokens_openid, userid, access_token);
 		oph_auth_cache_userinfo(access_token, userinfo);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
 	} else
@@ -1473,7 +1882,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_user(const char *userid, const char *passwd, const char *host)
+int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_username)
 {
 	if (!userid || !passwd)
 		return OPH_SERVER_NULL_POINTER;
@@ -1528,6 +1937,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host)
 #endif
 				else if (!count)
 					oph_add_to_bl(&bl_head, userid, host);
+				if (!result && actual_username)
+					*actual_username = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
 				break;
 			}
 		}
@@ -1573,7 +1984,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tmp->key = strdup(OPH_USER_OPENED_SESSIONS);
 		if (asprintf(&tmp->value, "%d", OPH_DEFAULT_USER_OPENED_SESSIONS) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
-			oph_cleanup_args(args);
+			oph_cleanup_args(&tmp);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		tmp->next = NULL;
@@ -1586,6 +1997,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tmp->key = strdup(OPH_USER_MAX_SESSIONS);
 		if (asprintf(&tmp->value, "%d", oph_default_max_sessions) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
+			oph_cleanup_args(&tmp);
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -1599,6 +2011,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tmp->key = strdup(OPH_USER_TIMEOUT_SESSION);
 		if (asprintf(&tmp->value, "%d", oph_default_session_timeout) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
+			oph_cleanup_args(&tmp);
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -1612,6 +2025,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tmp->key = strdup(OPH_USER_MAX_CORES);
 		if (asprintf(&tmp->value, "%d", oph_default_max_cores) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
+			oph_cleanup_args(&tmp);
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -1625,6 +2039,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		tmp->key = strdup(OPH_USER_MAX_HOSTS);
 		if (asprintf(&tmp->value, "%d", oph_default_max_hosts) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in creation of configuration files\n");
+			oph_cleanup_args(&tmp);
 			oph_cleanup_args(args);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -2169,29 +2584,35 @@ int oph_auth_check_role(oph_auth_user_role role, oph_auth_user_role permission)
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_user_enabling(const char *userid, int *result)
+int oph_auth_user_enabling(const char *userid, int *result, char **actual_userid)
 {
 	if (!userid || !result)
 		return OPH_SERVER_NULL_POINTER;
 	*result = -1;
+	if (actual_userid)
+		*actual_userid = NULL;
 
 	char *res = oph_get_host_by_user_in_bl(&auth_users, userid, NULL);
 	if (res) {
 		*result = (int) strtol(res, NULL, 10);
+		if (actual_userid)
+			*actual_userid = oph_get_host_by_user_in_bl(&actual_users, userid, NULL);
 		return OPH_SERVER_OK;
 	}
 
 	return OPH_SERVER_ERROR;
 }
 
-int oph_auth_enable_user(const char *userid, int result)
+int oph_auth_enable_user(const char *userid, int result, char *actual_userid)
 {
 	if (!userid)
 		return OPH_SERVER_NULL_POINTER;
 
-	char res[1];
-	snprintf(res, 1, "%d", result);
+	char res[OPH_SHORT_STRING_SIZE];
+	snprintf(res, OPH_SHORT_STRING_SIZE, "%d", result);
 	oph_add_to_bl(&auth_users, userid, res);
+	if (actual_userid)
+		oph_add_to_bl(&actual_users, userid, actual_userid);
 
 	return OPH_SERVER_OK;
 }
@@ -2199,10 +2620,17 @@ int oph_auth_enable_user(const char *userid, int result)
 int oph_auth_autocheck_tokens()
 {
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_create(&token_tid, NULL, (void *(*)(void *)) &_oph_check, NULL);
+	pthread_create(&token_tid_openid, NULL, (void *(*)(void *)) &_oph_check_openid, NULL);
+#endif
+
+#endif
+#ifdef OPH_AAA_SUPPORT
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_create(&token_tid_aaa, NULL, (void *(*)(void *)) &_oph_check_aaa, NULL);
 #endif
 
 #endif

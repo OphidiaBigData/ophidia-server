@@ -20,19 +20,34 @@
 
 	session_start();
 	if (isset($_SESSION['token']) && !empty($_SESSION['token']) && (!isset($_SESSION['userid']) || empty($_SESSION['userid']))) {
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/userinfo');
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer '.$_SESSION['token'])); 
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		$userinfo_json = curl_exec($ch);
-		curl_close($ch);
-		$userinfo = json_decode($userinfo_json, 1);
-		if (strlen($userinfo['error']) > 0)
-			session_destroy();
-		else {
-			$_SESSION['userid'] = $userinfo['sub'];
-			$_SESSION['username'] = $userinfo['name'];
-			$_SESSION['userinfo'] = $userinfo_json;
+		if (!empty($oph_openid_endpoint) && ($_SESSION['token_type'] === 'openid')) {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $oph_openid_endpoint.'/userinfo');
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer '.$_SESSION['token'])); 
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			$userinfo_json = curl_exec($ch);
+			curl_close($ch);
+			$userinfo = json_decode($userinfo_json, 1);
+			if (strlen($userinfo['error']) > 0)
+				session_destroy();
+			else {
+				$_SESSION['userid'] = $userinfo['sub'];
+				$_SESSION['username'] = $userinfo['name'];
+				$_SESSION['userinfo'] = $userinfo_json;
+			}
+		} else if (!empty($oph_aaa_endpoint) && ($_SESSION['token_type'] === 'aaa')) {
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $oph_aaa_endpoint.'/engine/api/verify_token');
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, 'token='.$_SESSION['token']);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+			$userinfo_json = curl_exec($ch);
+			curl_close($ch);
+			$userinfo = json_decode($userinfo_json, 1);
+			if ($userinfo['response'] !== 'invalid token')
+				$_SESSION['userid'] = $userinfo['response'];
+			else
+				session_destroy();
 		}
 	}
 ?>
