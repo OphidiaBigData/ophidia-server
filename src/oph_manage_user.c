@@ -486,6 +486,17 @@ int main(int argc, char *argv[])
 		}
 		// users.dat
 		if (password) {
+			char *_password = password;
+#ifdef INTERFACE_TYPE_IS_SSL
+			char sha_password[2 * SHA_DIGEST_LENGTH + 2];
+			_password = oph_sha(sha_password, password);
+			if (!_password) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "SHA digest cannot be created!\n");
+				cleanup();
+				return 1;
+			}
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Use SHA digest: %s\n", _password);
+#endif
 			file = fopen(filename, "w");
 			if (!file) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' cannot be opened!\n", filename);
@@ -496,7 +507,7 @@ int main(int argc, char *argv[])
 				if (strcmp(username, tmp->key))
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_BASIC, tmp->value);
 				else
-					fprintf(file, "%s%s%s\n", username, OPH_SEPARATOR_BASIC, password);
+					fprintf(file, "%s%s%s\n", username, OPH_SEPARATOR_BASIC, _password);
 			fclose(file);
 		}
 		// user.dat

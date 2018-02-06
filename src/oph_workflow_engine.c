@@ -832,7 +832,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	}
 
 	if (datacube_input || src_path) {
-		if (oph_workflow_var_substitute(wf, task_index, -1, target_base, NULL)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: variable substitution for task '%s'\n", ttype, jobid, task->name);
+		if (oph_workflow_var_substitute(wf, task_index, -1, target_base, NULL, src_path ? OPH_ARG_SRC_PATH : OPH_ARG_CUBE)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n", ttype, jobid, task->name);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -2223,6 +2224,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					hashtbl_insert(task_tbl, OPH_ARG_MARKERID, str_markerid);
 
 					// Build the preliminary submission string (without jobid)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: build preliminary submission string of task '%s' of '%s'.\n", ttype, jobid, wf->tasks[i].name, wf->name);
 					submission_string = sss = errore = NULL;
 					if (oph_workflow_get_submission_string(wf, i, j, &submission_string, &sss, &errore)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: submission string cannot be loaded\n", ttype, jobid);
