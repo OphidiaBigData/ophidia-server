@@ -5229,7 +5229,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					for (jj = 0; jj < wf->tasks[ii].light_tasks_num; jj++) {
 						tasks_num++;
 						if ((wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_COMPLETED)
-						    || (wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_UNSELECTED))
+						    || (wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_UNSELECTED)
+						    || (wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_SKIPPED))
 							success_tasks_num++;
 					}
 				}
