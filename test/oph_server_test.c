@@ -38,6 +38,7 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
+pthread_mutex_t curl_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
 #endif
@@ -72,6 +73,10 @@ char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
 oph_service_info *service_info = NULL;
+unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
+unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
+unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
+unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 
 void set_global_values(const char *configuration_file)
 {
@@ -2313,14 +2318,14 @@ int _check_oph_server(const char *function, int option)
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,4)) AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,3,10)) AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,2,1,2) OR mysql.oph_is_in_subset(datacube.iddatacube,3,1,3) OR mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
-				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0,metadatainstance AS metadatainstance0,metadatakey AS metadatakey1,metadatainstance AS metadatainstance1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0.idkey=metadatainstance0.idkey AND metadatainstance0.iddatacube=datacube.iddatacube AND metadatakey0.label='key1' AND metadatakey1.idkey=metadatainstance1.idkey AND metadatainstance1.iddatacube=datacube.iddatacube AND metadatakey1.label='key2' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatainstance AS metadatainstance0,metadatainstance AS metadatainstance1 WHERE datacube.idcontainer=container.idcontainer AND metadatainstance0.iddatacube=datacube.iddatacube AND metadatainstance0.label='key1' AND metadatainstance1.iddatacube=datacube.iddatacube AND metadatainstance1.label='key2' AND (container.idfolder='1')",
 				"No query expected",
-				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1')",
-				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0,metadatakey AS metadatakey0k1,metadatainstance AS metadatainstance0k1 WHERE datacube.idcontainer=container.idcontainer AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key1' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value1%' AND metadatakey0k1.idkey=metadatainstance0k1.idkey AND metadatainstance0k1.iddatacube=datacube.iddatacube AND metadatakey0k1.label='key2' AND CONVERT(metadatainstance0k1.value USING latin1) LIKE '%value2%' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatainstance0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatainstance AS metadatainstance0k0,metadatainstance AS metadatainstance0k1 WHERE datacube.idcontainer=container.idcontainer AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatainstance0k0.label='key1' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value1%' AND metadatainstance0k1.iddatacube=datacube.iddatacube AND metadatainstance0k1.label='key2' AND CONVERT(metadatainstance0k1.value USING latin1) LIKE '%value2%' AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2' OR datacube.level='3') AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (container.idfolder='1' OR container.idfolder='2')",
-				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatakey AS metadatakey0k0,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatakey0k0.idkey=metadatainstance0k0.idkey AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatakey0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
+				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container,metadatainstance AS metadatainstance0k0 WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='2') AND container.containername='containername' AND metadatainstance0k0.iddatacube=datacube.iddatacube AND metadatainstance0k0.label='key' AND CONVERT(metadatainstance0k0.value USING latin1) LIKE '%value%' AND (container.idfolder='1' OR container.idfolder='2')",
 				"No query expected",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (datacube.level='1') AND (container.idfolder='1')|SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND datacube.measure='measure' AND (container.idfolder='1')",
 				"SELECT DISTINCT datacube.iddatacube, datacube.idcontainer FROM datacube,container WHERE datacube.idcontainer=container.idcontainer AND (mysql.oph_is_in_subset(datacube.iddatacube,10,1,10)) AND (container.idfolder='1')",
