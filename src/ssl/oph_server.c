@@ -83,9 +83,13 @@ int oph_server_timeout = OPH_SERVER_TIMEOUT;
 int oph_server_inactivity_timeout = OPH_SERVER_INACTIVITY_TIMEOUT;
 int oph_server_workflow_timeout = OPH_SERVER_WORKFLOW_TIMEOUT;
 FILE *logfile = 0;
-char *oph_log_file_name = 0;
+FILE *wf_logfile = 0;
+FILE *task_logfile = 0;
 FILE *statuslogfile = 0;
+char *oph_log_file_name = 0;
 char *oph_status_log_file_name = 0;
+char *oph_wf_csv_log_file_name = 0;
+char *oph_task_csv_log_file_name = 0;
 char *oph_server_cert = 0;
 char *oph_server_ca = 0;
 char *oph_server_password = 0;
@@ -200,15 +204,23 @@ void set_global_values(const char *configuration_file)
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_TIMEOUT_SESSION)))
 		oph_default_session_timeout = (unsigned int) strtol(value, NULL, 10);
 	if (!logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE))) {
-		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
-		logfile = fopen(value, "a");
-		if (logfile)
+		if ((logfile = fopen(value, "a"))) {
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 			set_log_file(logfile);
+		}
 		// Redirect stdout and stderr to logfile
 		if (!freopen(value, "a", stdout))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdout to logfile\n");
 		if (!freopen(value, "a", stderr))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stderr to logfile\n");
+	}
+	if (!wf_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WF_LOGFILE))) {
+		if ((wf_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
+	}
+	if (!task_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TASK_LOGFILE))) {
+		if ((task_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 	}
 	// Default values
 	if (!oph_server_protocol && !(oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL))) {
@@ -368,6 +380,14 @@ void cleanup()
 		fclose(statuslogfile);
 		statuslogfile = NULL;
 	}
+	if (wf_logfile) {
+		fclose(wf_logfile);
+		wf_logfile = NULL;
+	}
+	if (task_logfile) {
+		fclose(task_logfile);
+		task_logfile = NULL;
+	}
 
 	mysql_library_end();
 	soap_destroy(psoap);
@@ -424,8 +444,11 @@ int main(int argc, char *argv[])
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "dhl:mp:s:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dhl:mp:s:t:vwxz")) != -1) {
 		switch (ch) {
+			case 'c':
+				oph_wf_csv_log_file_name = optarg;
+				break;
 			case 'd':
 				msglevel = LOG_DEBUG;
 				break;
@@ -443,6 +466,9 @@ int main(int argc, char *argv[])
 				break;
 			case 's':
 				oph_status_log_file_name = optarg;
+				break;
+			case 't':
+				oph_task_csv_log_file_name = optarg;
 				break;
 			case 'v':
 				return 0;
@@ -498,6 +524,28 @@ int main(int argc, char *argv[])
 
 	if (oph_status_log_file_name)
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected status log file '%s'\n", oph_status_log_file_name);
+	if (oph_wf_csv_log_file_name) {
+		if (wf_logfile)
+			fclose(wf_logfile);
+		if (!(wf_logfile = fopen(oph_wf_csv_log_file_name, "a"))) {
+			fprintf(stderr, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
+			return 1;
+		}
+		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected workflow log file '%s'\n", oph_wf_csv_log_file_name);
+	}
+	if (oph_task_csv_log_file_name) {
+		if (task_logfile)
+			fclose(task_logfile);
+		if (!(task_logfile = fopen(oph_task_csv_log_file_name, "a"))) {
+			fprintf(stderr, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
+			return 1;
+		}
+		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
+	}
+	if (wf_logfile && !ftell(wf_logfile))
+		fprintf(wf_logfile, "idworkflow\tusername\tip_address\t#tasks\t#success_tasks\n");
+	if (task_logfile && !ftell(task_logfile))
+		fprintf(task_logfile, "idworkflow\toperator\t#cores\tsuccess_flag\n");
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 

@@ -244,6 +244,7 @@ typedef struct _oph_workflow_stack {
  * \param status Status of the workflow
  * \param username User executing the workflow
  * \param userrole User role
+ * \param ip_address IP address of the submitter
  * \param name Name of the workflow
  * \param author Author of the workflow
  * \param abstract Abstract of the workflow
@@ -279,6 +280,7 @@ typedef struct _oph_workflow {
 	int status;
 	char *username;
 	int userrole;
+	char *ip_address;
 	char *name;
 	char *author;
 	char *abstract;

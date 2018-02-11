@@ -93,6 +93,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->username);
 		workflow->username = NULL;
 	}
+	if (workflow->ip_address) {
+		free(workflow->ip_address);
+		workflow->ip_address = NULL;
+	}
 	if (workflow->tasks_num) {
 		for (i = 0; i <= workflow->tasks_num; i++) {
 			oph_workflow_task_free(&(workflow->tasks[i]));

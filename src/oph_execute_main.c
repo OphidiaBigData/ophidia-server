@@ -350,7 +350,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Load workflow
 	oph_workflow *wf = NULL;
-	if (oph_workflow_load(request, userid, &wf)) {
+	if (oph_workflow_load(request, userid, _host, &wf)) {
 #ifdef COMMAND_TO_JSON
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for JSON conversion\n", jobid);
 		char *json = NULL;
@@ -360,7 +360,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			return SOAP_OK;
 		}
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: generated the following JSON request:\n%s\n", jobid, json);
-		if (oph_workflow_load(json, userid, &wf)) {
+		if (oph_workflow_load(json, userid, _host, &wf)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong data\n", jobid);
 			if (json)
 				free(json);
@@ -2431,7 +2431,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									return SOAP_OK;
 								}
 								if (level < 3) {
-									if (!oph_workflow_load(buffer, userid, &old_wf)) {
+									if (!oph_workflow_load(buffer, userid, _host, &old_wf)) {
 										if (level == 1) {
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
@@ -5171,7 +5171,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							oph_workflow *old_wf = NULL;
 							submission_string = NULL;
-							if (!oph_workflow_load(jstring, userid, &old_wf)) {
+							if (!oph_workflow_load(jstring, userid, _host, &old_wf)) {
 								if (level == 1) {
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
