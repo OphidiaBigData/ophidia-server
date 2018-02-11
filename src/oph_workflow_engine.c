@@ -5223,7 +5223,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (wf->tasks[ii].name) {
 					if (!wf->tasks[ii].light_tasks_num) {
 						tasks_num++;
-						if ((wf->tasks[ii].status == (int) OPH_ODB_STATUS_COMPLETED) || (wf->tasks[ii].status == (int) OPH_ODB_STATUS_UNSELECTED))
+						if ((wf->tasks[ii].status == (int) OPH_ODB_STATUS_COMPLETED) || (wf->tasks[ii].status == (int) OPH_ODB_STATUS_UNSELECTED)
+						    || (wf->tasks[ii].status == (int) OPH_ODB_STATUS_SKIPPED))
 							success_tasks_num++;
 					}
 					for (jj = 0; jj < wf->tasks[ii].light_tasks_num; jj++) {
