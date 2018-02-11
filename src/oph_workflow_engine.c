@@ -5236,6 +5236,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 				}
 			fprintf(wf_logfile, "%d\t%s\t%s\t%d\t%d\n", wf->idjob, wf->username, wf->ip_address, tasks_num, success_tasks_num);
+			fflush(wf_logfile);
+			if (task_logfile)
+				fflush(task_logfile);
 		}
 
 		if (wf->callback_url) {
