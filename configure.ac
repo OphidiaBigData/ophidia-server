@@ -462,10 +462,42 @@ JANSSON_LIBDIR=`pkg-config --variable=libdir jansson`
 AC_SUBST(JANSSON_LIBDIR)
 
 if test "x$openid" = "xyes"; then
-PKG_CHECK_MODULES(CJOSE, cjose >= 0.4.1)
-AC_SUBST(CJOSE_CFLAGS)
-AC_SUBST(CJOSE_LIBS)
+openid=no
+CJOSE_CONFIG=
+AC_ARG_WITH(cjose_path,
+           [  --with-cjose-path=PATH  Set the cjose library root dir],
+           [
+                cjose_path="$withval"
+                                openid=yes
+                                CJOSE_CONFIG="${withval}/pkgconfig/cjose.pc"
+           ],
+           [
+                        CJOSE_CONFIG="/usr/local/lib/pkgconfig/cjose.pc"
+                        echo -n "checking for $CJOSE_CONFIG... "
+                        if test -e "$CJOSE_CONFIG" ; then
+                                openid=yes
+                        fi
+                        echo "$openid"
+           ]
+           )
+if test "x${openid}" = "xyes"; then
+	CJOSE_CFLAGS="`pkg-config $CJOSE_CONFIG --cflags`"
+	CJOSE_LIBS="`pkg-config $CJOSE_CONFIG --libs`"
+    if test "x${CJOSE_LIBS}" != "x"; then
+            AC_SUBST(CJOSE_CFLAGS)
+            AC_SUBST(CJOSE_LIBS)
+            AC_MSG_NOTICE(openid enabled)
+    else
+            AC_MSG_NOTICE(openid disabled)
+            openid=no
+    fi
+else
+	AC_MSG_NOTICE(openid disabled)
 fi
+AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
+fi
+
+
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS
