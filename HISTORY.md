@@ -12,6 +12,7 @@
 
 ### Added:
 
+- Add accounting log [#19](https://github.com/OphidiaBigData/ophidia-server/pull/19)
 - Feature AAAaaS [#17](https://github.com/OphidiaBigData/ophidia-server/pull/17)
 - URL to workflow header [#15](https://github.com/OphidiaBigData/ophidia-server/pull/15)
 - Workflow execution time as extra field
@@ -22,7 +23,7 @@
 
 ### Changed:
 
-- Update fill partition query to use datacubecount field [#1](https://github.com/OphidiaBigData/ophidia-server/pull/18)
+- Update fill partition query to use datacubecount field [#18](https://github.com/OphidiaBigData/ophidia-server/pull/18)
 - Look of web pages of session space
 - Use subject identifier as userid for OpenId Connect
 - Default values for configuration parameters
