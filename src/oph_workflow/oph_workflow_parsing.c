@@ -36,7 +36,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int tasks_num);
 int _oph_workflow_add_to_json(json_t * oph_json, const char *name, const char *value);
 
-int oph_workflow_load(char *json_string, const char *username, oph_workflow ** workflow)
+int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow ** workflow)
 {
 	if (!json_string || !username || !workflow) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -56,6 +56,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 		oph_workflow_free(*workflow);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating username\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+	if (ip_address) {
+		//add ip_address
+		(*workflow)->ip_address = (char *) strdup((const char *) ip_address);
 	}
 	//load json_t from json_string
 	json_t *jansson = json_loads((const char *) json_string, 0, NULL);
@@ -888,6 +892,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->tasks = NULL;
 	(*workflow)->tasks_num = 0;
 	(*workflow)->username = NULL;
+	(*workflow)->ip_address = NULL;
 	(*workflow)->response = NULL;
 	(*workflow)->command = NULL;
 	(*workflow)->exit_values = NULL;

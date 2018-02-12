@@ -45,6 +45,8 @@ extern char oph_server_is_running;
 extern unsigned int oph_base_backoff;
 extern char *oph_subm_user;
 extern char *oph_txt_location;
+extern FILE *wf_logfile;
+extern FILE *task_logfile;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -2941,6 +2943,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 				wf->tasks[task_index].residual_light_tasks_num--;
 
+				// Log into TASK_LOGFILE
+				if (task_logfile)
+					fprintf(task_logfile, "%d\t%s\t%d\t%d\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].light_tasks[light_task_index].ncores,
+						status == OPH_ODB_STATUS_COMPLETED);
+
 #ifdef LEVEL3
 				if (wf->exec_mode && !strncasecmp(wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
 					if (wf->tasks[task_index].light_tasks[light_task_index].response)
@@ -3692,8 +3699,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		int check_status;
 		if (light_task_index < 0) {
 			check_status = (status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR);
-			if (check_status && wf->tasks[wf->tasks_num].name)
-				update_wf_data = final = 1;
+			if (check_status) {
+				if (wf->tasks[wf->tasks_num].name)
+					update_wf_data = final = 1;
+				// Log into TASK_LOGFILE
+				if (task_logfile && !wf->tasks[task_index].light_tasks_num)
+					fprintf(task_logfile, "%d\t%s\t%d\t%d\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED);
+			}
 			if (check_status && !final) {
 				int hh = 0;
 				char *next_task;
@@ -5203,6 +5215,31 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output for workflow '%s' has been written\n", ttype, jobid, wf->name);
 		}
 		oph_json_free(oper_json);
+
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			int ii, jj, tasks_num = 0, success_tasks_num = 0;
+			for (ii = 0; ii <= wf->tasks_num; ii++)
+				if (wf->tasks[ii].name) {
+					if (!wf->tasks[ii].light_tasks_num) {
+						tasks_num++;
+						if ((wf->tasks[ii].status == (int) OPH_ODB_STATUS_COMPLETED) || (wf->tasks[ii].status == (int) OPH_ODB_STATUS_UNSELECTED)
+						    || (wf->tasks[ii].status == (int) OPH_ODB_STATUS_SKIPPED))
+							success_tasks_num++;
+					}
+					for (jj = 0; jj < wf->tasks[ii].light_tasks_num; jj++) {
+						tasks_num++;
+						if ((wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_COMPLETED)
+						    || (wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_UNSELECTED)
+						    || (wf->tasks[ii].light_tasks[jj].status == (int) OPH_ODB_STATUS_SKIPPED))
+							success_tasks_num++;
+					}
+				}
+			fprintf(wf_logfile, "%d\t%s\t%s\t%d\t%d\n", wf->idjob, wf->username, wf->ip_address, tasks_num, success_tasks_num);
+			fflush(wf_logfile);
+			if (task_logfile)
+				fflush(task_logfile);
+		}
 
 		if (wf->callback_url) {
 			// Build request
