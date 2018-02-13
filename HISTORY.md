@@ -1,7 +1,8 @@
-## v1.2.0 - 2018-02-06
+## v1.2.0 - 2018-02-13
 
 ### Fixed:
 
+- Bug [#20](https://github.com/OphidiaBigData/ophidia-server/issues/20)
 - Update resource manager to set specific MPI type in case only one core is used [#16](https://github.com/OphidiaBigData/ophidia-server/pull/16)
 - Bug [#14](https://github.com/OphidiaBigData/ophidia-server/issues/14)
 - Bug [#12](https://github.com/OphidiaBigData/ophidia-server/issues/12)

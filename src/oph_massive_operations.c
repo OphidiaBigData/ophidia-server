@@ -359,15 +359,15 @@ int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, 
 	char **tmp1, **tmp2;
 
 	int result, running_;
-	unsigned int i, j, counter_;
-	char *task_string, *end_task, *last_char, tmp[1 + strlen(datacube_input)], *_datacube_input, _task_string[1 + strlen(datacube_input)];
+	unsigned int i, j, counter_, datacube_input_size = (unsigned int) strlen(datacube_input);
+	char *task_string, *end_task, *last_char, tmp[1 + datacube_input_size], *_datacube_input, _task_string[1 + datacube_input_size];
 
 	// Copy while skipping spaces in parameter name
 	result = 0;
-	for (i = j = 0; i <= strlen(datacube_input); ++i) {
+	for (i = j = 0; i <= datacube_input_size; ++i) {
 		if (datacube_input[i] == OPH_SEPARATOR_BASIC[0])
 			result = 0;
-		if (datacube_input[i] == OPH_SEPARATOR_KV[0])
+		else if (datacube_input[i] == OPH_SEPARATOR_KV[0])
 			result = 1;
 		if (result || (datacube_input[i] != OPH_SEPARATOR_NULL))
 			tmp[j++] = datacube_input[i];
@@ -455,15 +455,24 @@ int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, 
 	}
 
 	// Check for pipes
-	if (!strchr(datacube_input, OPH_SEPARATOR_SUBPARAM))
+	char bracket = 0;
+	for (i = 0; i < datacube_input_size; ++i)
+		if (!bracket) {
+			if (datacube_input[i] == OPH_SEPARATOR_SUBPARAM)
+				break;
+			else if (datacube_input[i] == OPH_SEPARATOR_SUBPARAM_OPEN)
+				bracket = 1;
+		} else if (datacube_input[i] == OPH_SEPARATOR_SUBPARAM_CLOSE)
+			bracket = 0;
+	if (i == datacube_input_size)
 		return result;
 
 	// Copy while skipping spaces in parameter name
 	result = 0;
-	for (i = j = 0; i <= strlen(datacube_input); ++i) {
+	for (i = j = 0; i <= datacube_input_size; ++i) {
 		if (datacube_input[i] == OPH_SEPARATOR_BASIC[0])
 			result = 0;
-		if (datacube_input[i] == OPH_SEPARATOR_KV[0])
+		else if (datacube_input[i] == OPH_SEPARATOR_KV[0])
 			result = 1;
 		if (result || (datacube_input[i] != OPH_SEPARATOR_NULL))
 			tmp[j++] = datacube_input[i];
