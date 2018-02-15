@@ -142,6 +142,9 @@ int _check_oph_server(const char *function, int option)
 	char sessionid[OPH_MAX_STRING_SIZE];
 	snprintf(sessionid, OPH_MAX_STRING_SIZE, "%s/sessions/123/experiment", oph_web_server);
 
+	void *var_buffer;
+	size_t var_size = sizeof(oph_workflow_var), svalue_size;
+
 	// Workflow
 	oph_workflow *wf = (oph_workflow *) calloc(1, sizeof(oph_workflow));
 	if (!wf)
@@ -351,10 +354,18 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = -1;
 					var.ivalue = 1;
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "234-234");
-					if (hashtbl_insert_with_size(wf->vars, "condition", (void *) &var, sizeof(oph_workflow_var))) {
+					var.svalue = strdup("234-234");
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, "condition", var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 					free(wf->tasks[0].arguments_values[0]);
 					wf->tasks[0].arguments_values[0] = strdup("@condition");
 				}
@@ -952,10 +963,18 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = -1;
 					var.ivalue = 1;
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "first|second|third");
-					if (hashtbl_insert_with_size(wf->vars, "values", (void *) &var, sizeof(oph_workflow_var))) {
+					var.svalue = strdup("first|second|third");
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, "values", var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 					free(wf->tasks[1].arguments_values[1]);
 					wf->tasks[1].arguments_values[1] = strdup("@values");
 				}
@@ -1510,11 +1529,21 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
-					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var))) {
+					char svalue[OPH_WORKFLOW_MAX_STRING];
+					snprintf(svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
+					var.svalue = strdup(svalue);
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						oph_trash_destroy(trash);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 				}
 				break;
 
@@ -1541,11 +1570,21 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = 0;
 					var.ivalue = ivalues[wf->stack->index];
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
-					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], (void *) &var, sizeof(oph_workflow_var))) {
+					char svalue[OPH_WORKFLOW_MAX_STRING];
+					snprintf(svalue, OPH_WORKFLOW_MAX_STRING, "%s", svalues[wf->stack->index]);
+					var.svalue = strdup(svalue);
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, wf->tasks[0].arguments_values[0], var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						oph_trash_destroy(trash);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 				}
 		}
 
@@ -3016,11 +3055,18 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = -1;
 					var.ivalue = 1;
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+					var.svalue = strdup("value");
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						goto _EXIT_3;
 					}
-
+					free(var.svalue);
+					free(var_buffer);
 					wf->tasks[0].arguments_values[1] = strdup("@goodvariable");
 				}
 				break;
@@ -3133,10 +3179,18 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = -1;
 					var.ivalue = 1;
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+					var.svalue = strdup("value");
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 					wf->tasks[0].arguments_values[1] = strdup("@goodvariable");
 				}
 				break;
@@ -3455,10 +3509,18 @@ int _check_oph_server(const char *function, int option)
 					oph_workflow_var var;
 					var.caller = -1;
 					var.ivalue = 1;
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "value");
-					if (hashtbl_insert_with_size(wf->vars, "goodvariable", (void *) &var, sizeof(oph_workflow_var))) {
+					var.svalue = strdup("value");
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->vars, "goodvariable", var_buffer, var_size + svalue_size)) {
+						free(var.svalue);
+						free(var_buffer);
 						goto _EXIT_3;
 					}
+					free(var.svalue);
+					free(var_buffer);
 
 					wf->tasks[0].arguments_num = 5;
 					wf->tasks[0].arguments_keys = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
