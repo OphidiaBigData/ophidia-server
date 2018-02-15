@@ -638,12 +638,14 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 
 	int i;
 	char *key[OPH_WORKFLOW_MIN_STRING] = OPH_WORKFLOW_BVAR_KEYS;
+	void *var_buffer;
+	size_t var_size = sizeof(oph_workflow_var), svalue_size;
 	for (i = 0; i < OPH_WORKFLOW_BVAR_KEYS_SIZE; ++i) {
-		*var.svalue = 0;
+		var.svalue = NULL;
 		switch (i) {
 			case 0:
 				if (wf->sessionid)
-					strcpy(var.svalue, wf->sessionid);
+					var.svalue = strdup(wf->sessionid);
 				break;
 			case 1:
 				if (wf->sessionid) {
@@ -651,20 +653,39 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 					if (oph_get_session_code(wf->sessionid, session_code))
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 					else
-						strcpy(var.svalue, session_code);
+						var.svalue = strdup(session_code);
 				}
 				break;
 			case 2:
-				if (wf->sessionid)
-					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", wf->workflowid);
+				if (wf->sessionid) {
+					var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+					if (var.svalue)
+						snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", wf->workflowid);
+				}
 				break;
 			default:
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n", i, wf->name);
+				var.svalue = strdup("");
 		}
-		if (hashtbl_insert_with_size(wf->vars, key[i], (void *) &var, sizeof(oph_workflow_var)))
+		if (!var.svalue) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		svalue_size = strlen(var.svalue) + 1;
+		var_buffer = malloc(var_size + svalue_size);
+		if (!var_buffer) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			free(var.svalue);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		memcpy(var_buffer, (void *) &var, var_size);
+		memcpy(var_buffer + var_size, var.svalue, svalue_size);
+		if (hashtbl_insert_with_size(wf->vars, key[i], var_buffer, var_size + svalue_size))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n", key[i], wf->name);
 		else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", key[i], var.svalue, wf->name);
+		free(var.svalue);
+		free(var_buffer);
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;

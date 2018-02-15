@@ -1019,23 +1019,48 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			hashtbl_remove(twf->vars, names[j]);
 
 			oph_workflow_var var;
+			void *var_buffer;
+			size_t var_size = sizeof(oph_workflow_var), svalue_size;
 			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
 			if (svalues)
-				strcpy(var.svalue, svalues[j]);
-			else
-				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-
-			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, twf->name);
-			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, twf->name);
-			if (hashtbl_insert_with_size(twf->vars, names[j], (void *) &var, sizeof(oph_workflow_var))) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, twf->name);
+				var.svalue = strdup(svalues[j]);
+			else {
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+			}
+			if (!var.svalue) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
+			svalue_size = strlen(var.svalue) + 1;
+			var_buffer = malloc(var_size + svalue_size);
+			if (!var_buffer) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				ret = OPH_SERVER_ERROR;
+				free(var.svalue);
+				break;
+			}
+			memcpy(var_buffer, (void *) &var, var_size);
+			memcpy(var_buffer + var_size, var.svalue, svalue_size);
+			if (hashtbl_insert_with_size(twf->vars, names[j], var_buffer, var_size + svalue_size)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, twf->name);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				ret = OPH_SERVER_ERROR;
+				free(var.svalue);
+				free(var_buffer);
+				break;
+			}
+			if (svalues)
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, twf->name);
+			else
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, twf->name);
+			free(var.svalue);
+			free(var_buffer);
 		}
 
 		if (has_action && (twf->tasks[tt].status < (int) caction)) {
@@ -1218,26 +1243,52 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 
 		if (!mode && (svalues_num > 0)) {
 			oph_workflow_var var;
+			void *var_buffer;
+			size_t var_size = sizeof(oph_workflow_var), svalue_size;
 			var.caller = i;
 			if (ivalues)
 				var.ivalue = ivalues[0];
 			else
 				var.ivalue = 1;	// Non C-like indexing
 			if (svalues)
-				strcpy(var.svalue, svalues[0]);
-			else
-				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-
-			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, wf->name);
-			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", name, var.ivalue, wf->name);
-			if (hashtbl_insert_with_size(wf->vars, name, (void *) &var, sizeof(oph_workflow_var))) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
+				var.svalue = strdup(svalues[0]);
+			else {
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+			}
+			if (!var.svalue) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
+			svalue_size = strlen(var.svalue) + 1;
+			var_buffer = malloc(var_size + svalue_size);
+			if (!var_buffer) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				ret = OPH_SERVER_ERROR;
+				free(var.svalue);
+				break;
+			}
+			memcpy(var_buffer, (void *) &var, var_size);
+			memcpy(var_buffer + var_size, var.svalue, svalue_size);
+			if (hashtbl_insert_with_size(wf->vars, name, var_buffer, var_size + svalue_size)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				ret = OPH_SERVER_ERROR;
+				free(var.svalue);
+				free(var_buffer);
+				break;
+			}
+			if (svalues)
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, wf->name);
+			else
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", name, var.ivalue, wf->name);
+			free(var.svalue);
+			free(var_buffer);
+
 			// Push them into the stack, even in case only one loop has to be performed
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Push for-data into the stack of workflow '%s'.\n", wf->name);
 			if (oph_workflow_push(wf, i, name, svalues, ivalues, svalues_num)) {
@@ -1289,25 +1340,48 @@ int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * t
 		if (tmp->index < tmp->values_num) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Create variable '%s' to be stored in environment of workflow '%s'.\n", tmp->name, wf->name);
 			oph_workflow_var var;
+			void *var_buffer;
+			size_t var_size = sizeof(oph_workflow_var), svalue_size;
 			var.caller = tmp->caller;
 			if (tmp->ivalues)
 				var.ivalue = tmp->ivalues[tmp->index];
 			else
 				var.ivalue = 1 + tmp->index;	// Non C-like indexing
 			if (tmp->svalues)
-				strcpy(var.svalue, tmp->svalues[tmp->index]);
-			else
-				snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-
+				var.svalue = strdup(tmp->svalues[tmp->index]);
+			else {
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+			}
+			if (!var.svalue) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+			svalue_size = strlen(var.svalue) + 1;
+			var_buffer = malloc(var_size + svalue_size);
+			if (!var_buffer) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				free(var.svalue);
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+			memcpy(var_buffer, (void *) &var, var_size);
+			memcpy(var_buffer + var_size, var.svalue, svalue_size);
+			if (hashtbl_insert_with_size(wf->vars, tmp->name, var_buffer, var_size + svalue_size)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to update variable '%s' in environment of workflow '%s'.", tmp->name, wf->name);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				free(var.svalue);
+				free(var_buffer);
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
 			if (tmp->svalues)
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%s' in environment of workflow '%s'.\n", tmp->name, var.svalue, wf->name);
 			else
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Update variable '%s=%d' in environment of workflow '%s'.\n", tmp->name, var.ivalue, wf->name);
-			if (hashtbl_insert_with_size(wf->vars, tmp->name, (void *) &var, sizeof(oph_workflow_var))) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to update variable '%s' in environment of workflow '%s'.", tmp->name, wf->name);
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
-				return OPH_SERVER_SYSTEM_ERROR;
-			}
+			free(var.svalue);
+			free(var_buffer);
 
 			if (odb_jobid)	// Reset status
 			{
@@ -1560,6 +1634,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		}
 
 		oph_workflow_var var;
+		void *var_buffer;
+		size_t var_size = sizeof(oph_workflow_var), svalue_size;
 		for (j = 0; j < names_num; ++j) {
 
 			// Add the variable only in case it does not exist
@@ -1570,20 +1646,43 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				var.caller = i;
 				var.ivalue = 1 + j;	// Non C-like indexing
 				if (svalues)
-					strcpy(var.svalue, svalues[j]);
-				else
-					snprintf(var.svalue, OPH_WORKFLOW_MAX_STRING, "%d", var.ivalue);
-
-				if (svalues)
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, wf->name);
-				else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, wf->name);
-				if (hashtbl_insert_with_size(wf->vars, names[j], (void *) &var, sizeof(oph_workflow_var))) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
+					var.svalue = strdup(svalues[j]);
+				else {
+					var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+					if (var.svalue)
+						snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+				}
+				if (!var.svalue) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 					ret = OPH_SERVER_ERROR;
 					break;
 				}
+				svalue_size = strlen(var.svalue) + 1;
+				var_buffer = malloc(var_size + svalue_size);
+				if (!var_buffer) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					free(var.svalue);
+					break;
+				}
+				memcpy(var_buffer, (void *) &var, var_size);
+				memcpy(var_buffer + var_size, var.svalue, svalue_size);
+				if (hashtbl_insert_with_size(wf->vars, names[j], var_buffer, var_size + svalue_size)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, wf->name);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					free(var.svalue);
+					free(var_buffer);
+					break;
+				}
+				if (svalues)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, wf->name);
+				else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, wf->name);
+				free(var.svalue);
+				free(var_buffer);
 			}
 		}
 
