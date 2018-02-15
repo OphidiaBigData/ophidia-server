@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,10 +24,11 @@
 /* \brief Function for JSON parsing and global variables substitution (ncores,cwd and cube)
  * \param json_string Input JSON string
  * \param username Input username
+ * \param ip_address Optional IP address of submitter
  * \param workflow Output OPH_WORKFLOW
  * \return 0 if successful
  */
-int oph_workflow_load(char *json_string, const char *username, oph_workflow ** workflow);
+int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow ** workflow);
 
 /* \brief Function for JSON parsing and global variables substitution (ncores,cwd and cube)
  * \param workflow Input OPH_WORKFLOW

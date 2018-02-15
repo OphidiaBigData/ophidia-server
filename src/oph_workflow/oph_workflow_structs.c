@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -45,6 +45,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 	}
 	int i;
+	if (workflow->url) {
+		free(workflow->url);
+		workflow->url = NULL;
+	}
 	if (workflow->abstract) {
 		free(workflow->abstract);
 		workflow->abstract = NULL;
@@ -88,6 +92,10 @@ int oph_workflow_free(oph_workflow * workflow)
 	if (workflow->username) {
 		free(workflow->username);
 		workflow->username = NULL;
+	}
+	if (workflow->ip_address) {
+		free(workflow->ip_address);
+		workflow->ip_address = NULL;
 	}
 	if (workflow->tasks_num) {
 		for (i = 0; i <= workflow->tasks_num; i++) {

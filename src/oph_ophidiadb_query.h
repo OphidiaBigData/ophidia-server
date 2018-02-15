@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@
 
 // Host partitions
 #define OPHIDIADB_CREATE_PARTITION "INSERT INTO hostpartition (partitionname, hidden) VALUES ('%s', 1);"
-#define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, priority) SELECT LAST_INSERT_ID(), idhost, priority FROM host WHERE idhost IN ( SELECT host.idhost FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hostpartition.idhostpartition = hashost.idhostpartition WHERE partitionname = '%s' );"
+#define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, datacubecount) SELECT LAST_INSERT_ID(), idhost, datacubecount FROM host WHERE idhost IN ( SELECT host.idhost FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hostpartition.idhostpartition = hashost.idhostpartition WHERE partitionname = '%s' );"
 #define OPHIDIADB_DESTROY_PARTITION "DELETE FROM hostpartition WHERE partitionname = '%s' AND hidden = 1;"
 
 #endif				/* OPH_OPHIDIADB_QUERY_H */

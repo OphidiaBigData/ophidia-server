@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -266,7 +266,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pthread_mutex_lock(&global_flag);
 
 	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
-		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token))) {
+		short token_type = 0;
+		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token, &token_type))) {
 			// Token is valid: check local authorization
 			if (oph_auth_user_enabling(userid, &result, &actual_userid)) {	// New user
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
@@ -275,12 +276,24 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					result = OPH_SERVER_AUTH_ERROR;
 				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid))) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
-					oph_argument *token_args = NULL;
-					if (!(result = oph_auth_read_token(soap->passwd, &token_args)) && !(result = oph_auth_vo(token_args, &actual_userid))) {
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized globally\n", jobid, userid);
-					} else
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized globally\n", jobid, userid);
-					oph_cleanup_args(&token_args);
+					switch (token_type) {
+						case 1:
+							{
+								oph_argument *token_args = NULL;
+								if (!(result = oph_auth_read_token(soap->passwd, &token_args)))
+									result = oph_auth_vo(token_args, &actual_userid);
+								oph_cleanup_args(&token_args);
+								break;
+							}
+						case 2:
+							{
+								result = oph_auth_check(soap->passwd, userid);
+								break;
+							}
+						default:
+							result = OPH_SERVER_SYSTEM_ERROR;
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized globally\n", jobid, userid, result ? "not " : "");
 				} else
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
 				if (actual_userid)
@@ -337,7 +350,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Load workflow
 	oph_workflow *wf = NULL;
-	if (oph_workflow_load(request, userid, &wf)) {
+	if (oph_workflow_load(request, userid, _host, &wf)) {
 #ifdef COMMAND_TO_JSON
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for JSON conversion\n", jobid);
 		char *json = NULL;
@@ -347,7 +360,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			return SOAP_OK;
 		}
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: generated the following JSON request:\n%s\n", jobid, json);
-		if (oph_workflow_load(json, userid, &wf)) {
+		if (oph_workflow_load(json, userid, _host, &wf)) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong data\n", jobid);
 			if (json)
 				free(json);
@@ -2418,7 +2431,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									return SOAP_OK;
 								}
 								if (level < 3) {
-									if (!oph_workflow_load(buffer, userid, &old_wf)) {
+									if (!oph_workflow_load(buffer, userid, _host, &old_wf)) {
 										if (level == 1) {
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
@@ -5158,7 +5171,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							oph_workflow *old_wf = NULL;
 							submission_string = NULL;
-							if (!oph_workflow_load(jstring, userid, &old_wf)) {
+							if (!oph_workflow_load(jstring, userid, _host, &old_wf)) {
 								if (level == 1) {
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);

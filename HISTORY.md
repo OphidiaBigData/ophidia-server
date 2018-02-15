@@ -1,3 +1,33 @@
+## v1.2.0 - 2018-02-13
+
+### Fixed:
+
+- Bug [#20](https://github.com/OphidiaBigData/ophidia-server/issues/20)
+- Update resource manager to set specific MPI type in case only one core is used [#16](https://github.com/OphidiaBigData/ophidia-server/pull/16)
+- Bug [#14](https://github.com/OphidiaBigData/ophidia-server/issues/14)
+- Bug [#12](https://github.com/OphidiaBigData/ophidia-server/issues/12)
+- Improve metadata management to prevent deadlocks [#11](https://github.com/OphidiaBigData/ophidia-server/pull/11)
+- Bug [#10](https://github.com/OphidiaBigData/ophidia-server/issues/10)
+- Bug [#9](https://github.com/OphidiaBigData/ophidia-server/issues/9)
+- Locking for libcurl
+
+### Added:
+
+- Add accounting log [#19](https://github.com/OphidiaBigData/ophidia-server/pull/19)
+- Feature AAAaaS [#17](https://github.com/OphidiaBigData/ophidia-server/pull/17)
+- URL to workflow header [#15](https://github.com/OphidiaBigData/ophidia-server/pull/15)
+- Workflow execution time as extra field
+- Fields 'category' and 'multivalue' to XML descriptions
+- Default values for configuration parameters of OpenId Connect
+- OPH_CDD as parameter of user.dat and output of OPH_GET_CONFIG
+- Timer to check for revoked tokens
+
+### Changed:
+
+- Update fill partition query to use datacubecount field [#18](https://github.com/OphidiaBigData/ophidia-server/pull/18)
+- Look of web pages of session space
+- Use subject identifier as userid for OpenId Connect
+- Default values for configuration parameters
 
 ## v1.1.0 - 2017-07-28
 

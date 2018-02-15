@@ -1,6 +1,6 @@
 <!--
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -46,9 +46,15 @@
 ?>
 <?php
 		if (isset($_SESSION['token']) && !empty($_SESSION['token'])) {
+			if ($_SESSION['token_type'] === 'openid') {
 ?>
 			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/openid.php">Get token</A></B>
 <?php
+			} else if ($_SESSION['token_type'] === 'aaa') {
+?>
+			<B class="activelink"><A href="<?php echo $oph_web_server_secure; ?>/aaa.php">Get token</A></B>
+<?php
+			}
 		}
 ?>
 		</DIV>

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int tasks_num);
 int _oph_workflow_add_to_json(json_t * oph_json, const char *name, const char *value);
 
-int oph_workflow_load(char *json_string, const char *username, oph_workflow ** workflow)
+int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow ** workflow)
 {
 	if (!json_string || !username || !workflow) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -57,6 +57,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating username\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
+	if (ip_address) {
+		//add ip_address
+		(*workflow)->ip_address = (char *) strdup((const char *) ip_address);
+	}
 	//load json_t from json_string
 	json_t *jansson = json_loads((const char *) json_string, 0, NULL);
 	if (!jansson) {
@@ -66,10 +70,10 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 	}
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
 		    &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run,
-		    "output_format", &output_format, "host_partition", &host_partition);
+		    "output_format", &output_format, "host_partition", &host_partition, "url", &url);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -102,6 +106,16 @@ int oph_workflow_load(char *json_string, const char *username, oph_workflow ** w
 			json_decref(jansson);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating abstract\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+	if (url && strlen(url)) {
+		(*workflow)->url = (char *) strdup((const char *) url);
+		if (!((*workflow)->url)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating sessionid\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
 	}
 	if (sessionid && strlen(sessionid)) {
 		(*workflow)->sessionid = (char *) strdup((const char *) sessionid);
@@ -677,6 +691,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "abstract", workflow->abstract))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (_oph_workflow_add_to_json(request, "url", workflow->url))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "sessionid", workflow->sessionid))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "exec_mode", workflow->exec_mode))
@@ -858,6 +874,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 	//init
+	(*workflow)->url = NULL;
 	(*workflow)->abstract = NULL;
 	(*workflow)->author = NULL;
 	(*workflow)->callback_url = NULL;
@@ -875,6 +892,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->tasks = NULL;
 	(*workflow)->tasks_num = 0;
 	(*workflow)->username = NULL;
+	(*workflow)->ip_address = NULL;
 	(*workflow)->response = NULL;
 	(*workflow)->command = NULL;
 	(*workflow)->exit_values = NULL;

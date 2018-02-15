@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2017 CMCC Foundation
+#    Copyright (C) 2012-2018 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -15,6 +15,8 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -47,7 +49,7 @@ dist_sessions_DATA =
 
 if OPH_WEB_ACCESS
 webdir = $(OPH_WEB_SERVER_LOCATION)/
-dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/openid.php etc/web/userinfo.php etc/web/style.css etc/web/.htaccess
+dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/openid.php etc/web/userinfo.php etc/web/aaa.php etc/web/style.css etc/web/.htaccess
 endif
 
 AM_DEFAULT_VERBOSITY = 1

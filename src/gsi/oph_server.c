@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -61,6 +61,8 @@ int oph_server_timeout = OPH_SERVER_TIMEOUT;
 int oph_server_inactivity_timeout = OPH_SERVER_INACTIVITY_TIMEOUT;
 int oph_server_workflow_timeout = OPH_SERVER_WORKFLOW_TIMEOUT;
 FILE *logfile = 0;
+FILE *wf_logfile = 0;
+FILE *task_logfile = 0;
 char *oph_log_file_name = 0;
 char *oph_server_cert = 0;
 char *oph_server_ca = 0;

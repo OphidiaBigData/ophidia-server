@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2017 CMCC Foundation
+#    Copyright (C) 2012-2018 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ LIBSSH2_LIBS =
 endif
 
 if OPENID_SUPPORT
-ADDITIONAL_CFLAGS += -DOPH_OPENID_ENDPOINT=\"@OPH_OPENID_ENDPOINT@\" -DOPH_OPENID_CLIENT_ID=\"@OPH_OPENID_CLIENT_ID@\" -DBLACK_LIST_FILE=\"@BLACK_LIST_FILE@\" -DAUTHORIZED_VO_FILE=\"@AUTHORIZED_VO_FILE@\"
+ADDITIONAL_CFLAGS += -DOPH_OPENID_SUPPORT -DBLACK_LIST_FILE=\"@BLACK_LIST_FILE@\" -DAUTHORIZED_VO_FILE=\"@AUTHORIZED_VO_FILE@\"
 OPENID_CFLAGS = ${LIBCURL_INCLUDE} $(JANSSON_CFLAGS) $(CJOSE_CFLAGS)
 OPENID_LDFLAGS = -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
 OPENID_LIBS = ${LIBCURL_LIB} $(JANSSON_LIBS) $(CJOSE_LIBS)
@@ -40,6 +40,17 @@ else
 OPENID_CFLAGS =
 OPENID_LDFLAGS =
 OPENID_LIBS =
+endif
+
+if AAA_SUPPORT
+ADDITIONAL_CFLAGS += -DOPH_AAA_SUPPORT -DBLACK_LIST_FILE=\"@BLACK_LIST_FILE@\" -DAUTHORIZED_VO_FILE=\"@AUTHORIZED_VO_FILE@\"
+AAA_CFLAGS = ${LIBCURL_INCLUDE} $(JANSSON_CFLAGS)
+AAA_LDFLAGS = -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
+AAA_LIBS = ${LIBCURL_LIB} $(JANSSON_LIBS)
+else
+AAA_CFLAGS =
+AAA_LDFLAGS =
+AAA_LIBS =
 endif
 
 if INTERFACE_TYPE_IS_SSL
@@ -178,9 +189,9 @@ liboph_parser_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = oph_auth.c
-liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(OPENID_CFLAGS)
-liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS)
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) -L. -loph_parser -lhashtbl
+liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(OPENID_CFLAGS) $(AAA_CFLAGS)
+liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_parser -lhashtbl
 
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -61,12 +61,17 @@ void oph_child_signal_handler(int sig);
 struct soap *psoap;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-pthread_t token_tid = 0;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
+#ifdef OPH_OPENID_SUPPORT
+pthread_t token_tid_openid = 0;
+#endif
+#ifdef OPH_AAA_SUPPORT
+pthread_t token_tid_aaa = 0;
+#endif
 #endif
 
 char *oph_server_location = 0;
@@ -78,9 +83,13 @@ int oph_server_timeout = OPH_SERVER_TIMEOUT;
 int oph_server_inactivity_timeout = OPH_SERVER_INACTIVITY_TIMEOUT;
 int oph_server_workflow_timeout = OPH_SERVER_WORKFLOW_TIMEOUT;
 FILE *logfile = 0;
-char *oph_log_file_name = 0;
+FILE *wf_logfile = 0;
+FILE *task_logfile = 0;
 FILE *statuslogfile = 0;
+char *oph_log_file_name = 0;
 char *oph_status_log_file_name = 0;
+char *oph_wf_csv_log_file_name = 0;
+char *oph_task_csv_log_file_name = 0;
 char *oph_server_cert = 0;
 char *oph_server_ca = 0;
 char *oph_server_password = 0;
@@ -114,12 +123,18 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
+#endif
+#ifdef OPH_AAA_SUPPORT
+char *oph_aaa_endpoint = 0;
+char *oph_aaa_category = 0;
+char *oph_aaa_name = 0;
+unsigned int oph_aaa_token_check_time = 0;
 #endif
 
 void set_global_values(const char *configuration_file)
@@ -189,15 +204,23 @@ void set_global_values(const char *configuration_file)
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_DEFAULT_TIMEOUT_SESSION)))
 		oph_default_session_timeout = (unsigned int) strtol(value, NULL, 10);
 	if (!logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE))) {
-		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
-		logfile = fopen(value, "a");
-		if (logfile)
+		if ((logfile = fopen(value, "a"))) {
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 			set_log_file(logfile);
+		}
 		// Redirect stdout and stderr to logfile
 		if (!freopen(value, "a", stdout))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdout to logfile\n");
 		if (!freopen(value, "a", stderr))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stderr to logfile\n");
+	}
+	if (!wf_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WF_LOGFILE))) {
+		if ((wf_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
+	}
+	if (!task_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TASK_LOGFILE))) {
+		if ((task_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 	}
 	// Default values
 	if (!oph_server_protocol && !(oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL))) {
@@ -298,20 +321,27 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_CHECK_TIME)))
 		oph_openid_token_check_time = (unsigned int) strtol(value, NULL, 10);
-	if (!(oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT))) {
-		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT, OPH_OPENID_ENDPOINT);
-		oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
-	}
-	if (!(oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID))) {
-		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID, OPH_OPENID_CLIENT_ID);
-		oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
-	}
+	oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
+	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
+#endif
+#ifdef OPH_AAA_SUPPORT
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_TOKEN_CHECK_TIME)))
+		oph_aaa_token_check_time = (unsigned int) strtol(value, NULL, 10);
+	oph_aaa_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_ENDPOINT);
+	if (!(oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY, OPH_AAA_CATEGORY);
+		oph_aaa_category = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_CATEGORY);
+	}
+	if (!(oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AAA_NAME, OPH_AAA_NAME);
+		oph_aaa_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_NAME);
+	}
 #endif
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
@@ -329,11 +359,18 @@ void cleanup()
 	oph_server_is_running = 0;
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	oph_openid_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid)
-		pthread_cancel(token_tid);
+	if (token_tid_openid)
+		pthread_cancel(token_tid_openid);
+#endif
+#endif
+#ifdef OPH_AAA_SUPPORT
+	oph_aaa_token_check_time = 0;
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (token_tid_aaa)
+		pthread_cancel(token_tid_aaa);
 #endif
 #endif
 
@@ -342,6 +379,14 @@ void cleanup()
 	if (statuslogfile) {
 		fclose(statuslogfile);
 		statuslogfile = NULL;
+	}
+	if (wf_logfile) {
+		fclose(wf_logfile);
+		wf_logfile = NULL;
+	}
+	if (task_logfile) {
+		fclose(task_logfile);
+		task_logfile = NULL;
 	}
 
 	mysql_library_end();
@@ -399,8 +444,11 @@ int main(int argc, char *argv[])
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "dhl:mp:s:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dhl:mp:s:t:vwxz")) != -1) {
 		switch (ch) {
+			case 'c':
+				oph_wf_csv_log_file_name = optarg;
+				break;
 			case 'd':
 				msglevel = LOG_DEBUG;
 				break;
@@ -418,6 +466,9 @@ int main(int argc, char *argv[])
 				break;
 			case 's':
 				oph_status_log_file_name = optarg;
+				break;
+			case 't':
+				oph_task_csv_log_file_name = optarg;
 				break;
 			case 'v':
 				return 0;
@@ -473,6 +524,28 @@ int main(int argc, char *argv[])
 
 	if (oph_status_log_file_name)
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected status log file '%s'\n", oph_status_log_file_name);
+	if (oph_wf_csv_log_file_name) {
+		if (wf_logfile)
+			fclose(wf_logfile);
+		if (!(wf_logfile = fopen(oph_wf_csv_log_file_name, "a"))) {
+			fprintf(stderr, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
+			return 1;
+		}
+		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected workflow log file '%s'\n", oph_wf_csv_log_file_name);
+	}
+	if (oph_task_csv_log_file_name) {
+		if (task_logfile)
+			fclose(task_logfile);
+		if (!(task_logfile = fopen(oph_task_csv_log_file_name, "a"))) {
+			fprintf(stderr, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
+			return 1;
+		}
+		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
+	}
+	if (wf_logfile && !ftell(wf_logfile))
+		fprintf(wf_logfile, "idworkflow\tusername\tip_address\t#tasks\t#success_tasks\n");
+	if (task_logfile && !ftell(task_logfile))
+		fprintf(task_logfile, "idworkflow\toperator\t#cores\tsuccess_flag\n");
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -244,9 +244,11 @@ typedef struct _oph_workflow_stack {
  * \param status Status of the workflow
  * \param username User executing the workflow
  * \param userrole User role
+ * \param ip_address IP address of the submitter
  * \param name Name of the workflow
  * \param author Author of the workflow
  * \param abstract Abstract of the workflow
+ * \param url URL of the workflow
  * \param sessionid SessionID for the entire workflow
  * \param exec_mode Execution mode for the entire workflow
  * \param ncores Number of cores for the entire workflow
@@ -278,9 +280,11 @@ typedef struct _oph_workflow {
 	int status;
 	char *username;
 	int userrole;
+	char *ip_address;
 	char *name;
 	char *author;
 	char *abstract;
+	char *url;
 	char *sessionid;
 	char *exec_mode;
 	int ncores;

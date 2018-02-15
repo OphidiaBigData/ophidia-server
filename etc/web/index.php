@@ -2,7 +2,7 @@
 
 /*
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,6 +25,15 @@
 		$error='';
 		if (isset($_GET['logout'])) {
 			session_start();
+			if (isset($_SESSION['token']) && !empty($_SESSION['token']) && ($_SESSION['token_type'] == 'aaa')) {
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $oph_aaa_endpoint.'/engine/api/checkout_data');
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, 'token='.$_SESSION['token']);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				$userinfo_json = curl_exec($ch);
+				curl_close($ch);
+			}
 			if (session_destroy()) header('Location: '.$oph_web_server_secure.'/index.php');
 		} else if (isset($_POST['submit'])) {
 			$error = 'Username or Password are not valid';
@@ -34,7 +43,7 @@
 
 				// User security check
 				$result = false;
-				$handle = fopen($oph_auth_location . '/authz/users.dat', 'r');
+				$handle = fopen($oph_auth_location.'/users.dat', 'r');
 				if ($handle) {
 					$sha_password = '*' . strtoupper(sha1(sha1($password, true)));
 					while (($buffer = fgets($handle, 4096))) {
@@ -63,7 +72,7 @@
 ?>
 <!--
     Ophidia Server
-    Copyright (C) 2012-2017 CMCC Foundation
+    Copyright (C) 2012-2018 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -88,6 +97,7 @@
 		$isset_userid = isset($_SESSION['userid']) && !empty($_SESSION['userid']);
 		$isset_token = isset($_SESSION['token']) && !empty($_SESSION['token']);
 		if (!$isset_userid && !$isset_token) {
+			if (!empty($oph_openid_endpoint)) {
 ?>
 		<SCRIPT type="text/javascript">
 			function login_with_openid() {
@@ -98,6 +108,50 @@
             }
 		</SCRIPT>
 <?php
+			}
+			if (!empty($oph_aaa_endpoint)) {
+?>
+		<SCRIPT type="text/javascript">
+			window.addEventListener("message", receiveMessage, false);
+			function receiveMessage(event)
+			{
+				if (event.origin !== "<?php echo $oph_aaa_endpoint; ?>")
+					return;
+				var error_label = document.getElementById("error");
+				var data = event.data;
+				if (!data.success) {
+					error_label.style.color = "red";
+					if (data.error !== "")						
+						error_label.textContent = data.error;
+					else
+						error_label.textContent = "Authorization error";
+					return;
+				}
+				if (data.error !== "") {
+					error_label.style.color = "red";
+					error_label.textContent = data.error;
+					return;
+				}
+				var user_info = data.user_info;
+				error_label.textContent = "";
+				location.href = '<?php echo $oph_web_server_secure; ?>/aaa.php?token=' + user_info.user_token + '&username=' + user_info.user.username + '&fname=' + user_info.user.fname + '&lname=' + user_info.user.lname;
+			}
+			function openWin(url, w, h) {
+				var left = (screen.width / 2) - (w / 2);
+				var top = (screen.height / 2) - (h / 2);
+				w = window.open(url, '_blank');
+				w.focus();
+			}
+			function login_with_aaa() {
+				var error_label = document.getElementById("error");
+				error_label.style.color = "green";
+				error_label.textContent = "Wait for the request to be processed";
+				openWin('<?php echo $oph_aaa_endpoint; ?>');
+				return false;
+            }
+		</SCRIPT>
+<?php
+			}
 		}
 ?>
 	</HEAD>
@@ -117,9 +171,15 @@
 			<B class="inactivelink">Download</B>
 <?php
 			if ($isset_token) {
+				if ($_SESSION['token_type'] === 'openid') {
 ?>
 			<B class="activelink"><A href="openid.php">Get token</A></B>
 <?php
+				} else if ($_SESSION['token_type'] === 'aaa') {
+?>
+			<B class="activelink"><A href="aaa.php">Get token</A></B>
+<?php
+				}
 			}
 ?>
 		</DIV>
@@ -127,14 +187,14 @@
 <?php
 			// Load sessions
 			print '<H5><TABLE align="center" border="1" width="100%"><TR><TH>Available sessions</TH><TH>Creation time</TH><TH>Active</TH><TH>Label</TH><TH>Number of tasks</TH><TH>Last access time</TH></TR>';
-			$dirFiles = scandir($oph_auth_location.'/authz/users/'.$_SESSION['userid'].'/sessions');
+			$dirFiles = scandir($oph_auth_location.'/users/'.$_SESSION['userid'].'/sessions');
 			rsort($dirFiles);
 			foreach($dirFiles as $filen) {
 				if ( ($filen != ".") && ($filen != "..") ) {
 					$ext = substr(strrchr($filen,'.'),1);
 					if ( $ext == 'session' ) {
 						$sessionn = substr($filen,0,strrpos($filen,'.'));
-						if ($file_handle = fopen($oph_auth_location.'/authz/users/'.$_SESSION['userid'].'/sessions/'.$filen,"r")) {
+						if ($file_handle = fopen($oph_auth_location.'/users/'.$_SESSION['userid'].'/sessions/'.$filen,"r")) {
 							print '<TR>';
 							print '<TD><A href="'.$oph_web_server.'/sessions.php/'.$sessionn.'/experiment">'.$oph_web_server.'/sessions/'.$sessionn.'/experiment</A></TD>';
 							while (!feof($file_handle)) {
@@ -173,6 +233,13 @@
 			if (!empty($oph_openid_endpoint)) {
 ?>
 				<INPUT name="openid" type="button" value=" Login with OpenId " onclick="login_with_openid()"/>
+<?php
+			}
+?>
+<?php
+			if (!empty($oph_aaa_endpoint)) {
+?>
+				<INPUT name="aaa" type="button" value=" Login with AAA " onclick="login_with_aaa()"/>
 <?php
 			}
 ?>

@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2017 CMCC Foundation
+#    Copyright (C) 2012-2018 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [1.1.0], [ophidia-info@cmcc.it])
+AC_INIT([ophidia-server], [1.2.0], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -100,13 +100,13 @@ if test "x${matheval_support}" = "xyes"; then
         if test "x${MATHEVAL_LIBS}" != "x"; then
                 AC_SUBST(MATHEVAL_CFLAGS)
                 AC_SUBST(MATHEVAL_LIBS)
-                AC_MSG_NOTICE("Matheval support enabled")
+                AC_MSG_NOTICE(Matheval enabled)
         else
-                AC_MSG_WARN("Matheval support disabled")
+                AC_MSG_NOTICE(Matheval disabled)
                 matheval_support=no
         fi
 else
-	AC_MSG_WARN("Matheval support disabled")
+	AC_MSG_NOTICE(Matheval disabled)
 fi
 AM_CONDITIONAL([MATHEVAL_SUPPORT], [test "x$matheval_support" = "xyes"])
 
@@ -128,9 +128,9 @@ AC_ARG_ENABLE(webaccess,
            [ webaccess="no"]
 	   )
 if test "x$webaccess" = "xyes"; then
-	AC_MSG_NOTICE("Web Access activated")
+	AC_MSG_NOTICE(Web Access activated)
 fi
-AM_CONDITIONAL([OPH_WEB_ACCESS], [test "x${webaccess}" = "xyes"])
+AM_CONDITIONAL([OPH_WEB_ACCESS], [test "x$webaccess" = "xyes"])
 
 AC_ARG_WITH(interface_type,
 	   [  --with-interface-type=TYPE 		Interface type: SSL],
@@ -175,15 +175,6 @@ gsi_plugin_threads_enable=0
 GSI_PLUGIN_THREADS=$gsi_plugin_threads_enable
 AC_SUBST(GSI_PLUGIN_THREADS)
 
-#GLOBUS_INCLUDE_BASIC=$GLOBUS_LOCATION/include/$GLOBUS_FLAVOR
-#AC_SUBST(GLOBUS_INCLUDE_BASIC)
-
-#GLOBUS_INCLUDE_THREADS=$GLOBUS_LOCATION/include/$GLOBUS_FLAVOR_THREADS
-#AC_SUBST(GLOBUS_INCLUDE_THREADS)
-
-
-
-
 #Enable VOMS
 voms_enable=0
 AC_ARG_ENABLE(voms,
@@ -194,12 +185,7 @@ VOMS=$voms_enable
 AC_SUBST(VOMS)
 
 #Set VOMS libs path
-AC_ARG_WITH(voms-libs,
-            [  --with-voms-libs=VOMS_LIBS       Sets the VOMS libraries path],
-                    [
-                             VOMS_LIBS="$withval"
-                    ]
-            )
+AC_ARG_WITH(voms-libs, [  --with-voms-libs=VOMS_LIBS       Sets the VOMS libraries path], [ VOMS_LIBS="$withval" ] )
 if test -z "$VOMS_LIBS" && test $voms_enable = 1; then
         AC_MSG_ERROR([no VOMS libraries directory found])
 else
@@ -210,12 +196,7 @@ AC_SUBST(VOMS_LIBS)
 AC_SUBST(VOMS_DEFINE)
 
 #Set VOMS include path
-AC_ARG_WITH(voms-include,
-            [  --with-voms-include=VOMS_INCLUDE       Sets the VOMS include path],
-                    [
-                             VOMS_INCLUDE="$withval"
-                    ]
-            )
+AC_ARG_WITH(voms-include, [  --with-voms-include=VOMS_INCLUDE       Sets the VOMS include path], [  VOMS_INCLUDE="$withval" ] )
 if test -z "$VOMS_INCLUDE" && test $voms_enable = 1; then
         AC_MSG_ERROR([no VOMS include directory found])
 else
@@ -315,19 +296,25 @@ AC_ARG_WITH(web_server_path,
 OPH_WEB_SERVER_LOCATION=${web_server_path}
 AC_SUBST(OPH_WEB_SERVER_LOCATION)
 
-AC_ARG_WITH(openid_endpoint, [  --with-openid-endpoint=URL	Endpoint], [ openid_endpoint="$withval" ])
-OPH_OPENID_ENDPOINT=${openid_endpoint}
-AC_SUBST(OPH_OPENID_ENDPOINT)
+AC_ARG_ENABLE(openid, [ --disable-openid	Disable OpenID. (Enabled by default)], [ openid="no" ], [ openid="yes" ])
+if test "x$openid" = "xyes"; then
+	AC_MSG_NOTICE(OpenID enabled)
+else
+	AC_MSG_NOTICE(OpenID disabled)
+fi
+AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
+OPH_OPENID_SUPPORT=$openid
+AC_SUBST(OPH_OPENID_SUPPORT)
 
-AC_ARG_WITH(openid_client_id, [  --with-openid-client-id=id	Client ID], [ openid_client_id="$withval" ])
-OPH_OPENID_CLIENT_ID=${openid_client_id}
-AC_SUBST(OPH_OPENID_CLIENT_ID)
-
-AC_ARG_WITH(openid_client_secret, [  --with-openid-client-secret=secret	Client Secret], [ openid_client_secret="$withval" ])
-OPH_OPENID_CLIENT_SECRET=${openid_client_secret}
-AC_SUBST(OPH_OPENID_CLIENT_SECRET)
-
-AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid_endpoint" != "x"])
+AC_ARG_ENABLE(aaa, [ --disable-aaa	Disable AAA. (Enabled by default)], [ aaa="no" ], [ aaa="yes" ])
+if test "x$aaa" = "xyes"; then
+	AC_MSG_NOTICE(AAA enabled)
+else
+	AC_MSG_NOTICE(AAA disabled)
+fi
+AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
+OPH_AAA_SUPPORT=$aaa
+AC_SUBST(OPH_AAA_SUPPORT)
 
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,
@@ -474,12 +461,43 @@ AC_SUBST(JANSON_LIBS)
 JANSSON_LIBDIR=`pkg-config --variable=libdir jansson`
 AC_SUBST(JANSSON_LIBDIR)
 
-if test "x$openid_endpoint" != "x"; then
-PKG_CHECK_MODULES(CJOSE, cjose >= 0.4.1)
-AC_SUBST(CJOSE_CFLAGS)
-AC_SUBST(CJOSE_LIBS)
-AC_MSG_NOTICE("OpenId support enabled")
+if test "x$openid" = "xyes"; then
+openid=no
+CJOSE_CONFIG=
+AC_ARG_WITH(cjose_path,
+           [  --with-cjose-path=PATH  Set the cjose library root dir],
+           [
+                cjose_path="$withval"
+                                openid=yes
+                                CJOSE_CONFIG="${withval}/pkgconfig/cjose.pc"
+           ],
+           [
+                        CJOSE_CONFIG="/usr/local/lib/pkgconfig/cjose.pc"
+                        echo -n "checking for $CJOSE_CONFIG... "
+                        if test -e "$CJOSE_CONFIG" ; then
+                                openid=yes
+                        fi
+                        echo "$openid"
+           ]
+           )
+if test "x${openid}" = "xyes"; then
+	CJOSE_CFLAGS="`pkg-config $CJOSE_CONFIG --cflags`"
+	CJOSE_LIBS="`pkg-config $CJOSE_CONFIG --libs`"
+    if test "x${CJOSE_LIBS}" != "x"; then
+            AC_SUBST(CJOSE_CFLAGS)
+            AC_SUBST(CJOSE_LIBS)
+            AC_MSG_NOTICE(openid enabled)
+    else
+            AC_MSG_NOTICE(openid disabled)
+            openid=no
+    fi
+else
+	AC_MSG_NOTICE(openid disabled)
 fi
+AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
+fi
+
+
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS
