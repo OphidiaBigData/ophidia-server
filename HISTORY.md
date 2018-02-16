@@ -2,6 +2,7 @@
 
 ### Fixed:
 
+- Unit tests
 - Bug [#13](https://github.com/OphidiaBigData/ophidia-server/issues/13) related to large variables causing server crash when used in OPH_SET [#21](https://github.com/OphidiaBigData/ophidia-server/pull/21)
 - Bug [#20](https://github.com/OphidiaBigData/ophidia-server/issues/20)
 - Update resource manager to set specific MPI type in case only one core is used [#16](https://github.com/OphidiaBigData/ophidia-server/pull/16)
