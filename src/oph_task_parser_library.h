@@ -52,6 +52,7 @@
 #define OPH_TP_XML_ATTRIBUTE_MINVALUE "minvalue"
 #define OPH_TP_XML_ATTRIBUTE_MAXVALUE "maxvalue"
 #define OPH_TP_XML_ATTRIBUTE_VALUES "values"
+#define OPH_TP_XML_ATTRIBUTE_ALLOWNOT "allownot"
 
 #define OPH_TP_INT_TYPE "int"
 #define OPH_TP_REAL_TYPE "double"
