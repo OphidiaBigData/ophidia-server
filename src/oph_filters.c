@@ -31,6 +31,7 @@ extern pthread_mutex_t global_flag;
 #define OPH_FILTER_AND2 OPH_FILTER_AND1"("
 #define OPH_FILTER_OR " OR "
 #define OPH_FILTER_TASK "task AS taskp,hasinput AS hasinputp,datacube AS datacubep"
+#define OPH_FILTER_NOT "!"
 
 int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t * flag)
 {
@@ -42,7 +43,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 
 	int i, level, key_num = 0;
 	unsigned int s;
-	char condition[OPH_MAX_STRING_SIZE], **key_list = NULL;
+	char condition[OPH_MAX_STRING_SIZE], **key_list = NULL, not_clause;
 	if (oph_tp_parse_multiple_value_param(value, &key_list, &key_num) || !key_num)
 		return OPH_MF_ERROR;
 
@@ -56,7 +57,8 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
 	for (i = 0; i < key_num; ++i) {
-		level = (int) strtol(key_list[i], NULL, 10);
+		not_clause = key_list[i][0] == OPH_FILTER_NOT[0] ? 1 : 0;
+		level = (int) strtol(key_list[i] + not_clause, NULL, 10);
 		if (i) {
 			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_OR)) {
 				oph_tp_free_multiple_value_param_list(key_list, key_num);
@@ -64,7 +66,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 			}
 			strncat(where_clause, OPH_FILTER_OR, s);
 		}
-		snprintf(condition, OPH_MAX_STRING_SIZE, "%s.level='%d'", OPH_MF_ARG_DATACUBE, level);
+		snprintf(condition, OPH_MAX_STRING_SIZE, "%s.level%s='%d'", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT : "", level);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			return OPH_MF_ERROR;
@@ -92,14 +94,15 @@ int oph_filter_measure(const char *value, char *tables, char *where_clause, pthr
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_MEASURE, value);
 
-	char condition[OPH_MAX_STRING_SIZE];
+	char condition[OPH_MAX_STRING_SIZE], not_clause;
 	unsigned int s;
 	if (*where_clause) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
 			return OPH_MF_ERROR;
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.measure='%s'", OPH_MF_ARG_DATACUBE, value);
+	not_clause = value[0] == OPH_FILTER_NOT[0] ? 1 : 0;
+	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.measure%s='%s'", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT : "", value + not_clause);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -114,12 +117,13 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_PARENT, value);
 
-	if (strncasecmp(value, oph_web_server, strlen(oph_web_server))) {
+	char not_clause = value[0] == OPH_FILTER_NOT[0] ? 1 : 0;
+
+	if (strncasecmp(value + not_clause, oph_web_server, strlen(oph_web_server))) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		return OPH_MF_ERROR;
 	}
-
-	char *pointer1 = value + strlen(oph_web_server);
+	char *pointer1 = value + strlen(oph_web_server) + not_clause;
 	if (*pointer1 != OPH_MF_ROOT_FOLDER[0]) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		return OPH_MF_ERROR;
@@ -157,8 +161,8 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
 	snprintf(condition, OPH_MAX_STRING_SIZE,
-		 "%s.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube='%d' AND datacubep.idcontainer='%d'",
-		 OPH_MF_ARG_DATACUBE, idparent, idcontainer);
+		 "%s.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube%s='%d' AND datacubep.idcontainer='%d'",
+		 OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT : "", idparent, idcontainer);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -184,13 +188,15 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 	} else
 		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
+	char not_clause = value[0] == OPH_FILTER_NOT[0] ? 1 : 0;
+
 	oph_subset *subset_struct = NULL;
 	if (oph_subset_init(&subset_struct)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		oph_subset_free(subset_struct);
 		return OPH_MF_ERROR;
 	}
-	if (oph_subset_parse(value, strlen(value), subset_struct, 0)) {
+	if (oph_subset_parse(value + not_clause, strlen(value), subset_struct, 0)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		oph_subset_free(subset_struct);
 		return OPH_MF_ERROR;
@@ -208,7 +214,7 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 			}
 			strncat(condition, OPH_FILTER_OR, s);
 		}
-		snprintf(temp, OPH_MAX_STRING_SIZE, OPH_SUBSET_ISINSUBSET_PLUGIN, OPH_MF_ARG_DATACUBE, "iddatacube", subset_struct->start[i], subset_struct->stride[i], subset_struct->end[i]);
+		snprintf(temp, OPH_MAX_STRING_SIZE, "%s"OPH_SUBSET_ISINSUBSET_PLUGIN, not_clause ? "NOT " : "", OPH_MF_ARG_DATACUBE, "iddatacube", subset_struct->start[i], subset_struct->stride[i], subset_struct->end[i]);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(condition) - 1) <= strlen(temp)) {
 			oph_subset_free(subset_struct);
 			return OPH_MF_ERROR;
@@ -237,7 +243,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_CONTAINER, value);
 
-	char condition[OPH_MAX_STRING_SIZE];
+	char condition[OPH_MAX_STRING_SIZE], not_clause = value[0] == OPH_FILTER_NOT[0] ? 1 : 0;
 	unsigned int s;
 
 	if (*where_clause) {
@@ -246,7 +252,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
 
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.containername='%s'", OPH_MF_ARG_CONTAINER, value);
+	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.containername%s='%s'", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT : "", value + not_clause);
 
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
@@ -264,11 +270,13 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_CONTAINER_PID, value);
 
-	if (strncasecmp(value, oph_web_server, strlen(oph_web_server))) {
+	char not_clause = value[0] == OPH_FILTER_NOT[0] ? 1 : 0;
+
+	if (strncasecmp(value + not_clause, oph_web_server, strlen(oph_web_server))) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		return OPH_MF_ERROR;
 	}
-	char *pointer = value + strlen(oph_web_server);
+	char *pointer = value + strlen(oph_web_server) + not_clause;
 	if (*pointer != OPH_MF_ROOT_FOLDER[0]) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		return OPH_MF_ERROR;
@@ -282,7 +290,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 			return OPH_MF_ERROR;
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idcontainer='%d'", OPH_MF_ARG_DATACUBE, idcontainer);
+	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idcontainer%s='%d'", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT : "", idcontainer);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -297,7 +305,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_METADATA_KEY, value);
 
-	char condition[OPH_MAX_STRING_SIZE];
+	char condition[OPH_MAX_STRING_SIZE], not_clause;
 
 	int key_num = 0;
 	char **key_list = NULL;
@@ -341,7 +349,8 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 			}
 			strncat(where_clause, OPH_FILTER_AND1, s);
 		}
-		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance%d.iddatacube=%s.iddatacube AND metadatainstance%d.label='%s'", i, OPH_MF_ARG_DATACUBE, i, key_list[i]);
+		not_clause = key_list[i][0] == OPH_FILTER_NOT[0] ? 1 : 0;
+		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance%d.iddatacube=%s.iddatacube AND metadatainstance%d.label%s='%s'", i, OPH_MF_ARG_DATACUBE, i, not_clause ? OPH_FILTER_NOT : "", key_list[i] + not_clause);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			return OPH_MF_ERROR;
@@ -361,7 +370,7 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_METADATA_KEY, key);
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_METADATA_VALUE, value);
 
-	char condition[OPH_MAX_STRING_SIZE];
+	char condition[OPH_MAX_STRING_SIZE], not_clause_k, not_clause_v;
 
 	int key_num = 0, value_num;
 	char **key_list = NULL;
@@ -422,9 +431,11 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 			}
 			strncat(where_clause, OPH_FILTER_AND1, s);
 		}
+		not_clause_k = key_list[i][0] == OPH_FILTER_NOT[0] ? 1 : 0;
+		not_clause_v = value_list[i][0] == OPH_FILTER_NOT[0] ? 1 : 0;
 		snprintf(condition, OPH_MAX_STRING_SIZE,
-			 "metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatainstance%dk%d.label='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) LIKE '%%%s%%'", prefix, i,
-			 OPH_MF_ARG_DATACUBE, prefix, i, key_list[i], prefix, i, value_list[i]);
+			 "metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatainstance%dk%d.label%s='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) %sLIKE '%%%s%%'", prefix, i,
+			 OPH_MF_ARG_DATACUBE, prefix, i, not_clause_k ? OPH_FILTER_NOT : "", key_list[i] + not_clause_k, prefix, i, not_clause_v ? "NOT " : "", value_list[i] + not_clause_v);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
 			oph_tp_free_multiple_value_param_list(value_list, value_num);
