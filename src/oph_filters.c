@@ -187,13 +187,22 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 	} else
 		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
+	unsigned long size = strlen(value), j = 0;
+	char _value[1 + size];
+	if (strstr(value, OPH_SEPARATOR_SUBPARAM_STR)) {
+		strcpy(_value, value);
+		for (; j < size; ++j)
+			if (_value[j] == OPH_SEPARATOR_SUBPARAM_STR[0])
+				_value[j] = OPH_SUBSET_LIB_SUBSET_SEPARATOR[0];
+	}
+
 	oph_subset *subset_struct = NULL;
 	if (oph_subset_init(&subset_struct)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		oph_subset_free(subset_struct);
 		return OPH_MF_ERROR;
 	}
-	if (oph_subset_parse(value, strlen(value), subset_struct, 0)) {
+	if (oph_subset_parse(j ? _value : value, size, subset_struct, 0)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
 		oph_subset_free(subset_struct);
 		return OPH_MF_ERROR;
@@ -557,19 +566,23 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	char *container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
 	char *container_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER "" OPH_MF_SYMBOL_NOT) : NULL;
 	char *path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
+	char *path_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH "" OPH_MF_SYMBOL_NOT) : NULL;
 
 	// Basic tables and where_clause
 	snprintf(tables, OPH_MAX_STRING_SIZE, "%s,%s", OPH_MF_ARG_DATACUBE, OPH_MF_ARG_CONTAINER);
 	snprintf(where_clause, OPH_MAX_STRING_SIZE, "%s.idcontainer=%s.idcontainer", OPH_MF_ARG_DATACUBE, OPH_MF_ARG_CONTAINER);
 
 	// Filter on current session
-	char ext_path[OPH_MAX_STRING_SIZE];
+	char ext_path[OPH_MAX_STRING_SIZE], ext_path_n[OPH_MAX_STRING_SIZE];
 	*ext_path = OPH_MF_ROOT_FOLDER[0];
 
 	if (oph_get_session_code(sessionid, ext_path + 1)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 		return OPH_MF_ERROR;
 	}
+	if (path_n && strlen(path_n))
+		strcpy(ext_path_n, ext_path);
+
 	if (path && strlen(path)) {
 		char *first_nospace = path;
 		while (first_nospace && *first_nospace && (*first_nospace == ' '))
@@ -586,6 +599,22 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	} else
 		strncat(ext_path, cwd, OPH_MAX_STRING_SIZE - strlen(ext_path));
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extended path to be explored is '%s'\n", ext_path);
+
+	if (path_n && strlen(path_n)) {
+		char *first_nospace = path_n;
+		while (first_nospace && *first_nospace && (*first_nospace == ' '))
+			first_nospace++;
+		if (!first_nospace || (*first_nospace != OPH_MF_ROOT_FOLDER[0])) {
+			strncat(ext_path_n, cwd, OPH_MAX_STRING_SIZE - strlen(ext_path_n));
+			first_nospace = ext_path_n + strlen(ext_path_n) - 1;
+			while (first_nospace && (*first_nospace == ' '))
+				first_nospace--;
+			if (first_nospace && (*first_nospace != OPH_MF_ROOT_FOLDER[0]))
+				strncat(ext_path_n, OPH_MF_ROOT_FOLDER, OPH_MAX_STRING_SIZE - strlen(ext_path_n));
+		}
+		strncat(ext_path_n, path_n, OPH_MAX_STRING_SIZE - strlen(ext_path_n));
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Extended path to be excluded is '%s'\n", ext_path_n);
+	}
 
 	if (task_tbl) {
 		char *value = NULL, *value2 = NULL, *metadata_key = NULL, *metadata_value = NULL;
@@ -673,9 +702,9 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 				return OPH_MF_ERROR;
 			}
 		}
-		if (oph_filter_path
-		    (ext_path, value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE "" OPH_MF_SYMBOL_NOT), value2 =
-		     hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH), sessionid, oDB, tables, where_clause, flag, 1))
+		if (path_n && strlen(path_n)
+		    && oph_filter_path(ext_path_n, value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE), value2 =
+				       hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH), sessionid, oDB, tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;	// path or cwd
 
 		if ((value = hashtbl_get(task_tbl, OPH_MF_ARG_FILE)))
