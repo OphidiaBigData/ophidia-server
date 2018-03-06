@@ -33,7 +33,6 @@ extern pthread_mutex_t global_flag;
 #define OPH_FILTER_TASK "task AS taskp,hasinput AS hasinputp,datacube AS datacubep"
 #define OPH_FILTER_NOT1 "!"
 #define OPH_FILTER_NOT2 "NOT "
-#define OPH_FILTER_NOT3 "!"	// "`"
 
 int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
@@ -41,7 +40,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_LEVEL, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_LEVEL, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	int i, level, key_num = 0;
 	unsigned int s;
@@ -84,7 +83,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_LEVEL, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_LEVEL, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -94,7 +93,7 @@ int oph_filter_measure(const char *value, char *tables, char *where_clause, pthr
 
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_MEASURE, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_MEASURE, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	char condition[OPH_MAX_STRING_SIZE];
 	unsigned int s;
@@ -109,7 +108,7 @@ int oph_filter_measure(const char *value, char *tables, char *where_clause, pthr
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_MEASURE, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_MEASURE, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -117,7 +116,7 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_PARENT, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_PARENT, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	if (strncasecmp(value, oph_web_server, strlen(oph_web_server))) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
@@ -167,7 +166,7 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_PARENT, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_PARENT, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -177,7 +176,7 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	unsigned int s;
 
@@ -230,7 +229,7 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 		return OPH_MF_ERROR;
 	strncat(where_clause, ")", s);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -240,7 +239,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	char condition[OPH_MAX_STRING_SIZE];
 	unsigned int s;
@@ -257,7 +256,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -267,7 +266,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	if (strncasecmp(value, oph_web_server, strlen(oph_web_server))) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
@@ -292,7 +291,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -300,7 +299,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	char condition[OPH_MAX_STRING_SIZE];
 
@@ -356,7 +355,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 	}
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -365,7 +364,7 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s='%s'\n", OPH_MF_ARG_METADATA_KEY, key);
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_METADATA_VALUE, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_METADATA_VALUE, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 
 	char condition[OPH_MAX_STRING_SIZE];
 
@@ -441,7 +440,7 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
 	oph_tp_free_multiple_value_param_list(value_list, value_num);
 
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_VALUE, not_clause ? OPH_FILTER_NOT1 : "", value);
+	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_VALUE, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
@@ -556,7 +555,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	char tables[OPH_MAX_STRING_SIZE], where_clause[OPH_MAX_STRING_SIZE];
 
 	char *container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
-	char *container_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER "" OPH_FILTER_NOT3) : NULL;
+	char *container_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER "" OPH_MF_SYMBOL_NOT) : NULL;
 	char *path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
 
 	// Basic tables and where_clause
@@ -618,7 +617,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 					return OPH_MF_ERROR;
 				}
 			} else {
-				metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_FILTER_NOT3);
+				metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT);
 				if (metadata_value && strlen(metadata_value)) {
 					if (oph_filter_metadata_value(metadata_key, metadata_value, tables, where_clause, flag, 1)) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong arguments '%s' and '%s'\n", OPH_MF_ARG_METADATA_KEY, OPH_MF_ARG_METADATA_VALUE);
@@ -641,24 +640,24 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Parse negative filters\n");
 
-		if (oph_filter_level(value = hashtbl_get(task_tbl, OPH_MF_ARG_LEVEL "" OPH_FILTER_NOT3), tables, where_clause, flag, 1))
+		if (oph_filter_level(value = hashtbl_get(task_tbl, OPH_MF_ARG_LEVEL "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;
-		if (oph_filter_measure(value = hashtbl_get(task_tbl, OPH_MF_ARG_MEASURE "" OPH_FILTER_NOT3), tables, where_clause, flag, 1))
+		if (oph_filter_measure(value = hashtbl_get(task_tbl, OPH_MF_ARG_MEASURE "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;
-		if (oph_filter_parent(value = hashtbl_get(task_tbl, OPH_MF_ARG_PARENT "" OPH_FILTER_NOT3), tables, where_clause, flag, 1))
+		if (oph_filter_parent(value = hashtbl_get(task_tbl, OPH_MF_ARG_PARENT "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;
-		if (oph_filter_using_subset(value = hashtbl_get(task_tbl, OPH_MF_ARG_DATACUBE_FILTER "" OPH_FILTER_NOT3), tables, where_clause, flag, 1))
+		if (oph_filter_using_subset(value = hashtbl_get(task_tbl, OPH_MF_ARG_DATACUBE_FILTER "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;
 		if (container_n && strlen(container_n)) {
 			if (oph_filter_container(container_n, tables, where_clause, flag, 1))
 				return OPH_MF_ERROR;
 		} else {
-			if (oph_filter_container_pid(value = hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER_PID "" OPH_FILTER_NOT3), tables, where_clause, flag, 1))
+			if (oph_filter_container_pid(value = hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER_PID "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 				return OPH_MF_ERROR;
 		}
-		metadata_key = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_KEY "" OPH_FILTER_NOT3);
+		metadata_key = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_KEY "" OPH_MF_SYMBOL_NOT);
 		if (metadata_key && strlen(metadata_key)) {
-			if (hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE) || hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_FILTER_NOT3)) {
+			if (hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE) || hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Negation cannot be used for '%s' in case '%s' is also set\n", OPH_MF_ARG_METADATA_KEY, OPH_MF_ARG_METADATA_VALUE);
 				return OPH_MF_ERROR;
 			} else if (oph_filter_metadata_key(metadata_key, tables, where_clause, flag, 1)) {
@@ -666,7 +665,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 				return OPH_MF_ERROR;
 			}
 		} else {
-			metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_FILTER_NOT3);
+			metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT);
 			if (metadata_value && strlen(metadata_value)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", OPH_MF_ARG_METADATA_VALUE);
 				return OPH_MF_ERROR;
