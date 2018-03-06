@@ -205,11 +205,11 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 	unsigned int i;
 	for (i = 0; i < subset_struct->number; ++i) {
 		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(condition) - 1) <= strlen(OPH_FILTER_OR)) {
+			if ((s = OPH_MAX_STRING_SIZE - strlen(condition) - 1) <= strlen(not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR)) {
 				oph_subset_free(subset_struct);
 				return OPH_MF_ERROR;
 			}
-			strncat(condition, OPH_FILTER_OR, s);
+			strncat(condition, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 		}
 		snprintf(temp, OPH_MAX_STRING_SIZE, "%s" OPH_SUBSET_ISINSUBSET_PLUGIN, not_clause ? OPH_FILTER_NOT2 : "", OPH_MF_ARG_DATACUBE, "iddatacube", subset_struct->start[i],
 			 subset_struct->stride[i], subset_struct->end[i]);
@@ -449,16 +449,16 @@ int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_
 	return _oph_filter_metadata_value(key, value, tables, where_clause, flag, 0, not_clause);
 }
 
-int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * oDB, int recursive_flag, pthread_mutex_t * flag)
+int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * oDB, int recursive_flag, pthread_mutex_t * flag, char not_clause)
 {
 	unsigned int s;
 	char condition[OPH_MAX_STRING_SIZE];
 	if (*counter) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_OR))
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR))
 			return OPH_MF_ERROR;
-		strncat(where_clause, OPH_FILTER_OR, s);
+		strncat(where_clause, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 	}
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idfolder='%d'", OPH_MF_ARG_CONTAINER, folder_id);
+	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idfolder%s='%d'", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT1 : "", folder_id);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -471,7 +471,7 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 		if (oph_odb_fs_get_subfolders(folder_id, &subfolder_id, &num_subfolders, oDB))
 			return OPH_MF_ERROR;
 		for (i = 0; i < num_subfolders; ++i)
-			if (oph_add_folder(subfolder_id[i], counter, where_clause, oDB, recursive_flag, flag))
+			if (oph_add_folder(subfolder_id[i], counter, where_clause, oDB, recursive_flag, flag, not_clause))
 				break;
 		if (subfolder_id)
 			free(subfolder_id);
@@ -482,7 +482,7 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 	return OPH_MF_OK;
 }
 
-int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag)
+int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -518,7 +518,7 @@ int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, o
 	} else
 		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
-	if (oph_add_folder(folder_id, &counter, where_clause, oDB, recursive_flag, flag)) {
+	if (oph_add_folder(folder_id, &counter, where_clause, oDB, recursive_flag, flag, not_clause)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Folder '%s' cannot be explored\n", path);
 		return OPH_MF_ERROR;
 	}
@@ -637,6 +637,8 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 				return OPH_MF_ERROR;
 			}
 		}
+		if (oph_filter_path(ext_path, value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE), value2 = hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH), sessionid, oDB, tables, where_clause, flag, 0))
+			return OPH_MF_ERROR;	// path or cwd
 
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Parse negative filters\n");
 
@@ -671,17 +673,17 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 				return OPH_MF_ERROR;
 			}
 		}
-
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Parse file system filters\n");
-
-		if (oph_filter_path(ext_path, value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE), value2 = hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH), sessionid, oDB, tables, where_clause, flag))
+		if (oph_filter_path
+		    (ext_path, value = hashtbl_get(task_tbl, OPH_MF_ARG_RECURSIVE "" OPH_MF_SYMBOL_NOT), value2 =
+		     hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH), sessionid, oDB, tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;	// path or cwd
+
 		if ((value = hashtbl_get(task_tbl, OPH_MF_ARG_FILE)))
 			pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Argument '%s' will be skipped\n", OPH_MF_ARG_FILE);
 		if ((value = hashtbl_get(task_tbl, OPH_MF_ARG_CONVENTION)))
 			pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Argument '%s' will be skipped\n", OPH_MF_ARG_CONVENTION);
 
-	} else if (oph_filter_path(ext_path, OPH_MF_ARG_VALUE_NO, NULL, sessionid, oDB, tables, where_clause, flag))
+	} else if (oph_filter_path(ext_path, OPH_MF_ARG_VALUE_NO, NULL, sessionid, oDB, tables, where_clause, flag, 0))
 		return OPH_MF_ERROR;
 
 	if (*where_clause)
