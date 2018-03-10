@@ -32,6 +32,7 @@
 
 #ifdef MATHEVAL_SUPPORT
 #include <matheval.h>
+#define OPH_FLOW_EVAL "EVAL("
 #endif
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -789,6 +790,7 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 				break;
 			pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
 		}
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %d values\n", *svalues_num);
 		*svalues = (char **) malloc(*svalues_num * sizeof(char *));
 		if (!*svalues)
 			break;
@@ -832,8 +834,91 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 	}
 	while (expansion);
 	free(tmp);
+
 	if (kk < *svalues_num)
 		return OPH_SERVER_ERROR;
+
+#ifdef MATHEVAL_SUPPORT
+	unsigned int count = 0, bracket, n, nchar;
+	char **names = NULL, *start, *stop, *base, flag;
+	void *me = NULL;
+	double return_value;
+	for (kk = 0; kk < *svalues_num; ++kk) {
+
+		tmp = (*svalues)[kk];
+		if (tmp && strlen(tmp)) {
+
+			char tmp2[OPH_MAX_STRING_SIZE];
+			*tmp2 = 0;
+			base = tmp;
+			flag = n = 0;
+
+			while (base && ((start = strstr(base, OPH_FLOW_EVAL)))) {
+
+				if (start > base) {
+					nchar = start - base;
+					if (nchar >= OPH_MAX_STRING_SIZE - strlen(tmp2))
+						break;
+					snprintf(tmp2 + n, 1 + nchar, "%s", base);
+					n += nchar;
+				}
+
+				stop = start += strlen(OPH_FLOW_EVAL);
+				bracket = 1;
+				while (stop && *stop && bracket) {
+					if (*stop == OPH_WORKFLOW_BRACKET_BEGIN[0])
+						bracket++;
+					else if (*stop == OPH_WORKFLOW_BRACKET_END[0]) {
+						bracket--;
+						if (!bracket)
+							break;
+					}
+					stop++;
+				}
+				if (!stop || !*stop || bracket)
+					break;
+
+				if (stop > start) {
+
+					char expr[1 + stop - start];
+					strncpy(expr, start, stop - start);
+					expr[stop - start] = 0;
+
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to evaluate expression '%s'.\n", expr);
+					me = evaluator_create(expr);
+					if (!me)
+						break;
+					evaluator_get_variables(me, &names, &count);
+					if (count > 0) {
+						evaluator_destroy(me);
+						break;
+					}
+					return_value = evaluator_evaluate(me, count, names, NULL);
+					evaluator_destroy(me);
+
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Expression '%s' = %f.\n", expr, return_value);
+					if (isnan(return_value) || isinf(return_value))
+						break;
+
+					n += snprintf(tmp2 + n, OPH_MAX_STRING_SIZE - strlen(tmp2), "%f", return_value);
+				}
+
+				base = stop + (*stop ? 1 : 0);
+				flag = 1;
+			}
+
+			if (!flag)
+				continue;
+
+			n += snprintf(tmp2 + n, OPH_MAX_STRING_SIZE - strlen(tmp2), "%s", base);
+
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Value[%d] = %s.\n", kk, tmp2);
+			free((*svalues)[kk]);
+			(*svalues)[kk] = strdup(tmp2);
+		}
+	}
+#endif
+
 	return OPH_SERVER_OK;
 }
 
@@ -951,7 +1036,8 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check compliance of variable name '%s' of task '%s' with IEEE Std 1003.1-2001 conventions.\n", name, wf->tasks[i].name);
 				for (kk = 0; name && (kk < (int) strlen(name)); ++kk)	// check compliance with IEEE Std 1003.1-2001 conventions
 				{
-					if ((name[kk] == '_') || ((name[kk] >= 'A') && (name[kk] <= 'Z')) || ((name[kk] >= 'a') && (name[kk] <= 'z')) || (kk && (name[kk] >= '0') && (name[kk] <= '9')))
+					if ((name[kk] == '_') || ((name[kk] >= 'A') && (name[kk] <= 'Z')) || ((name[kk] >= 'a') && (name[kk] <= 'z'))
+					    || (kk && (name[kk] >= '0') && (name[kk] <= '9')))
 						continue;
 					for (kkk = 0; kkk < lll; ++kkk)
 						if (name[kk] == OPH_WORKFLOW_SEPARATORS[kkk]) {
@@ -1600,7 +1686,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check compliance of variable name '%s' of task '%s' with IEEE Std 1003.1-2001 conventions.\n", name, wf->tasks[i].name);
 				for (kk = 0; name && (kk < (int) strlen(name)); ++kk)	// check compliance with IEEE Std 1003.1-2001 conventions
 				{
-					if ((name[kk] == '_') || ((name[kk] >= 'A') && (name[kk] <= 'Z')) || ((name[kk] >= 'a') && (name[kk] <= 'z')) || (kk && (name[kk] >= '0') && (name[kk] <= '9')))
+					if ((name[kk] == '_') || ((name[kk] >= 'A') && (name[kk] <= 'Z')) || ((name[kk] >= 'a') && (name[kk] <= 'z'))
+					    || (kk && (name[kk] >= '0') && (name[kk] <= '9')))
 						continue;
 					for (kkk = 0; kkk < lll; ++kkk)
 						if (name[kk] == OPH_WORKFLOW_SEPARATORS[kkk]) {
@@ -1723,8 +1810,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 }
 
 int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
-				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name,
-				     pthread_t * tid)
+				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output,
+				     const char *operator_name, pthread_t * tid)
 {
 	UNUSED(ncores);
 	UNUSED(request);
@@ -2572,8 +2659,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 	return error;
 }
 
-int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
+				    int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
 {
 	return _oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
 						operator_name, NULL);
