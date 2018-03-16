@@ -47,7 +47,6 @@
             %s\n\
         ]\n\
     }\n"
-#define OPH_EXEC_TIME "execution_time"
 
 extern int oph_service_status;
 extern char *oph_auth_location;
@@ -380,6 +379,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 #endif
 	}
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
+
+	// Save the token
+	if (strlen(_new_token))
+		wf->new_token = strdup(_new_token);
 
 	// Flush useless variables
 	if (wf->cdd) {
@@ -5855,38 +5858,45 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&session_args);
 			}
+#if defined(LEVEL1)
+			if (wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
 
-			unsigned int nextra = 1, iextra = 0;
-			if (strlen(_new_token))
-				nextra++;
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: add extra data to workflow '%s'\n", jobid, wf->name);
 
-			struct timeval tv;
-			gettimeofday(&tv, 0);
-			char exec_time[OPH_SHORT_STRING_SIZE];
-			snprintf(exec_time, OPH_SHORT_STRING_SIZE, "%.2f", (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
-			char **keys = (char **) calloc(nextra, sizeof(char *)), **values = (char **) calloc(nextra, sizeof(char *));
-			while (keys && values) {
+				unsigned int nextra = 1, iextra = 0;
+				if (strlen(_new_token))
+					nextra++;
 
-				keys[iextra] = strdup(OPH_EXEC_TIME);
-				values[iextra] = strdup(exec_time);
-				if (!keys[iextra] || !values[iextra])
-					break;
-				iextra++;
-				if (strlen(_new_token)) {
-					keys[iextra] = strdup(OPH_AUTH_TOKEN_JSON);
-					values[iextra] = strdup(_new_token);
+				struct timeval tv;
+				gettimeofday(&tv, 0);
+				char exec_time[OPH_SHORT_STRING_SIZE];
+				snprintf(exec_time, OPH_SHORT_STRING_SIZE, "%.2f", (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+				char **keys = (char **) calloc(nextra, sizeof(char *)), **values = (char **) calloc(nextra, sizeof(char *));
+				while (keys && values) {
+
+					keys[iextra] = strdup(OPH_EXEC_TIME);
+					values[iextra] = strdup(exec_time);
 					if (!keys[iextra] || !values[iextra])
 						break;
 					iextra++;
+					if (strlen(_new_token)) {
+						keys[iextra] = strdup(OPH_AUTH_TOKEN_JSON);
+						values[iextra] = strdup(_new_token);
+						if (!keys[iextra] || !values[iextra])
+							break;
+						iextra++;
+					}
+
+					break;
 				}
 
-				break;
+				if (oph_add_extra(&wf->response, keys, values, iextra))	// iextra is correct
+					response->response = soap_strdup(soap, wf->response);
+				free_string_vector(keys, nextra);
+				free_string_vector(values, nextra);
 			}
+#endif
 
-			if (oph_add_extra(&wf->response, keys, values, iextra))	// iextra is correct
-				response->response = soap_strdup(soap, wf->response);
-			free_string_vector(keys, nextra);
-			free_string_vector(values, nextra);
 			if (!response->response)
 				response->response = soap_strdup(soap, wf->response);
 			oph_workflow_free(wf);

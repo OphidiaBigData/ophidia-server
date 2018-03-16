@@ -4387,6 +4387,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_json *oper_json = NULL;
 		int success = 0;
 
+		struct timeval tv;
+		gettimeofday(&tv, 0);
+		char exec_time[OPH_SHORT_STRING_SIZE];
+		snprintf(exec_time, OPH_SHORT_STRING_SIZE, "%.2f", (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: initialization of the main JSON Response\n", ttype, jobid);
 		while (!success) {
 			if (oph_json_alloc(&oper_json)) {
@@ -4417,6 +4422,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 			if (oph_json_add_consumer(oper_json, wf->username)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+				break;
+			}
+			if (oph_json_add_extra_detail(oper_json, OPH_EXEC_TIME, exec_time)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->new_token && oph_json_add_extra_detail(oper_json, OPH_AUTH_TOKEN_JSON, wf->new_token)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
 				break;
 			}
 			success = 1;
