@@ -1101,9 +1101,9 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 
 			// Extract the other arguments
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY) && !name)
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && !name)
 					name = wf->tasks[i].arguments_values[j];
-				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					char *pch1;
 					pch = strchr(wf->tasks[i].arguments_values[j], OPH_SEPARATOR_SUBPARAM);
 					for (svalues_num++; pch; svalues_num++) {
@@ -1178,12 +1178,12 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				break;
 			}
 			if (!name) {
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
 				break;
 			}
 			if (svalues_num) {
 				if (ivalues_num && (ivalues_num != svalues_num)) {
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Arguments '%s' and '%s' have different sizes.\n", OPH_OPERATOR_PARAMETER_VALUES,
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Arguments '%s' and '%s' have different sizes.\n", OPH_ARG_VALUES,
 						   OPH_OPERATOR_PARAMETER_COUNTER, wf->tasks[i].name);
 					break;
 				}
