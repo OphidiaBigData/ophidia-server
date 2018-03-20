@@ -543,9 +543,9 @@ int main(int argc, char *argv[])
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
 	}
 	if (wf_logfile && !ftell(wf_logfile))
-		fprintf(wf_logfile, "idworkflow\tusername\tip_address\t#tasks\t#success_tasks\n");
+		fprintf(wf_logfile, "idworkflow\tusername\tip_address\t#tasks\t#success_tasks\ttimestamp\n");
 	if (task_logfile && !ftell(task_logfile))
-		fprintf(task_logfile, "idworkflow\toperator\t#cores\tsuccess_flag\n");
+		fprintf(task_logfile, "idworkflow\toperator\t#cores\tsuccess_flag\ttimestamp\n");
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 
