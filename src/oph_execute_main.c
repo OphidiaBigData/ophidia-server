@@ -5744,6 +5744,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 		if (wf->response && (wf->status == OPH_ODB_STATUS_CLOSED)) {
 
+			unsigned int nextra = 1;
+
 			// Save user data in user.dat
 			if (wf->cdd) {
 				oph_init_args(&user_args);
@@ -5776,6 +5778,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&user_args);
+				nextra++;
 			}
 
 			int skip = 0;
@@ -5817,6 +5820,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&session_args);
+				nextra++;
 			}
 			// Save user-specific session data in <session_code>.user
 			if (!skip && wf->cwd) {
@@ -5854,9 +5858,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&session_args);
+				nextra++;
 			}
 
-			unsigned int nextra = 1, iextra = 0;
+			unsigned int iextra = 0;
 			if (strlen(_new_token))
 				nextra++;
 
@@ -5872,6 +5877,27 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				if (!keys[iextra] || !values[iextra])
 					break;
 				iextra++;
+				if (wf->cdd) {
+					keys[iextra] = strdup(OPH_ARG_CDD);
+					values[iextra] = strdup(wf->cdd);
+					if (!keys[iextra] || !values[iextra])
+						break;
+					iextra++;
+				}
+				if (wf->cube) {
+					keys[iextra] = strdup(OPH_ARG_CUBE);
+					values[iextra] = strdup(wf->cube);
+					if (!keys[iextra] || !values[iextra])
+						break;
+					iextra++;
+				}
+				if (wf->cwd) {
+					keys[iextra] = strdup(OPH_ARG_CWD);
+					values[iextra] = strdup(wf->cwd);
+					if (!keys[iextra] || !values[iextra])
+						break;
+					iextra++;
+				}
 				if (strlen(_new_token)) {
 					keys[iextra] = strdup(OPH_AUTH_TOKEN_JSON);
 					values[iextra] = strdup(_new_token);
