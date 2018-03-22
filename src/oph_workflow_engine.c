@@ -4448,6 +4448,18 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
 				break;
 			}
+			if (wf->cdd && oph_json_add_extra_detail(oper_json, OPH_ARG_CDD, wf->cdd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->cube && oph_json_add_extra_detail(oper_json, OPH_ARG_CUBE, wf->cube)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->cwd && oph_json_add_extra_detail(oper_json, OPH_ARG_CWD, wf->cwd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
 			if (wf->new_token && oph_json_add_extra_detail(oper_json, OPH_AUTH_TOKEN_JSON, wf->new_token)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
 				break;

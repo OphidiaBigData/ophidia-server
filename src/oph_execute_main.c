@@ -5866,8 +5866,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 #if defined(LEVEL1)
 			if (wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
 
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: add extra data to workflow '%s'\n", jobid, wf->name);
-
 				unsigned int iextra = 0;
 				if (strlen(_new_token))
 					nextra++;
