@@ -269,6 +269,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
+
 		int i, j, k, res;
 		for (k = 0; k < dependents_indexes_num; ++k) {
 			i = dependents_indexes[k];
@@ -2337,7 +2338,13 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
 
-				wf->tasks[i].status = retry ? OPH_ODB_STATUS_RUNNING : OPH_ODB_STATUS_PENDING;
+				if (!retry) {
+					struct timeval tv;
+					gettimeofday(&tv, 0);
+					wf->tasks[i].timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
+					wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
+				} else
+					wf->tasks[i].status = OPH_ODB_STATUS_RUNNING;
 
 			} else	// Single operation
 			{
@@ -2382,6 +2389,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
 					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
 				request_data[k]->error_notification = strdup(submission_string_ext);
+
+				struct timeval tv;
+				gettimeofday(&tv, 0);
+				wf->tasks[i].timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
 
 				wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
 			}
@@ -2989,14 +3000,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (task_logfile) {
 					time_t nowtime;
 					struct tm nowtm;
+					struct timeval tv;
 					char buffer[OPH_SHORT_STRING_SIZE];
 					*buffer = 0;
 					pthread_mutex_lock(&curl_flag);
+					gettimeofday(&tv, 0);
 					time(&nowtime);
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-					fprintf(task_logfile, "%d\t%s\t%d\t%d\t%s\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].light_tasks[light_task_index].ncores,
-						status == OPH_ODB_STATUS_COMPLETED, buffer);
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
+						wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
 #ifdef LEVEL3
@@ -3757,14 +3771,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (task_logfile && !wf->tasks[task_index].light_tasks_num) {
 					time_t nowtime;
 					struct tm nowtm;
+					struct timeval tv;
 					char buffer[OPH_SHORT_STRING_SIZE];
 					*buffer = 0;
 					pthread_mutex_lock(&curl_flag);
+					gettimeofday(&tv, 0);
 					time(&nowtime);
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-					fprintf(task_logfile, "%d\t%s\t%d\t%d\t%s\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
-						buffer);
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
+						wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
 			}
@@ -5299,13 +5316,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 			time_t nowtime;
 			struct tm nowtm;
+			struct timeval tv;
 			char buffer[OPH_SHORT_STRING_SIZE];
 			*buffer = 0;
 			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
 			time(&nowtime);
 			if (localtime_r(&nowtime, &nowtm))
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-			fprintf(wf_logfile, "%d\t%s\t%s\t%d\t%d\t%s\n", wf->idjob, wf->username, wf->ip_address, tasks_num, success_tasks_num, buffer);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, wf->idjob, wf->name, wf->username, wf->ip_address, tasks_num, success_tasks_num,
+				(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			if (task_logfile)
 				fflush(task_logfile);
