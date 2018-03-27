@@ -4422,7 +4422,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		// Save JSON related to parent job
 		oph_json *oper_json = NULL;
-		int success = 0;
+		int success = 0, ii, jj;
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: initialization of the main JSON Response\n", ttype, jobid);
 		while (!success) {
@@ -5254,7 +5254,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (check_for_constraint)
 					snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow constraint violated on task '%s'!", failed_task ? failed_task : "unknown");
 				else {
-					int ii, num_errors;
+					int num_errors;
 					for (ii = num_errors = 0; ii < wf->tasks_num; ++ii)
 						if ((wf->tasks[ii].status >= (int) OPH_ODB_STATUS_ERROR) && (wf->tasks[ii].status < (int) OPH_ODB_STATUS_ABORTED))
 							num_errors++;
@@ -5295,9 +5295,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		}
 		oph_json_free(oper_json);
 
+		// Move job data for job table to accounting table
+		for (ii = 0; ii <= wf->tasks_num; ii++)
+			if (wf->tasks[ii].name && wf->tasks[ii].light_tasks_num)
+				oph_odb_copy_job(&oDB, 0, wf->tasks[ii].idjob);
+		oph_odb_copy_job(&oDB, wf->idjob, wf->idjob);
+		oph_odb_drop_job(&oDB, wf->idjob, 0);
+
 		// Log into WF_LOGFILE
 		if (wf_logfile) {
-			int ii, jj, tasks_num = 0, success_tasks_num = 0;
+			int tasks_num = 0, success_tasks_num = 0;
 			for (ii = 0; ii <= wf->tasks_num; ii++)
 				if (wf->tasks[ii].name) {
 					if (!wf->tasks[ii].light_tasks_num) {
@@ -5943,7 +5950,7 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 	oph_odb_initialize_ophidiadb_list(&list);
 
 	char query[OPH_MAX_STRING_SIZE];
-	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW, wf->sessionid, wf->workflowid, wf->sessionid, wf->workflowid);
 	if (oph_odb_retrieve_list(&oDB, query, &list)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
 		oph_odb_free_ophidiadb_list(&list);
@@ -5993,7 +6000,7 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 	if (cdate) {
 		oph_odb_initialize_ophidiadb_list(&list);
 
-		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid);
+		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid, wf->sessionid, wf->workflowid);
 		if (oph_odb_retrieve_list(&oDB, query, &list)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
 			oph_odb_free_ophidiadb_list(&list);
@@ -6049,7 +6056,7 @@ int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate
 	oph_odb_initialize_ophidiadb_list(&list);
 
 	char query[OPH_MAX_STRING_SIZE];
-	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, sessionid, workflowid);
+	snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, sessionid, workflowid, sessionid, workflowid);
 	if (oph_odb_retrieve_list(&oDB, query, &list)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to extract job information using '%s'.\n", query);
 		oph_odb_free_ophidiadb_list(&list);

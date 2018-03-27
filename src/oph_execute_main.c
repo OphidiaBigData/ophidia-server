@@ -2374,16 +2374,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 				char query[OPH_MAX_STRING_SIZE];
 				if (user && !id_type)
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_USER_SESSION, session, user);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_USER_SESSION, session, user, session, user);
 				else if (document_type && id_type) {
 					if (wid)
-						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_WORKFLOW, session, wid);
+						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_WORKFLOW, session, wid, session, wid);
 					else
-						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_SESSION, session);
+						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_SESSION, session, session);
 				} else if (id_type)
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_JOBS_OF_SESSION, session);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_JOBS_OF_SESSION, session, session);
 				else
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session, session);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session, session, session, session);
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: execute query '%s'\n", jobid, query);
 				if (oph_odb_retrieve_list(&oDB, query, &list)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to execute '%s'\n", jobid, query);
@@ -2725,7 +2725,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			char query[OPH_MAX_STRING_SIZE], *submission_string = NULL, *creation_date = NULL;
 			if (!document_type && !id_type && ((level == 1) || (level == 3)))	// JSON Response for workflow: extract specific outputs
 			{
-				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow);
+				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow, session, workflow);
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker id\n", jobid);
 					if (markers) {
@@ -2747,7 +2747,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				ophidiadb_list list;
 				oph_odb_initialize_ophidiadb_list(&list);
 
-				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRING_OF_JOB, session, marker);
+				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRING_OF_JOB, session, marker, session, marker);
 				if (oph_odb_retrieve_list(&oDB, query, &list)) {
 					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to load submission string of %s?%d#%d\n", jobid, session, workflow, marker);
 					oph_odb_free_ophidiadb_list(&list);
@@ -2813,7 +2813,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else	// Normal case
 			{
 				// Set the markerid by accessing OphidiaDB
-				snprintf(query, OPH_MAX_STRING_SIZE, id_type ? MYSQL_RETRIEVE_WORKFLOW_BY_MARKER : MYSQL_RETRIEVE_MARKER_BY_WORKFLOW, session, id_type ? marker : workflow);
+				snprintf(query, OPH_MAX_STRING_SIZE, id_type ? MYSQL_RETRIEVE_WORKFLOW_BY_MARKER : MYSQL_RETRIEVE_MARKER_BY_WORKFLOW, session, id_type ? marker : workflow, session,
+					 id_type ? marker : workflow);
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker/workflow id\n", jobid);
 					if (markers) {

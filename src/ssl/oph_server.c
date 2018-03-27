@@ -115,6 +115,7 @@ unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 int oph_service_status = 1;
 ophidiadb *ophDB = 0;
+int last_idjob = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
@@ -345,6 +346,14 @@ void set_global_values(const char *configuration_file)
 #endif
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (!oph_odb_read_config_ophidiadb(&oDB) && !oph_odb_connect_to_ophidiadb(&oDB) && !oph_odb_get_last_id(&oDB, &last_idjob))
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Starting from idjob %d\n", last_idjob);
+	else
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Last idjob is not available: starting with 0\n");
+	oph_odb_disconnect_from_ophidiadb(&oDB);
 }
 
 /******************************************************************************\
