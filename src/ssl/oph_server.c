@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
 	}
 	if (wf_logfile && !ftell(wf_logfile))
-		fprintf(wf_logfile, "timestamp\tidworkflow\tname\tusername\tip_address\t#tasks\t#success_tasks\tduration\n");
+		fprintf(wf_logfile, "timestamp\tidworkflow\tname\tusername\tip_address\tclient_address\t#tasks\t#success_tasks\tduration\n");
 	if (task_logfile && !ftell(task_logfile))
 		fprintf(task_logfile, "timestamp\tidtask\tidworkflow\toperator\t#cores\tsuccess_flag\tduration\n");
 

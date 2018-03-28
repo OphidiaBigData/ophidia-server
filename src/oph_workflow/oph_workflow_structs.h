@@ -275,6 +275,7 @@ typedef struct _oph_workflow_stack {
  * \param host_partition Host partition to be used during the workflow
  * \param waiting_tasks_num Flag used to defer workflow struct in case of waiting tasks
  * \param timestamp Reference to creation date of the struct
+ * \param client_address IP Address of client node
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -313,6 +314,7 @@ typedef struct _oph_workflow {
 	char *host_partition;
 	int waiting_tasks_num;
 	double timestamp;
+	char *client_address;
 } oph_workflow;
 
 /* Functions for structs cleanup */

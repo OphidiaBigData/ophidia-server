@@ -5331,8 +5331,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			time(&nowtime);
 			if (localtime_r(&nowtime, &nowtm))
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, wf->idjob, wf->name, wf->username, wf->ip_address, tasks_num, success_tasks_num,
-				(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, wf->idjob, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", tasks_num, success_tasks_num, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			if (task_logfile)
 				fflush(task_logfile);

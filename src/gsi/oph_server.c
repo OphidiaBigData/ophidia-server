@@ -38,6 +38,8 @@
 #include <pthread.h>
 #endif
 
+#define OPH_STATUS_LOG_PERIOD 1
+
 #define OPH_VOMS_AUTH_READ "pdas_read"
 #define OPH_VOMS_AUTH_WRITE "pdas_write"
 
@@ -176,6 +178,14 @@ void set_global_values(const char *configuration_file)
 		if (!freopen(value, "a", stderr))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stderr to logfile\n");
 	}
+	if (!wf_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WF_LOGFILE))) {
+		if ((wf_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
+	}
+	if (!task_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TASK_LOGFILE))) {
+		if ((task_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
+	}
 	// Default values
 	if (!oph_server_protocol && !(oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL))) {
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_PROTOCOL, OPH_DEFAULT_PROTOCOL);
@@ -291,7 +301,17 @@ void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
-	sleep(1);
+	sleep(OPH_STATUS_LOG_PERIOD);
+
+	if (wf_logfile) {
+		fclose(wf_logfile);
+		wf_logfile = NULL;
+	}
+	if (task_logfile) {
+		fclose(task_logfile);
+		task_logfile = NULL;
+	}
+
 	mysql_library_end();
 	soap_destroy(psoap);
 	soap_end(psoap);
@@ -740,6 +760,11 @@ int main(int argc, char **argv)
 			set_log_file(logfile);
 	} else
 		oph_log_file_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE);
+
+	if (wf_logfile && !ftell(wf_logfile))
+		fprintf(wf_logfile, "timestamp\tidworkflow\tname\tusername\tip_address\tclient_address\t#tasks\t#success_tasks\tduration\n");
+	if (task_logfile && !ftell(task_logfile))
+		fprintf(task_logfile, "timestamp\tidtask\tidworkflow\toperator\t#cores\tsuccess_flag\tduration\n");
 
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");

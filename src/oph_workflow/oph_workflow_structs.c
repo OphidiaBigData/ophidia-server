@@ -65,6 +65,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->host_partition);
 		workflow->host_partition = NULL;
 	}
+	if (workflow->client_address) {
+		free(workflow->client_address);
+		workflow->client_address = NULL;
+	}
 	if (workflow->cube) {
 		free(workflow->cube);
 		workflow->cube = NULL;
