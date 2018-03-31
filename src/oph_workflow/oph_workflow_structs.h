@@ -119,6 +119,7 @@ typedef struct _oph_workflow_dep {
  * \param branch_num Number of selection blocks which the task is involved in
  * \param isknown Flag set only for known operators
  * \param forward Flag set only for selection interface
+ * \param timestamp Reference to creation date of the struct
  */
 typedef struct _oph_workflow_task {
 	int idjob;
@@ -161,6 +162,7 @@ typedef struct _oph_workflow_task {
 	int branch_num;
 	char isknown;
 	char forward;
+	double timestamp;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations
@@ -272,6 +274,7 @@ typedef struct _oph_workflow_stack {
  * \param cancel_type Used to differentiate workflow abort
  * \param host_partition Host partition to be used during the workflow
  * \param waiting_tasks_num Flag used to defer workflow struct in case of waiting tasks
+ * \param timestamp Reference to creation date of the struct
  */
 typedef struct _oph_workflow {
 	int idjob;

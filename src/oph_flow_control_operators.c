@@ -776,10 +776,17 @@ int oph_extract_from_json(char **key, const char *json_string)
 // Thread unsafe
 int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *svalues_num, char *arg_value)
 {
+	if (!wf || !svalues || !svalues_num || !arg_value)
+		return OPH_SERVER_NULL_POINTER;
+	*svalues = NULL;
+	*svalues_num = 0;
+
 	int h, hh, kk = 0;
 	char *tmp = strdup(arg_value), expansion, *pch, *pch1, *save_pointer = NULL;
 	if (!tmp)
-		return OPH_SERVER_ERROR;
+		return OPH_SERVER_NULL_POINTER;
+	if (!strlen(tmp))
+		return OPH_SERVER_OK;
 	do {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
 		expansion = *svalues_num = 0;
@@ -791,11 +798,11 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 			pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
 		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %d values\n", *svalues_num);
-		*svalues = (char **) malloc(*svalues_num * sizeof(char *));
+		*svalues = (char **) calloc(*svalues_num, sizeof(char *));
 		if (!*svalues)
 			break;
 		pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
-		for (kk = 0; kk < *svalues_num; ++kk) {
+		for (kk = 0; pch && (kk < *svalues_num); ++kk) {
 			(*svalues)[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
 			if (!(*svalues)[kk])
 				break;
@@ -950,29 +957,27 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 					free(error_msg);
 					error_msg = NULL;
 				}
-				ret = OPH_SERVER_ERROR;
 				break;
 			}
 
-			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
+			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
-			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
-			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_ID)) {
+			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ID)) {
 				wid = strtol(arg_value, NULL, 10);
 				if (wid != wf->workflowid) {
 					oph_job_info *item = NULL;
 					if ((wid <= 0) || !(item = oph_find_workflow_in_job_list(state->job_info, wf->sessionid, wid))) {
 						snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong workflow identifier '%d'!", wid);
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-						ret = OPH_SERVER_ERROR;
 						break;
 					}
 					twf = item->wf;
 				}
 			} else if (has_action) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_ACTION)) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ACTION)) {
 					if (!strcmp(arg_value, OPH_OPERATOR_INPUT_PARAMETER_ACTION_ABORT))
 						caction = OPH_ODB_STATUS_ERROR;
 					else if (!strcmp(arg_value, OPH_OPERATOR_INPUT_PARAMETER_ACTION_WAIT))
@@ -980,12 +985,10 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 					else if (strcmp(arg_value, OPH_OPERATOR_INPUT_PARAMETER_ACTION_CONTINUE)) {
 						snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong action '%s'!", arg_value);
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-						ret = OPH_SERVER_ERROR;
 						break;
 					}
-				} else if (!taskname && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TASKNAME)) {
+				} else if (!taskname && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TASKNAME))
 					taskname = strdup(arg_value);
-				}
 			}
 		}
 		if ((j < wf->tasks[i].arguments_num) || error_msg) {
@@ -1002,8 +1005,8 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_ARG_KEY);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
@@ -1052,14 +1055,14 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 					break;
 			}
 			if (!name) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_OPERATOR_PARAMETER_KEY);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_ARG_KEY);
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
 		}
 		if (!name && !has_action) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_OPERATOR_PARAMETER_KEY);
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_ARG_KEY);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 			ret = OPH_SERVER_ERROR;
 			break;
@@ -1070,7 +1073,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		if (svalues_num > names_num)
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Only the first %d value%s of the list will be considered\n", names_num, names_num == 1 ? "" : "s");
 		if (svalues_num < names_num) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_OPERATOR_PARAMETER_VALUE);
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_ARG_VALUE);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 			ret = OPH_SERVER_ERROR;
 			break;
@@ -1204,13 +1207,12 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 					free(error_msg);
 					error_msg = NULL;
 				}
-				ret = OPH_SERVER_ERROR;
 				break;
 			}
 
-			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
+			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
-			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUES) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
 			} else if (!mode && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL)) {
@@ -1277,8 +1279,8 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_ARG_KEY);
 			name = arg_value;
 		}
 
@@ -1298,7 +1300,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			break;
 		}
 		if (!name) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_OPERATOR_PARAMETER_KEY);
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_ARG_KEY);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 			ret = OPH_SERVER_ERROR;
 			break;
@@ -1319,7 +1321,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			svalues_num = 1;	// Parallel for involves only one loop
 		} else if (svalues_num) {
 			if (ivalues_num && (ivalues_num != svalues_num)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Arguments '%s' and '%s' have different sizes.", OPH_OPERATOR_PARAMETER_VALUES, OPH_OPERATOR_PARAMETER_COUNTER);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Arguments '%s' and '%s' have different sizes.", OPH_ARG_VALUES, OPH_OPERATOR_PARAMETER_COUNTER);
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
@@ -1557,13 +1559,12 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 					free(error_msg);
 					error_msg = NULL;
 				}
-				ret = OPH_SERVER_ERROR;
 				break;
 			}
 
-			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY))
+			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
-			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TYPE)) {
@@ -1574,7 +1575,6 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				else if (strcmp(arg_value, OPH_OPERATOR_WAIT_PARAMETER_TYPE_CLOCK)) {
 					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong type '%s'!", arg_value);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-					ret = OPH_SERVER_ERROR;
 					break;
 				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TIMEOUT_TYPE)) {
@@ -1583,7 +1583,6 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				else if (strcmp(arg_value, OPH_OPERATOR_WAIT_PARAMETER_TTYPE_DURATION)) {
 					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong timeout type '%s'!", arg_value);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-					ret = OPH_SERVER_ERROR;
 					break;
 				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TIMEOUT)) {
@@ -1598,7 +1597,6 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				else if (strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES)) {
 					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong value '%s' for parameter '%s'!", arg_value, OPH_OPERATOR_PARAMETER_RUN);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-					ret = OPH_SERVER_ERROR;
 					break;
 				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_CUBE)) {
@@ -1652,8 +1650,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		}
 		if (name) {
 			snprintf(arg_value, OPH_MAX_STRING_SIZE, "%s", name);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
-			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_OPERATOR_PARAMETER_KEY);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check for variables in argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
+			oph_workflow_var_substitute(wf, i, -1, arg_value, &error_msg, OPH_ARG_KEY);
 
 			char *tmp = strdup(arg_value), *pch, *pch1, *save_pointer = NULL;
 			if (!tmp)
@@ -1702,7 +1700,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 					break;
 			}
 			if (!name) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_OPERATOR_PARAMETER_KEY);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad argument '%s'.", OPH_ARG_KEY);
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
 				break;
@@ -1714,7 +1712,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		if (svalues_num > names_num)
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Only the first %d value%s of the list will be considered\n", names_num, names_num == 1 ? "" : "s");
 		if (svalues_num < names_num) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_OPERATOR_PARAMETER_VALUE);
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_ARG_VALUE);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 			ret = OPH_SERVER_ERROR;
 			break;
