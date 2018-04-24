@@ -543,9 +543,9 @@ int main(int argc, char *argv[])
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
 	}
 	if (wf_logfile && !ftell(wf_logfile))
-		fprintf(wf_logfile, "idworkflow\tusername\tip_address\t#tasks\t#success_tasks\n");
+		fprintf(wf_logfile, "timestamp\tidworkflow\tname\tusername\tip_address\t#tasks\t#success_tasks\tduration\n");
 	if (task_logfile && !ftell(task_logfile))
-		fprintf(task_logfile, "idworkflow\toperator\t#cores\tsuccess_flag\n");
+		fprintf(task_logfile, "timestamp\tidtask\tidworkflow\toperator\t#cores\tsuccess_flag\tduration\n");
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 
@@ -728,14 +728,14 @@ int oph_status_destroy(oph_status_object ** list)
 	return 0;
 }
 
-void reset_load_average(unsigned int *load_average)
+void reset_load_average(unsigned long *load_average)
 {
 	unsigned int i;
 	for (i = 0; i < OPH_STATUS_LOG_AVG_PERIOD; i++)
 		load_average[i] = 0;
 }
 
-unsigned int eval_load_average(unsigned int *load_average)
+unsigned int eval_load_average(unsigned long *load_average)
 {
 	unsigned int result = 0, i;
 	for (i = 0; i < OPH_STATUS_LOG_AVG_PERIOD; i++)
@@ -759,13 +759,16 @@ void *status_logger(struct soap *soap)
 	unsigned long pw;	// Number of pending workflows
 	unsigned long ww;	// Number of waiting workflows
 	unsigned long rw;	// Number of running workflows
-	unsigned long sw;	// Number of incoming workflows from last snapshoot
+	unsigned long iw;	// Number of incoming workflows from last snapshoot
+	unsigned long dw;	// Number of outcoming workflows from last snapshoot
 	unsigned long at;	// Number of active tasks
 	unsigned long pt;	// Number of pending tasks
 	unsigned long wt;	// Number of waiting tasks
 	unsigned long rt;	// Number of running tasks
 	unsigned long mt;	// Number of massive tasks
+	unsigned long it;	// Number of incoming tasks from last snapshoot
 	unsigned long st;	// Number of submmitted tasks from last snapshoot
+	unsigned long dt;	// Number of completed tasks from last snapshoot
 	unsigned long lt;	// Number of active light tasks
 	unsigned long plt;	// Number of pending light tasks
 	unsigned long rlt;	// Number of running light tasks
@@ -777,7 +780,7 @@ void *status_logger(struct soap *soap)
 	// Number of workflow tasks
 	// Progress ratio of a massive task
 	// Number of light tasks of a massive task
-	unsigned long msw;	// Mean number of incoming workflows in average period
+	unsigned long miw;	// Mean number of incoming workflows in average period
 
 	oph_job_list *job_info;
 	oph_job_info *temp;
@@ -789,8 +792,8 @@ void *status_logger(struct soap *soap)
 	long tau = 0, eps = 0, _eps;
 	char name[OPH_MAX_STRING_SIZE];
 
-	unsigned last_sw = 0, last_st = 0;	// Initialization
-	unsigned int load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
+	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
+	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
 	reset_load_average(load_average);
 
 	while (oph_status_log_file_name) {
@@ -808,22 +811,29 @@ void *status_logger(struct soap *soap)
 			eps = eps ? (long) (OPH_STATUS_LOG_ALPHA * eps + (1.0 - OPH_STATUS_LOG_ALPHA) * _eps) : _eps;
 		}
 
-		aw = pw = ww = rw = sw = at = pt = wt = rt = mt = st = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
+		aw = pw = ww = rw = at = pt = wt = rt = mt = st = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
 		wpr = 0.0;
 		users = workflows = massives = NULL;
 
 		pthread_mutex_lock(&global_flag);
 
 		if (service_info) {
-			sw = service_info->incoming_workflows - last_sw;
+			iw = service_info->incoming_workflows - last_iw;
+			it = service_info->incoming_tasks - last_it;
 			st = service_info->submitted_tasks - last_st;
-			last_sw = service_info->incoming_workflows;
+			dw = service_info->closed_workflows - last_dw;
+			dt = service_info->closed_tasks - last_dt;
+
+			last_iw = service_info->incoming_workflows;
+			last_it = service_info->incoming_tasks;
 			last_st = service_info->submitted_tasks;
+			last_dw = service_info->closed_workflows;
+			last_dt = service_info->closed_tasks;
 		}
 
-		load_average[current_load++] = sw;
+		load_average[current_load++] = iw;
 		current_load %= OPH_STATUS_LOG_AVG_PERIOD;
-		msw = eval_load_average(load_average);
+		miw = eval_load_average(load_average);
 
 		job_info = state->job_info;
 		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
@@ -894,14 +904,17 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "workflow,status=pending value=%ld %d000000000\n", pw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=waiting value=%ld %d000000000\n", ww, (int) tv.tv_sec);
 			fprintf(statuslogfile, "workflow,status=running value=%ld %d000000000\n", rw, (int) tv.tv_sec);
-			fprintf(statuslogfile, "workflow,status=incoming value=%ld %d000000000\n", sw, (int) tv.tv_sec);
-			fprintf(statuslogfile, "workflow,status=load value=%ld %d000000000\n", msw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=incoming value=%ld %d000000000\n", iw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=closed value=%ld %d000000000\n", dw, (int) tv.tv_sec);
+			fprintf(statuslogfile, "workflow,status=load value=%ld %d000000000\n", miw, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=active value=%ld %d000000000\n", at, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=pending value=%ld %d000000000\n", pt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=waiting value=%ld %d000000000\n", wt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=running value=%ld %d000000000\n", rt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=massive value=%ld %d000000000\n", mt, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=incoming value=%ld %d000000000\n", it, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=submitted value=%ld %d000000000\n", st, (int) tv.tv_sec);
+			fprintf(statuslogfile, "task,status=closed value=%ld %d000000000\n", dt, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=completed value=%ld %d000000000\n", ct, (int) tv.tv_sec);
 			fprintf(statuslogfile, "task,status=failed value=%ld %d000000000\n", ft, (int) tv.tv_sec);
 			fprintf(statuslogfile, "light\\ task,status=active value=%ld %d000000000\n", lt, (int) tv.tv_sec);
