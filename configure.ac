@@ -393,6 +393,7 @@ AC_ARG_ENABLE(ssh_lib,
 	   )
 AM_CONDITIONAL([SSH_SUPPORT], [test "x$ssh_lib" = "xyes"])
 
+if test "x${ssh_lib}" = "xyes"; then
 PKG_CHECK_MODULES(SSH2, libssh2 >= 0.23)
 AC_ARG_WITH(libssh2_header_path,
 	   [  --with-libssh2-header-path=PATH 		Location of libssh2 includes directory],
@@ -414,6 +415,7 @@ LIBSSH2_INCLUDE="$libssh2_header_path"
 AC_SUBST(LIBSSH2_INCLUDE)
 LIBSSH2_LIB="$libssh2_lib_path"
 AC_SUBST(LIBSSH2_LIB)
+fi
 
 have_soapcpp2=no
 SOAPCPP2_PROG=
