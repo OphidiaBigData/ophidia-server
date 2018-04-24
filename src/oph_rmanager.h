@@ -46,6 +46,7 @@ struct _oph_rmanager {
 	char *subm_batch;
 	char *subm_stdoutput;
 	char *subm_stderror;
+	char *subm_prefix;
 	char *subm_postfix;
 	char *subm_jobname;
 	char *subm_cancel;

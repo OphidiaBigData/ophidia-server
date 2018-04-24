@@ -369,6 +369,23 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
+			if (!(orm->subm_prefix = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_prefix, position + 1, strlen(position + 1) + 1);
+			orm->subm_prefix[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
 			if (!(orm->subm_postfix = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
@@ -454,6 +471,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_batch = NULL;
 	orm->subm_stdoutput = NULL;
 	orm->subm_stderror = NULL;
+	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
 	orm->subm_jobname = NULL;
 	orm->subm_cancel = NULL;
@@ -552,7 +570,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	len =
 	    strlen(orm->subm_cmd) + 1 + strlen(subm_args) + 1 + (special_args ? strlen(special_args) + 1 : 0) + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 +
 	    strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 +
-	    strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
+	    strlen(outfile) + 1 + strlen(orm->subm_prefix) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
 	if (username)
 		len += strlen(username);
 	else if (oph_subm_user) {
@@ -584,12 +602,13 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
 				orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
 		else
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
+			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
 				orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid,
-				oph_operator_client, request, orm->subm_postfix);
+				orm->subm_prefix, oph_operator_client, request, orm->subm_postfix);
 	} else
-		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
-			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, request, orm->subm_postfix);
+		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
+			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, request,
+			orm->subm_postfix);
 
 	if (special_args)
 		free(special_args);
@@ -648,6 +667,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_stderror) {
 		free(orm->subm_stderror);
 		orm->subm_stderror = NULL;
+	}
+	if (orm->subm_prefix) {
+		free(orm->subm_prefix);
+		orm->subm_prefix = NULL;
 	}
 	if (orm->subm_postfix) {
 		free(orm->subm_postfix);
