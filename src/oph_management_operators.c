@@ -2582,7 +2582,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 
-	} else if (!strncasecmp(operator_name, OPH_OPERATOR_IO_SERVER, OPH_MAX_STRING_SIZE)) {
+	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
@@ -2624,9 +2624,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
 			if (strlen(type)) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
-				if (!strcmp(type, OPH_OPERATOR_IO_SERVER_PARAMETER_STOP))
+				if (!strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_STOP))
 					btype = 'd';	// Deallocate
-				else if (strcmp(type, OPH_OPERATOR_IO_SERVER_PARAMETER_START))
+				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_START))
 					break;
 			}
 
