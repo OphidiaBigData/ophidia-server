@@ -25,7 +25,6 @@
 
 #include <mysql.h>
 
-#define OPH_NULL_FILENAME "/dev/null"
 #define OPH_CHECK_FOR_MPITYPE "operator=oph_script;"
 #define OPH_NULL_MPITYPE "--mpi=none"
 
@@ -234,6 +233,23 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
+			if (!(orm->subm_args2 = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_args2, position + 1, strlen(position + 1) + 1);
+			orm->subm_args2[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
 			if (!(orm->subm_username = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
@@ -430,6 +446,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->name = NULL;
 	orm->subm_cmd = NULL;
 	orm->subm_args = NULL;
+	orm->subm_args2 = NULL;
 	orm->subm_username = NULL;
 	orm->subm_group = NULL;
 	orm->subm_ncores = NULL;
@@ -518,7 +535,7 @@ int oph_read_job_queue(int **list, unsigned int *n)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -529,9 +546,11 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	if ((ncores == 1) && strstr(request, OPH_CHECK_FOR_MPITYPE))
 		special_args = strdup(OPH_NULL_MPITYPE);
 
+	char *subm_args = type ? orm->subm_args2 : orm->subm_args;
+
 	int len = 0;
 	len =
-	    strlen(orm->subm_cmd) + 1 + strlen(orm->subm_args) + 1 + (special_args ? strlen(special_args) + 1 : 0) + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 +
+	    strlen(orm->subm_cmd) + 1 + strlen(subm_args) + 1 + (special_args ? strlen(special_args) + 1 : 0) + 2 * strlen(orm->subm_username) + 2 + strlen(orm->subm_group) + 1 + +1 +
 	    strlen(orm->subm_ncores) + 1 + strlen(orm->subm_interact) + 1 + strlen(orm->subm_batch) + 1 + strlen(orm->subm_stdoutput) + 1 + strlen(outfile) + 1 + strlen(orm->subm_stderror) + 1 +
 	    strlen(outfile) + 1 + strlen(orm->subm_postfix) + 1 + strlen(orm->subm_jobname) + 1 + strlen(request);
 	if (username)
@@ -560,20 +579,24 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	else			// Skip username for backward compatibility
 		*subm_username = 0;
 
-	if (!strcasecmp(orm->name, "slurm")) {
-		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
-				orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
-		else
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
-				orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid,
-				oph_operator_client, request, orm->subm_postfix);
-	} else {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
-		if (special_args)
-			free(special_args);
-		return RMANAGER_ERROR;
-	}
+	if (!type) {
+		if (!strcasecmp(orm->name, "slurm")) {
+			if (interactive_subm)
+				sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
+					orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
+			else
+				sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s \"%s\" %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
+					orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX,
+					jobid, oph_operator_client, request, orm->subm_postfix);
+		} else {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Resource manager not found\n");
+			if (special_args)
+				free(special_args);
+			return RMANAGER_ERROR;
+		}
+	} else
+		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
+			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, request, orm->subm_postfix);
 
 	if (special_args)
 		free(special_args);
@@ -600,6 +623,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_args) {
 		free(orm->subm_args);
 		orm->subm_args = NULL;
+	}
+	if (orm->subm_args2) {
+		free(orm->subm_args2);
+		orm->subm_args2 = NULL;
 	}
 	if (orm->subm_username) {
 		free(orm->subm_username);
@@ -777,7 +804,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if (oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd)) {
+	if (oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 		if (cmd) {
 			free(cmd);
@@ -785,7 +812,6 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		}
 		return OPH_SERVER_ERROR;
 	}
-
 	if (oph_system(cmd, error, state, delay)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {

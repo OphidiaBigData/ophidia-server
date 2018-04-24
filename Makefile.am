@@ -44,6 +44,9 @@ dist_dtd_DATA = etc/dtd/*.dtd
 rmsdir = $(prefix)/etc/rms/
 dist_rms_DATA = etc/rms/*.conf
 
+scriptdir = $(prefix)/etc/script/
+dist_script_DATA = etc/script/*.sh
+
 sessionsdir = $(OPH_WEB_SERVER_LOCATION)/sessions/
 dist_sessions_DATA =
 

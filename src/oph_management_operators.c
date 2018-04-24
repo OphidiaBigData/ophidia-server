@@ -23,6 +23,7 @@
 #include "oph_json_library.h"
 #include "oph_task_parser_library.h"
 #include "oph_workflow_engine.h"
+#include "oph_rmanager.h"
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -35,6 +36,8 @@ extern char *oph_log_file_name;
 extern char *oph_auth_location;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
+extern oph_rmanager *orm;
+extern char *oph_cluster_start;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -2616,41 +2619,157 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int success = 0, success2 = 0, nhosts = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], btype = 'a';	// Allocate
+		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], btype = 1;	// Allocate
 
 		while (!success) {
 
 			*type = 0;
 			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
 			if (strlen(type)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
 				if (!strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_STOP))
-					btype = 'd';	// Deallocate
-				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_START))
+					btype = 0;	// Deallocate
+				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_START)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
 					break;
+				}
 			}
 
 			*type = 0;
 			oph_tp_find_param_in_task_string(request, OPH_ARG_NHOSTS, &type);
 			if (strlen(type)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
 				nhosts = (int) strtol(type, NULL, 10);
-				if (nhosts < 0)
+				if (nhosts <= 0) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
 					break;
+				}
 			}
 
 			*host_partition = 0;
 			oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_HOST_PARTITION, &host_partition);
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
-			if (!strlen(host_partition))
+			if (!strlen(host_partition)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
+			}
 
 			success = 1;
 		}
 
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+		if (oph_odb_read_config_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if (oph_odb_connect_to_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
 		if (success) {
 
-			// TODO
+			success = 0;
+			while (!success) {
+
+				int id_user = 0;
+				if (oph_odb_retrieve_user_id(&oDB, username, &id_user)) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User id of '%s' cannot be retrieved\n", username);
+					break;
+				}
+
+				if (!orm) {
+					orm = (oph_rmanager *) malloc(sizeof(oph_rmanager));
+					if (initialize_rmanager(orm)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on initialization OphidiaDB\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Internal error!");
+						break;
+					}
+					if (oph_read_rmanager_conf(orm)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Internal error!\n");
+						break;
+					}
+				}
+
+				if (btype) {
+
+					if (!oph_cluster_start) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster is not configured!");
+						break;
+					}
+
+					int id_hostpartition = 0;
+					if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, &id_hostpartition)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
+						break;
+					}
+					if (!id_hostpartition) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
+						break;
+					}
+
+					char command[OPH_MAX_STRING_SIZE];
+					snprintf(command, OPH_MAX_STRING_SIZE, "%s %d", oph_cluster_start, id_hostpartition);
+
+					char outfile[OPH_MAX_STRING_SIZE];
+					snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+
+					char *cmd = NULL;
+					if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, username, &cmd, 1)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+						if (cmd) {
+							free(cmd);
+							cmd = NULL;
+						}
+						break;
+					}
+					if (!cmd) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+						break;
+					}
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+					if (oph_system(cmd, "Error during remote submission", state, 0)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to start cluster!");
+						free(cmd);
+						break;
+					}
+					free(cmd);
+
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
+
+				} else {
+
+					int id_hostpartition = 0, id_job = 0;
+					if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
+						break;
+					}
+					if (!id_hostpartition) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
+						break;
+					}
+
+					if (oph_cancel_request(id_job))
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
+					else
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
+
+					if (oph_odb_release_hp(&oDB, id_hostpartition)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be released\n", host_partition);
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to delete host partition '%s'!", host_partition);
+						break;
+					}
+				}
+
+				success = 1;
+			}
 		}
 
 		while (!success2) {
@@ -2696,19 +2815,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
-
-		ophidiadb oDB;
-		oph_odb_initialize_ophidiadb(&oDB);
-		if (oph_odb_read_config_ophidiadb(&oDB)) {
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
-			oph_odb_disconnect_from_ophidiadb(&oDB);
-			return OPH_SERVER_SYSTEM_ERROR;
-		}
-		if (oph_odb_connect_to_ophidiadb(&oDB)) {
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
-			oph_odb_disconnect_from_ophidiadb(&oDB);
-			return OPH_SERVER_SYSTEM_ERROR;
-		}
 
 		if (success)
 			*error_message = 0;
