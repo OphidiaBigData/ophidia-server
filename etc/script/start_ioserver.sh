@@ -21,8 +21,10 @@
 # Input parameters
 hpid=$1
 
-LOGIN_NODE=127.0.0.1
-CONFIGURATION=/etc/.my.cnf
+OPHIDIADB_SERVER_HOST=127.0.0.1
+OPHIDIADB_SERVER_PORT=3306
+OPHIDIADB_NAME=ophidiadb
+OPHIDIADB_CLIENT_CONFIGURATION=$HOME/.my.cnf
 IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server
 
 # Body
@@ -32,10 +34,14 @@ temp=${string%$searchstring*}
 myhost=`echo ${temp} | tail -c 5`'-ib'
 myid=`echo ${temp} | tail -c 4 | bc`
 
-mysql --default-file=${CONFIGURATION} -P 3306 -h ${LOGIN_NODE} ophidiadb -e "UPDATE host SET status='up' WHERE hostname='${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname='${myhost}'));"
+echo "Updating info in OphidiaDB"
+mysql --default-file=${OPHIDIADB_CLIENT_CONFIGURATION} -h ${OPHIDIADB_SERVER_HOST} -P ${OPHIDIADB_SERVER_PORT} ${OPHIDIADB_NAME} -e "UPDATE host SET status='up' WHERE hostname='${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname='${myhost}'));"
+echo "OphidiaDB updated"
 
 rm -rf ${IO_SERVER_PATH}/data${myid}/*
 mkdir -p ${IO_SERVER_PATH}/data${myid}/{var,log}
 
-${IO_SERVER_PATH}/bin/oph_io_server -i $myid >> ${IO_SERVER_PATH}/data${myid}/log/server.log 2>>&1 < /dev/null
+echo "Starting I/O server ${myid}"
+${IO_SERVER_PATH}/bin/oph_io_server -i $myid > ${IO_SERVER_PATH}/data${myid}/log/server.log 2>&1 < /dev/null
+echo "Exit from IO server ${myid}"
 
