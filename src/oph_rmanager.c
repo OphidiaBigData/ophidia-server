@@ -559,6 +559,10 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
+	if (interactive_subm) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Interactive submission is not longer supported\n");
+		return RMANAGER_ERROR;
+	}
 
 	char *special_args = NULL;
 	if ((ncores == 1) && strstr(request, OPH_CHECK_FOR_MPITYPE))
@@ -597,14 +601,33 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	else			// Skip username for backward compatibility
 		*subm_username = 0;
 
+	char _outfile[OPH_MAX_STRING_SIZE];
+	snprintf(_outfile, OPH_MAX_STRING_SIZE, "%s", outfile);
+	if (get_debug_level() != LOG_DEBUG)
+		outfile = NULL;
+
 	if (!type) {
-		if (interactive_subm)
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s \"%s\"", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
-				orm->subm_ncores, ncores, orm->subm_interact, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, oph_operator_client, request);
-		else
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username, orm->subm_group,
-				orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid,
-				orm->subm_prefix, oph_operator_client, request, orm->subm_postfix);
+		if (!strcasecmp(orm->name, "slurm"))
+			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s \"%s\" %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username,
+				orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile ? outfile : OPH_NULL_FILENAME, orm->subm_stderror,
+				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, oph_operator_client, request,
+				orm->subm_postfix);
+		else {
+			char outfile_[OPH_MAX_STRING_SIZE];
+			snprintf(outfile_, OPH_MAX_STRING_SIZE, "%s.sh", _outfile);
+			FILE *file = fopen(outfile_, "w");
+			if (!file) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Submission script cannot be created\n");
+				if (special_args)
+					free(special_args);
+				return RMANAGER_ERROR;
+			}
+			fprintf(file, "%s %s \"%s\" %s\n", orm->subm_prefix, oph_operator_client, request, orm->subm_postfix);
+			fclose(file);
+			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username,
+				orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile ? outfile : OPH_NULL_FILENAME, orm->subm_stderror,
+				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, outfile_);
+		}
 	} else
 		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
 			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, request,
@@ -790,16 +813,14 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 
 	char outfile[OPH_MAX_STRING_SIZE];
 	snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
-	if (get_debug_level() == LOG_DEBUG) {
-		char code[OPH_MAX_STRING_SIZE];
-		if (!oph_get_session_code(sessionid, code)) {
-			if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
-				snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
-				oph_mkdir(outfile);
-				snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
-			} else
-				snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
-		}
+	char code[OPH_MAX_STRING_SIZE];
+	if (!oph_get_session_code(sessionid, code)) {
+		if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
+			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+			oph_mkdir(outfile);
+			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
+		} else
+			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 	}
 #ifdef LOCAL_FRAMEWORK
 	char command[OPH_MAX_STRING_SIZE];

@@ -38,6 +38,8 @@ extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
 extern char *oph_cluster_start;
+extern char *oph_txt_location;
+extern char *oph_subm_user;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -2715,6 +2717,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					char outfile[OPH_MAX_STRING_SIZE];
 					snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+					if (get_debug_level() == LOG_DEBUG) {
+						char code[OPH_MAX_STRING_SIZE];
+						if (!oph_get_session_code(sessionid, code)) {
+							if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
+								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+								oph_mkdir(outfile);
+								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
+							} else
+								snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+						}
+					}
 
 					char *cmd = NULL;
 					if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, username, &cmd, 1)) {
