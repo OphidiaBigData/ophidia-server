@@ -624,6 +624,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			}
 			fprintf(file, "%s %s \"%s\" %s\n", orm->subm_prefix, oph_operator_client, request, orm->subm_postfix);
 			fclose(file);
+			chmod(outfile_, strtol("0775", 0, 8));
 			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username,
 				orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile ? outfile : OPH_NULL_FILENAME, orm->subm_stderror,
 				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, outfile_);
