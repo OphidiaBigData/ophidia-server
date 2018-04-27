@@ -658,9 +658,11 @@ void *process_request(struct soap *soap)
 	soap_end(soap);
 	soap_free(soap);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
+#endif
 
-	return NULL;
+	return (void *) NULL;
 }
 
 #define OPH_SERVER_MAX_WF_LOG_PARAM 10
@@ -752,7 +754,7 @@ void *status_logger(struct soap *soap)
 	struct oph_plugin_data *state = NULL;
 	if (!(state = (struct oph_plugin_data *) soap_lookup_plugin((struct soap *) soap, OPH_PLUGIN_ID))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on oph lookup plugin struct\n");
-		return NULL;
+		return (void *) NULL;
 	}
 
 	unsigned long aw;	// Number of active workflows
@@ -951,9 +953,11 @@ void *status_logger(struct soap *soap)
 	soap_end(soap);
 	soap_free(soap);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
+#endif
 
-	return NULL;
+	return (void *) NULL;
 }
 
 
