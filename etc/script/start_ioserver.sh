@@ -34,7 +34,7 @@ temp=${string%$searchstring*}
 myhost=`echo ${temp} | tail -c 5`'-ib'
 myid=`echo ${temp} | tail -c 4 | bc`
 
-echo "Updating info related to host ${myhost} in OphidiaDB"
+echo "Add host ${myhost} to partition ${hpid}"
 mysql --defaults-file=${OPHIDIADB_CLIENT_CONFIGURATION} -h ${OPHIDIADB_SERVER_HOST} -P ${OPHIDIADB_SERVER_PORT} ${OPHIDIADB_NAME} -e "UPDATE host SET status='up' WHERE hostname='${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname='${myhost}'));"
 echo "OphidiaDB updated"
 
@@ -44,4 +44,8 @@ mkdir -p ${IO_SERVER_PATH}/data${myid}/{var,log}
 echo "Starting I/O server ${myid}"
 ${IO_SERVER_PATH}/bin/oph_io_server -i ${myid} > ${IO_SERVER_PATH}/data${myid}/log/server.log 2>&1 < /dev/null
 echo "Exit from IO server ${myid}"
+
+echo "Remove host ${myhost} from partition ${hpid}"
+mysql --defaults-file=${OPHIDIADB_CLIENT_CONFIGURATION} -h ${OPHIDIADB_SERVER_HOST} -P ${OPHIDIADB_SERVER_PORT} ${OPHIDIADB_NAME} -e "UPDATE host SET status='down' WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}');"
+echo "OphidiaDB updated"
 
