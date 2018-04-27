@@ -28,6 +28,7 @@
 #include "oph_session_report.h"
 #include "oph_subset_library.h"
 #include "oph_filters.h"
+#include "oph_service_info.h"
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -47,6 +48,7 @@ extern char *oph_subm_user;
 extern char *oph_txt_location;
 extern FILE *wf_logfile;
 extern FILE *task_logfile;
+extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -3784,6 +3786,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
+
+				if (service_info)
+					service_info->closed_tasks++;
 			}
 			if (check_status && !final) {
 				int hh = 0;
@@ -5517,6 +5522,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pthread_mutex_unlock(&global_flag);
 		} else
 			oph_workflow_free(wf);
+
+		pthread_mutex_lock(&global_flag);
+		if (service_info)
+			service_info->closed_workflows++;
+		pthread_mutex_unlock(&global_flag);
 	}
 
 	if (my_output_json)
