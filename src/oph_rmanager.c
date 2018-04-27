@@ -97,7 +97,7 @@ void *_oph_system(oph_command_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
-	return NULL;
+	return (void *) NULL;;
 }
 
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay)
