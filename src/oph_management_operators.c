@@ -2744,7 +2744,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 						break;
 					}
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
 					if (oph_system(cmd, "Error during remote submission", state, 0)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
