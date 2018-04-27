@@ -395,6 +395,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		wf->cube = NULL;
 	}
 
+	if (wf->client_address) {	// the field named 'client_access' is not used in this version
+		free(wf->client_address);
+		wf->client_address = NULL;
+	}
+	if (soap->proxy_from)
+		wf->client_address = strdup(soap->proxy_from);
+	else
+		wf->client_address = strdup(_host);
+
 	if (!wf->tasks_num) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: no task found in workflow '%s'\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
