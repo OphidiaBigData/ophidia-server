@@ -674,7 +674,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int *id_hostpartition)
+int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition)
 {
 	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
@@ -684,7 +684,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 		return OPH_ODB_MYSQL_ERROR;
 
 	char insertQuery[MYSQL_BUFLEN];
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RESERVE_PARTITION, name, id_user, id_job);
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RESERVE_PARTITION, name, id_user, id_job, hosts);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
