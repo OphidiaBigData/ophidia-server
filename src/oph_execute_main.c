@@ -56,6 +56,7 @@ extern char *oph_xml_operators;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_base_src_path;
+extern FILE *wf_logfile;
 extern oph_service_info *service_info;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_max_cores;
@@ -65,6 +66,7 @@ extern unsigned int oph_default_session_timeout;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
+extern pthread_mutex_t curl_flag;
 #endif
 
 void free_string_vector(char **ctime, int n)
@@ -630,7 +632,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 			}
 		}
-		oph_workflow_free(wf);
 
 		int _oph_service_status;
 		*tmp = 0;
@@ -1274,6 +1275,25 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		oph_json_free(oper_json);
 
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
+		oph_workflow_free(wf);
+
 		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d has been processed\n", jobid);
 		return SOAP_OK;
 	}
@@ -1761,6 +1781,24 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 		}
 		oph_json_free(oper_json);
+
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
 
 		oph_workflow_free(wf);
 		oph_cleanup_args(&user_args);
@@ -5383,7 +5421,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 			pthread_mutex_unlock(&global_flag);
 		}
-
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
 		oph_workflow_free(wf);
 		oph_cleanup_args(&user_args);
 
