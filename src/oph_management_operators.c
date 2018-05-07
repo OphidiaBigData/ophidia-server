@@ -2621,7 +2621,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int success = 0, success2 = 0, nhosts = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], btype = 1;	// Allocate
+		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], exec_mode[OPH_MAX_STRING_SIZE], em = 0, btype = 1;	// Allocate
 
 		while (!success) {
 
@@ -2651,6 +2651,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (!strlen(host_partition)) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
+			}
+
+			*exec_mode = 0;
+			oph_tp_find_param_in_task_string(request, OPH_ARG_MODE, &exec_mode);
+			if (strlen(exec_mode)) {
+				if (!strcmp(exec_mode, OPH_ARG_MODE_SYNC))
+					em = 1;
+				else if (strcmp(exec_mode, OPH_ARG_MODE_ASYNC)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_MODE);
+					break;
+				}
 			}
 
 			success = 1;
@@ -2746,7 +2757,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-					if (oph_system(cmd, "Error during remote submission", state, 0, 1)) {
+					if (oph_system(cmd, "Error during remote submission", state, 0, em)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to start cluster!");
 						free(cmd);
