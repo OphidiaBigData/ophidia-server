@@ -64,6 +64,6 @@ int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid);
 int oph_read_job_queue(int **list, unsigned int *n);
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay);
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking);
 
 #endif				/* OPH_RMANAGER_H */

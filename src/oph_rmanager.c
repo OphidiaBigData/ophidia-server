@@ -51,11 +51,8 @@ typedef struct _oph_command_data {
 	int delay;
 } oph_command_data;
 
-void *_oph_system(oph_command_data * data)
+void __oph_system(oph_command_data * data)
 {
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_detach(pthread_self());
-#endif
 	if (data) {
 		if (data->command) {
 			if (data->delay > 0) {
@@ -94,25 +91,35 @@ void *_oph_system(oph_command_data * data)
 
 		free(data);
 	}
+}
+
+void *_oph_system(oph_command_data * data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+#endif
+	__oph_system(data);
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
 	return (void *) NULL;;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
-
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
+#endif
 	if (service_info)
 		service_info->submitted_tasks++;
-	pthread_mutex_unlock(&global_flag);
-
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_unlock(&global_flag);
+#endif
+
 	oph_command_data *data = (oph_command_data *) malloc(sizeof(oph_command_data));
 	if (!data)
 		return RMANAGER_ERROR;
@@ -148,12 +155,16 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	data->state->job_info = state->job_info;
 	data->delay = delay;
 
-	pthread_t tid;
-	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_system, data);
-	return RMANAGER_SUCCESS;
-#else
-	return system(command);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	if (!blocking) {
+		pthread_t tid;
+		pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_system, data);
+		return RMANAGER_SUCCESS;
+	}
 #endif
+	__oph_system(data);
+
+	return RMANAGER_SUCCESS;
 }
 
 int oph_read_rmanager_conf(oph_rmanager * orm)
@@ -612,23 +623,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile ? outfile : OPH_NULL_FILENAME, orm->subm_stderror,
 				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, oph_operator_client, request,
 				orm->subm_postfix);
-		else {
-			char outfile_[OPH_MAX_STRING_SIZE];
-			snprintf(outfile_, OPH_MAX_STRING_SIZE, "%s.sh", _outfile);
-			FILE *file = fopen(outfile_, "w");
-			if (!file) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Submission script cannot be created\n");
-				if (special_args)
-					free(special_args);
-				return RMANAGER_ERROR;
-			}
-			fprintf(file, "%s %s \"%s\" %s\n", orm->subm_prefix, oph_operator_client, request, orm->subm_postfix);
-			fclose(file);
-			chmod(outfile_, strtol("0775", 0, 8));
-			sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s", orm->subm_cmd, orm->subm_args, special_args ? special_args : "", subm_username,
-				orm->subm_group, orm->subm_ncores, ncores, orm->subm_batch, orm->subm_stdoutput, outfile ? outfile : OPH_NULL_FILENAME, orm->subm_stderror,
-				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, outfile_);
-		}
+		else
+			sprintf(*cmd, "%s %s %s %d %d %s", subm_username, orm->subm_cmd, username, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME);
 	} else
 		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
 			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, request,
@@ -833,7 +829,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Execute command: %s\n", command);
-	if (oph_system(command, error, state, delay)) {
+	if (oph_system(command, error, state, delay, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on executing the command\n");
 		if (cmd) {
 			free(cmd);
@@ -850,7 +846,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		}
 		return OPH_SERVER_ERROR;
 	}
-	if (oph_system(cmd, error, state, delay)) {
+	if (oph_system(cmd, error, state, delay, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {
 			free(cmd);
