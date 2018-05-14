@@ -2919,11 +2919,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
 								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->username);
 								}
 						} else {
 							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob);
+							oph_cancel_request(wf->tasks[i].idjob, wf->username);
 						}
 					}
 			} else {
@@ -2933,12 +2933,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->username);
 								}
 						}
 					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING) {
 						wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-						oph_cancel_request(wf->tasks[i].idjob);
+						oph_cancel_request(wf->tasks[i].idjob, wf->username);
 					}
 			}
 		}
@@ -5833,7 +5833,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
 				if (list[k] < 0)
-					oph_cancel_request(-list[k]);
+					oph_cancel_request(-list[k], NULL);
 		}
 
 		if (list)

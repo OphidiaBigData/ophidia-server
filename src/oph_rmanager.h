@@ -62,7 +62,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
-int oph_cancel_request(int jobid);
+int oph_cancel_request(int jobid, char *username);
 int oph_read_job_queue(int **list, unsigned int *n);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking);
 

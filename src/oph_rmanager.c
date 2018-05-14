@@ -491,7 +491,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_cancel_request(int jobid)
+int oph_cancel_request(int jobid, char *username)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
@@ -499,12 +499,27 @@ int oph_cancel_request(int jobid)
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
-		size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
-		char cmd[len];
-		snprintf(cmd, len, "%s %s%s%d", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid);
-		if (oph_ssh_submit(cmd)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
-			return RMANAGER_ERROR;
+		if (username && strcasecmp(orm->name, "slurm")) {
+			char subm_username[1 + strlen(orm->subm_username) + strlen(username)];
+			if (strlen(orm->subm_username) > 0)
+				sprintf(subm_username, "%s%s", orm->subm_username, username);
+			else	// Skip username for backward compatibility
+				*subm_username = 0;
+			size_t len = 2 + strlen(subm_username) + strlen(orm->subm_cancel) + OPH_RMANAGER_MAX_INT_SIZE;
+			char cmd[len];
+			snprintf(cmd, len, "%s %s %d", subm_username, orm->subm_cancel, jobid);
+			if (oph_ssh_submit(cmd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+				return RMANAGER_ERROR;
+			}
+		} else {
+			size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
+			char cmd[len];
+			snprintf(cmd, len, "%s %s%s%d", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid);
+			if (oph_ssh_submit(cmd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+				return RMANAGER_ERROR;
+			}
 		}
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n");
 #endif
@@ -624,11 +639,9 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, oph_operator_client, request,
 				orm->subm_postfix);
 		else
-			sprintf(*cmd, "%s %s %s %d %d %s", subm_username, orm->subm_cmd, username, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME);
+			sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
 	} else
-		sprintf(*cmd, "%s %s %s %s %s %s %d %s %s %s %s %s %s %s%s%d %s %s %s", orm->subm_cmd, subm_args, special_args ? special_args : "", subm_username, orm->subm_group, orm->subm_ncores,
-			ncores, orm->subm_batch, orm->subm_stdoutput, outfile, orm->subm_stderror, outfile, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, request,
-			orm->subm_postfix);
+		sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
 
 	if (special_args)
 		free(special_args);

@@ -2780,7 +2780,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						break;
 					}
 
-					if (oph_cancel_request(id_job))
+					if (oph_cancel_request(id_job, username))
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 					else
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
