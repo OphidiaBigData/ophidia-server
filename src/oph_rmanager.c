@@ -227,6 +227,23 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
+			if (!(orm->subm_cmd2 = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_cmd2, position + 1, strlen(position + 1) + 1);
+			orm->subm_cmd2[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
 			if (!(orm->subm_args = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
@@ -473,6 +490,7 @@ int initialize_rmanager(oph_rmanager * orm)
 
 	orm->name = NULL;
 	orm->subm_cmd = NULL;
+	orm->subm_cmd2 = NULL;
 	orm->subm_args = NULL;
 	orm->subm_args2 = NULL;
 	orm->subm_username = NULL;
@@ -641,7 +659,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		else
 			sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
 	} else
-		sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
+		sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd2, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
 
 	if (special_args)
 		free(special_args);
@@ -664,6 +682,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_cmd) {
 		free(orm->subm_cmd);
 		orm->subm_cmd = NULL;
+	}
+	if (orm->subm_cmd2) {
+		free(orm->subm_cmd2);
+		orm->subm_cmd2 = NULL;
 	}
 	if (orm->subm_args) {
 		free(orm->subm_args);

@@ -37,6 +37,7 @@
 struct _oph_rmanager {
 	char *name;
 	char *subm_cmd;
+	char *subm_cmd2;
 	char *subm_username;
 	char *subm_group;
 	char *subm_args;
