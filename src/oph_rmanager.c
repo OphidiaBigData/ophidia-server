@@ -24,6 +24,7 @@
 #include "oph_utils.h"
 
 #include <mysql.h>
+#include <grp.h>
 
 #define OPH_CHECK_FOR_MPITYPE "operator=oph_script;"
 #define OPH_NULL_MPITYPE "--mpi=none"
@@ -894,14 +895,19 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	if (!oph_get_session_code(sessionid, code)) {
 		if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
-			if (!oph_mkdir2(outfile, 0775)) {
-/*
-				gid_t *group;
-				long ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
-				gid_t* group = (gid_t *)malloc(ngroups_max *sizeof(gid_t));
-				int nogroups = getgroups(ngroups_max, group);
-				chown(outfile, getuid(), );
-*/
+			if (!oph_mkdir2(outfile, 0775) && orm->subm_group) {
+				char group[1 + strlen(orm->subm_group)], *_group;
+				_group = strstr(group, "=");
+				if (_group)
+					_group++;
+				else
+					_group = group;
+
+				struct group space, *gp = NULL;
+				long size = sysconf(_SC_GETGR_R_SIZE_MAX);
+				char buf[size];
+				if (!getgrnam_r(_group, &space, buf, sizeof buf, &gp) && gp)
+					chown(outfile, getuid(), gp->gr_gid);
 			}
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
 		} else
