@@ -43,7 +43,7 @@
 #define OPH_WORKFLOW_GENERIC_VALUE	"*"
 
 #define OPH_WORKFLOW_FIXED_VALUE	""
-#define OPH_WORKFLOW_EXT_SUB_STRING	"operator=%s;sessionid=%s;workflowid=%d;markerid=%d;username="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";userrole=%d;parentid=%d;taskindex=%d;lighttaskindex=%d;"
+#define OPH_WORKFLOW_EXT_SUB_STRING	"operator=%s;sessionid=%s;workflowid=%d;markerid=%d;username="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";userrole=%d;parentid=%d;taskindex=%d;lighttaskindex=%d;exec_mode=%s;"
 #define OPH_WORKFLOW_KEY_VALUE_STRING	"%s=%s;"
 #define OPH_WORKFLOW_KEY_VALUE_STRING2	"%s="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";"
 #define OPH_WORKFLOW_KEY_HOST_PARTITION	"host_partition"

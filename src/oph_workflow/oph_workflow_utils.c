@@ -232,7 +232,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 
 	snprintf(long_submit_string, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_EXT_SUB_STRING, workflow->tasks[task_index].operator, workflow->sessionid, workflow->workflowid,
 		 subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob,
-		 task_index, light_task_index);
+		 task_index, light_task_index, workflow->exec_mode);
 
 	if (workflow->host_partition) {
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
