@@ -363,6 +363,40 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		}
 		position = strchr(buffer, '=');
 		if (position != NULL) {
+			if (!(orm->subm_queue_high = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_queue_high, position + 1, strlen(position + 1) + 1);
+			orm->subm_queue_high[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
+			if (!(orm->subm_queue_low = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
+			strncpy(orm->subm_queue_low, position + 1, strlen(position + 1) + 1);
+			orm->subm_queue_low[strlen(position + 1)] = '\0';
+		}
+
+		fgetc(file);
+		if (fscanf(file, "%[^\n]", buffer) == EOF) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
+			fclose(file);
+			return RMANAGER_ERROR;
+		}
+		position = strchr(buffer, '=');
+		if (position != NULL) {
 			if (!(orm->subm_stdoutput = (char *) malloc((strlen(position + 1) + 1) * sizeof(char)))) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				fclose(file);
@@ -498,6 +532,8 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_ncores = NULL;
 	orm->subm_interact = NULL;
 	orm->subm_batch = NULL;
+	orm->subm_queue_high = NULL;
+	orm->subm_queue_low = NULL;
 	orm->subm_stdoutput = NULL;
 	orm->subm_stderror = NULL;
 	orm->subm_prefix = NULL;
@@ -657,7 +693,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, oph_operator_client, request,
 				orm->subm_postfix);
 		else
-			sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
+			sprintf(*cmd, "%s %s %d %d %s \"%s\" %s", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
+				ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low);
 	} else
 		sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd2, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
 
@@ -714,6 +751,14 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_batch) {
 		free(orm->subm_batch);
 		orm->subm_batch = NULL;
+	}
+	if (orm->subm_queue_high) {
+		free(orm->subm_queue_high);
+		orm->subm_queue_high = NULL;
+	}
+	if (orm->subm_queue_low) {
+		free(orm->subm_queue_low);
+		orm->subm_queue_low = NULL;
 	}
 	if (orm->subm_stdoutput) {
 		free(orm->subm_stdoutput);
@@ -849,7 +894,15 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	if (!oph_get_session_code(sessionid, code)) {
 		if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
-			oph_mkdir2(outfile, 0777);
+			if (!oph_mkdir2(outfile, 0775)) {
+/*
+				gid_t *group;
+				long ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
+				gid_t* group = (gid_t *)malloc(ngroups_max *sizeof(gid_t));
+				int nogroups = getgroups(ngroups_max, group);
+				chown(outfile, getuid(), );
+*/
+			}
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
 		} else
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);

@@ -45,6 +45,8 @@ struct _oph_rmanager {
 	char *subm_ncores;
 	char *subm_interact;
 	char *subm_batch;
+	char *subm_queue_high;
+	char *subm_queue_low;
 	char *subm_stdoutput;
 	char *subm_stderror;
 	char *subm_prefix;
