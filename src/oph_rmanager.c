@@ -897,17 +897,21 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
 			if (!oph_mkdir2(outfile, 0775) && orm->subm_group) {
 				char group[1 + strlen(orm->subm_group)], *_group;
+				strcpy(group, orm->subm_group);
 				_group = strstr(group, "=");
 				if (_group)
 					_group++;
 				else
 					_group = group;
-
-				struct group space, *gp = NULL;
-				long size = sysconf(_SC_GETGR_R_SIZE_MAX);
-				char buf[size];
-				if (!getgrnam_r(_group, &space, buf, sizeof buf, &gp) && gp)
-					chown(outfile, getuid(), gp->gr_gid);
+				if (strlen(_group) > 0) {
+					struct group space, *gp = NULL;
+					long size = sysconf(_SC_GETGR_R_SIZE_MAX);
+					if (size) {
+						char buf[size];
+						if (!getgrnam_r(_group, &space, buf, sizeof buf, &gp) && gp)
+							chown(outfile, getuid(), gp->gr_gid);
+					}
+				}
 			}
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
 		} else
