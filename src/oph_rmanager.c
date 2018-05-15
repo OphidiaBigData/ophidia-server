@@ -849,7 +849,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	if (!oph_get_session_code(sessionid, code)) {
 		if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
-			oph_mkdir(outfile);
+			oph_mkdir2(outfile, 0777);
 			snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
 		} else
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
