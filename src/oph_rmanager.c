@@ -908,8 +908,8 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 					long size = sysconf(_SC_GETGR_R_SIZE_MAX);
 					if (size) {
 						char buf[size];
-						if (!getgrnam_r(_group, &space, buf, sizeof buf, &gp) && gp)
-							chown(outfile, getuid(), gp->gr_gid);
+						if (!getgrnam_r(_group, &space, buf, sizeof buf, &gp) && gp && !chown(outfile, getuid(), gp->gr_gid))
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Group ownership on folder '%s' set to '%s'\n", outfile, _group);
 					}
 				}
 			}
