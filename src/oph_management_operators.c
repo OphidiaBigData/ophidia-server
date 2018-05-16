@@ -2628,9 +2628,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			*type = 0;
 			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
 			if (strlen(type)) {
-				if (!strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_STOP))
+				if (!strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_UNDEPLOY))
 					btype = 0;	// Deallocate
-				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_START)) {
+				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_DEPLOY)) {
 					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
 					break;
 				}
