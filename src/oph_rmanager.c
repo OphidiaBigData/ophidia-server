@@ -562,7 +562,7 @@ int oph_cancel_request(int jobid, char *username)
 				*subm_username = 0;
 			size_t len = 2 + strlen(subm_username) + strlen(orm->subm_cancel) + OPH_RMANAGER_MAX_INT_SIZE;
 			char cmd[len];
-			snprintf(cmd, len, "%s %s %d", subm_username, orm->subm_cancel, jobid);
+			snprintf(cmd, len, "%s %s %d %s", subm_username, orm->subm_cancel, jobid, orm->subm_postfix);
 			if (oph_ssh_submit(cmd)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 				return RMANAGER_ERROR;
@@ -570,7 +570,7 @@ int oph_cancel_request(int jobid, char *username)
 		} else {
 			size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
 			char cmd[len];
-			snprintf(cmd, len, "%s %s%s%d", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid);
+			snprintf(cmd, len, "%s %s%s%d %s", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_postfix);
 			if (oph_ssh_submit(cmd)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 				return RMANAGER_ERROR;
@@ -694,10 +694,10 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				outfile ? outfile : OPH_NULL_FILENAME, orm->subm_jobname, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_prefix, oph_operator_client, request,
 				orm->subm_postfix);
 		else
-			sprintf(*cmd, "%s %s %d %d %s \"%s\" %s", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
-				ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low);
+			sprintf(*cmd, "%s %s %d %d %s \"%s\" %s %s", subm_username, orm->subm_cmd, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
+				ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, orm->subm_postfix);
 	} else
-		sprintf(*cmd, "%s %s %d %d %s \"%s\"", subm_username, orm->subm_cmd2, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request);
+		sprintf(*cmd, "%s %s %d %d %s \"%s\" %s", subm_username, orm->subm_cmd2, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request, orm->subm_postfix);
 
 	if (special_args)
 		free(special_args);
