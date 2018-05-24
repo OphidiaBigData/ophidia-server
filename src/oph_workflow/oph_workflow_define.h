@@ -46,7 +46,9 @@
 #define OPH_WORKFLOW_EXT_SUB_STRING	"operator=%s;sessionid=%s;workflowid=%d;markerid=%d;username="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";userrole=%d;parentid=%d;taskindex=%d;lighttaskindex=%d;exec_mode=%s;"
 #define OPH_WORKFLOW_KEY_VALUE_STRING	"%s=%s;"
 #define OPH_WORKFLOW_KEY_VALUE_STRING2	"%s="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";"
+#define OPH_WORKFLOW_KEY_VALUE_STRING3	"%s=%d;"
 #define OPH_WORKFLOW_KEY_HOST_PARTITION	"host_partition"
+#define OPH_WORKFLOW_KEY_NHOSTS			"nhosts"
 
 #define OPH_WORKFLOW_BASE_NOTIFICATION	"parentid=%d;taskindex=%d;lighttaskindex=%d;jobid=%d;status=%d;sessionid=%s;markerid=%d;"
 
@@ -71,6 +73,8 @@
 #define OPH_WORKFLOW_BVAR_KEYS		{"OPH_SESSION_ID","OPH_SESSION_CODE","OPH_WORKFLOW_ID"}
 #define OPH_WORKFLOW_BVAR_KEYS_SIZE	3
 #define OPH_WORKFLOW_BVAR_KEY_MARKERID	"OPH_MARKER_ID"
+#define OPH_WORKFLOW_BVAR_KEY_NCORES	"NCORES"
+#define OPH_WORKFLOW_BVAR_KEY_NHOSTS	"NHOSTS"
 
 // Additional known operators
 #define OPH_OPERATOR_SET		"oph_set"

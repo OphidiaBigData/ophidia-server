@@ -122,5 +122,6 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name);
 int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition);
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition);
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job);
+int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts);
 
 #endif				/* OPH_OPHIDIADB_H */

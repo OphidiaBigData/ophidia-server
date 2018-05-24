@@ -759,3 +759,37 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 
 	return OPH_ODB_SUCCESS;
 }
+
+int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
+{
+	if (!oDB || !id_user || !rhosts)
+		return OPH_ODB_NULL_PARAM;
+	*rhosts = 0;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	char insertQuery[MYSQL_BUFLEN];
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_RESERVED_HOSTS, id_user);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, insertQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	res = mysql_store_result(oDB->conn);
+
+	if ((mysql_field_count(oDB->conn) != 1) || (mysql_num_rows(res) != 1)) {
+		mysql_free_result(res);
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	while ((row = mysql_fetch_row(res)) != NULL) {
+		*rhosts = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
+	}
+	mysql_free_result(res);
+
+	return OPH_ODB_SUCCESS;
+}

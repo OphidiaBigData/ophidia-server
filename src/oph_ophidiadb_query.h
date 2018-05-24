@@ -80,5 +80,6 @@
 #define OPHIDIADB_RETRIEVE_PARTITION "SELECT idhostpartition, idjob FROM hostpartition WHERE partitionname = '%s' AND iduser = %d;"
 #define OPHIDIADB_RELEASE_HOSTS "UPDATE host SET status='down' WHERE idhost IN (SELECT idhost FROM hashost WHERE idhostpartition = %d);"
 #define OPHIDIADB_RELEASE_PARTITION "DELETE FROM hostpartition WHERE idhostpartition = %d;"
+#define OPHIDIADB_RETRIEVE_RESERVED_HOSTS "SELECT COUNT(*) FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND iduser = %d;"
 
 #endif				/* OPH_OPHIDIADB_QUERY_H */

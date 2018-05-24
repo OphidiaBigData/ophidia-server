@@ -78,18 +78,18 @@ void free_string_vector(char **ctime, int n)
 	}
 }
 
-int oph_check_operator(const char *operator, int *ncores, int *role)
+int oph_check_operator(const char *operator, int *ncores, int *nhosts, int *role)
 {
-	if (!ncores) {
+	if (!ncores || !nhosts) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Null pointer\n");
 		return OPH_SERVER_ERROR;
 	}
 
 	int previous = *ncores;
 	char task_string[OPH_MAX_STRING_SIZE], value[OPH_MAX_STRING_SIZE], op_role[OPH_MAX_STRING_SIZE];
-	snprintf(task_string, OPH_MAX_STRING_SIZE, "%s=%d;", OPH_ARG_NCORES, previous);
 	*value = *op_role = 0;
 
+	snprintf(task_string, OPH_MAX_STRING_SIZE, "%s=%d;", OPH_ARG_NCORES, *ncores);
 	int result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NCORES, value, op_role);
 	if (result == OPH_TP_TASK_SYSTEM_ERROR)
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -98,6 +98,16 @@ int oph_check_operator(const char *operator, int *ncores, int *role)
 	else
 		*ncores = OPH_DEFAULT_CORES;
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Input value for '%s' is %d, but effective value is '%d'\n", OPH_ARG_NCORES, previous, *ncores);
+
+	*value = 0;
+	snprintf(task_string, OPH_MAX_STRING_SIZE, "%s=%d;", OPH_ARG_NHOSTS, *nhosts);
+	result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NHOSTS, value, op_role);
+	if (result == OPH_TP_TASK_SYSTEM_ERROR)
+		return OPH_SERVER_WRONG_PARAMETER_ERROR;
+	if (strlen(value))
+		*nhosts = (int) strtol(value, NULL, 10);
+	else
+		*nhosts = OPH_DEFAULT_HOSTS;
 
 	*role = oph_code_role(op_role);
 	if (!(*role))
@@ -415,10 +425,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 	// Control on workflow parameters
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_NCORES);
-	int ncores = wf->ncores;
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_NCORES, OPH_ARG_NHOSTS);
+	int ncores = wf->ncores, nhosts = wf->nhosts;
 	for (i = 0; i < wf->tasks_num; ++i) {
-		if (oph_check_operator(wf->tasks[i].operator, &(wf->tasks[i].ncores), &(wf->tasks[i].role))) {
+		if (oph_check_operator(wf->tasks[i].operator, &(wf->tasks[i].ncores), &(wf->tasks[i].nhosts), &(wf->tasks[i].role))) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: error in check operator '%s'\n", jobid, wf->tasks[i].operator);
 			response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 			oph_workflow_free(wf);
@@ -426,6 +436,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		if (ncores < wf->tasks[i].ncores)
 			ncores = wf->tasks[i].ncores;
+		if (nhosts < wf->tasks[i].nhosts)
+			nhosts = wf->tasks[i].nhosts;
 	}
 	if (!ncores) {
 		wf->ncores = ncores = OPH_DEFAULT_CORES;
@@ -433,12 +445,12 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			wf->tasks[i].ncores = ncores;
 	} else
 		wf->ncores = ncores;
-	for (i = 0; i < wf->tasks_num; ++i)
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: %s=%d for task '%s'\n", jobid, OPH_ARG_NCORES, wf->tasks[i].ncores, wf->tasks[i].name);
-
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_NHOSTS);
-	int nhosts = OPH_DEFAULT_HOSTS;
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: %s=%d\n", jobid, OPH_ARG_NHOSTS, nhosts);
+	if (!nhosts) {
+		wf->nhosts = nhosts = OPH_DEFAULT_HOSTS;
+		for (i = 0; i < wf->tasks_num; ++i)
+			wf->tasks[i].nhosts = nhosts;
+	} else
+		wf->nhosts = nhosts;
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_SESSIONID);
 	if (wf->sessionid && strncmp(wf->sessionid, state->serverid, strlen(state->serverid))) {
@@ -5452,6 +5464,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		max_hosts = oph_default_max_hosts;
 	else
 		max_hosts = strtol(tmp, NULL, 10);
+	wf->max_hosts = max_hosts;
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_MAX_SESSIONS);
 	int max_sessions = oph_get_arg(user_args, OPH_USER_MAX_SESSIONS, tmp);
@@ -5468,10 +5481,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		timeout_value = strtol(tmp, NULL, 10);
 
 	// Check for number of cores
-	if (ncores <= 0) {
+	if (ncores < OPH_DEFAULT_CORES) {
 		oph_cleanup_args(&user_args);
 		oph_workflow_free(wf);
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong '%s': %d. Minimum is 1\n", jobid, OPH_ARG_NCORES, ncores);
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong '%s': %d. Minimum is %d\n", jobid, OPH_ARG_NCORES, ncores, OPH_DEFAULT_CORES);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		return SOAP_OK;
 	}
@@ -5483,10 +5496,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 	// Check for number of hosts
-	if (nhosts <= 0) {
+	if (nhosts < OPH_DEFAULT_HOSTS) {
 		oph_cleanup_args(&user_args);
 		oph_workflow_free(wf);
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong '%s': %d. Minimum is 1\n", jobid, OPH_ARG_NHOSTS, nhosts);
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong '%s': %d. Minimum is %d\n", jobid, OPH_ARG_NHOSTS, nhosts, OPH_DEFAULT_HOSTS);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		return SOAP_OK;
 	}

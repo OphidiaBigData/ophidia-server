@@ -2589,6 +2589,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 
+		pthread_mutex_lock(&global_flag);
+
+		oph_job_info *item = NULL, *prev = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		int max_hosts = item->wf->max_hosts;
+
+		pthread_mutex_unlock(&global_flag);
+
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
@@ -2619,7 +2631,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
-		int success = 0, success2 = 0, nhosts = 0;
+		int success = 0, success2 = 0, nhosts = 1;
 		oph_json *oper_json = NULL;
 		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], exec_mode[OPH_MAX_STRING_SIZE], em = 0, btype = 1;	// Allocate
 
@@ -2710,6 +2722,21 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					if (!oph_cluster_start) {
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster is not configured!");
 						break;
+					}
+
+					if (max_hosts) {
+						int rhosts = 0;
+						if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+							break;
+						}
+						if (rhosts + nhosts > max_hosts) {
+							nhosts = max_hosts - rhosts;
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: available only %d host%s", nhosts,
+								 nhosts == 1 ? "" : "s");
+							break;
+						}
 					}
 
 					int id_hostpartition = 0;
