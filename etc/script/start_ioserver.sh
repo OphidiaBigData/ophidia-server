@@ -46,6 +46,6 @@ ${IO_SERVER_PATH}/bin/oph_io_server -i ${myid} > ${IO_SERVER_PATH}/data${myid}/l
 echo "Exit from IO server ${myid}"
 
 echo "Remove host ${myhost} from partition ${hpid}"
-mysql --defaults-file=${OPHIDIADB_CLIENT_CONFIGURATION} -h ${OPHIDIADB_SERVER_HOST} -P ${OPHIDIADB_SERVER_PORT} ${OPHIDIADB_NAME} -e "UPDATE host SET status='down' WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}');"
+mysql --defaults-file=${OPHIDIADB_CLIENT_CONFIGURATION} -h ${OPHIDIADB_SERVER_HOST} -P ${OPHIDIADB_SERVER_PORT} ${OPHIDIADB_NAME} -e "UPDATE host SET status='down', datacubecount=0 WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}');"
 echo "OphidiaDB updated"
 

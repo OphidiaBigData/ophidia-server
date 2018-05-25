@@ -722,6 +722,11 @@ int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 	return OPH_ODB_SUCCESS;
 }
 
+int oph_odb_release_hp2(int id_hostpartition)
+{
+	return oph_odb_release_hp(ophDB, id_hostpartition);
+}
+
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job)
 {
 	if (!oDB || !name || !id_user || !id_hostpartition)

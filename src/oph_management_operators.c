@@ -40,6 +40,7 @@ extern oph_rmanager *orm;
 extern char *oph_cluster_start;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
+extern ophidiadb *ophDB;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -2784,9 +2785,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-					if (oph_system(cmd, "Error during remote submission", state, 0, em)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to start cluster!");
+					if (oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition)) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Cluster has been stopped!");
 						free(cmd);
 						break;
 					}
