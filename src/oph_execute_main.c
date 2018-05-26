@@ -1287,7 +1287,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			time(&nowtime);
 			if (localtime_r(&nowtime, &nowtm))
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
 				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
@@ -1794,7 +1796,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			time(&nowtime);
 			if (localtime_r(&nowtime, &nowtm))
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
 				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
@@ -5433,7 +5437,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			time(&nowtime);
 			if (localtime_r(&nowtime, &nowtm))
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, wf->username, wf->ip_address ? wf->ip_address : "unknown",
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
 				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
