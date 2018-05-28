@@ -22,12 +22,15 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = . src test
 
+include_HEADERS = src/oph_types.h src/oph_execute_main.h
+
 sysconf_DATA = etc/server.conf etc/ophidiadb.conf etc/rmanager.conf etc/oph_server_logrotate
 
-bin_SCRIPTS = etc/oph_server
 bindir=${prefix}/etc
+bin_SCRIPTS = etc/oph_server
 
-include_HEADERS = src/oph_types.h src/oph_execute_main.h
+scriptdir=${prefix}/etc/script
+dist_script_SCRIPTS = etc/script/*.sh
 
 certdir = $(prefix)/etc/cert/
 dist_cert_DATA =
@@ -43,9 +46,6 @@ dist_dtd_DATA = etc/dtd/*.dtd
 
 rmsdir = $(prefix)/etc/rms/
 dist_rms_DATA = etc/rms/*.conf
-
-scriptdir = $(prefix)/etc/script/
-dist_script_DATA = etc/script/*.sh
 
 sessionsdir = $(OPH_WEB_SERVER_LOCATION)/sessions/
 dist_sessions_DATA =
