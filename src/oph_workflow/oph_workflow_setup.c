@@ -500,6 +500,7 @@ int oph_workflow_validate_fco(oph_workflow * wf)
 	for (k = 0; k < wf->tasks_num; k++) {
 		wf->tasks[k].parent = wf->tasks[k].child = -1;
 		wf->tasks[k].branch_num = wf->tasks[k].nesting_level = 0;
+		level[k] = 0;
 	}
 
 	for (k = 0; k < wf->tasks_num; k++) {
