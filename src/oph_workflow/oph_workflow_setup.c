@@ -500,92 +500,127 @@ int oph_workflow_validate_fco(oph_workflow * wf)
 			for (i = 0; i < wf->tasks_num; ++i)
 				flag[i] = 1;
 			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ENDFOR, OPH_OPERATOR_FOR, flag, 0, &child);
-			if (!number || (number > 1))
+			if (!number || (number > 1)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDFOR,
+				      wf->tasks[k].name);
 				break;
+			}
 			for (i = 0; i < wf->tasks_num; ++i)
 				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDFOR, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
 					break;
-			if (i < wf->tasks_num)
+			if (i < wf->tasks_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDFOR);
 				break;
+			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_IF, OPH_WORKFLOW_MAX_STRING)) {
 			for (i = 0; i < wf->tasks_num; ++i)
 				flag[i] = 1;
 			child = -1;
 			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, 0, &child);
-			if (number > 1)
+			if (number > 1) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+				      wf->tasks[k].name);
 				break;
+			}
 			if (child >= 0) {
 				for (i = 0; i < wf->tasks_num; ++i)
 					if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
 						break;
-				if (i < wf->tasks_num)
+				if (i < wf->tasks_num) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 					break;
+				}
 			} else {
 				for (i = 0; i < wf->tasks_num; ++i)
 					flag[i] = 1;
 				child = -1;
 				number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ELSE, OPH_OPERATOR_IF, flag, 0, &child);
-				if (number > 1)
+				if (number > 1) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+					      wf->tasks[k].name);
 					break;
+				}
 				if (child >= 0) {
 					for (i = 0; i < wf->tasks_num; ++i)
 						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)
 						    && !oph_workflow_is_child_of(wf, i, child))
 							break;
-					if (i < wf->tasks_num)
+					if (i < wf->tasks_num) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 						break;
+					}
 				}
 			}
 			for (i = 0; i < wf->tasks_num; ++i)
 				flag[i] = 1;
 			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
-			if (!number && (number > 1))
+			if (!number && (number > 1)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+				      wf->tasks[k].name);
 				break;
+			}
 			for (i = 0; i < wf->tasks_num; ++i)
 				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
 					break;
-			if (i < wf->tasks_num)
+			if (i < wf->tasks_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 				break;
+			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING)) {
 			kk = oph_gparent_of(wf, k);
 			for (i = 0; i < wf->tasks_num; ++i)
 				flag[i] = 1;
 			child = -1;
 			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, 0, &child);
-			if (number > 1)
+			if (number > 1) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+				      wf->tasks[k].name);
 				break;
+			}
 			if (child >= 0) {
 				for (i = 0; i < wf->tasks_num; ++i)
 					if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
 						break;
-				if (i < wf->tasks_num)
+				if (i < wf->tasks_num) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 					break;
+				}
 			} else {
 				for (i = 0; i < wf->tasks_num; ++i)
 					flag[i] = 1;
 				child = -1;
 				number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ELSE, OPH_OPERATOR_IF, flag, 0, &child);
-				if (number > 1)
+				if (number > 1) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+					      wf->tasks[k].name);
 					break;
+				}
 				if (child >= 0) {
 					for (i = 0; i < wf->tasks_num; ++i)
 						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)
 						    && !oph_workflow_is_child_of(wf, i, child))
 							break;
-					if (i < wf->tasks_num)
+					if (i < wf->tasks_num) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 						break;
+					}
 				} else {
 					for (i = 0; i < wf->tasks_num; ++i)
 						flag[i] = 1;
 					number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
-					if (!number || (number > 1))
+					if (!number || (number > 1)) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+						      wf->tasks[k].name);
 						break;
+					}
 					for (i = 0; i < wf->tasks_num; ++i)
 						if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING)
 						    && !oph_workflow_is_child_of(wf, i, child))
 							break;
-					if (i < wf->tasks_num)
+					if (i < wf->tasks_num) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 						break;
+					}
 				}
 			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)) {
@@ -593,13 +628,18 @@ int oph_workflow_validate_fco(oph_workflow * wf)
 			for (i = 0; i < wf->tasks_num; ++i)
 				flag[i] = 1;
 			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, 0, &child);
-			if (!number || (number > 1))
+			if (!number || (number > 1)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
+				      wf->tasks[k].name);
 				break;
+			}
 			for (i = 0; i < wf->tasks_num; ++i)
 				if ((wf->tasks[i].parent == k) && strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING) && !oph_workflow_is_child_of(wf, i, child))
 					break;
-			if (i < wf->tasks_num)
+			if (i < wf->tasks_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found a wrong correspondence between '%s' and '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_ENDIF);
 				break;
+			}
 		}
 	}
 	if (k < wf->tasks_num) {
@@ -609,14 +649,19 @@ int oph_workflow_validate_fco(oph_workflow * wf)
 
 	for (k = 0; k < wf->tasks_num; k++)
 		if (wf->tasks[k].parent < 0) {
-			if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDFOR, OPH_WORKFLOW_MAX_STRING))
+			if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDFOR, OPH_WORKFLOW_MAX_STRING)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' without '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_FOR);
 				break;
-			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING))
+			} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' without '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_IF);
 				break;
-			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING))
+			} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' without '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_IF);
 				break;
-			else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING))
+			} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ENDIF, OPH_WORKFLOW_MAX_STRING)) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found '%s' without '%s'.\n", wf->tasks[k].name, OPH_OPERATOR_IF);
 				break;
+			}
 		}
 	if (k < wf->tasks_num) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Flow control operator '%s' is not set correctly!\n", wf->tasks[k].name);
