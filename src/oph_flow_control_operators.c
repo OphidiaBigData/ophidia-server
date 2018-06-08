@@ -685,6 +685,8 @@ int oph_extract_from_json(char **key, const char *json_string)
 		} else {
 			if (col && !strcmp(col, OPH_WORKFLOW_GENERIC_VALUE))
 				all_values = 2;
+			else if (col && !strcmp(col, OPH_WORKFLOW_END_VALUE))
+				icol = obj->values_num2 - 1;	// Non 'C'-like indexing
 			else {
 				icol = col ? (unsigned int) strtol(col, NULL, 10) : 0;
 				if (icol)
@@ -698,7 +700,9 @@ int oph_extract_from_json(char **key, const char *json_string)
 				return OPH_SERVER_ERROR;
 			}
 			all_values = 1;
-		} else {
+		} else if (row && !strcmp(row, OPH_WORKFLOW_END_VALUE))
+			irow = obj->values_num1 - 1;	// Non 'C'-like indexing
+		else {
 			irow = row ? (unsigned int) strtol(row, NULL, 10) : 0;
 			if (irow)
 				irow--;	// Non 'C'-like indexing
