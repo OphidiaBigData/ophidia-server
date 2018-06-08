@@ -20,16 +20,18 @@
 #define OPH_SERVICE_INFO_H
 
 typedef struct _oph_service_info {
-	unsigned int incoming_requests;
-	unsigned int accepted_requests;
-	unsigned int authorized_requests;
-	unsigned int incoming_workflows;
-	unsigned int accepted_workflows;
-	unsigned int incoming_tasks;
-	unsigned int submitted_tasks;
-	unsigned int incoming_notifications;
-	unsigned int incoming_responses;
-	unsigned int outcoming_responses;
+	unsigned long incoming_requests;
+	unsigned long accepted_requests;
+	unsigned long authorized_requests;
+	unsigned long incoming_workflows;
+	unsigned long accepted_workflows;
+	unsigned long closed_workflows;
+	unsigned long incoming_tasks;
+	unsigned long submitted_tasks;
+	unsigned long closed_tasks;
+	unsigned long incoming_notifications;
+	unsigned long incoming_responses;
+	unsigned long outcoming_responses;
 } oph_service_info;
 
 #endif				/* OPH_SERVICE_INFO_H */

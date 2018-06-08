@@ -39,6 +39,7 @@
 #define OPH_ARG_MEASURE "measure"
 #define OPH_ARG_KEY "key"
 #define OPH_ARG_VALUE "value"
+#define OPH_ARG_VALUES "values"
 #define OPH_ARG_CALLBACK_URL "callback_url"
 #define OPH_ARG_OBJKEY "objkey_filter"
 #define OPH_ARG_PARENTID "parentid"
@@ -99,9 +100,6 @@
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 
 // Known parameters
-#define OPH_OPERATOR_PARAMETER_KEY "key"
-#define OPH_OPERATOR_PARAMETER_VALUE "value"
-#define OPH_OPERATOR_PARAMETER_VALUES "values"
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
 #define OPH_OPERATOR_PARAMETER_LINES_NUMBER "nlines"
 #define OPH_OPERATOR_PARAMETER_COUNTER "counter"
@@ -113,9 +111,7 @@
 #define OPH_OPERATOR_PARAMETER_TIMEOUT_TYPE "timeout_type"
 #define OPH_OPERATOR_PARAMETER_FILENAME "filename"
 #define OPH_OPERATOR_PARAMETER_MESSAGE "message"
-#define OPH_OPERATOR_PARAMETER_ACTION "action"
 #define OPH_OPERATOR_PARAMETER_TASKNAME "taskname"
-#define OPH_OPERATOR_PARAMETER_ID OPH_ARG_ID
 #define OPH_OPERATOR_PARAMETER_RUN "run"
 #define OPH_OPERATOR_PARAMETER_STATUS_FILTER "status_filter"
 
