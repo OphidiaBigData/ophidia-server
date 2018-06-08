@@ -940,7 +940,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 
 	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
-		return;
+		return (void *) NULL;;
 	}
 
 	oph_auth_clip chunk;
@@ -1074,6 +1074,8 @@ void *_oph_refresh(oph_refresh_token * refresh)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
+
+	return (void *) NULL;
 }
 
 int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
@@ -1473,6 +1475,8 @@ void *_oph_check_openid(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
+
+	return (void *) NULL;
 }
 
 #endif
@@ -1536,6 +1540,8 @@ void *_oph_check_aaa(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
+
+	return (void *) NULL;
 }
 
 #endif
