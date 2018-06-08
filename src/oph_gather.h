@@ -152,6 +152,7 @@
 #define OPH_MAX_PROGRAM_SIZE 1048576
 #define OPH_MAX_STRING_SIZE 4096
 #define OPH_SHORT_STRING_SIZE 128
+#define OPH_EXEC_TIME "execution_time"
 
 // Internal XML
 #define OPH_SERVER_XML_PATH "%s/etc/xml"
