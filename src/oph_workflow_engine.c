@@ -5848,7 +5848,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
-	return NULL;
+	return (void *) NULL;
 }
 
 int oph_workflow_check_job_queue(struct oph_plugin_data *state)
