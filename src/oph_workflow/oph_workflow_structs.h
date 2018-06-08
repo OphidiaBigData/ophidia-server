@@ -42,6 +42,7 @@ typedef struct _oph_workflow_var {
  * \param markerid Marker ID of the job
  * \param status Status of the task
  * \param ncores Number of ncores to be used in task execution
+ * \param nhosts Number of nhosts to be used in task execution
  * \param arguments_keys Array of explicit parameters keys for the operator
  * \param arguments_values Array of explicit parameters values for the operator
  * \param arguments_num Number of explicit parameters for the operator
@@ -52,6 +53,7 @@ typedef struct _oph_workflow_light_task {
 	int markerid;
 	int status;
 	int ncores;
+	int nhosts;
 	char **arguments_keys;
 	char **arguments_values;
 	int arguments_num;
@@ -87,6 +89,7 @@ typedef struct _oph_workflow_dep {
  * \param operator Name of the operator called by task
  * \param role Permission needed to execute the operator
  * \param ncores Number of ncores to be used in task execution
+ * \param nhosts Number of nhosts to be used in task execution
  * \param arguments_keys Array of explicit parameters keys for the operator
  * \param arguments_values Array of explicit parameters values for the operator
  * \param arguments_num Number of explicit parameters for the operator
@@ -129,6 +132,7 @@ typedef struct _oph_workflow_task {
 	char *operator;
 	int role;
 	int ncores;
+	int nhosts;
 	char **arguments_keys;
 	char **arguments_values;
 	int arguments_num;
@@ -254,6 +258,8 @@ typedef struct _oph_workflow_stack {
  * \param sessionid SessionID for the entire workflow
  * \param exec_mode Execution mode for the entire workflow
  * \param ncores Number of cores for the entire workflow
+ * \param nhosts Number of hosts for the entire workflow
+ * \param max_hosts Maximum number of hosts for the user
  * \param cwd CWD for the entire workflow
  * \param cdd CDD for the entire workflow
  * \param command Original command submitted by the user
@@ -292,6 +298,8 @@ typedef struct _oph_workflow {
 	char *sessionid;
 	char *exec_mode;
 	int ncores;
+	int nhosts;
+	int max_hosts;
 	char *command;
 	char *cwd;
 	char *cdd;

@@ -76,5 +76,10 @@
 #define OPHIDIADB_CREATE_PARTITION "INSERT INTO hostpartition (partitionname, hidden) VALUES ('%s', 1);"
 #define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, datacubecount) SELECT LAST_INSERT_ID(), idhost, datacubecount FROM host WHERE idhost IN ( SELECT host.idhost FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hostpartition.idhostpartition = hashost.idhostpartition WHERE partitionname = '%s' );"
 #define OPHIDIADB_DESTROY_PARTITION "DELETE FROM hostpartition WHERE partitionname = '%s' AND hidden = 1;"
+#define OPHIDIADB_RESERVE_PARTITION "INSERT IGNORE INTO hostpartition (partitionname, iduser, idjob, reserved, hosts) VALUES ('%s', %d, %d, 1, %d);"
+#define OPHIDIADB_RETRIEVE_PARTITION "SELECT idhostpartition, idjob FROM hostpartition WHERE partitionname = '%s' AND iduser = %d;"
+#define OPHIDIADB_RELEASE_HOSTS "UPDATE host SET status='down', datacubecount=0 WHERE idhost IN (SELECT idhost FROM hashost WHERE idhostpartition = %d);"
+#define OPHIDIADB_RELEASE_PARTITION "DELETE FROM hostpartition WHERE idhostpartition = %d;"
+#define OPHIDIADB_RETRIEVE_RESERVED_HOSTS "SELECT COUNT(*) FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND iduser = %d;"
 
 #endif				/* OPH_OPHIDIADB_QUERY_H */

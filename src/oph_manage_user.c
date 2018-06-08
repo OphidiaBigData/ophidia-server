@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
 #endif
 	int ch, msglevel = LOG_ERROR;
 	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0;
-	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, black_listed = 0, update = 0;
-	while ((ch = getopt(argc, argv, "a:bc:e:f:hlm:n:p:r:s:t:u:vw")) != -1) {
+	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, max_hosts = 1, black_listed = 0, update = 0;
+	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hlm:n:p:r:s:t:u:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				action = optarg;
@@ -197,6 +197,10 @@ int main(int argc, char *argv[])
 			case 'c':
 				max_cores = (unsigned int) strtol(optarg, NULL, 10);
 				update += 1;
+				break;
+			case 'd':
+				max_hosts = (unsigned int) strtol(optarg, NULL, 10);
+				update += 16;
 				break;
 			case 'e':
 				email = optarg;
@@ -254,20 +258,21 @@ int main(int argc, char *argv[])
 #ifdef INTERFACE_TYPE_IS_GSI
 				fprintf(stdout, "-b to black-list the user\n");
 #endif
-				fprintf(stdout, "-c <maximum number of cores per task>\n");
+				fprintf(stdout, "-c <maximum number of cores per task> (default %d)\n", max_cores);
+				fprintf(stdout, "-d <maximum number of hosts> (default %d)\n", max_hosts);
 				fprintf(stdout, "-e <email>\n");
 				fprintf(stdout, "-f <country>\n");
 				fprintf(stdout, "-l is used in case a specific folder for user log data has to be created (valid only for type 'add')\n");
-				fprintf(stdout, "-m <maximum number of opened sessions>\n");
+				fprintf(stdout, "-m <maximum number of opened sessions> (default %d)\n", max_sessions);
 				fprintf(stdout, "-n <name>\n");
 #ifdef INTERFACE_TYPE_IS_GSI
 				fprintf(stdout, "-p <role>\n");
 #else
 				fprintf(stdout, "-p <password>\n");
 #endif
-				fprintf(stdout, "-r <yes|no> to enable|disable administration privileges\n");
+				fprintf(stdout, "-r <yes|no> to enable|disable administration privileges (default '%s')\n", is_admin);
 				fprintf(stdout, "-s <surname>\n");
-				fprintf(stdout, "-t <session timeout> in days\n");
+				fprintf(stdout, "-t <session timeout> in days (default %d)\n", timeout_session);
 				return 0;
 		}
 	}
@@ -394,7 +399,7 @@ int main(int argc, char *argv[])
 		fprintf(file, "%s%s%d\n", OPH_USER_MAX_SESSIONS, OPH_SEPARATOR_KV, max_sessions);
 		fprintf(file, "%s%s%d\n", OPH_USER_TIMEOUT_SESSION, OPH_SEPARATOR_KV, timeout_session);
 		fprintf(file, "%s%s%d\n", OPH_USER_MAX_CORES, OPH_SEPARATOR_KV, max_cores);
-		fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, 1);
+		fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
 		fprintf(file, "%s%s%s\n", OPH_USER_IS_ADMIN, OPH_SEPARATOR_KV, is_admin);
 		fprintf(file, "%s%s%s\n", OPH_USER_LAST_SESSION_ID, OPH_SEPARATOR_KV, "");
 		fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, "/");
@@ -554,6 +559,8 @@ int main(int argc, char *argv[])
 					fprintf(file, "%s%s%s\n", OPH_USER_IS_ADMIN, OPH_SEPARATOR_KV, is_admin);
 				else if ((update & 8) && (!strcmp(tmp->key, OPH_USER_TIMEOUT_SESSION)))
 					fprintf(file, "%s%s%d\n", OPH_USER_TIMEOUT_SESSION, OPH_SEPARATOR_KV, timeout_session);
+				else if ((update & 16) && (!strcmp(tmp->key, OPH_USER_MAX_HOSTS)))
+					fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
 				else
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_KV, tmp->value);
 			}
