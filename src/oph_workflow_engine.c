@@ -28,6 +28,7 @@
 #include "oph_session_report.h"
 #include "oph_subset_library.h"
 #include "oph_filters.h"
+#include "oph_service_info.h"
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -47,6 +48,7 @@ extern char *oph_subm_user;
 extern char *oph_txt_location;
 extern FILE *wf_logfile;
 extern FILE *task_logfile;
+extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -269,6 +271,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
+
 		int i, j, k, res;
 		for (k = 0; k < dependents_indexes_num; ++k) {
 			i = dependents_indexes[k];
@@ -1101,9 +1104,9 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 
 			// Extract the other arguments
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_KEY) && !name)
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && !name)
 					name = wf->tasks[i].arguments_values[j];
-				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					char *pch1;
 					pch = strchr(wf->tasks[i].arguments_values[j], OPH_SEPARATOR_SUBPARAM);
 					for (svalues_num++; pch; svalues_num++) {
@@ -1178,12 +1181,12 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				break;
 			}
 			if (!name) {
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_KEY, wf->tasks[i].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
 				break;
 			}
 			if (svalues_num) {
 				if (ivalues_num && (ivalues_num != svalues_num)) {
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Arguments '%s' and '%s' have different sizes.\n", OPH_OPERATOR_PARAMETER_VALUES,
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Arguments '%s' and '%s' have different sizes.\n", OPH_ARG_VALUES,
 						   OPH_OPERATOR_PARAMETER_COUNTER, wf->tasks[i].name);
 					break;
 				}
@@ -2337,7 +2340,13 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
 
-				wf->tasks[i].status = retry ? OPH_ODB_STATUS_RUNNING : OPH_ODB_STATUS_PENDING;
+				if (!retry) {
+					struct timeval tv;
+					gettimeofday(&tv, 0);
+					wf->tasks[i].timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
+					wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
+				} else
+					wf->tasks[i].status = OPH_ODB_STATUS_RUNNING;
 
 			} else	// Single operation
 			{
@@ -2382,6 +2391,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
 					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
 				request_data[k]->error_notification = strdup(submission_string_ext);
+
+				struct timeval tv;
+				gettimeofday(&tv, 0);
+				wf->tasks[i].timestamp = (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0);
 
 				wf->tasks[i].status = OPH_ODB_STATUS_PENDING;
 			}
@@ -2986,10 +2999,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				wf->tasks[task_index].residual_light_tasks_num--;
 
 				// Log into TASK_LOGFILE
-				if (task_logfile)
-					fprintf(task_logfile, "%d\t%s\t%d\t%d\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].light_tasks[light_task_index].ncores,
-						status == OPH_ODB_STATUS_COMPLETED);
-
+				if (task_logfile) {
+					time_t nowtime;
+					struct tm nowtm;
+					struct timeval tv;
+					char buffer[OPH_SHORT_STRING_SIZE];
+					*buffer = 0;
+					pthread_mutex_lock(&curl_flag);
+					gettimeofday(&tv, 0);
+					time(&nowtime);
+					if (localtime_r(&nowtime, &nowtm))
+						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
+						wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
+					pthread_mutex_unlock(&curl_flag);
+				}
 #ifdef LEVEL3
 				if (wf->exec_mode && !strncasecmp(wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
 					if (wf->tasks[task_index].light_tasks[light_task_index].response)
@@ -3745,8 +3770,25 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (wf->tasks[wf->tasks_num].name)
 					update_wf_data = final = 1;
 				// Log into TASK_LOGFILE
-				if (task_logfile && !wf->tasks[task_index].light_tasks_num)
-					fprintf(task_logfile, "%d\t%s\t%d\t%d\n", wf->idjob, wf->tasks[task_index].operator, wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED);
+				if (task_logfile && !wf->tasks[task_index].light_tasks_num) {
+					time_t nowtime;
+					struct tm nowtm;
+					struct timeval tv;
+					char buffer[OPH_SHORT_STRING_SIZE];
+					*buffer = 0;
+					pthread_mutex_lock(&curl_flag);
+					gettimeofday(&tv, 0);
+					time(&nowtime);
+					if (localtime_r(&nowtime, &nowtm))
+						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
+						wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
+					pthread_mutex_unlock(&curl_flag);
+				}
+
+				if (service_info)
+					service_info->closed_tasks++;
 			}
 			if (check_status && !final) {
 				int hh = 0;
@@ -5277,10 +5319,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							success_tasks_num++;
 					}
 				}
-			fprintf(wf_logfile, "%d\t%s\t%s\t%d\t%d\n", wf->idjob, wf->username, wf->ip_address, tasks_num, success_tasks_num);
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, wf->idjob, wf->name, wf->username, wf->ip_address, tasks_num, success_tasks_num,
+				(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			if (task_logfile)
 				fflush(task_logfile);
+			pthread_mutex_unlock(&curl_flag);
 		}
 
 		if (wf->callback_url) {
@@ -5461,6 +5515,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pthread_mutex_unlock(&global_flag);
 		} else
 			oph_workflow_free(wf);
+
+		pthread_mutex_lock(&global_flag);
+		if (service_info)
+			service_info->closed_workflows++;
+		pthread_mutex_unlock(&global_flag);
 	}
 
 	if (my_output_json)
@@ -5789,7 +5848,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
-	return NULL;
+	return (void *) NULL;
 }
 
 int oph_workflow_check_job_queue(struct oph_plugin_data *state)
