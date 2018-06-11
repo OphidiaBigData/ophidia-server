@@ -280,7 +280,8 @@ typedef struct _oph_workflow_stack {
  * \param cancel_type Used to differentiate workflow abort
  * \param host_partition Host partition to be used during the workflow
  * \param waiting_tasks_num Flag used to defer workflow struct in case of waiting tasks
- * \param timestamp Starting time stamp
+ * \param timestamp Reference to creation date of the struct
+ * \param client_address IP Address of client node
  * \param new_token Pointer to an up-to-dated token
  */
 typedef struct _oph_workflow {
@@ -322,6 +323,7 @@ typedef struct _oph_workflow {
 	char *host_partition;
 	int waiting_tasks_num;
 	double timestamp;
+	char *client_address;
 	char *new_token;
 } oph_workflow;
 

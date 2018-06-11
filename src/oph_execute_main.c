@@ -55,6 +55,7 @@ extern char *oph_xml_operators;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_base_src_path;
+extern FILE *wf_logfile;
 extern oph_service_info *service_info;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_max_cores;
@@ -64,6 +65,7 @@ extern unsigned int oph_default_session_timeout;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
+extern pthread_mutex_t curl_flag;
 #endif
 
 void free_string_vector(char **ctime, int n)
@@ -408,6 +410,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		wf->cube = NULL;
 	}
 
+	if (wf->client_address) {	// Useless in this version
+		free(wf->client_address);
+		wf->client_address = NULL;
+	}
+	if (soap->proxy_from)
+		wf->client_address = strdup(soap->proxy_from);
+	else
+		wf->client_address = strdup(_host);
+
 	if (!wf->tasks_num) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: no task found in workflow '%s'\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -639,7 +650,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				}
 			}
 		}
-		oph_workflow_free(wf);
 
 		int _oph_service_status;
 		*tmp = 0;
@@ -1283,6 +1293,27 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		oph_json_free(oper_json);
 
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
+		oph_workflow_free(wf);
+
 		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d has been processed\n", jobid);
 		return SOAP_OK;
 	}
@@ -1770,6 +1801,26 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 		}
 		oph_json_free(oper_json);
+
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
 
 		oph_workflow_free(wf);
 		oph_cleanup_args(&user_args);
@@ -2392,16 +2443,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 				char query[OPH_MAX_STRING_SIZE];
 				if (user && !id_type)
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_USER_SESSION, session, user);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_USER_SESSION, session, user, session, user);
 				else if (document_type && id_type) {
 					if (wid)
-						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_WORKFLOW, session, wid);
+						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_WORKFLOW, session, wid, session, wid);
 					else
-						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_SESSION, session);
+						snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRINGS_OF_SESSION, session, session);
 				} else if (id_type)
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_JOBS_OF_SESSION, session);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_JOBS_OF_SESSION, session, session);
 				else
-					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session, session);
+					snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_WORKFLOWS_OF_SESSION, session, session, session, session);
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: execute query '%s'\n", jobid, query);
 				if (oph_odb_retrieve_list(&oDB, query, &list)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to execute '%s'\n", jobid, query);
@@ -2743,7 +2794,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			char query[OPH_MAX_STRING_SIZE], *submission_string = NULL, *creation_date = NULL;
 			if (!document_type && !id_type && ((level == 1) || (level == 3)))	// JSON Response for workflow: extract specific outputs
 			{
-				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow);
+				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow, session, workflow);
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker id\n", jobid);
 					if (markers) {
@@ -2765,7 +2816,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				ophidiadb_list list;
 				oph_odb_initialize_ophidiadb_list(&list);
 
-				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRING_OF_JOB, session, marker);
+				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_SUBMISSION_STRING_OF_JOB, session, marker, session, marker);
 				if (oph_odb_retrieve_list(&oDB, query, &list)) {
 					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to load submission string of %s?%d#%d\n", jobid, session, workflow, marker);
 					oph_odb_free_ophidiadb_list(&list);
@@ -2831,7 +2882,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else	// Normal case
 			{
 				// Set the markerid by accessing OphidiaDB
-				snprintf(query, OPH_MAX_STRING_SIZE, id_type ? MYSQL_RETRIEVE_WORKFLOW_BY_MARKER : MYSQL_RETRIEVE_MARKER_BY_WORKFLOW, session, id_type ? marker : workflow);
+				snprintf(query, OPH_MAX_STRING_SIZE, id_type ? MYSQL_RETRIEVE_WORKFLOW_BY_MARKER : MYSQL_RETRIEVE_MARKER_BY_WORKFLOW, session, id_type ? marker : workflow, session,
+					 id_type ? marker : workflow);
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker/workflow id\n", jobid);
 					if (markers) {
@@ -5391,7 +5443,25 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 			pthread_mutex_unlock(&global_flag);
 		}
-
+		// Log into WF_LOGFILE
+		if (wf_logfile) {
+			time_t nowtime;
+			struct tm nowtm;
+			struct timeval tv;
+			char buffer[OPH_SHORT_STRING_SIZE];
+			*buffer = 0;
+			pthread_mutex_lock(&curl_flag);
+			gettimeofday(&tv, 0);
+			time(&nowtime);
+			if (localtime_r(&nowtime, &nowtm))
+				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
+			oph_sha(sha_username, wf->username);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
+				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fflush(wf_logfile);
+			pthread_mutex_unlock(&curl_flag);
+		}
 		oph_workflow_free(wf);
 		oph_cleanup_args(&user_args);
 

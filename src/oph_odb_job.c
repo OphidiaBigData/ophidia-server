@@ -20,6 +20,8 @@
 
 #include "oph_auth.h"
 
+extern int last_idjob;
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
@@ -205,7 +207,7 @@ int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, i
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
 
-	if ((row = mysql_fetch_row(res)) != NULL)
+	if ((row = mysql_fetch_row(res)) && row[0])
 		*id_job = (int) strtol(row[0], NULL, 10);
 
 	mysql_free_result(res);
@@ -298,7 +300,7 @@ int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user,
 	}
 
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
 
@@ -332,6 +334,7 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
 	}
+	*id_job = 0;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to reconnect to OphidiaDB.\n");
@@ -355,27 +358,33 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 	}
 	new_query[j] = 0;
 
+	if (flag)
+		pthread_mutex_lock(flag);
+	*id_job = ++last_idjob;
+	if (flag)
+		pthread_mutex_unlock(flag);
+
 	if (parentid)
-		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILD, id_user, id_session, markerid, status, new_query, parentid, workflowid);
+		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILD, *id_job, id_user, id_session, markerid, status, new_query, parentid, workflowid);
 	else if (nchildren >= 0)
-		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_PARENT, id_user, id_session, markerid, status, new_query, nchildren, workflowid);
+		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_PARENT, *id_job, id_user, id_session, markerid, status, new_query, nchildren, workflowid);
 	else
-		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB, id_user, id_session, markerid, status, new_query);
+		n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB, *id_job, id_user, id_session, markerid, status, new_query);
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Execute query: %s\n", insertQuery);
 
 	if (n >= MYSQL_BUFLEN) {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
+		if (flag)
+			pthread_mutex_lock(flag);
+		--last_idjob;
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
+		if (flag)
+			pthread_mutex_unlock(flag);
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
 
 	if (mysql_query(oDB->conn, insertQuery)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
-	}
-
-	if (!(*id_job = mysql_insert_id(oDB->conn))) {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to find last inserted job id\n");
-		return OPH_ODB_TOO_MANY_ROWS;
 	}
 
 	return OPH_ODB_SUCCESS;
@@ -844,7 +853,7 @@ int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *
 	}
 
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
 
@@ -864,4 +873,129 @@ int oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *l
 int oph_odb_update_session_label_unsafe(ophidiadb * oDB, const char *sessionid, char *label)
 {
 	return _oph_odb_update_session_label(oDB, sessionid, label, NULL);
+}
+
+int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
+{
+	if (!oDB || !idjob)
+		return OPH_ODB_NULL_PARAM;
+	*idjob = 0;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	char selectQuery[MYSQL_BUFLEN];
+	int n = snprintf(selectQuery, MYSQL_BUFLEN, MYSQL_QUERY_RETRIEVE_LAST_ID);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, selectQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	res = mysql_store_result(oDB->conn);
+
+	if ((mysql_field_count(oDB->conn) != 1) || (mysql_num_rows(res) != 1)) {
+		mysql_free_result(res);
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if ((row = mysql_fetch_row(res)) && row[0])
+		*idjob = strtol(row[0], NULL, 10);
+
+	mysql_free_result(res);
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_get_last_id(ophidiadb * oDB, int *idjob)
+{
+	return _oph_odb_get_last_id(oDB, idjob, &global_flag);
+}
+
+int oph_odb_get_last_id_unsafe(ophidiadb * oDB, int *idjob)
+{
+	return _oph_odb_get_last_id(oDB, idjob, NULL);
+}
+
+int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	int n;
+	char copyQuery[MYSQL_BUFLEN];
+	if (idjob) {
+		if (idparent)
+			n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB_PARENT, idjob, idparent);
+		else
+			n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB, idjob);
+	} else if (idparent)
+		n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB_CHILD, idparent);
+	else
+		return OPH_ODB_NULL_PARAM;
+
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, copyQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_copy_job(oDB, idjob, idparent, &global_flag);
+}
+
+int oph_odb_copy_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_copy_job(oDB, idjob, idparent, NULL);
+}
+
+int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	int n;
+	char deleteQuery[MYSQL_BUFLEN];
+	if (idjob) {
+		if (idparent)
+			n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB_PARENT, idjob, idparent);
+		else
+			n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB, idjob);
+	} else if (idparent)
+		n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB_CHILD, idparent);
+	else
+		return OPH_ODB_NULL_PARAM;
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (mysql_query(oDB->conn, deleteQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_drop_job(oDB, idjob, idparent, &global_flag);
+}
+
+int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
 }

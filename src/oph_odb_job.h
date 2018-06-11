@@ -62,4 +62,13 @@ int oph_odb_update_session_table_unsafe(ophidiadb * oDB, char *sessionid, int id
 int oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id_session);
 int oph_odb_retrieve_session_id_unsafe(ophidiadb * oDB, const char *sessionid, int *id_session);
 
+int oph_odb_get_last_id(ophidiadb * oDB, int *idjob);
+int oph_odb_get_last_id_unsafe(ophidiadb * oDB, int *idjob);
+
+int oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent);
+int oph_odb_copy_job_unsafe(ophidiadb * oDB, int idjob, int idparent);
+
+int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent);
+int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent);
+
 #endif				/* OPH_ODB_JOB_H */

@@ -941,6 +941,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->run = 1;
 	(*workflow)->parallel_mode = 0;
 	(*workflow)->host_partition = NULL;
+	(*workflow)->client_address = NULL;
 	(*workflow)->new_token = NULL;
 
 	struct timeval tv;

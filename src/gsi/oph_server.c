@@ -38,6 +38,8 @@
 #include <pthread.h>
 #endif
 
+#define OPH_STATUS_LOG_PERIOD 1
+
 #define OPH_VOMS_AUTH_READ "pdas_read"
 #define OPH_VOMS_AUTH_WRITE "pdas_write"
 
@@ -89,6 +91,7 @@ unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
 int oph_service_status = 1;
 ophidiadb *ophDB = 0;
+int last_idjob = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
@@ -174,6 +177,14 @@ void set_global_values(const char *configuration_file)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdout to logfile\n");
 		if (!freopen(value, "a", stderr))
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stderr to logfile\n");
+	}
+	if (!wf_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WF_LOGFILE))) {
+		if ((wf_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
+	}
+	if (!task_logfile && (value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TASK_LOGFILE))) {
+		if ((task_logfile = fopen(value, "a")))
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", value);
 	}
 	// Default values
 	if (!oph_server_protocol && !(oph_server_protocol = hashtbl_get(oph_server_params, OPH_SERVER_CONF_PROTOCOL))) {
@@ -276,13 +287,31 @@ void set_global_values(const char *configuration_file)
 	}
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
+
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (!oph_odb_read_config_ophidiadb(&oDB) && !oph_odb_connect_to_ophidiadb(&oDB) && !oph_odb_get_last_id(&oDB, &last_idjob))
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Starting from idjob %d\n", last_idjob);
+	else
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Last idjob is not available: starting with 0\n");
+	oph_odb_disconnect_from_ophidiadb(&oDB);
 }
 
 void cleanup()
 {
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Server shutdown\n");
 	oph_server_is_running = 0;
-	sleep(1);
+	sleep(OPH_STATUS_LOG_PERIOD);
+
+	if (wf_logfile) {
+		fclose(wf_logfile);
+		wf_logfile = NULL;
+	}
+	if (task_logfile) {
+		fclose(task_logfile);
+		task_logfile = NULL;
+	}
+
 	mysql_library_end();
 	soap_destroy(psoap);
 	soap_end(psoap);
@@ -731,6 +760,11 @@ int main(int argc, char **argv)
 			set_log_file(logfile);
 	} else
 		oph_log_file_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_LOGFILE);
+
+	if (wf_logfile && !ftell(wf_logfile))
+		fprintf(wf_logfile, "timestamp\tidworkflow\tname\tusername\tip_address\tclient_address\t#tasks\t#success_tasks\tduration\n");
+	if (task_logfile && !ftell(task_logfile))
+		fprintf(task_logfile, "timestamp\tidtask\tidworkflow\toperator\t#cores\tsuccess_flag\tduration\n");
 
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
