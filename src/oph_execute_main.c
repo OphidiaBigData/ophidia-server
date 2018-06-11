@@ -397,7 +397,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		wf->cube = NULL;
 	}
 
-	if (wf->client_address) {	// the field named 'client_access' is not used in this version
+	if (wf->client_address) {	// Useless in this version
 		free(wf->client_address);
 		wf->client_address = NULL;
 	}
