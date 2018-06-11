@@ -69,6 +69,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->client_address);
 		workflow->client_address = NULL;
 	}
+	if (workflow->new_token) {
+		free(workflow->new_token);
+		workflow->new_token = NULL;
+	}
 	if (workflow->cube) {
 		free(workflow->cube);
 		workflow->cube = NULL;

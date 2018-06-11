@@ -35,6 +35,8 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 /* Add cube to list of arguments for each task with no explicit cube argument and with none or embedded-only deps */
 int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int tasks_num);
 int _oph_workflow_add_to_json(json_t * oph_json, const char *name, const char *value);
+/* Skip comments from input JSON file */
+int _oph_workflow_skip_comments(const char *json_string, char **clean_json_string);
 
 int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow ** workflow)
 {
@@ -42,7 +44,6 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
-
 	*workflow = NULL;
 
 	//alloc and init
@@ -61,19 +62,29 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		//add ip_address
 		(*workflow)->ip_address = (char *) strdup((const char *) ip_address);
 	}
+	// Skip comments
+	char *clean_json_string = NULL;
+	if (_oph_workflow_skip_comments(json_string, &clean_json_string) || !clean_json_string) {
+		oph_workflow_free(*workflow);
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "comments are not corrected set\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
 	//load json_t from json_string
-	json_t *jansson = json_loads((const char *) json_string, 0, NULL);
+	json_t *jansson = json_loads((const char *) clean_json_string, 0, NULL);
 	if (!jansson) {
+		free(clean_json_string);
 		oph_workflow_free(*workflow);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "json_loads error\n");
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
+	free(clean_json_string);
+
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid, "exec_mode",
 		    &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit, "run", &run,
-		    "output_format", &output_format, "host_partition", &host_partition, "url", &url);
+		    "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhosts", &nhosts);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -139,6 +150,9 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	}
 	if (ncores) {
 		(*workflow)->ncores = (int) strtol((const char *) ncores, NULL, 10);
+	}
+	if (nhosts) {
+		(*workflow)->nhosts = (int) strtol((const char *) nhosts, NULL, 10);
 	}
 	if (cwd && strlen(cwd)) {
 		(*workflow)->cwd = (char *) strdup((const char *) cwd);
@@ -638,6 +652,27 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			}
 		}
 	}
+	//nhosts
+	if ((*workflow)->nhosts != 0) {
+		char buf[OPH_WORKFLOW_MIN_STRING];
+		snprintf(buf, OPH_WORKFLOW_MIN_STRING, "%d", (*workflow)->nhosts);
+		if (_oph_workflow_substitute_var("nhosts", buf, (*workflow)->tasks, (*workflow)->tasks_num)) {
+			oph_workflow_free(*workflow);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error substituting nhosts\n");
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+	}
+	// Finalize nhosts
+	for (i = 0; i < (*workflow)->tasks_num; i++) {
+		if (!(*workflow)->tasks[i].nhosts) {
+			for (j = 0; j < (*workflow)->tasks[i].arguments_num; j++) {
+				if (!strcmp((*workflow)->tasks[i].arguments_keys[j], "nhosts")) {
+					(*workflow)->tasks[i].nhosts = (int) strtol((*workflow)->tasks[i].arguments_values[j], NULL, 10);
+					break;
+				}
+			}
+		}
+	}
 	//cwd
 	if (!(*workflow)->cwd)
 		(*workflow)->cwd = strdup(OPH_WORKFLOW_ROOT_FOLDER);
@@ -699,6 +734,9 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, "%d", workflow->ncores);
 	if (_oph_workflow_add_to_json(request, "ncores", jsontmp))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, "%d", workflow->nhosts);
+	if (_oph_workflow_add_to_json(request, "nhosts", jsontmp))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "on_error", workflow->on_error))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -886,6 +924,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->markerid = -1;
 	(*workflow)->name = NULL;
 	(*workflow)->ncores = 0;
+	(*workflow)->nhosts = 0;
 	(*workflow)->residual_tasks_num = 0;
 	(*workflow)->sessionid = NULL;
 	(*workflow)->status = OPH_WORKFLOW_STATUS_PENDING;
@@ -903,6 +942,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->parallel_mode = 0;
 	(*workflow)->host_partition = NULL;
 	(*workflow)->client_address = NULL;
+	(*workflow)->new_token = NULL;
 
 	struct timeval tv;
 	gettimeofday(&tv, 0);
@@ -925,6 +965,8 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 		if (tasks[i].arguments_num == 0) {
 			if (!strcmp(key, "ncores")) {
 				tasks[i].ncores = (int) strtol(value, NULL, 10);
+			} else if (!strcmp(key, "nhosts")) {
+				tasks[i].nhosts = (int) strtol(value, NULL, 10);
 			} else {
 				tasks[i].arguments_keys = (char **) calloc(1, sizeof(char *));
 				if (!(tasks[i].arguments_keys)) {
@@ -955,8 +997,11 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 			for (j = 0; j < tasks[i].arguments_num; j++) {
 				if (!strcmp(tasks[i].arguments_keys[j], key)) {
 					found = 1;
-					if (!strcmp(key, "ncores")) {
-						tasks[i].ncores = (int) strtol(tasks[i].arguments_values[j], NULL, 10);
+					if (!strcmp(key, "ncores") || !strcmp(key, "nhosts")) {
+						if (!strcmp(key, "ncores"))
+							tasks[i].ncores = (int) strtol(tasks[i].arguments_values[j], NULL, 10);
+						else
+							tasks[i].nhosts = (int) strtol(tasks[i].arguments_values[j], NULL, 10);
 						free(tasks[i].arguments_keys[j]);
 						tasks[i].arguments_keys[j] = NULL;
 						free(tasks[i].arguments_values[j]);
@@ -992,6 +1037,8 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 			if (!found) {
 				if (!strcmp(key, "ncores")) {
 					tasks[i].ncores = (int) strtol(value, NULL, 10);
+				} else if (!strcmp(key, "nhosts")) {
+					tasks[i].nhosts = (int) strtol(value, NULL, 10);
 				} else {
 					char **tmpkeys = tasks[i].arguments_keys;
 					char **tmpvalues = tasks[i].arguments_values;
@@ -1120,6 +1167,75 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 			}
 		}
 	}
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int _oph_workflow_skip_comments(const char *json_string, char **clean_json_string)
+{
+	if (!json_string || !clean_json_string)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	*clean_json_string = NULL;
+
+	size_t i, j, size = strlen(json_string);
+	char invalue = 0, flag = 0, print, drop;
+	char result[1 + size];
+	for (i = j = 0; i < size; ++i) {
+		print = 1;
+		drop = 0;
+		if (json_string[i] == '"') {
+			if (invalue)
+				invalue = 0;
+			else
+				invalue = 1;
+		}
+		if (!invalue) {
+			if (json_string[i] == '/') {
+				if (flag == 0)	// Previous char belongs to valid code
+					flag = 1;
+				else if (flag == 1)	// Previous char is '/'
+				{
+					flag = 4;
+					drop = 1;
+				} else if (flag == 3)	// Previous char is '*'
+				{
+					flag = 0;
+					print = 0;
+				}
+			} else if (json_string[i] == '*') {
+				if (flag == 1)	// Previous char is '/'
+				{
+					flag = 2;	// Comment until '*/'
+					drop = 1;
+				} else if (flag == 2)	// Possible end of a comment
+					flag = 3;
+				else if (flag == 3)
+					flag = 2;
+			} else if (json_string[i] == '\n') {
+				if (flag == 1)
+					flag = 0;
+				else if (flag == 3)
+					flag = 2;
+				else if (flag == 4)
+					flag = 0;
+			} else {
+				if (flag == 1)
+					flag = 0;
+				else if (flag == 3)
+					flag = 2;
+			}
+		}
+		if (print && (flag < 2))
+			result[j++] = json_string[i];
+		if (drop && (j > 0))
+			j--;
+	}
+	result[j] = 0;
+
+	if (flag)
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
+	*clean_json_string = strdup(result);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

@@ -22,12 +22,15 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = . src test
 
+include_HEADERS = src/oph_types.h src/oph_execute_main.h
+
 sysconf_DATA = etc/server.conf etc/ophidiadb.conf etc/rmanager.conf etc/oph_server_logrotate
 
-bin_SCRIPTS = etc/oph_server
 bindir=${prefix}/etc
+bin_SCRIPTS = etc/oph_server
 
-include_HEADERS = src/oph_types.h src/oph_execute_main.h
+scriptdir=${prefix}/etc/script
+dist_script_SCRIPTS = etc/script/*.sh
 
 certdir = $(prefix)/etc/cert/
 dist_cert_DATA =

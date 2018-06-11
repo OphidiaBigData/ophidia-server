@@ -97,7 +97,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		}
 		if (filter)	// By default all the task string is a path in case of src_path or a list of identifiers in case of datacube
 		{
-			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s=%s", is_src_path ? OPH_MF_ARG_PATH : OPH_MF_ARG_DATACUBE_FILTER, task_string);
+			int not_clause = tmp[0] == OPH_MF_SYMBOL_NOT[0] ? 1 : 0;
+			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s=%s", is_src_path ? OPH_MF_ARG_PATH : OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_MF_SYMBOL_NOT : "", task_string + not_clause);
 			task_string = tmp;
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Add option '%s' to task string\n", tmp);
 		}

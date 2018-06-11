@@ -2919,11 +2919,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
 								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->username);
 								}
 						} else {
 							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob);
+							oph_cancel_request(wf->tasks[i].idjob, wf->username);
 						}
 					}
 			} else {
@@ -2933,12 +2933,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->username);
 								}
 						}
 					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING) {
 						wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-						oph_cancel_request(wf->tasks[i].idjob);
+						oph_cancel_request(wf->tasks[i].idjob, wf->username);
 					}
 			}
 		}
@@ -4429,6 +4429,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_json *oper_json = NULL;
 		int success = 0, ii, jj;
 
+		struct timeval tv;
+		gettimeofday(&tv, 0);
+		char exec_time[OPH_SHORT_STRING_SIZE];
+		snprintf(exec_time, OPH_SHORT_STRING_SIZE, "%.2f", (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: initialization of the main JSON Response\n", ttype, jobid);
 		while (!success) {
 			if (oph_json_alloc(&oper_json)) {
@@ -4459,6 +4464,26 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 			if (oph_json_add_consumer(oper_json, wf->username)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+				break;
+			}
+			if (oph_json_add_extra_detail(oper_json, OPH_EXEC_TIME, exec_time)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->cdd && oph_json_add_extra_detail(oper_json, OPH_ARG_CDD, wf->cdd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->cube && oph_json_add_extra_detail(oper_json, OPH_ARG_CUBE, wf->cube)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->cwd && oph_json_add_extra_detail(oper_json, OPH_ARG_CWD, wf->cwd)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
+				break;
+			}
+			if (wf->new_token && oph_json_add_extra_detail(oper_json, OPH_AUTH_TOKEN_JSON, wf->new_token)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD EXTRA DETAIL error\n", ttype, jobid);
 				break;
 			}
 			success = 1;
@@ -5842,7 +5867,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
 				if (list[k] < 0)
-					oph_cancel_request(-list[k]);
+					oph_cancel_request(-list[k], NULL);
 		}
 
 		if (list)

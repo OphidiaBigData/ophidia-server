@@ -620,10 +620,11 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 		return OPH_TP_TASK_SYSTEM_ERROR;
 	}
 
-	xmlChar *content;
+	xmlChar *content, *attribute_allownot;
 
 	//Parse till args section
 	long number_arguments = 0;
+	char key1[OPH_TP_TASKLEN];
 	char value1[OPH_TP_TASKLEN] = { '\0' };
 	node = root->children;
 	while (node) {
@@ -650,6 +651,20 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 						hashtbl_insert(*hashtbl, (char *) content, value1);
+						attribute_allownot = xmlGetProp(subnode, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_ALLOWNOT);
+						if (attribute_allownot) {
+							if (!xmlStrcmp((const xmlChar *) "yes", attribute_allownot)) {
+								snprintf(key1, OPH_TP_TASKLEN, "%s!", (char *) content);
+								if (oph_tp_validate_task_string_param(task_string, subnode, key1, &value1)) {
+									xmlFree(attribute_allownot);
+									xmlFree(content);
+									xmlFreeDoc(document);
+									return OPH_TP_TASK_PARSER_ERROR;
+								}
+								hashtbl_insert(*hashtbl, key1, value1);
+							}
+							xmlFree(attribute_allownot);
+						}
 					}
 					xmlFree(content);
 				}

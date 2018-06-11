@@ -45,6 +45,18 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 	}
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, OPH_WORKFLOW_BVAR_KEY_NCORES, workflow->name);
+	if (!strcmp(key, OPH_WORKFLOW_BVAR_KEY_NCORES)) {
+		if (asprintf(value, "%d", is_task ? workflow->tasks[task_index].ncores : workflow->tasks[task_index].light_tasks[light_task_index].ncores) <= 0)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+	}
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, OPH_WORKFLOW_BVAR_KEY_NHOSTS, workflow->name);
+	if (!strcmp(key, OPH_WORKFLOW_BVAR_KEY_NHOSTS)) {
+		if (asprintf(value, "%d", is_task ? workflow->tasks[task_index].nhosts : workflow->tasks[task_index].light_tasks[light_task_index].nhosts) <= 0)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+	}
 	// Loop on the arguments
 	for (i = 0; i < arguments_num; ++i) {
 		len =
@@ -232,10 +244,20 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 
 	snprintf(long_submit_string, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_EXT_SUB_STRING, workflow->tasks[task_index].operator, workflow->sessionid, workflow->workflowid,
 		 subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob,
-		 task_index, light_task_index);
+		 task_index, light_task_index, workflow->exec_mode);
 
 	if (workflow->host_partition) {
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
+		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
+			if (error)
+				*error = strdup("Space for submission string is not enough");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		strncat(long_submit_string, key_value, length);
+	}
+	if (workflow->nhosts) {
+		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
 		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
 			if (error)

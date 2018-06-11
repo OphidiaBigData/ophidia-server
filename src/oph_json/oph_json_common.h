@@ -95,6 +95,20 @@ typedef struct _oph_json_source {
 } oph_json_source;
 
 /**
+ * \brief Structure that defines OPH_JSON extra data
+ * \param keys List of other source-specific parameters
+ * \param keys_num Number of keys
+ * \param values Values for all keys
+ * \param values_num Number of values
+ */
+typedef struct _oph_json_extra {
+	char **keys;
+	unsigned int keys_num;
+	char **values;
+	unsigned int values_num;
+} oph_json_extra;
+
+/**
  * \brief Structure that defines a complete OPH_JSON object
  * \param source Data source
  * \param consumers Users interested in data
@@ -103,6 +117,7 @@ typedef struct _oph_json_source {
  * \param responseKeyset_num Length of responseKeyset
  * \param response Response with JSON objects
  * \param response_num Number of response objects
+ * \param extra Extra data
  */
 typedef struct _oph_json {
 	oph_json_source *source;
@@ -112,6 +127,7 @@ typedef struct _oph_json {
 	unsigned int responseKeyset_num;
 	oph_json_response *response;
 	unsigned int response_num;
+	oph_json_extra *extra;
 } oph_json;
 
 /**
@@ -230,6 +246,8 @@ int oph_json_free_consumers(oph_json * json);
 int oph_json_free_responseKeyset(oph_json * json);
 // Free source
 int oph_json_free_source(oph_json * json);
+// Free extra
+int oph_json_free_extra(oph_json * json);
 // Free response
 int oph_json_free_response(oph_json * json);
 
@@ -256,5 +274,8 @@ int oph_json_free_unsafe(oph_json * json);
 
 int oph_json_to_json_string(oph_json * json, char **jstring);
 int oph_json_to_json_string_unsafe(oph_json * json, char **jstring);
+
+int oph_json_add_extra_detail(oph_json * json, const char *key, const char *value);
+int oph_json_add_extra_detail_unsafe(oph_json * json, const char *key, const char *value);
 
 #endif

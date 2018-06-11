@@ -196,7 +196,7 @@ int free_oph_rmanager(oph_rmanager * orm)
 	return OPH_SERVER_OK;
 }
 
-int oph_cancel_request(int jobid)
+int oph_cancel_request(int jobid, char *username)
 {
 	return OPH_SERVER_OK;
 }
