@@ -1,3 +1,28 @@
+
+## NEXT RELEASE
+
+### Added:
+
+- Keyword 'end' to refer to JSON fields using OPH_SET [#27](https://github.com/OphidiaBigData/ophidia-server/pull/27)
+- Support to create, start and terminate user-reserved host partitions and associated hosts - DBMS instances [#26](https://github.com/OphidiaBigData/ophidia-server/pull/26)
+- Extra fields in workflow response [#25](https://github.com/OphidiaBigData/ophidia-server/pull/25)
+- Support for negation in filters for massive operations [#24](https://github.com/OphidiaBigData/ophidia-server/pull/24)
+- Possibility to evaluate expressions in OPH_SET [#23](https://github.com/OphidiaBigData/ophidia-server/pull/23)
+- Support for comments in workflow request [#22](https://github.com/OphidiaBigData/ophidia-server/pull/22)
+- Some debug messages in workflow validation function
+
+### Fixed:
+
+- Algorithm used to check workflow validity.
+- Checking for libssh when it is not enabled in configuration
+
+### Changed:
+
+- Job tracking for accounting purposes [#28](https://github.com/OphidiaBigData/ophidia-server/pull/28)
+- Monitoring log to include number of incoming/closed tasks during a period
+- Information shown in accounting log
+- Code coverage macros to allow the use of LCOV 1.13
+
 ## v1.2.0 - 2018-02-16
 
 ### Fixed:
