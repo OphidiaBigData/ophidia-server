@@ -333,7 +333,7 @@ oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -lstdsoap2 -ldebug
 oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_auth -loph_task_parser_library -lhashtbl -loph_ophidiadb -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_workflow_engine
+oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_auth -loph_task_parser_library -lhashtbl -loph_ophidiadb -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_workflow_engine
 
 oph_manage_user_SOURCES= oph_manage_user.c
 oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)
