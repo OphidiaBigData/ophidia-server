@@ -25,12 +25,11 @@
 #include <dirent.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <mysql.h>
 
 #ifdef INTERFACE_TYPE_IS_SSL
 #include <openssl/sha.h>
 #endif
-
-
 
 #ifdef OPH_OPENID_SUPPORT
 
@@ -524,17 +523,6 @@ int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid,
 }
 
 #ifdef INTERFACE_TYPE_IS_SSL
-char *octet2hex(char *to, const unsigned char *str, size_t len)
-{
-	const char hexvalue[] = "0123456789ABCDEF";
-	for (; len; --len, ++str) {
-		*to++ = hexvalue[(*str) >> 4];
-		*to++ = hexvalue[(*str) & 0x0F];
-	}
-	*to = '\0';
-	return to;
-}
-
 char *oph_sha(char *to, const char *passwd)
 {
 	char *result = to;
@@ -932,6 +920,26 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 	return OPH_SERVER_OK;
 }
 
+#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
+
+int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
+{
+	if (!access_token || !userinfo)
+		return OPH_SERVER_NULL_POINTER;
+
+	if (!usersinfo) {
+		usersinfo = hashtbl_create(strlen(access_token), NULL);
+		if (!usersinfo)
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+	}
+	if (usersinfo)
+		hashtbl_insert(usersinfo, access_token, (char *) userinfo);
+
+	return OPH_SERVER_OK;
+}
+
+#endif
+
 void *_oph_refresh(oph_refresh_token * refresh)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -947,7 +955,6 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	char url[OPH_MAX_STRING_SIZE], credentials[OPH_MAX_STRING_SIZE], fields[OPH_MAX_STRING_SIZE];
 	snprintf(url, OPH_MAX_STRING_SIZE, "%s/token", oph_openid_endpoint);
 	snprintf(credentials, OPH_MAX_STRING_SIZE, "%s:%s", oph_openid_client_id, oph_openid_client_secret);
-	int count;
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "OPENID: start token refreshing procedure\n");
 
@@ -1167,7 +1174,7 @@ int oph_auth_get_user_from_userinfo_aaa(const char *userinfo, char **userid)
 		return OPH_SERVER_ERROR;
 	}
 
-	char *error = NULL, *response = NULL;
+	char *response = NULL;
 	json_unpack(userinfo_json, "{s?s}", "response", &response);
 
 	if (!response) {
@@ -1200,26 +1207,6 @@ int oph_auth_check_token_aaa(const char *token)
 	// Add specific check to token string in order to check validity before sending any request to identity server
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: token is valid\n");
-
-	return OPH_SERVER_OK;
-}
-
-#endif
-
-#if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
-
-int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
-{
-	if (!access_token || !userinfo)
-		return OPH_SERVER_NULL_POINTER;
-
-	if (!usersinfo) {
-		usersinfo = hashtbl_create(strlen(access_token), NULL);
-		if (!usersinfo)
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
-	}
-	if (usersinfo)
-		hashtbl_insert(usersinfo, access_token, (char *) userinfo);
 
 	return OPH_SERVER_OK;
 }
@@ -1427,7 +1414,7 @@ void *_oph_check_openid(void *data)
 	char *userid = NULL, *token, *user;
 	time_t deadtime;
 	struct timeval tv;
-	oph_auth_user_bl *bl_item, *bl_prev;
+	oph_auth_user_bl *bl_item;
 
 	while (oph_openid_token_check_time) {
 
@@ -1440,7 +1427,6 @@ void *_oph_check_openid(void *data)
 
 			gettimeofday(&tv, NULL);
 			bl_item = tokens_openid;
-			bl_prev = NULL;
 			while (bl_item) {
 				deadtime = (time_t) (bl_item->check_time + oph_openid_token_check_time);
 				if (tv.tv_sec >= deadtime) {
@@ -1458,7 +1444,6 @@ void *_oph_check_openid(void *data)
 						free(user);
 					break;	// Need to restart since the lock has been released
 				}
-				bl_prev = bl_item;
 				bl_item = bl_item->next;
 				if (userid) {
 					free(userid);
@@ -1492,7 +1477,7 @@ void *_oph_check_aaa(void *data)
 	char *userid = NULL, *token, *user;
 	time_t deadtime;
 	struct timeval tv;
-	oph_auth_user_bl *bl_item, *bl_prev;
+	oph_auth_user_bl *bl_item;
 
 	while (oph_aaa_token_check_time) {
 
@@ -1505,7 +1490,6 @@ void *_oph_check_aaa(void *data)
 
 			gettimeofday(&tv, NULL);
 			bl_item = tokens_aaa;
-			bl_prev = NULL;
 			while (bl_item) {
 				deadtime = (time_t) (bl_item->check_time + oph_aaa_token_check_time);
 				if (tv.tv_sec >= deadtime) {
@@ -1523,7 +1507,6 @@ void *_oph_check_aaa(void *data)
 						free(user);
 					break;	// Need to restart since the lock has been released
 				}
-				bl_prev = bl_item;
 				bl_item = bl_item->next;
 				if (userid) {
 					free(userid);

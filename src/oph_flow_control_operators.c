@@ -850,7 +850,8 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 		return OPH_SERVER_ERROR;
 
 #ifdef MATHEVAL_SUPPORT
-	unsigned int count = 0, bracket, n, nchar;
+	int count = 0;
+	unsigned int bracket, n, nchar;
 	char **names = NULL, *start, *stop, *base, flag;
 	void *me = NULL;
 	double return_value;
@@ -901,6 +902,7 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 						break;
 					evaluator_get_variables(me, &names, &count);
 					if (count > 0) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Variables are not admitted in expression '%s'.\n", expr);
 						evaluator_destroy(me);
 						break;
 					}

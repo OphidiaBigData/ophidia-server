@@ -85,7 +85,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
 	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable;
 	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
-	oph_workflow_var *var;
+	oph_workflow_var *var = NULL;
 	int index;
 
 	while (((p = strchr(submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {

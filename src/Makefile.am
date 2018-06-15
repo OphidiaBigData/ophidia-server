@@ -189,7 +189,7 @@ liboph_parser_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = oph_auth.c
-liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(OPENID_CFLAGS) $(AAA_CFLAGS)
+liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(OPENID_CFLAGS) $(AAA_CFLAGS)
 liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
 liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_parser -lhashtbl
 

@@ -24,6 +24,7 @@
 #include "oph_task_parser_library.h"
 #include "oph_workflow_engine.h"
 #include "oph_rmanager.h"
+#include "oph_utils.h"
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -2759,7 +2760,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					if (get_debug_level() == LOG_DEBUG) {
 						char code[OPH_MAX_STRING_SIZE];
 						if (!oph_get_session_code(sessionid, code)) {
-							if (username && oph_subm_user && strcmp(username, oph_subm_user)) {
+							if (oph_subm_user && strcmp(username, oph_subm_user)) {
 								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
 								oph_mkdir(outfile);
 								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);

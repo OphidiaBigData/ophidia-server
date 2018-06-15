@@ -871,13 +871,13 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 
 	int _ncores = ncores;
 	if (ncores < 1) {
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The job will be executed with 1!\n");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The job will be executed with 1 core!\n");
 		_ncores = 1;
 	}
 
 	int result;
 	if ((result =
-	     oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
+	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
 				      exit_output)) != OPH_SERVER_UNKNOWN)
 		return result;
 
@@ -926,7 +926,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 #ifdef LOCAL_FRAMEWORK
 	char command[OPH_MAX_STRING_SIZE];
 #ifdef USE_MPI
-	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s", outfile, ncores, oph_operator_client, request, outfile, outfile);
+	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s", outfile, _ncores, oph_operator_client, request, outfile, outfile);
 #else
 	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; %s \"%s\" >> %s 2>> %s", outfile, oph_operator_client, request, outfile, outfile);
 	if (ncores > 1)
@@ -942,7 +942,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if (oph_form_subm_string(request, ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd, 0)) {
+	if (oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 		if (cmd) {
 			free(cmd);

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <sys/time.h>
 
 /* Jansson header to manipulate JSONs */
 #include <jansson.h>
