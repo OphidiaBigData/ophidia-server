@@ -99,4 +99,4 @@ $ oph_manage_user -h
 
 to see all other available options.
 
-Further information can be found at [http://ophidia.cmcc.it/documentation](http://ophidia.cmcc.it/documentation).
+Further information can be found at [http://ophidia.cmcc.it/documentation/admin/](http://ophidia.cmcc.it/documentation/admin/).
