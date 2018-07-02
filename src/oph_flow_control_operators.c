@@ -941,9 +941,9 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	*error_message = 0;
 
 	char *name = NULL, **names = NULL, **svalues = NULL;
-	int j, kk = 0, names_num = 0, svalues_num = 0, wid = 0, tt = -1;
+	int j, jj, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL;
+	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL, add_numerical_variables = 0, first = 1, repeat = 0, *array_value = NULL;
 	oph_workflow *twf = wf;
 	enum oph__oph_odb_job_status caction = OPH_ODB_STATUS_RUNNING;
 
@@ -971,6 +971,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
+				array_value = strdup(arg_value);
 			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ID)) {
 				wid = strtol(arg_value, NULL, 10);
 				if (wid != wf->workflowid) {
@@ -1076,8 +1077,11 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		if (!svalues_num)
 			svalues_num = names_num;
 
-		if (svalues_num > names_num)
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Only the first %d value%s of the list will be considered\n", names_num, names_num == 1 ? "" : "s");
+		if (svalues_num > names_num) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Only the first %d value%s of the list will be considered, the others will be assigned to additional variables named '%s_#'\n", names_num,
+			      names_num == 1 ? "" : "s", names[0]);
+			add_numerical_variables = 1;
+		}
 		if (svalues_num < names_num) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_ARG_VALUE);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
@@ -1107,20 +1111,49 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			}
 		}
 
-		for (j = 0; j < names_num; ++j) {
+		num = add_numerical_variables ? svalues_num : names_num;
+		for (j = 0; j < num; repeat ? repeat = 0 : ++j) {
+
+			if (!add_numerical_variables || (j < names_num)) {
+				if (add_numerical_variables && first && !j) {
+					repeat = 1;
+					first = 0;
+					ttt = asprintf(&name, "%s_1", names[0]);
+					if (ttt < 0) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+						ret = OPH_SERVER_ERROR;
+						break;
+					}
+				} else {
+					name = names[j];
+					ttt = -1;
+				}
+			} else {
+				ttt = asprintf(&name, "%s_%d", names[0], j - names_num + 2);
+				if (ttt < 0) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					break;
+				}
+			}
 
 			// Drop the previous value
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop variable '%s'\n", names[j]);
-			hashtbl_remove(twf->vars, names[j]);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Drop variable '%s'\n", name);
+			hashtbl_remove(twf->vars, name);
 
 			oph_workflow_var var;
 			void *var_buffer;
 			size_t var_size = sizeof(oph_workflow_var), svalue_size;
 			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
-			if (svalues)
-				var.svalue = strdup(svalues[j]);
-			else {
+			if (svalues) {
+				if (!add_numerical_variables || repeat || j)
+					var.svalue = strdup(svalues[j]);
+				else	// Consider the whole array
+					var.svalue = strdup(array_value);
+			} else {
 				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
 				if (var.svalue)
 					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
@@ -1128,6 +1161,8 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			if (!var.svalue) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+				if (ttt >= 0)
+					free(name);
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
@@ -1137,23 +1172,30 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
+				if (ttt >= 0)
+					free(name);
 				free(var.svalue);
 				break;
 			}
 			memcpy(var_buffer, (void *) &var, var_size);
 			memcpy(var_buffer + var_size, var.svalue, svalue_size);
-			if (hashtbl_insert_with_size(twf->vars, names[j], var_buffer, var_size + svalue_size)) {
+			if (hashtbl_insert_with_size(twf->vars, name, var_buffer, var_size + svalue_size)) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", name, twf->name);
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 				ret = OPH_SERVER_ERROR;
+				if (ttt >= 0)
+					free(name);
 				free(var.svalue);
 				free(var_buffer);
 				break;
 			}
 			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, twf->name);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, twf->name);
 			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, twf->name);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", name, var.ivalue, twf->name);
+
+			if (ttt >= 0)
+				free(name);
 			free(var.svalue);
 			free(var_buffer);
 		}
@@ -1181,6 +1223,8 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	}
 	if (taskname)
 		free(taskname);
+	if (array_value)
+		free(array_value);
 
 	return ret;
 }
