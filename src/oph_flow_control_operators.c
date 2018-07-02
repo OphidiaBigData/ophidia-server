@@ -943,7 +943,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	char *name = NULL, **names = NULL, **svalues = NULL;
 	int j, jj, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL, add_numerical_variables = 0, first = 1, repeat = 0, *array_value = NULL;
+	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0, *array_value = NULL;
 	oph_workflow *twf = wf;
 	enum oph__oph_odb_job_status caction = OPH_ODB_STATUS_RUNNING;
 
@@ -1077,11 +1077,6 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 		if (!svalues_num)
 			svalues_num = names_num;
 
-		if (svalues_num > names_num) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Only the first %d value%s of the list will be considered, the others will be assigned to additional variables named '%s_#'\n", names_num,
-			      names_num == 1 ? "" : "s", names[0]);
-			add_numerical_variables = 1;
-		}
 		if (svalues_num < names_num) {
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Bad number of keys in parameter '%s'.", OPH_ARG_VALUE);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
@@ -1111,11 +1106,11 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			}
 		}
 
-		num = add_numerical_variables ? svalues_num : names_num;
+		num = svalues_num > names_num ? svalues_num : names_num;
 		for (j = 0; j < num; repeat ? repeat = 0 : ++j) {
 
-			if (!add_numerical_variables || (j < names_num)) {
-				if (add_numerical_variables && first && !j) {
+			if (j < names_num) {
+				if (first && !j) {
 					repeat = 1;
 					first = 0;
 					ttt = asprintf(&name, "%s_1", names[0]);
@@ -1149,7 +1144,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
 			if (svalues) {
-				if (!add_numerical_variables || repeat || j)
+				if (repeat || j)
 					var.svalue = strdup(svalues[j]);
 				else	// Consider the whole array
 					var.svalue = strdup(array_value);
