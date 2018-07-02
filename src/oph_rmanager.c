@@ -566,7 +566,7 @@ int oph_cancel_request(int jobid, char *username)
 				sprintf(subm_username, "%s%s", orm->subm_username, username);
 			else	// Skip username for backward compatibility
 				*subm_username = 0;
-			size_t len = 2 + strlen(subm_username) + strlen(orm->subm_cancel) + OPH_RMANAGER_MAX_INT_SIZE;
+			size_t len = 4 + strlen(subm_username) + strlen(orm->subm_cancel) + OPH_RMANAGER_MAX_INT_SIZE + strlen(orm->subm_postfix);
 			char cmd[len];
 			snprintf(cmd, len, "%s %s %d %s", subm_username, orm->subm_cancel, jobid, orm->subm_postfix);
 			if (oph_ssh_submit(cmd)) {
@@ -574,7 +574,7 @@ int oph_cancel_request(int jobid, char *username)
 				return RMANAGER_ERROR;
 			}
 		} else {
-			size_t len = 2 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE;
+			size_t len = 3 + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE + strlen(orm->subm_postfix);
 			char cmd[len];
 			snprintf(cmd, len, "%s %s%s%d %s", orm->subm_cancel, oph_server_port, OPH_RMANAGER_PREFIX, jobid, orm->subm_postfix);
 			if (oph_ssh_submit(cmd)) {
