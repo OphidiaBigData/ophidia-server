@@ -1215,6 +1215,8 @@ int _oph_workflow_skip_comments(const char *json_string, char **clean_json_strin
 			} else if (json_string[i] == '\n') {
 				if (flag == 1)
 					flag = 0;
+				else if (flag == 2)
+					result[j++] = json_string[i];
 				else if (flag == 3)
 					flag = 2;
 				else if (flag == 4)
