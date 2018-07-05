@@ -789,8 +789,10 @@ int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *sva
 	char *tmp = strdup(arg_value), expansion, *pch, *pch1, *save_pointer = NULL;
 	if (!tmp)
 		return OPH_SERVER_NULL_POINTER;
-	if (!strlen(tmp))
+	if (!strlen(tmp)) {
+		free(tmp);
 		return OPH_SERVER_OK;
+	}
 	do {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Values parsing: %s\n", tmp);
 		expansion = *svalues_num = 0;
@@ -941,9 +943,9 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	*error_message = 0;
 
 	char *name = NULL, **names = NULL, **svalues = NULL;
-	int j, jj, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
+	int j, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0, *array_value = NULL;
+	char arg_value[OPH_MAX_STRING_SIZE], *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0;
 	oph_workflow *twf = wf;
 	enum oph__oph_odb_job_status caction = OPH_ODB_STATUS_RUNNING;
 
@@ -971,7 +973,6 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value))
 					break;
-				array_value = strdup(arg_value);
 			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ID)) {
 				wid = strtol(arg_value, NULL, 10);
 				if (wid != wf->workflowid) {
@@ -1146,8 +1147,20 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			if (svalues) {
 				if (repeat || j)
 					var.svalue = strdup(svalues[j]);
-				else	// Consider the whole array
-					var.svalue = strdup(array_value);
+				else {	// Consider the whole array
+					int jj, tttt;
+					char *array_value = NULL, *previous_value = NULL;
+					for (jj = 0; jj < svalues_num; ++jj, previous_value = array_value) {
+						tttt = asprintf(&array_value, "%s%s%s", previous_value ? previous_value : "", jj ? OPH_SEPARATOR_SUBPARAM_STR : "", svalues[jj]);
+						if (previous_value)
+							free(previous_value);
+						if (tttt < 0)
+							break;
+					}
+					if (jj < svalues_num)	// In case of errors
+						array_value = NULL;
+					var.svalue = array_value ? array_value : strdup(svalues[j]);
+				}
 			} else {
 				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
 				if (var.svalue)
@@ -1218,8 +1231,6 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	}
 	if (taskname)
 		free(taskname);
-	if (array_value)
-		free(array_value);
 
 	return ret;
 }
