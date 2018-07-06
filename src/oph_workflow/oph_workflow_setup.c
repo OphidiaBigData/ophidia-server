@@ -24,6 +24,9 @@
 #include "oph_workflow_library.h"
 #include "debug.h"
 
+extern char *oph_server_host;
+extern char *oph_server_port;
+
 // Internal structures
 
 typedef struct _workflow_node {
@@ -697,8 +700,7 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 		var.svalue = NULL;
 		switch (i) {
 			case 0:
-				if (wf->sessionid)
-					var.svalue = strdup(wf->sessionid);
+				var.svalue = strdup(wf->sessionid ? wf->sessionid : "none");
 				break;
 			case 1:
 				if (wf->sessionid) {
@@ -715,6 +717,18 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 					if (var.svalue)
 						snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", wf->workflowid);
 				}
+				break;
+			case 3:
+				var.svalue = strdup(oph_server_host ? oph_server_host : "none");
+				break;
+			case 4:
+				var.svalue = strdup(oph_server_port ? oph_server_port : "none");
+				break;
+			case 5:
+				var.svalue = strdup(wf->username ? wf->username : "none");
+				break;
+			case 6:
+				var.svalue = strdup(wf->password ? wf->password : "none");
 				break;
 			default:
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n", i, wf->name);
