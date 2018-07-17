@@ -200,10 +200,12 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				cdd = optarg;
-				if (!cdd || (*cdd != '/'))
+				if (!cdd || (*cdd != '/')) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad data directory '%d': it needs to start with '/'!\n");
-				cleanup();
-				return 1;
+					cleanup();
+					return 1;
+				}
+				update += 32;
 				break;
 			case 'e':
 				email = optarg;
@@ -569,6 +571,8 @@ int main(int argc, char *argv[])
 					fprintf(file, "%s%s%d\n", OPH_USER_TIMEOUT_SESSION, OPH_SEPARATOR_KV, timeout_session);
 				else if ((update & 16) && (!strcmp(tmp->key, OPH_USER_MAX_HOSTS)))
 					fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
+				else if ((update & 32) && (!strcmp(tmp->key, OPH_USER_LAST_CDD)))
+					fprintf(file, "%s%s%d\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
 				else
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_KV, tmp->value);
 			}
