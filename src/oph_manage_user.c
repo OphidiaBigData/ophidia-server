@@ -187,9 +187,9 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&curl_flag, NULL);
 #endif
 	int ch, msglevel = LOG_ERROR;
-	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0;
+	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0, *cdd = NULL;
 	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, max_hosts = 1, black_listed = 0, update = 0;
-	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hlm:n:p:r:s:t:u:vw")) != -1) {
+	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hi:lm:n:p:r:s:t:u:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				action = optarg;
@@ -199,14 +199,21 @@ int main(int argc, char *argv[])
 				update += 1;
 				break;
 			case 'd':
-				max_hosts = (unsigned int) strtol(optarg, NULL, 10);
-				update += 16;
+				cdd = optarg;
+				if (!cdd || (*cdd != '/'))
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad data directory '%d': it needs to start with '/'!\n");
+				cleanup();
+				return 1;
 				break;
 			case 'e':
 				email = optarg;
 				break;
 			case 'f':
 				country = optarg;
+				break;
+			case 'i':
+				max_hosts = (unsigned int) strtol(optarg, NULL, 10);
+				update += 16;
 				break;
 			case 'l':
 				log = 1;
@@ -259,9 +266,10 @@ int main(int argc, char *argv[])
 				fprintf(stdout, "-b to black-list the user\n");
 #endif
 				fprintf(stdout, "-c <maximum number of cores per task> (default %d)\n", max_cores);
-				fprintf(stdout, "-d <maximum number of hosts> (default %d)\n", max_hosts);
+				fprintf(stdout, "-d <home data directory> (default '/')\n");
 				fprintf(stdout, "-e <email>\n");
 				fprintf(stdout, "-f <country>\n");
+				fprintf(stdout, "-i <maximum number of hosts> (default %d)\n", max_hosts);
 				fprintf(stdout, "-l is used in case a specific folder for user log data has to be created (valid only for type 'add')\n");
 				fprintf(stdout, "-m <maximum number of opened sessions> (default %d)\n", max_sessions);
 				fprintf(stdout, "-n <name>\n");
@@ -402,7 +410,7 @@ int main(int argc, char *argv[])
 		fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
 		fprintf(file, "%s%s%s\n", OPH_USER_IS_ADMIN, OPH_SEPARATOR_KV, is_admin);
 		fprintf(file, "%s%s%s\n", OPH_USER_LAST_SESSION_ID, OPH_SEPARATOR_KV, "");
-		fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, "/");
+		fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
 		fclose(file);
 
 		// ophDB
