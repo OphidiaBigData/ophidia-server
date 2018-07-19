@@ -35,23 +35,15 @@
 #define OPH_NULL_FILENAME "/dev/null"
 
 struct _oph_rmanager {
-	char *name;
-	char *subm_cmd;
-	char *subm_cmd2;
-	char *subm_username;
+	char *subm_name;
+	char *subm_cmd_submit;
+	char *subm_cmd_start;
+	char subm_multiuser;
 	char *subm_group;
-	char *subm_args;
-	char *subm_args2;
-	char *subm_ncores;
-	char *subm_interact;
-	char *subm_batch;
 	char *subm_queue_high;
 	char *subm_queue_low;
-	char *subm_stdoutput;
-	char *subm_stderror;
 	char *subm_prefix;
 	char *subm_postfix;
-	char *subm_jobname;
 	char *subm_cancel;
 	char *subm_jobcheck;
 };
