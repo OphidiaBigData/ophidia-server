@@ -38,7 +38,8 @@
 #define SUBM_CANCEL			"SUBM_CANCEL"
 #define SUBM_JOBCHECK		"SUBM_JOBCHECK"
 
-#define SUBM_SUDO "sudo -u %s"
+#define OPH_RMANAGER_SUDO			"sudo -u %s"
+#define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -259,10 +260,20 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	}
 	if (!orm->subm_name)
 		orm->subm_name = strdup("");
-	if (!orm->subm_queue_high)
-		orm->subm_queue_high = strdup("");
-	if (!orm->subm_queue_low)
-		orm->subm_queue_low = strdup("");
+	if (!orm->subm_queue_high || !strlen(orm->subm_queue_high)) {
+		if (orm->subm_queue_high) {
+			free(orm->subm_queue_high);
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_HIGH, OPH_RMANAGER_DEFAULT_QUEUE);
+		}
+		orm->subm_queue_high = strdup(OPH_RMANAGER_DEFAULT_QUEUE);
+	}
+	if (!orm->subm_queue_low || !strlen(orm->subm_queue_low)) {
+		if (orm->subm_queue_low) {
+			free(orm->subm_queue_low);
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_LOW, OPH_RMANAGER_DEFAULT_QUEUE);
+		}
+		orm->subm_queue_low = strdup(OPH_RMANAGER_DEFAULT_QUEUE);
+	}
 	if (!orm->subm_prefix)
 		orm->subm_prefix = strdup("");
 	if (!orm->subm_postfix)
@@ -304,7 +315,7 @@ int oph_cancel_request(int jobid, char *username)
 #else
 		char subm_username[10 + (username ? strlen(username) : 0)];
 		if (username && orm->subm_multiuser)
-			sprintf(subm_username, SUBM_SUDO, username);
+			sprintf(subm_username, OPH_RMANAGER_SUDO, username);
 		else		// Skip username for backward compatibility
 			*subm_username = 0;
 		size_t len =
@@ -397,7 +408,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 
 	char subm_username[10 + (username ? strlen(username) : 0)];
 	if (username && orm->subm_multiuser)
-		sprintf(subm_username, SUBM_SUDO, username);
+		sprintf(subm_username, OPH_RMANAGER_SUDO, username);
 	else			// Skip username for backward compatibility
 		*subm_username = 0;
 

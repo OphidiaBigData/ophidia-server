@@ -27,8 +27,9 @@ queue=${5}
 serverid=${6}
 
 # Const
-fixString=_RANDOM_STRING_oph
+fixString=
 FRAMEWORK_PATH=/usr/local/ophidia/oph-cluster/oph-analytics-framework
+LAUNCHER=/usr/local/ophidia/extra/bin/srun
 
 # Body
 mkdir -p ${HOME}/.ophidia
@@ -46,7 +47,7 @@ MPI_TYPE=--mpi=none
 fi
 fi
 
-srun ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 if [ $? -ne 0 ]; then
         echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
         exit 1

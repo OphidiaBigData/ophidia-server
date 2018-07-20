@@ -23,10 +23,11 @@ taskid=${1}
 serverid=${2}
 
 # Const
-fixString=_RANDOM_STRING_oph
+fixString=
+KILLER=/usr/local/ophidia/extra/bin/scancel
 
 # Body
-scancel -n ${fixString}${serverid}${taskid}
+${KILLER} -n ${fixString}${serverid}${taskid}
 
 exit $?
 
