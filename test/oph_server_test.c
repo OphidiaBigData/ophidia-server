@@ -71,6 +71,7 @@ unsigned int oph_server_queue_size = 0;
 unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
+ophidiadb *ophDB = 0;
 char oph_server_is_running = 1;
 char *oph_base_src_path = 0;
 unsigned int oph_base_backoff = 0;
@@ -79,6 +80,7 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
+char *oph_cluster_start;
 
 void set_global_values(const char *configuration_file)
 {

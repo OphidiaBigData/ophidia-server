@@ -87,6 +87,22 @@ extern pthread_cond_t waiting_flag;
     ]\
 }"
 
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id)
+{
+	UNUSED(error);
+	UNUSED(state);
+	UNUSED(delay);
+	UNUSED(blocking);
+	UNUSED(id);
+
+	if (!command) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return RMANAGER_NULL_PARAM;
+	}
+
+	return RMANAGER_SUCCESS;
+}
+
 void *_oph_sleep(char **response)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -176,7 +192,7 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	return OPH_SERVER_OK;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type)
 {
 	return OPH_SERVER_OK;
 }

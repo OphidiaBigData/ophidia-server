@@ -290,3 +290,42 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 
 	return OPH_ODB_SUCCESS;
 }
+
+int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition)
+{
+	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
+{
+	if (!oDB || !id_hostpartition)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_release_hp2(int id_hostpartition)
+{
+	return oph_odb_release_hp(ophDB, id_hostpartition);
+}
+
+int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job)
+{
+	if (!oDB || !name || !id_user || !id_hostpartition)
+		return OPH_ODB_NULL_PARAM;
+	if (id_job)
+		*id_job = 0;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
+{
+	if (!oDB || !id_user || !rhosts)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
