@@ -38,7 +38,7 @@ extern char *oph_auth_location;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
-extern char *oph_cluster_start;
+extern char *oph_cluster_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
@@ -2721,8 +2721,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				if (btype) {
 
-					if (!oph_cluster_start) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster is not configured!");
+					if (!oph_cluster_deployment || strcmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
 						break;
 					}
 
@@ -2753,7 +2753,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 
 					char command[OPH_MAX_STRING_SIZE];
-					snprintf(command, OPH_MAX_STRING_SIZE, "%s %d", oph_cluster_start, id_hostpartition);
+					snprintf(command, OPH_MAX_STRING_SIZE, "%d", id_hostpartition);
 
 					char outfile[OPH_MAX_STRING_SIZE];
 					snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);

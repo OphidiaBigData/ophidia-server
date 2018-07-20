@@ -124,7 +124,7 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-char *oph_cluster_start = 0;
+char *oph_cluster_deployment = 0;
 #ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
@@ -323,11 +323,7 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
-	if (!(oph_cluster_start = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CLUSTER_START))) {
-		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_CLUSTER_START, oph_server_location);
-		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_CLUSTER_START, tmp);
-		oph_cluster_start = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CLUSTER_START);
-	}
+	oph_cluster_deployment = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT);
 #ifdef OPH_OPENID_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
