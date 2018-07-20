@@ -430,7 +430,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 8;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -824,7 +827,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			time_t nowtime, nowtime2;
 			struct tm nowtm, nowtm2;
 			// Data
-			success = 0;
+			if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+				success = 0;
+			else
+				success = 1;
 			while (!success) {
 				for (session_args_item = session_args_list; session_args_item; session_args_item = session_args_item->next) {
 					session_args = session_args_item->item;
@@ -979,7 +985,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					snprintf(tmp, OPH_MAX_STRING_SIZE, "Found 1 session");
 				else
 					snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d sessions", num_sessions);
-				if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY, "Summary", tmp)) {
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY)
+				    && oph_json_add_text(oper_json, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY, "Summary", tmp)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
 					success = 0;
 				}
@@ -1047,7 +1054,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 2;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -1152,7 +1162,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				time_t nowtime;
 				struct tm nowtm;
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					for (tmp2 = args; tmp2; tmp2 = tmp2->next) {
 						if (!strcmp(tmp2->key, OPH_SESSION_USERS))
@@ -1286,7 +1299,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 2;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -1388,7 +1404,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			if (success) {
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonvalues) {
@@ -1438,7 +1457,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (success && !oph_get_arg(args, OPH_SESSION_USERS, tmp)) {
 				char *save_pointer = NULL, *pch1, *pch2;
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					pch1 = strtok_r(tmp, OPH_SEPARATOR_USER, &save_pointer);
 					while (pch1) {
