@@ -157,7 +157,7 @@ liboph_parser_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = ../src/oph_auth.c
-liboph_auth_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+liboph_auth_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_auth_la_LDFLAGS = -shared
 liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser
 

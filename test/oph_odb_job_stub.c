@@ -437,3 +437,85 @@ int oph_odb_update_session_label_unsafe(ophidiadb * oDB, const char *sessionid, 
 {
 	return _oph_odb_update_session_label(oDB, sessionid, label, NULL);
 }
+
+int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	int n;
+	char copyQuery[MYSQL_BUFLEN];
+	if (idjob) {
+		if (idparent)
+			n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB_PARENT, idjob, idparent);
+		else
+			n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB, idjob);
+	} else if (idparent)
+		n = snprintf(copyQuery, MYSQL_BUFLEN, MYSQL_QUERY_COPY_JOB_CHILD, idparent);
+	else
+		return OPH_ODB_NULL_PARAM;
+
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, copyQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_copy_job(oDB, idjob, idparent, &global_flag);
+}
+
+int oph_odb_copy_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_copy_job(oDB, idjob, idparent, NULL);
+}
+
+int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	int n;
+	char deleteQuery[MYSQL_BUFLEN];
+	if (idjob) {
+		if (idparent)
+			n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB_PARENT, idjob, idparent);
+		else
+			n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB, idjob);
+	} else if (idparent)
+		n = snprintf(deleteQuery, MYSQL_BUFLEN, MYSQL_QUERY_DROP_JOB_CHILD, idparent);
+	else
+		return OPH_ODB_NULL_PARAM;
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (mysql_query(oDB->conn, deleteQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_drop_job(oDB, idjob, idparent, &global_flag);
+}
+
+int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
+{
+	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
+}

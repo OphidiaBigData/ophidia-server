@@ -1894,6 +1894,97 @@ int oph_json_add_source_detail_unsafe(oph_json * json, const char *key, const ch
 	return _oph_json_add_source_detail(json, key, value, NULL);
 }
 
+int _oph_json_add_extra_detail(oph_json * json, const char *key, const char *value, pthread_mutex_t * flag)
+{
+	if (!json || !key || !value) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
+		return OPH_JSON_BAD_PARAM_ERROR;
+	}
+
+	if (!json->extra) {
+		json->extra = (oph_json_extra *) malloc(sizeof(oph_json_extra));
+		if (!json->extra) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "extra");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->keys = NULL;
+		json->extra->keys_num = 0;
+		json->extra->values = NULL;
+		json->extra->values_num = 0;
+	}
+
+	if (json->extra->keys_num == 0) {
+		json->extra->keys = (char **) malloc(sizeof(char *));
+		if (!json->extra->keys) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "keys");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->keys[0] = (char *) strdup(key);
+		if (!json->extra->keys[0]) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "key");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->keys_num++;
+		json->extra->values = (char **) malloc(sizeof(char *));
+		if (!json->extra->values) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "values");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->values[0] = (char *) strdup(value);
+		if (!json->extra->values[0]) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "value");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->values_num++;
+	} else {
+		unsigned int i;
+		for (i = 0; i < json->extra->keys_num; i++) {
+			if (!strcmp(json->extra->keys[i], key)) {
+				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "key");
+				return OPH_JSON_BAD_PARAM_ERROR;
+			}
+		}
+		char **tmp = json->extra->keys;
+		json->extra->keys = (char **) realloc(json->extra->keys, sizeof(char *) * (json->extra->keys_num + 1));
+		if (!json->extra->keys) {
+			json->extra->keys = tmp;
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "keys");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->keys[json->extra->keys_num] = (char *) strdup(key);
+		if (!json->extra->keys[json->extra->keys_num]) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "key");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->keys_num++;
+		char **tmp2 = json->extra->values;
+		json->extra->values = (char **) realloc(json->extra->values, sizeof(char *) * (json->extra->values_num + 1));
+		if (!json->extra->values) {
+			json->extra->values = tmp2;
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "values");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->values[json->extra->values_num] = (char *) strdup(value);
+		if (!json->extra->values[json->extra->values_num]) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_MEMORY_ERROR, "value");
+			return OPH_JSON_MEMORY_ERROR;
+		}
+		json->extra->values_num++;
+	}
+
+	return OPH_JSON_SUCCESS;
+}
+
+int oph_json_add_extra_detail(oph_json * json, const char *key, const char *value)
+{
+	return _oph_json_add_extra_detail(json, key, value, NULL);
+}
+
+int oph_json_add_extra_detail_unsafe(oph_json * json, const char *key, const char *value)
+{
+	return _oph_json_add_extra_detail(json, key, value, NULL);
+}
+
 int oph_json_is_objkey_printable(char **objkeys, int objkeys_num, const char *objkey)
 {
 	if (objkeys_num < 1 || !objkeys || !objkey)
