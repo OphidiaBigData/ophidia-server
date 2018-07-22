@@ -38,14 +38,14 @@ struct _oph_rmanager {
 	char *subm_name;
 	char *subm_cmd_submit;
 	char *subm_cmd_start;
+	char *subm_cmd_cancel;
+	char *subm_cmd_check;
 	char subm_multiuser;
 	char *subm_group;
 	char *subm_queue_high;
 	char *subm_queue_low;
 	char *subm_prefix;
 	char *subm_postfix;
-	char *subm_cancel;
-	char *subm_jobcheck;
 };
 typedef struct _oph_rmanager oph_rmanager;
 

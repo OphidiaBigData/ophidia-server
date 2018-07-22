@@ -27,16 +27,16 @@
 #include <grp.h>
 
 #define SUBM_NAME			"SUBM_NAME"
-#define SUBM_CMD_SUBMIT		"SUBM_CMD_SUBMIT"
-#define SUBM_CMD_START		"SUBM_CMD_START"
+#define SUBM_CMD_TO_SUBMIT	"SUBM_CMD_TO_SUBMIT"
+#define SUBM_CMD_TO_START	"SUBM_CMD_TO_START"
+#define SUBM_CMD_TO_CANCEL	"SUBM_CMD_TO_CANCEL"
+#define SUBM_CMD_TO_CHECK	"SUBM_CMD_TO_CHECK"
 #define SUBM_MULTIUSER		"SUBM_MULTIUSER"
 #define SUBM_GROUP			"SUBM_GROUP"
 #define SUBM_QUEUE_HIGH		"SUBM_QUEUE_HIGH"
 #define SUBM_QUEUE_LOW		"SUBM_QUEUE_LOW"
 #define SUBM_PREFIX			"SUBM_PREFIX"
 #define SUBM_POSTFIX		"SUBM_POSTFIX"
-#define SUBM_CANCEL			"SUBM_CANCEL"
-#define SUBM_JOBCHECK		"SUBM_JOBCHECK"
 
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
@@ -226,10 +226,14 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
 		if (!strcmp(buffer, SUBM_NAME))
 			orm->subm_name = target;
-		else if (!strcmp(buffer, SUBM_CMD_SUBMIT))
+		else if (!strcmp(buffer, SUBM_CMD_TO_SUBMIT))
 			orm->subm_cmd_submit = target;
-		else if (!strcmp(buffer, SUBM_CMD_START))
+		else if (!strcmp(buffer, SUBM_CMD_TO_START))
 			orm->subm_cmd_start = target;
+		else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL))
+			orm->subm_cmd_cancel = target;
+		else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
+			orm->subm_cmd_check = target;
 		else if (!strcmp(buffer, SUBM_MULTIUSER))
 			orm->subm_multiuser = !strcmp(target, "yes");
 		else if (!strcmp(buffer, SUBM_GROUP))
@@ -242,10 +246,6 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 			orm->subm_prefix = target;
 		else if (!strcmp(buffer, SUBM_POSTFIX))
 			orm->subm_postfix = target;
-		else if (!strcmp(buffer, SUBM_CANCEL))
-			orm->subm_cancel = target;
-		else if (!strcmp(buffer, SUBM_JOBCHECK))
-			orm->subm_jobcheck = target;
 		else
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
 
@@ -255,7 +255,7 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	fclose(file);
 
 	if (!orm->subm_cmd_submit) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is mandatory\n", SUBM_CMD_SUBMIT);
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is mandatory\n", SUBM_CMD_TO_SUBMIT);
 		return RMANAGER_ERROR;
 	}
 	if (!orm->subm_name)
@@ -293,14 +293,14 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_name = NULL;
 	orm->subm_cmd_submit = NULL;
 	orm->subm_cmd_start = NULL;
-	orm->subm_group = NULL;
+	orm->subm_cmd_cancel = NULL;
+	orm->subm_cmd_check = NULL;
 	orm->subm_multiuser = 0;	// No
+	orm->subm_group = NULL;
 	orm->subm_queue_high = NULL;
 	orm->subm_queue_low = NULL;
 	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
-	orm->subm_cancel = NULL;
-	orm->subm_jobcheck = NULL;
 
 	return RMANAGER_SUCCESS;
 }
@@ -309,7 +309,7 @@ int oph_cancel_request(int jobid, char *username)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
-	if (orm && orm->subm_cancel) {
+	if (orm && orm->subm_cmd_cancel) {
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
@@ -319,10 +319,10 @@ int oph_cancel_request(int jobid, char *username)
 		else		// Skip username for backward compatibility
 			*subm_username = 0;
 		size_t len =
-		    6 + strlen(orm->subm_prefix) + strlen(subm_username) + strlen(orm->subm_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE +
+		    6 + strlen(orm->subm_prefix) + strlen(subm_username) + strlen(orm->subm_cmd_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE +
 		    strlen(orm->subm_postfix);
 		char cmd[len];
-		snprintf(cmd, len, "%s %s %s %d %s%s %s", orm->subm_prefix, subm_username, orm->subm_cancel, jobid, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
+		snprintf(cmd, len, "%s %s %s %d %s%s %s", orm->subm_prefix, subm_username, orm->subm_cmd_cancel, jobid, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
 		if (oph_ssh_submit(cmd)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
@@ -342,12 +342,12 @@ int oph_read_job_queue(int **list, unsigned int *n)
 	*list = NULL;
 	*n = 0;
 #ifndef LOCAL_FRAMEWORK
-	if (orm && orm->subm_jobcheck) {
+	if (orm && orm->subm_cmd_check) {
 		char outfile[OPH_MAX_STRING_SIZE];
 		snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, "job", "queue");
-		size_t len = 4 + strlen(orm->subm_jobcheck) + strlen(outfile);
+		size_t len = 4 + strlen(orm->subm_cmd_check) + strlen(outfile);
 		char cmd[len];
-		snprintf(cmd, len, "%s > %s", orm->subm_jobcheck, outfile);
+		snprintf(cmd, len, "%s > %s", orm->subm_cmd_check, outfile);
 		if (oph_ssh_submit(cmd)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
@@ -396,7 +396,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		return RMANAGER_ERROR;
 	}
 	if (type && !orm->subm_cmd_start) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_START);
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_START);
 		return RMANAGER_ERROR;
 	}
 
@@ -443,6 +443,14 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_cmd_start);
 		orm->subm_cmd_start = NULL;
 	}
+	if (orm->subm_cmd_cancel) {
+		free(orm->subm_cmd_cancel);
+		orm->subm_cmd_cancel = NULL;
+	}
+	if (orm->subm_cmd_check) {
+		free(orm->subm_cmd_check);
+		orm->subm_cmd_check = NULL;
+	}
 	if (orm->subm_group) {
 		free(orm->subm_group);
 		orm->subm_group = NULL;
@@ -462,14 +470,6 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_postfix) {
 		free(orm->subm_postfix);
 		orm->subm_postfix = NULL;
-	}
-	if (orm->subm_cancel) {
-		free(orm->subm_cancel);
-		orm->subm_cancel = NULL;
-	}
-	if (orm->subm_jobcheck) {
-		free(orm->subm_jobcheck);
-		orm->subm_jobcheck = NULL;
 	}
 	free(orm);
 	return RMANAGER_SUCCESS;
