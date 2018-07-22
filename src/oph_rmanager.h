@@ -35,7 +35,6 @@
 #define OPH_NULL_FILENAME "/dev/null"
 
 struct _oph_rmanager {
-	char *subm_name;
 	char *subm_cmd_submit;
 	char *subm_cmd_start;
 	char *subm_cmd_cancel;

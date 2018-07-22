@@ -26,7 +26,6 @@
 #include <mysql.h>
 #include <grp.h>
 
-#define SUBM_NAME			"SUBM_NAME"
 #define SUBM_CMD_TO_SUBMIT	"SUBM_CMD_TO_SUBMIT"
 #define SUBM_CMD_TO_START	"SUBM_CMD_TO_START"
 #define SUBM_CMD_TO_CANCEL	"SUBM_CMD_TO_CANCEL"
@@ -223,32 +222,31 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 			fclose(file);
 			return RMANAGER_MEMORY_ERROR;
 		}
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
-		if (!strcmp(buffer, SUBM_NAME))
-			orm->subm_name = target;
-		else if (!strcmp(buffer, SUBM_CMD_TO_SUBMIT))
-			orm->subm_cmd_submit = target;
-		else if (!strcmp(buffer, SUBM_CMD_TO_START))
-			orm->subm_cmd_start = target;
-		else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL))
-			orm->subm_cmd_cancel = target;
-		else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
-			orm->subm_cmd_check = target;
-		else if (!strcmp(buffer, SUBM_MULTIUSER))
-			orm->subm_multiuser = !strcmp(target, "yes");
-		else if (!strcmp(buffer, SUBM_GROUP))
-			orm->subm_group = target;
-		else if (!strcmp(buffer, SUBM_QUEUE_HIGH))
-			orm->subm_queue_high = target;
-		else if (!strcmp(buffer, SUBM_QUEUE_LOW))
-			orm->subm_queue_low = target;
-		else if (!strcmp(buffer, SUBM_PREFIX))
-			orm->subm_prefix = target;
-		else if (!strcmp(buffer, SUBM_POSTFIX))
-			orm->subm_postfix = target;
-		else
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
-
+		if (*buffer != OPH_COMMENT_MARK) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
+			if (!strcmp(buffer, SUBM_CMD_TO_SUBMIT))
+				orm->subm_cmd_submit = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_START))
+				orm->subm_cmd_start = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL))
+				orm->subm_cmd_cancel = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
+				orm->subm_cmd_check = target;
+			else if (!strcmp(buffer, SUBM_MULTIUSER))
+				orm->subm_multiuser = !strcmp(target, "yes");
+			else if (!strcmp(buffer, SUBM_GROUP))
+				orm->subm_group = target;
+			else if (!strcmp(buffer, SUBM_QUEUE_HIGH))
+				orm->subm_queue_high = target;
+			else if (!strcmp(buffer, SUBM_QUEUE_LOW))
+				orm->subm_queue_low = target;
+			else if (!strcmp(buffer, SUBM_PREFIX))
+				orm->subm_prefix = target;
+			else if (!strcmp(buffer, SUBM_POSTFIX))
+				orm->subm_postfix = target;
+			else
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
+		}
 		fgetc(file);	// '\n'
 	}
 
@@ -258,8 +256,6 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is mandatory\n", SUBM_CMD_TO_SUBMIT);
 		return RMANAGER_ERROR;
 	}
-	if (!orm->subm_name)
-		orm->subm_name = strdup("");
 	if (!orm->subm_queue_high || !strlen(orm->subm_queue_high)) {
 		if (orm->subm_queue_high) {
 			free(orm->subm_queue_high);
@@ -290,7 +286,6 @@ int initialize_rmanager(oph_rmanager * orm)
 		return RMANAGER_NULL_PARAM;
 	}
 
-	orm->subm_name = NULL;
 	orm->subm_cmd_submit = NULL;
 	orm->subm_cmd_start = NULL;
 	orm->subm_cmd_cancel = NULL;
@@ -430,10 +425,6 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
-	}
-	if (orm->subm_name) {
-		free(orm->subm_name);
-		orm->subm_name = NULL;
 	}
 	if (orm->subm_cmd_submit) {
 		free(orm->subm_cmd_submit);
