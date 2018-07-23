@@ -31,11 +31,9 @@ IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server/bin/oph_io_server
 IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-server/etc/script/oph_ioserver.conf.template
 
 # Body
-string=`hostname --all-fqdns`
-searchstring='-ib'
-temp=${string%$searchstring*}
-myhost=`echo ${temp} | tail -c 5`'-ib'
-myid=`echo ${temp} | tail -c 4 | bc`
+hostlist=`hostname --all-fqdns`
+myhost=`echo ${hostlist} | tail -c 7`
+myid=`echo ${hostlist} | tail -c 2 | bc`
 
 echo "Add host ${myhost} to partition ${hpid}"
 mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status='up' WHERE hostname='${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname='${myhost}')); COMMIT;"
