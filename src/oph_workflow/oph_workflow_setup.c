@@ -750,7 +750,8 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 		if (hashtbl_insert_with_size(wf->vars, key[i], var_buffer, var_size + svalue_size))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n", key[i], wf->name);
 		else
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", key[i], var.svalue, wf->name);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", key[i],
+			      strcmp(key[i], OPH_WORKFLOW_BVAR_HIDDEN_KEY) ? var.svalue : OPH_WORKFLOW_BVAR_HIDDEN_VALUE, wf->name);
 		free(var.svalue);
 		free(var_buffer);
 	}

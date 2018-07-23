@@ -77,6 +77,9 @@
 #define OPH_WORKFLOW_BVAR_KEY_NCORES	"NCORES"
 #define OPH_WORKFLOW_BVAR_KEY_NHOSTS	"NHOSTS"
 
+#define OPH_WORKFLOW_BVAR_HIDDEN_KEY	"OPH_PASSWD"
+#define OPH_WORKFLOW_BVAR_HIDDEN_VALUE	"***"
+
 // Additional known operators
 #define OPH_OPERATOR_SET		"oph_set"
 #define OPH_OPERATOR_FOR		"oph_for"
