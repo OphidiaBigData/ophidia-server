@@ -1,4 +1,15 @@
 
+## Next release
+
+### Fixed:
+
+- Unit tests
+- Bug in workflow comments parsing
+
+### Changed:
+
+- oph_manage_user to set initial OPH_CDD argument when user is first created
+
 ## v1.3.0 - 2018-06-18
 
 ### Added:
