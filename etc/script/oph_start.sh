@@ -35,7 +35,7 @@ IO_SERVER_LAUNCHER=/usr/local/ophidia/oph-cluster/oph-io-server/etc/start_ioserv
 mkdir -p ${HOME}/.ophidia
 > ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
-echo "${SERVER_PATH} ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 
 ${LAUNCHER} --mpi=pmi2 --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
