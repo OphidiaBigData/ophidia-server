@@ -28,7 +28,7 @@ OPHDB_PORT=3306
 OPHDB_LOGIN=root
 OPHDB_PWD=abcd
 IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server/bin/oph_io_server
-IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-server/etc/script/oph_ioserver.conf.template
+IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-cluster/oph-io-server/etc/oph_ioserver.conf.template
 
 # Body
 hostlist=`hostname --all-fqdns`
