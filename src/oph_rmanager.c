@@ -207,11 +207,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 
 	while (!feof(file)) {
 
-		if (fscanf(file, "%[^\n]", buffer) == EOF) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error retrieving data from configuration file\n");
-			fclose(file);
-			return RMANAGER_ERROR;
-		}
+		if (fscanf(file, "%[^\n]", buffer) == EOF)
+			break;
 		position = strchr(buffer, '=');
 		if (!position)
 			continue;
