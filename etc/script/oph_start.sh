@@ -34,7 +34,7 @@ LAUNCHER=/usr/local/ophidia/extra/bin/srun
 # Body
 mkdir -p ${HOME}/.ophidia
 > ${HOME}/.ophidia/${serverid}${taskid}.start.sh
-echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 echo "${SERVER_PATH}/etc/script/start_ioserver.sh ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 
