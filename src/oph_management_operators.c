@@ -59,6 +59,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 	int error = OPH_SERVER_UNKNOWN;
 
 	if (!strncasecmp(operator_name, OPH_OPERATOR_CANCEL, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
@@ -210,6 +213,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_MANAGE_SESSION, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		char *action, *key, *value, username[OPH_MAX_STRING_SIZE], *new_sessionid = NULL, oph_jobid[OPH_MAX_STRING_SIZE];
 		const char *session;
 		int result, save_user = 0, save_session = 0, num_sessions = -1;
@@ -2256,6 +2262,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_LOG_INFO, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		error = OPH_SERVER_SYSTEM_ERROR;
 
 		HASHTBL *task_tbl = NULL;
@@ -2668,6 +2677,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		pthread_mutex_lock(&global_flag);
 
 		oph_job_info *item = NULL, *prev = NULL;
@@ -2715,6 +2726,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], exec_mode[OPH_MAX_STRING_SIZE], em = 0, btype = 1;	// Allocate
 
 		while (!success) {
+
+			if (!oph_cluster_deployment || strcmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
+				break;
+			}
 
 			*type = 0;
 			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
@@ -2798,11 +2814,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				if (btype) {
 
-					if (!oph_cluster_deployment || strcmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
-						break;
-					}
-
 					if (max_hosts) {
 						int rhosts = 0;
 						if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
@@ -2819,6 +2830,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 
 					int id_hostpartition = 0;
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
 					if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
@@ -2874,6 +2886,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				} else {
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retriving host partition '%s'\n", host_partition);
 					int id_hostpartition = 0, id_job = 0;
 					if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
@@ -2885,11 +2898,13 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						break;
 					}
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition, id_hostpartition);
 					if (oph_cancel_request(id_job, username))
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 					else
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Releasing host partition '%s' (%d)\n", host_partition, id_hostpartition);
 					if (oph_odb_release_hp(&oDB, id_hostpartition)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be released\n", host_partition);
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to delete host partition '%s'!", host_partition);

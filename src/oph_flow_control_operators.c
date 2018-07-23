@@ -1830,6 +1830,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 	}
 
 	if (!strncasecmp(operator_name, OPH_OPERATOR_SET, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -1932,6 +1935,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_FOR, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2034,6 +2040,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_ENDFOR, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2133,6 +2142,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ELSEIF, OPH_MAX_STRING_SIZE))	// oph_if, oph_elseif
 	{
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2233,6 +2244,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))	// oph_else, oph_endif
 	{
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2327,6 +2340,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_WAIT, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2558,6 +2574,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_INPUT, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		if (!task_id) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Operator '%s' needs parameter task_id\n", operator_name);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
