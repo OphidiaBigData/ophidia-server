@@ -3,15 +3,16 @@
 
 ### Added:
 
-- Extend the set of pre-defined run-time variables [#30](https://github.com/OphidiaBigData/ophidia-server/pull/30)
+- Clear job table from intemediate results in case of unexpected failures
 - Support to extract arrays from JSON Responses and to process them as run-time variables [#29](https://github.com/OphidiaBigData/ophidia-server/pull/29)
+- Extend the set of pre-defined run-time variables [#30](https://github.com/OphidiaBigData/ophidia-server/pull/30)
 
 ### Fixed:
 
+- Bug in handling Ophidia DB access failures
+- Bug in postprocessing oph_system
 - Unit tests
 - Bug in workflow comments parsing
-- Bug in postprocessing oph_system
-- Bug in handling Ophidia DB access failures
 
 ### Changed:
 
