@@ -2786,6 +2786,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
+		oph_odb_start_job_fast(idjob, &oDB);
 
 		if (success) {
 

@@ -312,6 +312,7 @@ int oph_cancel_request(int jobid, char *username)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
+	pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
 	if (orm && orm->subm_cmd_cancel) {
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
