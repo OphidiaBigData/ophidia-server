@@ -102,7 +102,7 @@ int oph_workflow_is_child_of(oph_workflow * wf, int p, int c);
  * \param skip_arg Argument that must not be substituted
  * \return 1 in case of errors
  */
-int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error, const char *skip_arg);
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char **submit_string, char **error, const char *skip_arg);
 
 /* \brief Function to set basic variables
  * \param workflow Input OPH_WORKFLOW

@@ -826,19 +826,24 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			cdd_value = task->arguments_values[i];
 	}
 
-	char target_base[OPH_WORKFLOW_MAX_STRING];	// measure_base[OPH_WORKFLOW_MAX_STRING], cwd_base[OPH_WORKFLOW_MAX_STRING];
+	char *target_base = NULL;
 	if (src_path) {
 		datacube_input = 0;
-		strcpy(target_base, src_path);
+		target_base = strdup(src_path);
 		src_path = target_base;
 	} else if (datacube_input) {
-		strcpy(target_base, datacube_input);
+		target_base = strdup(datacube_input);
 		datacube_input = target_base;
 	}
 
 	if (datacube_input || src_path) {
+		if (!target_base) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: memory error\n", ttype, jobid);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: variable substitution for task '%s'\n", ttype, jobid, task->name);
-		if (oph_workflow_var_substitute(wf, task_index, -1, target_base, NULL, src_path ? OPH_ARG_SRC_PATH : OPH_ARG_CUBE)) {
+		if (oph_workflow_var_substitute(wf, task_index, -1, &target_base, NULL, src_path ? OPH_ARG_SRC_PATH : OPH_ARG_CUBE)) {
+			free(target_base);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n", ttype, jobid, task->name);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -849,9 +854,12 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: parsing task '%s' for massive operations\n", ttype, jobid, task->name);
 		if ((res =
-		     oph_mf_parse_query_unsafe(state, wf, task_index, &datacube_inputs, &measure_name, &number, src_path ? src_path : datacube_input, cwd_value, cdd_value, wf->sessionid, &running,
-					       src_path ? 1 : 0, oDB, query)))
+		     oph_mf_parse_query_unsafe(state, wf, task_index, &datacube_inputs, &measure_name, &number, target_base, cwd_value, cdd_value, wf->sessionid, &running, src_path ? 1 : 0, oDB,
+					       query))) {
+			free(target_base);
 			return res;
+		}
+		free(target_base);
 
 		if (datacube_inputs) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: found %d light tasks\n", ttype, jobid, number);
