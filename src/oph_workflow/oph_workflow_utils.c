@@ -154,6 +154,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			ep++;
 
 		key = target_value + 1 + lastc;
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' in workflow '%s'\n", key, workflow->name);
 		if (lastc != lastcc)
 			return_error = 1;
 		else if (!strlen(key))
@@ -213,7 +214,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		offset = p - *submit_string;
 
 		if (prefix)
-			new_size = 1 + snprintf(NULL, OPH_WORKFLOW_MIN_STRING, "%d", return_error ? index : var->ivalue) + strlen(ep);
+			new_size = 1 + snprintf(NULL, 0, "%d", return_error ? index : var->ivalue) + strlen(ep);
 		else
 			new_size = 1 + strlen(return_error ? value : (char *) var + sizeof(oph_workflow_var)) + strlen(ep);
 
