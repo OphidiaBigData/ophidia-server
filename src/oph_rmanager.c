@@ -337,13 +337,14 @@ int oph_cancel_request(int jobid, char *username)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_read_job_queue(int **list, unsigned int *n)
+int oph_read_job_queue(int **list, char ***username, unsigned int *n)
 {
-	if (!list || !n) {
+	if (!list || !username || !n) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
 	*list = NULL;
+	*username = NULL;
 	*n = 0;
 #ifndef LOCAL_FRAMEWORK
 	if (orm && orm->subm_cmd_check) {
@@ -378,11 +379,34 @@ int oph_read_job_queue(int **list, unsigned int *n)
 		free(tmp);
 
 		*list = (int *) calloc(*n, sizeof(int));
+		if (!*list) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			free(response);
+			return RMANAGER_ERROR;
+		}
+		*username = (char **) calloc(*n, sizeof(char *));
+		if (!*username) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			free(response);
+			free(*list);
+			return RMANAGER_ERROR;
+		}
+
 		unsigned int i = 0;
+		char *pch2;
 		save_pointer = NULL;
 		for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer))
-			if ((pch = strstr(pch, prefix)) && !strncmp(pch, prefix, len))
-				(*list)[i++] = (int) strtol(pch + len, NULL, 10);
+			if ((pch = strstr(pch, prefix)) && !strncmp(pch, prefix, len)) {
+				pch += len;
+				if (!(pch2 = strchr(pch, ' '))) {
+					*pch2 = 0;
+					pch2++;
+				}
+				(*list)[i] = (int) strtol(pch, NULL, 10);
+				if (pch2)
+					(*username)[i] = strdup(pch2 + 1);
+				i++;
+			}
 		free(response);
 	}
 #endif

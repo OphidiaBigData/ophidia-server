@@ -5723,7 +5723,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 		unsigned int k, n, nn = 0;
 		oph_job_list *job_list = data->state->job_info;
 		oph_job_info *temp;
-		char submission_string_ext[OPH_MAX_STRING_SIZE], *error_notification[OPH_SERVER_POLL_ITEMS];
+		char submission_string_ext[OPH_MAX_STRING_SIZE], *error_notification[OPH_SERVER_POLL_ITEMS], **username = NULL;
 
 		for (k = 0; k < OPH_SERVER_POLL_ITEMS; ++k)
 			error_notification[k] = NULL;
@@ -5752,7 +5752,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Check for aborted or starved tasks\n");
 
 			// Load task list in resource manager queue
-			if (oph_read_job_queue(&list, &n))
+			if (oph_read_job_queue(&list, &username, &n))
 				continue;
 
 			pthread_mutex_lock(&global_flag);
@@ -5871,11 +5871,17 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
 				if (list[k] < 0)
-					oph_cancel_request(-list[k], NULL);
+					oph_cancel_request(-list[k], username[k] ? username[k] : NULL);
 		}
 
 		if (list)
 			free(list);
+		if (username) {
+			for (k = 0; k < n; ++k)
+				if (username[k])
+					free(username[k]);
+			free(username);
+		}
 		for (k = 0; k < nn; ++k)
 			if (error_notification[k])
 				free(error_notification[k]);

@@ -25,7 +25,7 @@ fixString=
 CHECKER=/usr/local/ophidia/extra/bin/squeue
 
 # Body
-${CHECKER} -o "%j"
+${CHECKER} -o "%j %u"
 
 exit $?
 
