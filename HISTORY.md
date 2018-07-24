@@ -1,6 +1,11 @@
 
 ## Next release
 
+### Added:
+
+- Extend the set of pre-defined run-time variables [#30](https://github.com/OphidiaBigData/ophidia-server/pull/30)
+- Support to extract arrays from JSON Responses and to process them as run-time variables [#29](https://github.com/OphidiaBigData/ophidia-server/pull/29)
+
 ### Fixed:
 
 - Unit tests
