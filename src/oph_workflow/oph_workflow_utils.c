@@ -82,6 +82,13 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 
 int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char **submit_string, char **error, const char *skip_arg)
 {
+	if (!workflow || !submit_string || !*submit_string) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null parameter\n");
+		if (error)
+			*error = strdup("Null parameter");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
 	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL;
 	oph_workflow_var *var = NULL;
@@ -227,6 +234,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		else
 			snprintf(replaced_value + offset, new_size, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
 
+		free(*submit_string);
 		*submit_string = replaced_value;
 
 		if (value) {
@@ -268,6 +276,9 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			*error = strdup("Null parameter");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
+	*long_submission_string = NULL;
+	if (short_submission_string)
+		*short_submission_string = NULL;
 	if ((task_index < 0) || (task_index > workflow->tasks_num) || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Index out of boundaries\n");
 		if (error)
@@ -285,7 +296,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	}
 
 	int i, j;
-	char *long_submit_string, *short_submit_string;
+	char *long_submit_string = NULL, *short_submit_string = NULL;
 	char key_value[OPH_WORKFLOW_MAX_STRING];
 	char *key, *value, *value2;
 	char *path_key[OPH_WORKFLOW_PATH_SET_SIZE] = OPH_WORKFLOW_PATH_SET;
@@ -303,6 +314,8 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	     subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob, task_index,
 	     light_task_index, workflow->exec_mode) <= 0) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		if (long_submit_string)
+			free(long_submit_string);
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
@@ -310,6 +323,8 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
 		if (oph_workflow_strcat(&long_submit_string, key_value)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -317,6 +332,8 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
 		if (oph_workflow_strcat(&long_submit_string, key_value)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -324,6 +341,10 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	if (short_submission_string) {
 		if (asprintf(&short_submit_string, "%s ", workflow->tasks[task_index].operator) <= 0) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
+			if (short_submit_string)
+				free(short_submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -344,14 +365,22 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
 			if (oph_workflow_strcat(&long_submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (long_submit_string)
+					free(long_submit_string);
+				if (short_submit_string)
+					free(short_submit_string);
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 			if (short_submission_string) {
 				if (value != value2)
-					snprintf(key_value, OPH_WORKFLOW_MAX_STRING,
-						 strchr(value2, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value2);
+					snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value2, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key,
+						 value2);
 				if (oph_workflow_strcat(&short_submit_string, key_value)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					if (long_submit_string)
+						free(long_submit_string);
+					if (short_submit_string)
+						free(short_submit_string);
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
 			}
@@ -360,14 +389,25 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	}
 
 	// Variable substitution
-	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &long_submit_string, error, NULL))
+	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &long_submit_string, error, NULL)) {
+		if (long_submit_string)
+			free(long_submit_string);
+		if (short_submit_string)
+			free(short_submit_string);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, long_submit_string);
 	*long_submission_string = long_submit_string;
 	if (short_submission_string) {
 		// Variable substitution
-		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &short_submit_string, error, NULL))
+		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &short_submit_string, error, NULL)) {
+			if (long_submit_string)
+				free(long_submit_string);
+			if (short_submit_string)
+				free(short_submit_string);
+			*long_submission_string = NULL;
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Short submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, short_submit_string);
 		*short_submission_string = short_submit_string;
 	}
@@ -376,17 +416,13 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 }
 
 
-int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, int light_task_index, int show_callback, char
-				      **submitted_string)
+int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, int light_task_index, int show_callback, char **submitted_string)
 {
 	if (!workflow || !submitted_string) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
-	if ((task_index < 0)
-	    || (task_index > workflow->tasks_num)
-	    || ((task_index == workflow->tasks_num)
-		&& strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
+	if ((task_index < 0) || (task_index > workflow->tasks_num) || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Index out of boundaries\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
@@ -399,18 +435,22 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 	}
 
 	int j;
-	char *submit_string;
+	char *submit_string = NULL;
 	char key_value[OPH_WORKFLOW_MAX_STRING];
 	char *key, *value;
 	if (asprintf(&submit_string, "%s ", workflow->tasks[task_index].operator) <= 0) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		if (submit_string)
+			free(submit_string);
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 	if (workflow->exec_mode && strlen(workflow->exec_mode)) {
-		snprintf(key_value, OPH_WORKFLOW_MAX_STRING,
-			 strchr(workflow->exec_mode, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, "exec_mode", workflow->exec_mode);
+		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(workflow->exec_mode, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, "exec_mode",
+			 workflow->exec_mode);
 		if (oph_workflow_strcat(&submit_string, key_value)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (submit_string)
+				free(submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -419,6 +459,8 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 			 ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, "callback_url", workflow->callback_url);
 		if (oph_workflow_strcat(&submit_string, key_value)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (submit_string)
+				free(submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
@@ -432,6 +474,8 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 				 ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
 			if (oph_workflow_strcat(&submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (submit_string)
+					free(submit_string);
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 		} else

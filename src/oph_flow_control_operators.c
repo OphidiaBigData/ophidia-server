@@ -1318,8 +1318,8 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 					while ((kk < ivalues_num) && (value <= subset_struct->end[kkk]));
 				}
 				oph_subset_free(subset_struct);
-				free(arg_value);
 			}
+			free(arg_value);
 		}
 		if ((j < wf->tasks[i].arguments_num) || error_msg) {
 			if (!strlen(error_message)) {
