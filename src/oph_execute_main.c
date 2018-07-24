@@ -392,6 +392,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	}
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
 
+	// Remember the password
+	if (soap->passwd)
+		wf->password = strdup(soap->passwd);
+
 	// Save the token
 	if (strlen(_new_token))
 		wf->new_token = strdup(_new_token);
