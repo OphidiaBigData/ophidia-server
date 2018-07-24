@@ -290,6 +290,7 @@ typedef struct _oph_workflow {
 	int markerid;
 	int status;
 	char *username;
+	char *password;
 	int userrole;
 	char *ip_address;
 	char *name;
