@@ -5,6 +5,7 @@
 
 - Unit tests
 - Bug in workflow comments parsing
+- Bug in postprocessing oph_system
 
 ### Changed:
 
