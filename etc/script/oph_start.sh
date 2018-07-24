@@ -38,7 +38,7 @@ echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 
-${LAUNCHER} --mpi=pmi2 --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 if [ $? -ne 0 ]; then
         echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
         exit 1
