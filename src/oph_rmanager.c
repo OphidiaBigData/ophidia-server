@@ -91,8 +91,6 @@ void __oph_system(oph_command_data * data)
 				free(data->state->serverid);
 			free(data->state);
 		}
-
-		free(data);
 	}
 }
 
@@ -102,8 +100,11 @@ void *_oph_system(oph_command_data * data)
 	pthread_detach(pthread_self());
 #endif
 	__oph_system(data);
-	if (data && data->id)
-		data->postprocess(data->id);
+	if (data) {
+		if (data->id)
+			data->postprocess(data->id);
+		free(data);
+	}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	mysql_thread_end();
 #endif
@@ -170,6 +171,11 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	}
 #endif
 	__oph_system(data);
+	if (data) {
+		if (data->id)
+			data->postprocess(data->id);
+		free(data);
+	}
 
 	return RMANAGER_SUCCESS;
 }
