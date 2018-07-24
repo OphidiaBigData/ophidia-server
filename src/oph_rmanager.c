@@ -209,17 +209,19 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 
 		if (fscanf(file, "%[^\n]", buffer) == EOF)
 			break;
-		position = strchr(buffer, '=');
-		if (!position)
-			continue;
-		*position = 0;
-		target = strdup(++position);
-		if (!target) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-			fclose(file);
-			return RMANAGER_MEMORY_ERROR;
-		}
+
 		if (*buffer != OPH_COMMENT_MARK) {
+
+			position = strchr(buffer, '=');
+			if (!position)
+				continue;
+			*position = 0;
+			target = strdup(++position);
+			if (!target) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				fclose(file);
+				return RMANAGER_MEMORY_ERROR;
+			}
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
 			if (!strcmp(buffer, SUBM_CMD_TO_SUBMIT))
 				orm->subm_cmd_submit = target;
@@ -241,8 +243,10 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_prefix = target;
 			else if (!strcmp(buffer, SUBM_POSTFIX))
 				orm->subm_postfix = target;
-			else
+			else {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
+				free(target);
+			}
 		}
 		fgetc(file);	// '\n'
 	}
