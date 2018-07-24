@@ -231,9 +231,10 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_cmd_cancel = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
 				orm->subm_cmd_check = target;
-			else if (!strcmp(buffer, SUBM_MULTIUSER))
+			else if (!strcmp(buffer, SUBM_MULTIUSER)) {
 				orm->subm_multiuser = !strcmp(target, "yes");
-			else if (!strcmp(buffer, SUBM_GROUP))
+				free(target);
+			} else if (!strcmp(buffer, SUBM_GROUP))
 				orm->subm_group = target;
 			else if (!strcmp(buffer, SUBM_QUEUE_HIGH))
 				orm->subm_queue_high = target;
