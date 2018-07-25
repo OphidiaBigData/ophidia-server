@@ -3,6 +3,7 @@
 
 ### Added:
 
+- Parameter 'nhost' to JSON Request schema
 - Feature for dynamic cluster deployment [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - Clear job table from intemediate results in case of unexpected failures
 - Support to extract arrays from JSON Responses and to process them as run-time variables [#29](https://github.com/OphidiaBigData/ophidia-server/pull/29)

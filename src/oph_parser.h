@@ -26,7 +26,7 @@
 #define OPH_ARG_MARKERID "markerid"
 #define OPH_ARG_WORKFLOWID "workflowid"
 #define OPH_ARG_NCORES "ncores"
-#define OPH_ARG_NHOSTS "nhosts"
+#define OPH_ARG_NHOSTS "nhost"
 #define OPH_ARG_MODE "exec_mode"
 #define OPH_ARG_OPERATOR "operator"
 #define OPH_ARG_USER "user"
