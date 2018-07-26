@@ -71,10 +71,9 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 	// Check XML
 	HASHTBL *task_tbl = NULL;
-	char filter = 1;
+	char tmp[OPH_MAX_STRING_SIZE], filter = 1;
 	if (!strchr(task_string, OPH_SEPARATOR_KV[0])) {
 		unsigned int i, j;
-		char tmp[OPH_MAX_STRING_SIZE];
 		for (i = j = 0; (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)) && (task_string[j] != OPH_SEPARATOR_PARAM[0]); j++)
 			if (task_string[j] != OPH_SEPARATOR_NULL)
 				tmp[i++] = task_string[j];
