@@ -19,6 +19,7 @@
 
 ### Changed:
 
+- Improvement of support for large variables [#32](https://github.com/OphidiaBigData/ophidia-server/pull/32)
 - New argument 'ENABLE_CLUSTER_DEPLOYMENT' in main configuration file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - OPH_CLUSTER xml file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - slurm.conf configuration file arguments [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
