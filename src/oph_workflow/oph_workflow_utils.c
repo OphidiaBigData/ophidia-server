@@ -80,15 +80,21 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 	return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 }
 
-int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char *submit_string, char **error, const char *skip_arg)
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char **submit_string, char **error, const char *skip_arg)
 {
-	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
-	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable;
-	char replaced_value[OPH_WORKFLOW_MAX_STRING], target_value[OPH_WORKFLOW_MAX_STRING];
-	oph_workflow_var *var = NULL;
-	int index;
+	if (!workflow || !submit_string || !*submit_string) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null parameter\n");
+		if (error)
+			*error = strdup("Null parameter");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
 
-	while (((p = strchr(submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
+	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
+	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL;
+	oph_workflow_var *var = NULL;
+	int index, new_size;
+
+	while (((p = strchr(*submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(*submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
 		do {
 			firstc = 1;
@@ -123,12 +129,32 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		}
 		while (parse_embedded_variable);
 
+		if (ep < p) {
+			char _error[OPH_WORKFLOW_MAX_STRING];
+			snprintf(_error, OPH_WORKFLOW_MAX_STRING, "Parsing error");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%s while processing workflow '%s'\n", _error, workflow->name);
+			if (error)
+				*error = strdup(_error);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
+
+		target_value = (char *) malloc((ep - p + 1) * sizeof(char));
+		if (!target_value) {
+			char _error[OPH_WORKFLOW_MAX_STRING];
+			snprintf(_error, OPH_WORKFLOW_MAX_STRING, "Memory error");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%s while processing workflow '%s'\n", _error, workflow->name);
+			if (error)
+				*error = strdup(_error);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+
 		strncpy(target_value, p, ep - p);
 		target_value[ep - p] = 0;
 		if (lastcc)
 			ep++;
 
 		key = target_value + 1 + lastc;
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' in workflow '%s'\n", key, workflow->name);
 		if (lastc != lastcc)
 			return_error = 1;
 		else if (!strlen(key))
@@ -141,7 +167,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			char *current_arg = NULL;
 			if (!skip_arg) {
 				char *ck = p;
-				while (ck && (ck > submit_string) && (*ck != OPH_WORKFLOW_KV_SEPARATOR[0]))
+				while (ck && (ck > *submit_string) && (*ck != OPH_WORKFLOW_KV_SEPARATOR[0]))
 					ck--;
 				if (ck) {
 					if (*ck == OPH_WORKFLOW_KV_SEPARATOR[0])
@@ -172,31 +198,71 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 				*error = strdup(_error);
 			if (value)
 				free(value);
+			free(target_value);
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		} else if (return_error > 0) {
-			offset = p - submit_string + 1;
+			offset = p - *submit_string + 1;
 			if (skip_until < offset)
 				skip_until = offset;
 			if (value) {
 				free(value);
 				value = NULL;
 			}
+			free(target_value);
 			continue;
 		}
-		offset = p - submit_string;
-		*replaced_value = 0;
-		strncpy(replaced_value, submit_string, offset);
+		offset = p - *submit_string;
+
+		if (prefix)
+			new_size = 1 + snprintf(NULL, 0, "%d", return_error ? index : var->ivalue) + strlen(ep);
+		else
+			new_size = 1 + strlen(return_error ? value : (char *) var + sizeof(oph_workflow_var)) + strlen(ep);
+
+		replaced_value = (char *) malloc((new_size + offset) * sizeof(char));
+		if (!replaced_value) {
+			char _error[OPH_WORKFLOW_MAX_STRING];
+			snprintf(_error, OPH_WORKFLOW_MAX_STRING, "Memory error");
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%s while processing workflow '%s'\n", _error, workflow->name);
+			if (error)
+				*error = strdup(_error);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+
+		strncpy(replaced_value, *submit_string, offset);
 		replaced_value[offset] = 0;
 		if (prefix)
-			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%d%s", return_error ? index : var->ivalue, ep);
+			snprintf(replaced_value + offset, new_size, "%d%s", return_error ? index : var->ivalue, ep);
 		else
-			snprintf(replaced_value + offset, OPH_WORKFLOW_MAX_STRING, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
-		strcpy(submit_string, replaced_value);
+			snprintf(replaced_value + offset, new_size, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
+
+		free(*submit_string);
+		*submit_string = replaced_value;
+
 		if (value) {
 			free(value);
 			value = NULL;
 		}
+		free(target_value);
 	}
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_strcat(char **base, char *extension)
+{
+	if (!base)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (!extension)
+		return OPH_WORKFLOW_EXIT_SUCCESS;
+
+	char *new = (char *) malloc(((*base ? strlen(*base) : 0) + strlen(extension) + 1) * sizeof(char));
+	if (!new)
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
+	sprintf(new, "%s%s", *base ? *base : "", extension);
+
+	free(*base);
+	*base = new;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -211,6 +277,9 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			*error = strdup("Null parameter");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
+	*long_submission_string = NULL;
+	if (short_submission_string)
+		*short_submission_string = NULL;
 	if ((task_index < 0) || (task_index > workflow->tasks_num) || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Index out of boundaries\n");
 		if (error)
@@ -228,8 +297,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 	}
 
 	int i, j;
-	unsigned int length;
-	char long_submit_string[OPH_WORKFLOW_MAX_STRING], short_submit_string[OPH_WORKFLOW_MAX_STRING];
+	char *long_submit_string = NULL, *short_submit_string = NULL;
 	char key_value[OPH_WORKFLOW_MAX_STRING];
 	char *key, *value, *value2;
 	char *path_key[OPH_WORKFLOW_PATH_SET_SIZE] = OPH_WORKFLOW_PATH_SET;
@@ -242,33 +310,45 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	snprintf(long_submit_string, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_EXT_SUB_STRING, workflow->tasks[task_index].operator, workflow->sessionid, workflow->workflowid,
-		 subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob,
-		 task_index, light_task_index, workflow->exec_mode);
+	if (asprintf
+	    (&long_submit_string, OPH_WORKFLOW_EXT_SUB_STRING, workflow->tasks[task_index].operator, workflow->sessionid, workflow->workflowid,
+	     subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob, task_index,
+	     light_task_index, workflow->exec_mode) <= 0) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		if (long_submit_string)
+			free(long_submit_string);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
 
 	if (workflow->host_partition) {
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
-		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
-			if (error)
-				*error = strdup("Space for submission string is not enough");
+		if (oph_workflow_strcat(&long_submit_string, key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
-		strncat(long_submit_string, key_value, length);
 	}
 	if (workflow->nhosts) {
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
-		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
-			if (error)
-				*error = strdup("Space for submission string is not enough");
+		if (oph_workflow_strcat(&long_submit_string, key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
-		strncat(long_submit_string, key_value, length);
 	}
 
-	if (short_submission_string)
-		snprintf(short_submit_string, OPH_WORKFLOW_MAX_STRING, "%s ", workflow->tasks[task_index].operator);
+	if (short_submission_string) {
+		if (asprintf(&short_submit_string, "%s ", workflow->tasks[task_index].operator) <= 0) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (long_submit_string)
+				free(long_submit_string);
+			if (short_submit_string)
+				free(short_submit_string);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+	}
 
 	for (j = 0; j < (subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_num : workflow->tasks[task_index].arguments_num); ++j) {
 		key = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[j] : workflow->tasks[task_index].arguments_keys[j];
@@ -284,48 +364,53 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 					}
 			}
 			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
-			if ((length = OPH_WORKFLOW_MAX_STRING - strlen(long_submit_string)) <= strlen(key_value)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
-				if (error)
-					*error = strdup("Space for submission string is not enough");
+			if (oph_workflow_strcat(&long_submit_string, key_value)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (long_submit_string)
+					free(long_submit_string);
+				if (short_submit_string)
+					free(short_submit_string);
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
-			strncat(long_submit_string, key_value, length);
 			if (short_submission_string) {
 				if (value != value2)
 					snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value2, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key,
 						 value2);
-				strncat(short_submit_string, key_value, length);
+				if (oph_workflow_strcat(&short_submit_string, key_value)) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					if (long_submit_string)
+						free(long_submit_string);
+					if (short_submit_string)
+						free(short_submit_string);
+					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+				}
 			}
 		} else
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Argument skipped\n");
 	}
 
 	// Variable substitution
-	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, long_submit_string, error, NULL))
+	if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &long_submit_string, error, NULL)) {
+		if (long_submit_string)
+			free(long_submit_string);
+		if (short_submit_string)
+			free(short_submit_string);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, long_submit_string);
-
-	*long_submission_string = strdup(long_submit_string);
-	if (!(*long_submission_string)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate submission string\n");
-		if (error)
-			*error = strdup("Unable to allocate submission string");
-		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, long_submit_string);
+	*long_submission_string = long_submit_string;
 	if (short_submission_string) {
 		// Variable substitution
-		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, short_submit_string, error, NULL))
+		if (oph_workflow_var_substitute(workflow, task_index, light_task_index, &short_submit_string, error, NULL)) {
+			if (long_submit_string)
+				free(long_submit_string);
+			if (short_submit_string)
+				free(short_submit_string);
+			*long_submission_string = NULL;
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Short submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, short_submit_string);
-		*short_submission_string = strdup(short_submit_string);
-		if (!(*short_submission_string)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate submission string\n");
-			if (error)
-				*error = strdup("Unable to allocate submission string");
-			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Short submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, short_submit_string);
+		*short_submission_string = short_submit_string;
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -351,51 +436,54 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 	}
 
 	int j;
-	unsigned int length;
-	char submit_string[OPH_WORKFLOW_MAX_STRING];
+	char *submit_string = NULL;
 	char key_value[OPH_WORKFLOW_MAX_STRING];
 	char *key, *value;
-
-	snprintf(submit_string, OPH_WORKFLOW_MAX_STRING, "%s ", workflow->tasks[task_index].operator);
+	if (asprintf(&submit_string, "%s ", workflow->tasks[task_index].operator) <= 0) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		if (submit_string)
+			free(submit_string);
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
 	if (workflow->exec_mode && strlen(workflow->exec_mode)) {
 		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(workflow->exec_mode, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, "exec_mode",
 			 workflow->exec_mode);
-		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(submit_string)) <= strlen(key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
+		if (oph_workflow_strcat(&submit_string, key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (submit_string)
+				free(submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
-		strncat(submit_string, key_value, length);
 	}
 	if (show_callback && workflow->callback_url && strlen(workflow->callback_url)) {
-		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(workflow->callback_url, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING,
-			 "callback_url", workflow->callback_url);
-		if ((length = OPH_WORKFLOW_MAX_STRING - strlen(submit_string)) <= strlen(key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
+		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(workflow->callback_url, OPH_WORKFLOW_VALUE_SEPARATOR)
+			 ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, "callback_url", workflow->callback_url);
+		if (oph_workflow_strcat(&submit_string, key_value)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			if (submit_string)
+				free(submit_string);
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
-		strncat(submit_string, key_value, length);
 	}
 	for (j = 0; j < (subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_num : workflow->tasks[task_index].arguments_num); ++j) {
 		key = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[j] : workflow->tasks[task_index].arguments_keys[j];
-		value = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_values[j] : workflow->tasks[task_index].arguments_values[j];
-		if (key && value && strlen(key) && strlen(value)) {
-			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
-			if ((length = OPH_WORKFLOW_MAX_STRING - strlen(submit_string)) <= strlen(key_value)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Space for submission string is not enough\n");
+		value = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_values[j]
+		    : workflow->tasks[task_index].arguments_values[j];
+		if (key && value && strlen(key)
+		    && strlen(value)) {
+			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR)
+				 ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
+			if (oph_workflow_strcat(&submit_string, key_value)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (submit_string)
+					free(submit_string);
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
-			strncat(submit_string, key_value, length);
 		} else
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Argument skipped\n");
 	}
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Submission string of '%s' is '%s'\n", workflow->tasks[task_index].name, submit_string);
-
-	*submitted_string = strdup(submit_string);
-	if (!(*submitted_string)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to alloc submission string\n");
-		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	}
-
+	*submitted_string = submit_string;
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
