@@ -71,15 +71,19 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 	// Check XML
 	HASHTBL *task_tbl = NULL;
-	char tmp[OPH_MAX_STRING_SIZE], filter = 1;
+	char tmp[OPH_MAX_STRING_SIZE + 1], filter = 1;
 	if (!strchr(task_string, OPH_SEPARATOR_KV[0])) {
+		char stop = 1;
 		unsigned int i, j;
-		for (i = j = 0; (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)) && (task_string[j] != OPH_SEPARATOR_PARAM[0]); j++)
+		for (i = j = 0; stop && (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)); j++) {
 			if (task_string[j] != OPH_SEPARATOR_NULL)
 				tmp[i++] = task_string[j];
+			if (task_string[j] == OPH_SEPARATOR_PARAM[0])
+				stop = 0;
+		}
 		tmp[i] = 0;
-		if ((j < strlen(task_string)) && (task_string[j] == OPH_SEPARATOR_PARAM[0]))
-			task_string[j] = 0;	// Skip any value beyond OPH_SEPARATOR_PARAM[0]
+		if (!stop)	// Skip beyond OPH_SEPARATOR_PARAM[0]
+			task_string[j] = 0;
 		if (!is_src_path) {	// In case of datacube filter, check for '*' and 'all'
 			switch (strlen(tmp)) {
 				case 0:
@@ -143,6 +147,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 	{
 		char _path[PATH_MAX], _path2[PATH_MAX];
 		char *path = hashtbl_get(task_tbl, OPH_MF_ARG_PATH);
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Raw path to files for massive operation: %s\n", path ? path : "(null)");
 		while (path && (*path == ' '))
 			path++;
 		if (!path) {
@@ -179,7 +184,6 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			snprintf(_path, PATH_MAX, "%s%s%s", oph_base_src_path, *path != OPH_MF_ROOT_FOLDER[0] ? OPH_MF_ROOT_FOLDER : "", path);
 			path = _path;
 		}
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Path to files for massive operation: %s\n", path);
 
 		char dpath[OPH_MAX_STRING_SIZE];
 		*dpath = 0;
