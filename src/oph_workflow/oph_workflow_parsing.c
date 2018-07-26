@@ -657,7 +657,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if ((*workflow)->nhosts != 0) {
 		char buf[OPH_WORKFLOW_MIN_STRING];
 		snprintf(buf, OPH_WORKFLOW_MIN_STRING, "%d", (*workflow)->nhosts);
-		if (_oph_workflow_substitute_var("nhosts", buf, (*workflow)->tasks, (*workflow)->tasks_num)) {
+		if (_oph_workflow_substitute_var("nhost", buf, (*workflow)->tasks, (*workflow)->tasks_num)) {
 			oph_workflow_free(*workflow);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error substituting nhosts\n");
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -667,7 +667,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
 		if (!(*workflow)->tasks[i].nhosts) {
 			for (j = 0; j < (*workflow)->tasks[i].arguments_num; j++) {
-				if (!strcmp((*workflow)->tasks[i].arguments_keys[j], "nhosts")) {
+				if (!strcmp((*workflow)->tasks[i].arguments_keys[j], "nhost")) {
 					(*workflow)->tasks[i].nhosts = (int) strtol((*workflow)->tasks[i].arguments_values[j], NULL, 10);
 					break;
 				}
