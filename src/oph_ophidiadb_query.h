@@ -85,6 +85,7 @@
 
 // Job accounting
 #define MYSQL_QUERY_RETRIEVE_LAST_ID "SELECT MAX(idjob) FROM jobaccounting;"
+#define MYSQL_QUERY_CLEAN_JOB_TABLE "DELETE FROM `job` WHERE idjob > %d;"
 #define MYSQL_QUERY_COPY_JOB "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idjob = %d;"
 #define MYSQL_QUERY_COPY_JOB_PARENT "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idjob = %d OR idparent = %d;"
 #define MYSQL_QUERY_COPY_JOB_CHILD "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idparent = %d;"

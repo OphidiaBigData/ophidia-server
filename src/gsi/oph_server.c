@@ -100,6 +100,7 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
+char *oph_cluster_deployment = 0;
 
 void set_global_values(const char *configuration_file)
 {
@@ -285,6 +286,7 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
+	oph_cluster_deployment = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT);
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 

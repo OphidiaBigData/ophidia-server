@@ -164,4 +164,7 @@
 #define OPH_JSON_OBJKEY_MANAGE_SESSION_LIST				"manage_session_list"
 #define OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY				"manage_session_summary"
 
+// OPH_CLUSTER
+#define OPH_JSON_OBJKEY_CLUSTER						"cluster"
+
 #endif

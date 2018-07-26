@@ -38,7 +38,7 @@ extern char *oph_auth_location;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
-extern char *oph_cluster_start;
+extern char *oph_cluster_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
@@ -59,6 +59,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 	int error = OPH_SERVER_UNKNOWN;
 
 	if (!strncasecmp(operator_name, OPH_OPERATOR_CANCEL, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
@@ -210,6 +213,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_MANAGE_SESSION, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		char *action, *key, *value, username[OPH_MAX_STRING_SIZE], *new_sessionid = NULL, oph_jobid[OPH_MAX_STRING_SIZE];
 		const char *session;
 		int result, save_user = 0, save_session = 0, num_sessions = -1;
@@ -281,6 +287,27 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
+		char **objkeys = NULL;
+		int objkeys_num = 0;
+		value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
+		if (!value) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_cleanup_args(&user_args);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_cleanup_args(&user_args);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
 		action = hashtbl_get(task_tbl, OPH_ARG_ACTION);
 		session = hashtbl_get(task_tbl, OPH_ARG_SESSION);
 		key = hashtbl_get(task_tbl, OPH_ARG_KEY);
@@ -295,6 +322,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (task_tbl)
 					hashtbl_destroy(task_tbl);
 				oph_cleanup_args(&user_args);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_WRONG_PARAMETER_ERROR;
 			}
 		} else
@@ -318,6 +346,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			oph_cleanup_args(&user_args);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
@@ -326,6 +355,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			oph_cleanup_args(&user_args);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 		snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
@@ -342,6 +372,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (task_tbl)
 					hashtbl_destroy(task_tbl);
 				oph_cleanup_args(&user_args);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_AUTH_ERROR;
 			}
 			char *str_role;
@@ -356,6 +387,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					hashtbl_destroy(task_tbl);
 				oph_cleanup_args(&user_args);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			if (oph_get_arg(args, OPH_SESSION_OWNER, owner)) {
@@ -365,6 +397,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					hashtbl_destroy(task_tbl);
 				oph_cleanup_args(&user_args);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "session owner is '%s'\n", owner);
@@ -430,7 +463,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 8;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -725,6 +761,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					hashtbl_destroy(task_tbl);
 				oph_json_free(oper_json);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 
@@ -784,6 +821,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						oph_cleanup_args_list(&session_args_list);
 						oph_json_free(oper_json);
 						oph_odb_disconnect_from_ophidiadb(&oDB);
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 						return OPH_SERVER_SYSTEM_ERROR;
 					}
 
@@ -818,13 +856,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				oph_cleanup_args_list(&session_args_list);
 				oph_json_free(oper_json);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 
 			time_t nowtime, nowtime2;
 			struct tm nowtm, nowtm2;
 			// Data
-			success = 0;
+			if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+				success = 0;
+			else
+				success = 1;
 			while (!success) {
 				for (session_args_item = session_args_list; session_args_item; session_args_item = session_args_item->next) {
 					session_args = session_args_item->item;
@@ -979,7 +1021,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					snprintf(tmp, OPH_MAX_STRING_SIZE, "Found 1 session");
 				else
 					snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d sessions", num_sessions);
-				if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY, "Summary", tmp)) {
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY)
+				    && oph_json_add_text(oper_json, OPH_JSON_OBJKEY_MANAGE_SESSION_SUMMARY, "Summary", tmp)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
 					success = 0;
 				}
@@ -1047,7 +1090,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 2;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -1152,7 +1198,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				time_t nowtime;
 				struct tm nowtm;
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					for (tmp2 = args; tmp2; tmp2 = tmp2->next) {
 						if (!strcmp(tmp2->key, OPH_SESSION_USERS))
@@ -1286,7 +1335,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			num_fields = 2;
 			if (success) {
 				// Header
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonkeys) {
@@ -1388,7 +1440,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			if (success) {
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 					if (!jsonvalues) {
@@ -1438,7 +1493,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (success && !oph_get_arg(args, OPH_SESSION_USERS, tmp)) {
 				char *save_pointer = NULL, *pch1, *pch2;
 				// Data
-				success = 0;
+				if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_MANAGE_SESSION_LIST))
+					success = 0;
+				else
+					success = 1;
 				while (!success) {
 					pch1 = strtok_r(tmp, OPH_SEPARATOR_USER, &save_pointer);
 					while (pch1) {
@@ -1523,6 +1581,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							hashtbl_destroy(task_tbl);
 						oph_json_free(oper_json);
 						oph_odb_disconnect_from_ophidiadb(&oDB);
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 						return OPH_SERVER_SYSTEM_ERROR;
 					}
 
@@ -1534,6 +1593,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							hashtbl_destroy(task_tbl);
 						oph_json_free(oper_json);
 						oph_odb_disconnect_from_ophidiadb(&oDB);
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 						return OPH_SERVER_IO_ERROR;
 					}
 
@@ -1555,6 +1615,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						if (!strncasecmp(value, OPH_COMMON_NO, OPH_MAX_STRING_SIZE) && !strncmp(last_session, session, OPH_MAX_STRING_SIZE))
@@ -1577,6 +1638,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						save_session = 1;
@@ -1626,6 +1688,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									hashtbl_destroy(task_tbl);
 								oph_json_free(oper_json);
 								oph_odb_disconnect_from_ophidiadb(&oDB);
+								oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 								return OPH_SERVER_SYSTEM_ERROR;
 							}
 							tmp2->key = strndup(session_username, OPH_MAX_STRING_SIZE);
@@ -1638,6 +1701,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									hashtbl_destroy(task_tbl);
 								oph_json_free(oper_json);
 								oph_odb_disconnect_from_ophidiadb(&oDB);
+								oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 								return OPH_SERVER_SYSTEM_ERROR;
 							}
 							if (pch2)
@@ -1739,6 +1803,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												hashtbl_destroy(task_tbl);
 											oph_json_free(oper_json);
 											oph_odb_disconnect_from_ophidiadb(&oDB);
+											oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 											return OPH_SERVER_SYSTEM_ERROR;
 										} else if (nchars >= OPH_MAX_STRING_SIZE) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "real file name of '%s' is too long\n", linkname);
@@ -1749,6 +1814,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												hashtbl_destroy(task_tbl);
 											oph_json_free(oper_json);
 											oph_odb_disconnect_from_ophidiadb(&oDB);
+											oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 											return OPH_SERVER_SYSTEM_ERROR;
 										}
 										newrole[nchars] = 0;
@@ -1786,6 +1852,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											hashtbl_destroy(task_tbl);
 										oph_json_free(oper_json);
 										oph_odb_disconnect_from_ophidiadb(&oDB);
+										oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 										return OPH_SERVER_SYSTEM_ERROR;
 									}
 
@@ -1804,6 +1871,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												hashtbl_destroy(task_tbl);
 											oph_json_free(oper_json);
 											oph_odb_disconnect_from_ophidiadb(&oDB);
+											oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 											return OPH_SERVER_SYSTEM_ERROR;
 										}
 									}
@@ -1818,6 +1886,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											hashtbl_destroy(task_tbl);
 										oph_json_free(oper_json);
 										oph_odb_disconnect_from_ophidiadb(&oDB);
+										oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 										return OPH_SERVER_SYSTEM_ERROR;
 									}
 									pthread_mutex_unlock(&global_flag);
@@ -1840,6 +1909,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						save_session = 1;
@@ -1883,6 +1953,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						tmp2->key = strndup(session_username, OPH_MAX_STRING_SIZE);
@@ -1895,6 +1966,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						tmp2->value = NULL;
@@ -1957,6 +2029,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								hashtbl_destroy(task_tbl);
 							oph_json_free(oper_json);
 							oph_odb_disconnect_from_ophidiadb(&oDB);
+							oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 							return OPH_SERVER_SYSTEM_ERROR;
 						}
 						save_session = 1;
@@ -1982,6 +2055,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						hashtbl_destroy(task_tbl);
 					oph_json_free(oper_json);
 					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 				if (!strncmp(last_session, session, OPH_MAX_STRING_SIZE))
@@ -2001,6 +2075,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						hashtbl_destroy(task_tbl);
 					oph_json_free(oper_json);
 					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 				save_session = 1;
@@ -2052,6 +2127,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							hashtbl_destroy(task_tbl);
 						oph_json_free(oper_json);
 						oph_odb_disconnect_from_ophidiadb(&oDB);
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 						return OPH_SERVER_SYSTEM_ERROR;
 					}
 					if (!strncmp(last_session, session, OPH_MAX_STRING_SIZE))
@@ -2077,6 +2153,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (new_sessionid)
 					free(new_sessionid);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			if (save_session > 1)	// Remove the intended session
@@ -2106,6 +2183,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					if (new_sessionid)
 						free(new_sessionid);
 					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 				if (!save_user)
@@ -2129,6 +2207,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					if (new_sessionid)
 						free(new_sessionid);
 					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 				if (jobid_response) {
@@ -2149,6 +2228,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					if (new_sessionid)
 						free(new_sessionid);
 					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 					return OPH_SERVER_SYSTEM_ERROR;
 				}
 			}
@@ -2163,6 +2243,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (new_sessionid)
 					free(new_sessionid);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
+				oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 				return OPH_SERVER_SYSTEM_ERROR;
 			}
 			pthread_mutex_unlock(&global_flag);
@@ -2174,11 +2255,16 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
 
+		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+
 		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code))
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_LOG_INFO, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		error = OPH_SERVER_SYSTEM_ERROR;
 
 		HASHTBL *task_tbl = NULL;
@@ -2288,7 +2374,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (oph_log_file_name) {
 				value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
 				if (!value) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
 					error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 					break;
 				}
@@ -2591,6 +2677,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
 		pthread_mutex_lock(&global_flag);
 
 		oph_job_info *item = NULL, *prev = NULL;
@@ -2638,6 +2726,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], exec_mode[OPH_MAX_STRING_SIZE], em = 0, btype = 1;	// Allocate
 
 		while (!success) {
+
+			if (!oph_cluster_deployment || strcmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
+				break;
+			}
 
 			*type = 0;
 			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
@@ -2693,6 +2786,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
+		oph_odb_start_job_fast(idjob, &oDB);
 
 		if (success) {
 
@@ -2721,11 +2815,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				if (btype) {
 
-					if (!oph_cluster_start) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster is not configured!");
-						break;
-					}
-
 					if (max_hosts) {
 						int rhosts = 0;
 						if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
@@ -2742,6 +2831,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 
 					int id_hostpartition = 0;
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
 					if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
@@ -2753,7 +2843,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 
 					char command[OPH_MAX_STRING_SIZE];
-					snprintf(command, OPH_MAX_STRING_SIZE, "%s %d", oph_cluster_start, id_hostpartition);
+					snprintf(command, OPH_MAX_STRING_SIZE, "%d", id_hostpartition);
 
 					char outfile[OPH_MAX_STRING_SIZE];
 					snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
@@ -2797,6 +2887,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				} else {
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retriving host partition '%s'\n", host_partition);
 					int id_hostpartition = 0, id_job = 0;
 					if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
@@ -2808,11 +2899,13 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						break;
 					}
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition, id_hostpartition);
 					if (oph_cancel_request(id_job, username))
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 					else
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
 
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Releasing host partition '%s' (%d)\n", host_partition, id_hostpartition);
 					if (oph_odb_release_hp(&oDB, id_hostpartition)) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be released\n", host_partition);
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to delete host partition '%s'!", host_partition);

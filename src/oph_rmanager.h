@@ -35,25 +35,16 @@
 #define OPH_NULL_FILENAME "/dev/null"
 
 struct _oph_rmanager {
-	char *name;
-	char *subm_cmd;
-	char *subm_cmd2;
-	char *subm_username;
+	char *subm_cmd_submit;
+	char *subm_cmd_start;
+	char *subm_cmd_cancel;
+	char *subm_cmd_check;
+	char subm_multiuser;
 	char *subm_group;
-	char *subm_args;
-	char *subm_args2;
-	char *subm_ncores;
-	char *subm_interact;
-	char *subm_batch;
 	char *subm_queue_high;
 	char *subm_queue_low;
-	char *subm_stdoutput;
-	char *subm_stderror;
 	char *subm_prefix;
 	char *subm_postfix;
-	char *subm_jobname;
-	char *subm_cancel;
-	char *subm_jobcheck;
 };
 typedef struct _oph_rmanager oph_rmanager;
 
@@ -66,7 +57,7 @@ int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid, char *username);
-int oph_read_job_queue(int **list, unsigned int *n);
+int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);
 
 #endif				/* OPH_RMANAGER_H */

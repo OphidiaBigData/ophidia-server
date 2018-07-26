@@ -905,6 +905,17 @@ int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 		*idjob = strtol(row[0], NULL, 10);
 
 	mysql_free_result(res);
+
+	// Clean main table
+	if (*idjob > 0) {
+		n = snprintf(selectQuery, MYSQL_BUFLEN, MYSQL_QUERY_CLEAN_JOB_TABLE, *idjob);
+		if (n >= MYSQL_BUFLEN)
+			return OPH_ODB_STR_BUFF_OVERFLOW;
+
+		if (mysql_query(oDB->conn, selectQuery))
+			return OPH_ODB_MYSQL_ERROR;
+	}
+
 	return OPH_ODB_SUCCESS;
 }
 
