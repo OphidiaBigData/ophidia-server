@@ -71,15 +71,17 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 	// Check XML
 	HASHTBL *task_tbl = NULL;
-	char tmp[OPH_MAX_STRING_SIZE], filter = 1;
+	char filter = 1;
 	if (!strchr(task_string, OPH_SEPARATOR_KV[0])) {
-		// Check for 'all'
-		if (!is_src_path) {
-			unsigned int i, j;
-			for (i = j = 0; (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)); j++)
-				if ((task_string[j] != OPH_SEPARATOR_NULL) && (task_string[j] != OPH_SEPARATOR_PARAM[0]))
-					tmp[i++] = task_string[j];
-			tmp[i] = 0;
+		unsigned int i, j;
+		char tmp[OPH_MAX_STRING_SIZE];
+		for (i = j = 0; (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)) && (task_string[j] != OPH_SEPARATOR_PARAM[0]); j++)
+			if (task_string[j] != OPH_SEPARATOR_NULL)
+				tmp[i++] = task_string[j];
+		tmp[i] = 0;
+		if ((j < strlen(task_string)) && (task_string[j] == OPH_SEPARATOR_PARAM[0]))
+			task_string[j] = 0;	// Skip any value beyond OPH_SEPARATOR_PARAM[0]
+		if (!is_src_path) {	// In case of datacube filter, check for '*' and 'all'
 			switch (strlen(tmp)) {
 				case 0:
 					break;
