@@ -49,7 +49,7 @@
 #define OPH_WORKFLOW_KEY_VALUE_STRING2	"%s="OPH_WORKFLOW_FIXED_VALUE"%s"OPH_WORKFLOW_FIXED_VALUE";"
 #define OPH_WORKFLOW_KEY_VALUE_STRING3	"%s=%d;"
 #define OPH_WORKFLOW_KEY_HOST_PARTITION	"host_partition"
-#define OPH_WORKFLOW_KEY_NHOSTS			"nhosts"
+#define OPH_WORKFLOW_KEY_NHOSTS			"nhost"
 
 #define OPH_WORKFLOW_BASE_NOTIFICATION	"parentid=%d;taskindex=%d;lighttaskindex=%d;jobid=%d;status=%d;sessionid=%s;markerid=%d;"
 
