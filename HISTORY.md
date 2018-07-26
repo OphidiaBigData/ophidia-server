@@ -11,6 +11,7 @@
 
 ### Fixed:
 
+- Bug in handling negative filters
 - Bug in handling Ophidia DB access failures
 - Bug in postprocessing oph_system
 - Unit tests
