@@ -71,15 +71,16 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 
 	// Check XML
 	HASHTBL *task_tbl = NULL;
-	char tmp[OPH_MAX_STRING_SIZE + 1], filter = 1;
+	unsigned int task_string_size = strlen(task_string) + OPH_SHORT_STRING_SIZE;	// Additional size is provided to consider OPH_MF_ARG_PATH or OPH_MF_ARG_DATACUBE_FILTER
+	char tmp[task_string_size + 1], filter = 1;
 	if (!strchr(task_string, OPH_SEPARATOR_KV[0])) {
 		char stop = 1;
 		unsigned int i, j;
-		for (i = j = 0; stop && (i < OPH_MAX_STRING_SIZE) && (j < strlen(task_string)); j++) {
-			if (task_string[j] != OPH_SEPARATOR_NULL)
-				tmp[i++] = task_string[j];
+		for (i = j = 0; stop && (i < task_string_size) && (j < task_string_size); j++) {
 			if (task_string[j] == OPH_SEPARATOR_PARAM[0])
 				stop = 0;
+			else if (task_string[j] != OPH_SEPARATOR_NULL)
+				tmp[i++] = task_string[j];
 		}
 		tmp[i] = 0;
 		if (!stop)	// Skip beyond OPH_SEPARATOR_PARAM[0]
@@ -102,8 +103,13 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		}
 		if (filter)	// By default all the task string is a path in case of src_path or a list of identifiers in case of datacube
 		{
+			char tmp2[strlen(tmp) + 1];
 			int not_clause = tmp[0] == OPH_MF_SYMBOL_NOT[0] ? 1 : 0;
-			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s=%s", is_src_path ? OPH_MF_ARG_PATH : OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_MF_SYMBOL_NOT : "", task_string + not_clause);
+			if (not_clause) {
+				strcpy(tmp2, tmp);
+				task_string = tmp2;
+			}
+			snprintf(tmp, task_string_size, "%s%s=%s", is_src_path ? OPH_MF_ARG_PATH : OPH_MF_ARG_DATACUBE_FILTER, not_clause ? OPH_MF_SYMBOL_NOT : "", task_string + not_clause);
 			task_string = tmp;
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Add option '%s' to task string\n", tmp);
 		}
