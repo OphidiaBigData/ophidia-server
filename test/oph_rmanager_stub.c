@@ -217,7 +217,7 @@ int oph_cancel_request(int jobid, char *username)
 	return OPH_SERVER_OK;
 }
 
-int oph_read_job_queue(int **list, unsigned int *n)
+int oph_read_job_queue(int **list, char ***username, unsigned int *n)
 {
 	return OPH_SERVER_OK;
 }
