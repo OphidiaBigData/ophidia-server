@@ -1,11 +1,12 @@
 
-## Next release
+## v1.4.0 - 2018-07-27
 
 ### Added:
 
 - Parameter 'nhost' to JSON Request schema
 - Feature for dynamic cluster deployment [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
-- Clear job table from intemediate results in case of unexpected failures
+- New argument 'ENABLE_CLUSTER_DEPLOYMENT' in main configuration file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
+- Clear intemediate results from job table in case of unexpected failures
 - Support to extract arrays from JSON Responses and to process them as run-time variables [#29](https://github.com/OphidiaBigData/ophidia-server/pull/29)
 - Extend the set of pre-defined run-time variables [#30](https://github.com/OphidiaBigData/ophidia-server/pull/30)
 
@@ -20,7 +21,6 @@
 ### Changed:
 
 - Improvement of support for large variables [#32](https://github.com/OphidiaBigData/ophidia-server/pull/32)
-- New argument 'ENABLE_CLUSTER_DEPLOYMENT' in main configuration file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - OPH_CLUSTER xml file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - slurm.conf configuration file arguments [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
 - Removed slurm_multiuser.conf configuration file [#31](https://github.com/OphidiaBigData/ophidia-server/pull/31)
