@@ -1,4 +1,10 @@
 
+## New features
+
+### Fixed:
+
+- Fix name of pre-defined runtime variable NHOST
+
 ## v1.4.0 - 2018-07-27
 
 ### Added:
