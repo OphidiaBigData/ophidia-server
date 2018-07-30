@@ -4063,18 +4063,32 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 
 					// Exit operation
-					if (wf->tasks[task_index].exit_action) {
+					while (wf->tasks[task_index].exit_action) {
+						char target[OPH_MAX_STRING_SIZE];
+						switch (wf->tasks[task_index].exit_action) {
+							case OPH_WORKFLOW_EXIT_ACTION_DELETE:
+								strcpy(target, OPH_ARG_CUBE);
+								break;
+							case OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER:
+								strcpy(target, OPH_ARG_CONTAINER_PID);
+								break;
+							default:
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: unknown code for 'exit action'\n", ttype, jobid);
+								*target = 0;
+						}
+						if (!strlen(target))
+							break;
 						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_cubes = NULL, tmp2[OPH_MAX_STRING_SIZE];
 						for (k = 0; k < wf->tasks[task_index].outputs_num; ++k)
-							if (!strncmp(wf->tasks[task_index].outputs_keys[k], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+							if (!strncmp(wf->tasks[task_index].outputs_keys[k], target, OPH_MAX_STRING_SIZE)) {
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
-								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes for final operation\n", ttype, jobid,
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes/containers for final operation\n", ttype, jobid,
 								      wf->tasks[task_index].outputs_values[k]);
 								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {
 									for (i = 0; i < wf->tasks[task_index].arguments_num; ++i)
-										if (!strncmp(wf->tasks[task_index].arguments_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+										if (!strncmp(wf->tasks[task_index].arguments_keys[i], target, OPH_MAX_STRING_SIZE)) {
 											if (wf->tasks[task_index].light_tasks_num) {
 												for (j = 0; j < wf->tasks[task_index].light_tasks_num; ++j) {
 													if (!strcmp(pch, pch2 = wf->tasks[task_index].light_tasks[j].arguments_values[i]))
@@ -4104,33 +4118,46 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								}
 								if (output_cubes) {
-									char *cubeid = NULL;
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select cubes for final operation\n", ttype, jobid, output_cubes);
-									do {
-										cubeid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
-										if (cubeid) {
-											cubeid++;
-											if (!wf->exit_values && oph_trash_create(&wf->exit_values)) {
-												pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in allocating the list of exit values\n", ttype,
-												      jobid);
-												pthread_mutex_unlock(&global_flag);
-												*response = OPH_SERVER_SYSTEM_ERROR;
-												return SOAP_OK;
+									char *objectid = NULL;
+									switch (wf->tasks[task_index].exit_action) {
+										case OPH_WORKFLOW_EXIT_ACTION_DELETE:{
+												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select cubes for final operation\n", ttype,
+												      jobid, output_cubes);
+												do {
+													objectid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
+													if (!objectid)
+														break;
+													objectid++;
+													if (!wf->exit_values && oph_trash_create(&wf->exit_values)) {
+														pmesg(LOG_WARNING, __FILE__, __LINE__,
+														      "%c%d: error in allocating the list of exit values\n", ttype, jobid);
+														pthread_mutex_unlock(&global_flag);
+														*response = OPH_SERVER_SYSTEM_ERROR;
+														return SOAP_OK;
+													}
+													oph_trash_append(wf->exit_values, NULL, strtol(objectid, NULL, 10));
+													pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype,
+													      jobid, objectid);
+													objectid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
+													if (objectid)
+														*objectid = 0;
+												}
+												while (objectid);
+												break;
 											}
-											oph_trash_append(wf->exit_values, NULL, strtol(cubeid, NULL, 10));
-											pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype, jobid, cubeid);
-											cubeid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
-											if (cubeid)
-												*cubeid = 0;
-										}
+										case OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER:{
+												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select containers for final operation\n",
+												      ttype, jobid, output_cubes);
+												break;
+											}
 									}
-									while (cubeid);
 									free(output_cubes);
 									output_cubes = NULL;
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair for final operation\n", ttype, jobid);
 								}
 								break;
 							}
+						break;
 					}
 
 					if (wf->status == OPH_ODB_STATUS_ERROR)	// Due to a previous failed task

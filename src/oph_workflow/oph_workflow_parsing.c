@@ -565,7 +565,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		(*workflow)->tasks[i].residual_retry_num = (*workflow)->tasks[i].retry_num;
 
 		// Set the exit code
-		(*workflow)->tasks[i].exit_action = 0;	// Default value (no operation)
+		(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_NOP;	// Default value (no operation)
 		if (!on_exit_task)
 			on_exit_task = on_exit;
 		else if (strlen(on_exit_task)) {
@@ -580,9 +580,11 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		}
 		if (on_exit_task) {
 			if (!strlen(on_exit_task) || !strcmp(on_exit_task, OPH_WORKFLOW_NOP))
-				(*workflow)->tasks[i].exit_action = 0;
+				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_NOP;
 			else if (!strcmp(on_exit_task, OPH_WORKFLOW_DELETE))
-				(*workflow)->tasks[i].exit_action = -1;
+				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_DELETE;
+			else if (!strcmp(on_exit_task, OPH_WORKFLOW_DELETECONTAINER))
+				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER;
 			else {
 				oph_workflow_free(*workflow);
 				if (jansson)
