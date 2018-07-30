@@ -937,7 +937,8 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->ip_address = NULL;
 	(*workflow)->response = NULL;
 	(*workflow)->command = NULL;
-	(*workflow)->exit_values = NULL;
+	(*workflow)->exit_cubes = NULL;
+	(*workflow)->exit_containers = NULL;
 	(*workflow)->workflowid = -1;
 	(*workflow)->vars = NULL;
 	(*workflow)->stack = NULL;

@@ -127,12 +127,12 @@ int oph_request_data_vector_free(oph_request_data * item, int num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_realloc_vector(char ***vector, int *length)
+int oph_realloc_vector(char ***vector, int *length, int incr)
 {
 	if (!vector || !(*vector) || !length)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	char **tmp = *vector;
-	*vector = (char **) malloc((*length + 1) * sizeof(char *));
+	*vector = (char **) malloc((*length + incr) * sizeof(char *));
 
 	if (!(*vector)) {
 		*vector = tmp;
@@ -142,7 +142,7 @@ int oph_realloc_vector(char ***vector, int *length)
 	memcpy(*vector, tmp, (*length) * sizeof(char *));
 	free(tmp);
 
-	(*length)++;
+	*length += incr;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -4019,7 +4019,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												      wf->tasks[dep_task_index].name);
 											} else {
 												kk = wf->tasks[dep_task_index].arguments_num;
-												if (oph_realloc_vector(&(wf->tasks[dep_task_index].arguments_keys), &kk)
+												if (oph_realloc_vector(&(wf->tasks[dep_task_index].arguments_keys), &kk, 1)
 												    || (kk != 1 + wf->tasks[dep_task_index].arguments_num)) {
 													pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 													pthread_mutex_unlock(&global_flag);
@@ -4027,7 +4027,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 													return SOAP_OK;
 												}
 												if (oph_realloc_vector
-												    (&(wf->tasks[dep_task_index].arguments_values), &(wf->tasks[dep_task_index].arguments_num))
+												    (&(wf->tasks[dep_task_index].arguments_values), &(wf->tasks[dep_task_index].arguments_num), 1)
 												    || (kk != wf->tasks[dep_task_index].arguments_num)) {
 													pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 													pthread_mutex_unlock(&global_flag);
@@ -4078,7 +4078,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						}
 						if (!strlen(target))
 							break;
-						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_cubes = NULL, tmp2[OPH_MAX_STRING_SIZE];
+						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_objects = NULL, tmp2[OPH_MAX_STRING_SIZE];
 						for (k = 0; k < wf->tasks[task_index].outputs_num; ++k)
 							if (!strncmp(wf->tasks[task_index].outputs_keys[k], target, OPH_MAX_STRING_SIZE)) {
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
@@ -4106,39 +4106,40 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											break;
 										}
 									if (!pch2) {
-										if (output_cubes) {
-											snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", output_cubes, OPH_SEPARATOR_SUBPARAM_STR, pch);
-											free(output_cubes);
-											output_cubes = strdup(tmp);
+										if (output_objects) {
+											snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", output_objects, OPH_SEPARATOR_SUBPARAM_STR, pch);
+											free(output_objects);
+											output_objects = strdup(tmp);
 										} else
-											output_cubes = strdup(pch);
+											output_objects = strdup(pch);
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to candidate list for final operation\n", ttype, jobid, pch);
 									} else
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: '%s' will be not considered for final operation\n", ttype, jobid, pch);
 									pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								}
-								if (output_cubes) {
+								if (output_objects) {
 									char *objectid = NULL;
 									switch (wf->tasks[task_index].exit_action) {
 										case OPH_WORKFLOW_EXIT_ACTION_DELETE:{
 												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select cubes for final operation\n", ttype,
-												      jobid, output_cubes);
+												      jobid, output_objects);
 												do {
-													objectid = strrchr(output_cubes, OPH_SEPARATOR_FOLDER[0]);
+													objectid = strrchr(output_objects, OPH_SEPARATOR_FOLDER[0]);
 													if (!objectid)
 														break;
 													objectid++;
-													if (!wf->exit_values && oph_trash_create(&wf->exit_values)) {
+													if (!wf->exit_cubes && oph_trash_create(&wf->exit_cubes)) {
 														pmesg(LOG_WARNING, __FILE__, __LINE__,
-														      "%c%d: error in allocating the list of exit values\n", ttype, jobid);
+														      "%c%d: error in allocating the list of exit cubes\n", ttype, jobid);
+														free(output_objects);
 														pthread_mutex_unlock(&global_flag);
 														*response = OPH_SERVER_SYSTEM_ERROR;
 														return SOAP_OK;
 													}
-													oph_trash_append(wf->exit_values, NULL, strtol(objectid, NULL, 10));
+													oph_trash_append(wf->exit_cubes, NULL, strtol(objectid, NULL, 10));
 													pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype,
 													      jobid, objectid);
-													objectid = strrchr(output_cubes, OPH_SEPARATOR_SUBPARAM_STR[0]);
+													objectid = strrchr(output_objects, OPH_SEPARATOR_SUBPARAM_STR[0]);
 													if (objectid)
 														*objectid = 0;
 												}
@@ -4147,12 +4148,33 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											}
 										case OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER:{
 												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select containers for final operation\n",
-												      ttype, jobid, output_cubes);
+												      ttype, jobid, output_objects);
+												do {
+													objectid = strrchr(output_objects, OPH_SEPARATOR_FOLDER[0]);
+													if (!objectid)
+														break;
+													objectid++;
+													if (!wf->exit_containers && oph_trash_create(&wf->exit_containers)) {
+														pmesg(LOG_WARNING, __FILE__, __LINE__,
+														      "%c%d: error in allocating the list of exit containers\n", ttype, jobid);
+														free(output_objects);
+														pthread_mutex_unlock(&global_flag);
+														*response = OPH_SERVER_SYSTEM_ERROR;
+														return SOAP_OK;
+													}
+													oph_trash_append(wf->exit_containers, NULL, strtol(objectid, NULL, 10));
+													pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype,
+													      jobid, objectid);
+													objectid = strrchr(output_objects, OPH_SEPARATOR_SUBPARAM_STR[0]);
+													if (objectid)
+														*objectid = 0;
+												}
+												while (objectid);
 												break;
 											}
 									}
-									free(output_cubes);
-									output_cubes = NULL;
+									free(output_objects);
+									output_objects = NULL;
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair for final operation\n", ttype, jobid);
 								}
 								break;
@@ -4351,18 +4373,18 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		int final_task = 0;
 		if (final) {
-			if (wf->exit_values) {
+			if (wf->exit_cubes) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].name = strdup(OPH_WORKFLOW_FINAL_TASK);
 				wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETE);
 				wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
 				int kk = wf->tasks[wf->tasks_num].arguments_num;
-				if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk) || (kk != 1 + wf->tasks[wf->tasks_num].arguments_num)) {
+				if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, 1) || (kk != 1 + wf->tasks[wf->tasks_num].arguments_num)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 					*response = OPH_SERVER_SYSTEM_ERROR;
 					error = 1;
-				} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num))
+				} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num), 1)
 					   || (kk != wf->tasks[wf->tasks_num].arguments_num)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 					*response = OPH_SERVER_SYSTEM_ERROR;
@@ -4371,15 +4393,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					kk--;
 					// Order the exit values
 					int cubeid, write, append;
-					char exit_values[OPH_MAX_STRING_SIZE], *last_block, *last_index;
-					*exit_values = 0;
-					oph_trash_order(wf->exit_values, NULL);
-					while (!oph_trash_extract(wf->exit_values, NULL, &cubeid)) {
-						if (strlen(exit_values)) {
+					char exit_cubes[OPH_MAX_STRING_SIZE], *last_block, *last_index;
+					*exit_cubes = 0;
+					oph_trash_order(wf->exit_cubes, NULL);
+					while (!oph_trash_extract(wf->exit_cubes, NULL, &cubeid)) {
+						if (strlen(exit_cubes)) {
 							write = append = 1;
-							last_block = strrchr(exit_values, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
+							last_block = strrchr(exit_cubes, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
 							if (!last_block)
-								last_block = exit_values;
+								last_block = exit_cubes;
 							else
 								last_block++;
 							last_index = strchr(last_block, OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
@@ -4398,20 +4420,76 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							if (write)
 								snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
 							if (append)
-								strncat(exit_values, tmp, OPH_MAX_STRING_SIZE - strlen(exit_values) - 1);
+								strncat(exit_cubes, tmp, OPH_MAX_STRING_SIZE - strlen(exit_cubes) - 1);
 						} else
-							snprintf(exit_values, OPH_MAX_STRING_SIZE, "%d", cubeid);
+							snprintf(exit_cubes, OPH_MAX_STRING_SIZE, "%d", cubeid);
 					}
-					snprintf(tmp, OPH_MAX_STRING_SIZE, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, exit_values,
+					snprintf(tmp, OPH_MAX_STRING_SIZE, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, exit_cubes,
 						 OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
 						 OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
+
 					wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CUBE);
 					wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(tmp);
+
 					final_task = 1;
 					final = 0;
 				}
-				oph_trash_destroy(wf->exit_values);
-				wf->exit_values = NULL;
+				oph_trash_destroy(wf->exit_cubes);
+				wf->exit_cubes = NULL;
+			} else if (wf->exit_containers) {
+
+				// Warning:only one container can be deleted
+				unsigned int size = 0;
+				oph_trash_size(wf->exit_containers, NULL, &size);
+				if (size) {
+
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
+					if (size > 1)
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: only the first container will be considered even if %d containers was created\n", ttype, jobid, size);
+
+					wf->tasks[wf->tasks_num].name = strdup(OPH_WORKFLOW_FINAL_TASK);
+					wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETECONTAINER);
+					wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
+
+					int kk = wf->tasks[wf->tasks_num].arguments_num, incr = 5;	// Specific arguments for this final operation (see below)
+					if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, incr) || (kk != incr + wf->tasks[wf->tasks_num].arguments_num)) {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
+						*response = OPH_SERVER_SYSTEM_ERROR;
+						error = 1;
+					} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num), incr)
+						   || (kk != wf->tasks[wf->tasks_num].arguments_num)) {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
+						*response = OPH_SERVER_SYSTEM_ERROR;
+						error = 1;
+					} else {
+						kk -= incr;
+						int containerid = 0;
+						oph_trash_extract(wf->exit_containers, NULL, &containerid);
+						if (containerid) {
+							snprintf(tmp, OPH_MAX_STRING_SIZE, "%s/%d", oph_web_server, containerid);
+							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER_PID);
+							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(tmp);
+							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER);
+							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NULL);
+							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_HIDDEN);
+							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NO);
+							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_TYPE);
+							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_WORKFLOW_DELETECONTAINER_VALUE);
+							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_FORCE);
+							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_YES);
+							final_task = 1;
+							final = 0;
+						} else {
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in extracting the pid of container\n", ttype, jobid);
+							*response = OPH_SERVER_SYSTEM_ERROR;
+							error = 1;
+						}
+					}
+				} else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: no container has been created during the execution of workflow '%s'", ttype, jobid, wf->name);
+
+				oph_trash_destroy(wf->exit_containers);
+				wf->exit_containers = NULL;
 			} else {
 				oph_drop_from_job_list(state->job_info, item, prev);
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: workflow '%s' dropped from the list\n", ttype, jobid, wf->name);

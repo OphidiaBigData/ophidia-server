@@ -156,3 +156,23 @@ int oph_trash_order(oph_trash * trash, const char *key)
 
 	return OPH_TRASH_OK;
 }
+
+int oph_trash_size(oph_trash * trash, const char *key, unsigned int *size)
+{
+	if (!trash || !size)
+		return OPH_TRASH_ERROR;
+	*size = 0;
+
+	oph_trash_node *tmp;
+	for (tmp = trash->trash; tmp; tmp = tmp->next)
+		if (!key || !strcmp(tmp->key, key))
+			break;
+	if (!tmp || !tmp->head)
+		return OPH_TRASH_ERROR;
+
+	oph_trash_item *temp;
+	for (temp = tmp->head; temp; temp = temp->next)
+		++ * size;
+
+	return OPH_TRASH_OK;
+}
