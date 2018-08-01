@@ -40,6 +40,7 @@
 #define OPH_ARG_KEY "key"
 #define OPH_ARG_VALUE "value"
 #define OPH_ARG_VALUES "values"
+#define OPH_ARG_SUBSET_FILTER "subset_filter"
 #define OPH_ARG_CALLBACK_URL "callback_url"
 #define OPH_ARG_OBJKEY "objkey_filter"
 #define OPH_ARG_PARENTID "parentid"

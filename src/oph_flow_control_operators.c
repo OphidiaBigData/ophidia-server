@@ -959,7 +959,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	char *name = NULL, **names = NULL, **svalues = NULL;
 	int j, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char *arg_value, *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0;
+	char *arg_value, *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0, compress_value = 0;
 	oph_workflow *twf = wf;
 	enum oph__oph_odb_job_status caction = OPH_ODB_STATUS_RUNNING;
 
@@ -996,6 +996,13 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value)) {
+					free(arg_value);
+					break;
+				}
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SUBSET_FILTER)) {
+				if (!strcasecmp(arg_value, OPH_COMMON_YES))
+					compress_value = 1;
+				else if (strcasecmp(arg_value, OPH_COMMON_NO)) {
 					free(arg_value);
 					break;
 				}
@@ -1203,6 +1210,49 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				ret = OPH_SERVER_ERROR;
 				break;
 			}
+			// Check for compression
+			if (compress_value) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress subset string\n");
+				char flag = 0, first = 0;
+				long long current, start, end;
+				char *base_string = strdup(var.svalue);
+				char *final_string = strdup(var.svalue);
+				char *pch = NULL, *save_pointer = NULL;
+				unsigned int n = 0;
+				*final_string = 0;
+				while ((pch = strtok_r(pch ? NULL : base_string, OPH_SEPARATOR_USER, &save_pointer))) {
+					current = strtoll(pch, NULL, 10);
+					if (flag) {
+						if (current == end + 1) {
+							end = current;
+							flag = 2;
+						} else {
+							if (flag > 1)
+								n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SEPARATOR_USER : "", start, OPH_SEPARATOR_BASIC, end);
+							else
+								n += sprintf(final_string + n, "%s%lld", first ? OPH_SEPARATOR_USER : "", start);
+							first = 1;
+							start = end = current;
+							flag = 1;
+						}
+					} else {
+						start = end = current;
+						flag = 1;
+					}
+				}
+				if (flag) {
+					if (flag > 1)
+						n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SEPARATOR_USER : "", start, OPH_SEPARATOR_BASIC, end);
+					else
+						n += sprintf(final_string + n, "%s%lld", first ? OPH_SEPARATOR_USER : "", start);
+					free(var.svalue);
+					var.svalue = final_string;
+				} else
+					free(final_string);
+				free(base_string);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Compressed subset string: %s\n", var.svalue);
+			}
+
 			svalue_size = strlen(var.svalue) + 1;
 			var_buffer = malloc(var_size + svalue_size);
 			if (!var_buffer) {
