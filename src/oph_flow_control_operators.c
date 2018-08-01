@@ -1212,7 +1212,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			}
 			// Check for compression
 			if (compress_value) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress subset string\n");
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress variable '%s' in environment of workflow '%s'\n", name, twf->name);
 				char flag = 0, first = 0;
 				long long current, start, end;
 				char *base_string = strdup(var.svalue);
@@ -1220,7 +1220,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				char *pch = NULL, *save_pointer = NULL;
 				unsigned int n = 0;
 				*final_string = 0;
-				while ((pch = strtok_r(pch ? NULL : base_string, OPH_SEPARATOR_USER, &save_pointer))) {
+				while ((pch = strtok_r(pch ? NULL : base_string, OPH_SUBSET_LIB_SUBSET_SEPARATOR, &save_pointer))) {
 					current = strtoll(pch, NULL, 10);
 					if (flag) {
 						if (current == end + 1) {
@@ -1228,9 +1228,10 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 							flag = 2;
 						} else {
 							if (flag > 1)
-								n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SEPARATOR_USER : "", start, OPH_SEPARATOR_BASIC, end);
+								n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start, OPH_SUBSET_LIB_PARAM_SEPARATOR,
+									     end);
 							else
-								n += sprintf(final_string + n, "%s%lld", first ? OPH_SEPARATOR_USER : "", start);
+								n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
 							first = 1;
 							start = end = current;
 							flag = 1;
@@ -1242,15 +1243,15 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				}
 				if (flag) {
 					if (flag > 1)
-						n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SEPARATOR_USER : "", start, OPH_SEPARATOR_BASIC, end);
+						n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start, OPH_SUBSET_LIB_PARAM_SEPARATOR, end);
 					else
-						n += sprintf(final_string + n, "%s%lld", first ? OPH_SEPARATOR_USER : "", start);
+						n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
 					free(var.svalue);
 					var.svalue = final_string;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Variable '%s' in environment of workflow '%s' has been compressed\n", name, twf->name);
 				} else
 					free(final_string);
 				free(base_string);
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Compressed subset string: %s\n", var.svalue);
 			}
 
 			svalue_size = strlen(var.svalue) + 1;
@@ -1276,10 +1277,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				free(var_buffer);
 				break;
 			}
-			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, twf->name);
-			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", name, var.ivalue, twf->name);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s' in environment of workflow '%s'.\n", name, twf->name);
 
 			if (ttt >= 0)
 				free(name);
@@ -1540,10 +1538,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 					free(arg_value);
 				break;
 			}
-			if (svalues)
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, wf->name);
-			else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", name, var.ivalue, wf->name);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s' in environment of workflow '%s'.\n", name, wf->name);
 			free(var.svalue);
 			free(var_buffer);
 
@@ -1953,10 +1948,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 					free(var_buffer);
 					break;
 				}
-				if (svalues)
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", names[j], var.svalue, wf->name);
-				else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%d' in environment of workflow '%s'.\n", names[j], var.ivalue, wf->name);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s' in environment of workflow '%s'.\n", names[j], wf->name);
 				free(var.svalue);
 				free(var_buffer);
 			}
