@@ -572,7 +572,7 @@ int main(int argc, char *argv[])
 				else if ((update & 16) && (!strcmp(tmp->key, OPH_USER_MAX_HOSTS)))
 					fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
 				else if ((update & 32) && (!strcmp(tmp->key, OPH_USER_LAST_CDD)))
-					fprintf(file, "%s%s%d\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
+					fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
 				else
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_KV, tmp->value);
 			}

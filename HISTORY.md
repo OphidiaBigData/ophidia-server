@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Fix bug in update OPH_USER_LAST_CDD by means of oph_manage_user
 - Fix name of pre-defined runtime variable NHOST
 
 ## v1.4.0 - 2018-07-27
