@@ -219,8 +219,10 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		if (*buffer != OPH_COMMENT_MARK) {
 
 			position = strchr(buffer, '=');
-			if (!position)
+			if (!position) {
+				fgetc(file);
 				continue;
+			}
 			*position = 0;
 			target = strdup(++position);
 			if (!target) {
