@@ -6,6 +6,10 @@
 - Fix bug in update OPH_USER_LAST_CDD by means of oph_manage_user
 - Fix name of pre-defined runtime variable NHOST
 
+### Changed:
+
+- Raise an error in case any task parameter contains special characters
+
 ## v1.4.0 - 2018-07-27
 
 ### Added:
