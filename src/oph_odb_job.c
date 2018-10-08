@@ -344,17 +344,17 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 	char insertQuery[MYSQL_BUFLEN];
 	int n, i, j;
 
-	char new_query[OPERATION_QUERY_SIZE];
+	char new_query[4 + OPERATION_QUERY_SIZE];
 	j = 0;
-	for (i = 0; i < OPERATION_QUERY_SIZE; i++) {
-		if (!task_string[i])
-			break;
+	for (i = 0; task_string[i]; i++) {
 		if (task_string[i] == '\'')
 			new_query[j++] = '\\';
-		new_query[j] = task_string[i];
-		j++;
-		if (j >= OPERATION_QUERY_SIZE - 1)
+		new_query[j++] = task_string[i];
+		if (j >= OPERATION_QUERY_SIZE) {
+			strcpy(new_query + j, "...");
+			j += 3;
 			break;
+		}
 	}
 	new_query[j] = 0;
 
