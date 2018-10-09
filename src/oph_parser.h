@@ -57,6 +57,7 @@
 #define OPH_ARG_DOCUMENTTYPE "document_type"
 #define OPH_ARG_LEVEL "level"
 #define OPH_ARG_LINK "link"
+#define OPH_ARG_OFFSET "offset"
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
 #ifdef OPH_OPENID_ENDPOINT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
@@ -123,6 +124,7 @@
 #define OPH_COMMON_YES "yes"
 #define OPH_COMMON_NO "no"
 #define OPH_COMMON_PARAMETER_WORKING_SESSION "this"
+#define OPH_COMMON_REAL "real"
 #define OPH_OPERATOR_LOG_INFO_PARAMETER_SERVER "server"
 #define OPH_OPERATOR_GET_CONFIG_PARAMETER_ALL "all"
 #define OPH_OPERATOR_RESUME_PARAMETER_WORKFLOW "workflow"
