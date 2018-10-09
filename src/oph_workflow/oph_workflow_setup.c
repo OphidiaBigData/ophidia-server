@@ -118,10 +118,34 @@ int oph_workflow_validate(oph_workflow * workflow)
 	}
 	// Check for uniqueness of task name
 	int i, j, k;
-	for (i = 0; i < workflow->tasks_num; i++)
-		for (j = 0; j < workflow->tasks_num; j++)
-			if ((i != j) && !strcmp(workflow->tasks[i].name, workflow->tasks[j].name))
+	for (i = 0; i < workflow->tasks_num - 1; i++)
+		for (j = i + 1; j < workflow->tasks_num; j++)
+			if (!strcmp(workflow->tasks[i].name, workflow->tasks[j].name)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Found two tasks with the same name '%s'\n", workflow->tasks[i].name);
 				return OPH_WORKFLOW_EXIT_TASK_NAME_ERROR;
+			}
+	// Check for special chars in parameters
+	for (i = 0; i < workflow->tasks_num; i++)
+		for (j = 0; j < workflow->tasks[i].arguments_num; j++) {
+			if (strchr(workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR[0])) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong key '%s': '%s' is reserved\n", workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR);
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+			if (strchr(workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR2[0])) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong key '%s': '%s' is reserved\n", workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR2);
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+			if (strchr(workflow->tasks[i].arguments_values[j], OPH_WORKFLOW_KV_SEPARATOR[0])) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong value '%s' for key '%s': '%s' is reserved\n", workflow->tasks[i].arguments_values[j], workflow->tasks[i].arguments_keys[j],
+				      OPH_WORKFLOW_KV_SEPARATOR);
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+			if (strchr(workflow->tasks[i].arguments_values[j], OPH_WORKFLOW_KV_SEPARATOR2[0])) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong value '%s' for key '%s': '%s' is reserved\n", workflow->tasks[i].arguments_values[j], workflow->tasks[i].arguments_keys[j],
+				      OPH_WORKFLOW_KV_SEPARATOR2);
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+		}
 
 	// Create graph from tasks
 	workflow_node *graph = NULL;
