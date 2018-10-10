@@ -1013,6 +1013,12 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_OFFSET)) {
 				offset = strtod(arg_value, NULL);
+				if (offset < 0) {
+					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong value for parameter '%s'!", OPH_ARG_OFFSET);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+					free(arg_value);
+					break;
+				}
 			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ID)) {
 				wid = strtol(arg_value, NULL, 10);
 				if (wid != wf->workflowid) {
@@ -1219,47 +1225,50 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			}
 			// Check for compression
 			if (compress_value == 1) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress variable '%s' in environment of workflow '%s'\n", name, twf->name);
-				char flag = 0, first = 0;
-				long long current, start, end, l_offset = (long long) offset;
-				char *base_string = strdup(var.svalue);
-				char *final_string = strdup(var.svalue);
-				char *pch = NULL, *save_pointer = NULL;
-				unsigned int n = 0;
-				*final_string = 0;
-				while ((pch = strtok_r(pch ? NULL : base_string, OPH_SUBSET_LIB_SUBSET_SEPARATOR, &save_pointer))) {
-					current = strtoll(pch, NULL, 10);
-					if (flag) {
-						if (current == end + l_offset) {
-							end = current;
-							flag = 2;
+				long long l_offset = (long long) offset;
+				if (l_offset > 0) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress variable '%s' in environment of workflow '%s'\n", name, twf->name);
+					char flag = 0, first = 0;
+					long long current, start, end;
+					char *base_string = strdup(var.svalue);
+					char *final_string = strdup(var.svalue);
+					char *pch = NULL, *save_pointer = NULL;
+					unsigned int n = 0;
+					*final_string = 0;
+					while ((pch = strtok_r(pch ? NULL : base_string, OPH_SUBSET_LIB_SUBSET_SEPARATOR, &save_pointer))) {
+						current = strtoll(pch, NULL, 10);
+						if (flag) {
+							if (current == end + l_offset) {
+								end = current;
+								flag = 2;
+							} else {
+								if (flag > 1)
+									n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start,
+										     OPH_SUBSET_LIB_PARAM_SEPARATOR, end);
+								else
+									n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
+								first = 1;
+								start = end = current;
+								flag = 1;
+							}
 						} else {
-							if (flag > 1)
-								n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start, OPH_SUBSET_LIB_PARAM_SEPARATOR,
-									     end);
-							else
-								n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
-							first = 1;
 							start = end = current;
 							flag = 1;
 						}
-					} else {
-						start = end = current;
-						flag = 1;
 					}
+					if (flag) {
+						if (flag > 1)
+							n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start, OPH_SUBSET_LIB_PARAM_SEPARATOR, end);
+						else
+							n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
+						free(var.svalue);
+						var.svalue = final_string;
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Variable '%s' in environment of workflow '%s' has been compressed\n", name, twf->name);
+					} else
+						free(final_string);
+					free(base_string);
 				}
-				if (flag) {
-					if (flag > 1)
-						n += sprintf(final_string + n, "%s%lld%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start, OPH_SUBSET_LIB_PARAM_SEPARATOR, end);
-					else
-						n += sprintf(final_string + n, "%s%lld", first ? OPH_SUBSET_LIB_SUBSET_SEPARATOR : "", start);
-					free(var.svalue);
-					var.svalue = final_string;
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Variable '%s' in environment of workflow '%s' has been compressed\n", name, twf->name);
-				} else
-					free(final_string);
-				free(base_string);
-			} else if (compress_value == 2) {
+			} else if (offset && (compress_value == 2)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Try to compress variable '%s' in environment of workflow '%s'\n", name, twf->name);
 				char flag = 0, first = 0;
 				double current, start, end, half_offset = offset / 2.0;
