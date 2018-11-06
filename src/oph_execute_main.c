@@ -470,11 +470,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	} else
 		wf->nhosts = nhosts;
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_SESSIONID);
+	pthread_mutex_lock(&global_flag);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_SESSIONID);
 	if (wf->sessionid && strncmp(wf->sessionid, state->serverid, strlen(state->serverid))) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong sessionid '%s'\n", jobid, wf->sessionid);
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong sessionid '%s'\n", jobid, wf->sessionid);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
+	pthread_mutex_unlock(&global_flag);
+
 	// Load user information
 	int save_in_odb = 0;
 	oph_argument *user_args = NULL;
@@ -929,6 +932,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 				oph_job_list *job_info = state->job_info;
 				oph_job_info *temp;
+				oph_workflow *wf;	// Overwrite previous definition
 				for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
 					if (!(wf = temp->wf))
 						break;
@@ -1982,13 +1986,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 
 		if (session) {
+			pthread_mutex_lock(&global_flag);
 			if (strncmp(session, state->serverid, strlen(state->serverid))) {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong sessionid '%s'\n", jobid, session);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong sessionid '%s'\n", jobid, session);
+				pthread_mutex_unlock(&global_flag);
 				response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 				oph_workflow_free(wf);
 				oph_cleanup_args(&user_args);
 				return SOAP_OK;
 			}
+			pthread_mutex_unlock(&global_flag);
 		} else
 			session = wf->sessionid;
 
