@@ -693,7 +693,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			success = 0;
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in setting JSON data!");
 
-			int num_fields = 7, ii, jj, iii, jjj = 0;
+			int num_fields = 8, ii, jj, iii, jjj = 0;
 
 			char **jsonkeys = NULL;
 			char **fieldtypes = NULL;
@@ -707,6 +707,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 					break;
 				}
+				jsonkeys[jjj] = strdup("USER");
+				if (!jsonkeys[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < jjj; iii++)
+						if (jsonkeys[iii])
+							free(jsonkeys[iii]);
+					if (jsonkeys)
+						free(jsonkeys);
+					break;
+				}
+				jjj++;
 				jsonkeys[jjj] = strdup("SESSION ID");
 				if (!jsonkeys[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
@@ -794,6 +805,22 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						free(jsonkeys);
 					break;
 				}
+				fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+				if (!fieldtypes[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonkeys[iii])
+							free(jsonkeys[iii]);
+					if (jsonkeys)
+						free(jsonkeys);
+					for (iii = 0; iii < jjj; iii++)
+						if (fieldtypes[iii])
+							free(fieldtypes[iii]);
+					if (fieldtypes)
+						free(fieldtypes);
+					break;
+				}
+				jjj++;
 				fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 				if (!fieldtypes[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
@@ -943,6 +970,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						break;
 					}
 					jjj = 0;
+					jsonvalues[jjj] = strdup(wf->username);
+					if (!jsonvalues[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonvalues[iii])
+								free(jsonvalues[iii]);
+						if (jsonvalues)
+							free(jsonvalues);
+						break;
+					}
+					jjj++;
 					jsonvalues[jjj] = strdup(wf->sessionid);
 					if (!jsonvalues[jjj]) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
@@ -1044,6 +1082,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							break;
 						}
 						jjj = 0;
+						jsonvalues[jjj] = strdup(wf->username);
+						if (!jsonvalues[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonvalues[iii])
+									free(jsonvalues[iii]);
+							if (jsonvalues)
+								free(jsonvalues);
+							break;
+						}
+						jjj++;
 						jsonvalues[jjj] = strdup(wf->sessionid);
 						if (!jsonvalues[jjj]) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
@@ -1146,6 +1195,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								break;
 							}
 							jjj = 0;
+							jsonvalues[jjj] = strdup(wf->username);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
 							jsonvalues[jjj] = strdup(wf->sessionid);
 							if (!jsonvalues[jjj]) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
