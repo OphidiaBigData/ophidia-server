@@ -117,7 +117,7 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 int oph_odb_delete_user(ophidiadb * oDB, const char *username);
 int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country);
 
-int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent);
+int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user);
 int oph_odb_destroy_hp(ophidiadb * oDB, const char *name);
 int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition);
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition);
