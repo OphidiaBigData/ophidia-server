@@ -2900,7 +2900,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 
 					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition, id_hostpartition);
-					if (oph_cancel_request(id_job, username))
+					if (oph_stop_request(id_job, username))
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 					else
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
