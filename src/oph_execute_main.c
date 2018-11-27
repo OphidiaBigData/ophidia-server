@@ -1315,7 +1315,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 
 		if (success) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", _oph_service_status ? OPH_OPERATOR_SERVICE_PARAMETER_STATUS_UP : OPH_OPERATOR_SERVICE_PARAMETER_STATUS_DOWN);
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", _oph_service_status ? OPH_ODB_STATUS_ACTIVE_STR : OPH_ODB_STATUS_INACTIVE_STR);
 			if (oph_json_add_text(oper_json, OPH_JSON_OBJKEY_SERVICE_STATUS, "Service status", error_message)) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: ADD TEXT error\n", jobid);
 				success = 0;

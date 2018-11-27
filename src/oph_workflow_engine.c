@@ -2148,7 +2148,12 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						} else if (oph_write_and_get_json_unsafe(oper_json, &output_json))
 							return_code = -1;
 					} else {
-						if (!output_list_dim && oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_SUMMARY, "WARNING", "No object found!")) {
+						char tmp[OPH_MAX_STRING_SIZE];
+						if (output_list_dim)
+							snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d object%s", output_list_dim, output_list_dim == 1 ? "" : "s");
+						else
+							snprintf(tmp, OPH_MAX_STRING_SIZE, "No object found!");
+						if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_SUMMARY, output_list_dim ? "SUMMARY" : "WARNING", tmp)) {
 							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
 							return_code = -1;
 						}
