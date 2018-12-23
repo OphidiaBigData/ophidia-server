@@ -54,7 +54,7 @@ ${IO_SERVER_PATH} -i ${myid} -c ${HOME}/.ophidia/data${myid}/oph_ioserver.conf >
 echo "Exit from IO server ${myid}"
 
 echo "Remove host ${myhost} from partition ${hpid}"
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status='down', datacubecount=0 WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}'); COMMIT;"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status='down', importcount=0 WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}'); COMMIT;"
 if [ $? -ne 0 ]; then
         echo "Query failed"
         exit 1

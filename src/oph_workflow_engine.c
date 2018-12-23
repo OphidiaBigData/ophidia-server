@@ -5958,9 +5958,14 @@ int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
 	if (!wf->host_partition || !strlen(wf->host_partition))
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 
+	int id_user = 0;
+	if (oph_odb_retrieve_user_id(oDB, wf->username, &id_user))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
 	char pname[OPH_SHORT_STRING_SIZE];
 	snprintf(pname, OPH_SHORT_STRING_SIZE, "_%d", wf->idjob);
-	if (oph_odb_create_hp(oDB, pname, wf->host_partition))
+
+	if (oph_odb_create_hp(oDB, pname, wf->host_partition, id_user))
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 
 	free(wf->host_partition);
