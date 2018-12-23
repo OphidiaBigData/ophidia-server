@@ -38,6 +38,7 @@ struct _oph_rmanager {
 	char *subm_cmd_submit;
 	char *subm_cmd_start;
 	char *subm_cmd_cancel;
+	char *subm_cmd_stop;
 	char *subm_cmd_check;
 	char subm_multiuser;
 	char *subm_group;
@@ -57,6 +58,7 @@ int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid, char *username);
+int oph_stop_request(int jobid, char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);
 

@@ -29,6 +29,7 @@
 #define SUBM_CMD_TO_SUBMIT	"SUBM_CMD_TO_SUBMIT"
 #define SUBM_CMD_TO_START	"SUBM_CMD_TO_START"
 #define SUBM_CMD_TO_CANCEL	"SUBM_CMD_TO_CANCEL"
+#define SUBM_CMD_TO_STOP	"SUBM_CMD_TO_STOP"
 #define SUBM_CMD_TO_CHECK	"SUBM_CMD_TO_CHECK"
 #define SUBM_MULTIUSER		"SUBM_MULTIUSER"
 #define SUBM_GROUP			"SUBM_GROUP"
@@ -237,6 +238,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_cmd_start = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL))
 				orm->subm_cmd_cancel = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_STOP))
+				orm->subm_cmd_stop = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
 				orm->subm_cmd_check = target;
 			else if (!strcmp(buffer, SUBM_MULTIUSER)) {
@@ -299,6 +302,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_cmd_submit = NULL;
 	orm->subm_cmd_start = NULL;
 	orm->subm_cmd_cancel = NULL;
+	orm->subm_cmd_stop = NULL;
 	orm->subm_cmd_check = NULL;
 	orm->subm_multiuser = 0;	// No
 	orm->subm_group = NULL;
@@ -310,12 +314,12 @@ int initialize_rmanager(oph_rmanager * orm)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_cancel_request(int jobid, char *username)
+int oph_abort_request(int jobid, char *username, char *command)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
 	pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
-	if (orm && orm->subm_cmd_cancel) {
+	if (command) {
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
@@ -325,10 +329,10 @@ int oph_cancel_request(int jobid, char *username)
 		else		// Skip username for backward compatibility
 			*subm_username = 0;
 		size_t len =
-		    6 + strlen(orm->subm_prefix) + strlen(subm_username) + strlen(orm->subm_cmd_cancel) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE +
+		    6 + strlen(orm->subm_prefix) + strlen(subm_username) + strlen(command) + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_RMANAGER_MAX_INT_SIZE +
 		    strlen(orm->subm_postfix);
 		char cmd[len];
-		snprintf(cmd, len, "%s %s %s %d %s%s %s", orm->subm_prefix, subm_username, orm->subm_cmd_cancel, jobid, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
+		snprintf(cmd, len, "%s %s %s %d %s%s %s", orm->subm_prefix, subm_username, command, jobid, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
 		if (oph_ssh_submit(cmd)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
@@ -337,6 +341,26 @@ int oph_cancel_request(int jobid, char *username)
 #endif
 	}
 	return RMANAGER_SUCCESS;
+}
+
+int oph_cancel_request(int jobid, char *username)
+{
+	if (!jobid)
+		return RMANAGER_NULL_PARAM;
+	if (orm && orm->subm_cmd_cancel)
+		return oph_abort_request(jobid, username, orm->subm_cmd_cancel);
+	else
+		return RMANAGER_SUCCESS;
+}
+
+int oph_stop_request(int jobid, char *username)
+{
+	if (!jobid)
+		return RMANAGER_NULL_PARAM;
+	if (orm && orm->subm_cmd_stop)
+		return oph_abort_request(jobid, username, orm->subm_cmd_stop);
+	else
+		return RMANAGER_SUCCESS;
 }
 
 int oph_read_job_queue(int **list, char ***username, unsigned int *n)
@@ -472,6 +496,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_cmd_cancel) {
 		free(orm->subm_cmd_cancel);
 		orm->subm_cmd_cancel = NULL;
+	}
+	if (orm->subm_cmd_stop) {
+		free(orm->subm_cmd_stop);
+		orm->subm_cmd_stop = NULL;
 	}
 	if (orm->subm_cmd_check) {
 		free(orm->subm_cmd_check);
