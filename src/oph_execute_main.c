@@ -606,6 +606,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			wf->tasks[i].isknown = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_CLUSTER_OPERATOR;
+			if (!is_admin) {
+				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+					if (wf->tasks[i].arguments_keys[j] && wf->tasks[i].arguments_values[j] && !strncasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ACTION, OPH_MAX_STRING_SIZE)
+					    && !strncasecmp(wf->tasks[i].arguments_values[j], OPH_OPERATOR_CLUSTER_PARAMETER_INFO_CLUSTER, OPH_MAX_STRING_SIZE)) {
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: the user is not authorized to submit the command '%s'\n", jobid, wf->tasks[i].operator);
+						response->error = OPH_SERVER_AUTH_ERROR;
+						break;
+					}
+			}
 			wf->tasks[i].isknown = 1;
 		} else
 			nstandardcommands++;
@@ -1375,8 +1384,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
 			oph_sha(sha_username, wf->username);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
-				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : OPH_UNKNOWN,
+				wf->client_address ? wf->client_address : OPH_UNKNOWN, 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
 		}
@@ -1884,8 +1893,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
 			oph_sha(sha_username, wf->username);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
-				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : OPH_UNKNOWN,
+				wf->client_address ? wf->client_address : OPH_UNKNOWN, 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
 		}
@@ -5528,8 +5537,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 			char sha_username[2 * SHA_DIGEST_LENGTH + 2];
 			oph_sha(sha_username, wf->username);
-			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : "unknown",
-				wf->client_address ? wf->client_address : "unknown", 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
+			fprintf(wf_logfile, "%s\t%d\t%s\t%s\t%s\t%s\t%d\t%d\t%f\n", buffer, 0, wf->name, sha_username, wf->ip_address ? wf->ip_address : OPH_UNKNOWN,
+				wf->client_address ? wf->client_address : OPH_UNKNOWN, 1, 1, (double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->timestamp);
 			fflush(wf_logfile);
 			pthread_mutex_unlock(&curl_flag);
 		}

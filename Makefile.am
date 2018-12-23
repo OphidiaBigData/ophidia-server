@@ -24,7 +24,7 @@ SUBDIRS = . src test
 
 include_HEADERS = src/oph_types.h src/oph_execute_main.h
 
-sysconf_DATA = etc/server.conf etc/ophidiadb.conf etc/rmanager.conf etc/oph_server_logrotate
+sysconf_DATA = etc/*.conf etc/oph_server_logrotate
 
 bindir=${prefix}/etc
 bin_SCRIPTS = etc/oph_server
@@ -52,7 +52,7 @@ dist_sessions_DATA =
 
 if OPH_WEB_ACCESS
 webdir = $(OPH_WEB_SERVER_LOCATION)/
-dist_web_DATA = etc/web/env.php etc/web/header.php etc/web/tailer.php etc/web/index.php etc/web/sessions.php etc/web/openid.php etc/web/userinfo.php etc/web/aaa.php etc/web/style.css etc/web/.htaccess
+dist_web_DATA = etc/web/*.php etc/web/style.css etc/web/.htaccess
 endif
 
 AM_DEFAULT_VERBOSITY = 1

@@ -41,16 +41,16 @@ chmod +x ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 MPI_TYPE=--mpi=pmi2
 if [ ${ncores} -eq 1 ]
 then
-if [[ ${submissionstring} = *"operator=oph_script;"* ]]
-then
-MPI_TYPE=--mpi=none
-fi
+	if [[ ${submissionstring} = *"operator=oph_script;"* ]]
+	then
+		MPI_TYPE=--mpi=none
+	fi
 fi
 
 ${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 if [ $? -ne 0 ]; then
-        echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
-        exit 1
+	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
+	exit -1
 fi
 
 rm ${HOME}/.ophidia/${serverid}${taskid}.submit.sh

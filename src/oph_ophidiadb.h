@@ -113,9 +113,9 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *query, ophidiadb_list * l
 int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube, int *counter);
 
 int oph_odb_insert_user(ophidiadb * oDB, const char *username);
-int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country);
+int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts);
 int oph_odb_delete_user(ophidiadb * oDB, const char *username);
-int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country);
+int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts);
 
 int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user);
 int oph_odb_destroy_hp(ophidiadb * oDB, const char *name);
@@ -123,6 +123,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition);
 int oph_odb_release_hp2(int id_hostpartition);
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job);
+int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts);
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts);
 
 #endif				/* OPH_OPHIDIADB_H */

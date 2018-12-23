@@ -31,6 +31,7 @@
 #define SUBM_CMD_TO_CANCEL	"SUBM_CMD_TO_CANCEL"
 #define SUBM_CMD_TO_STOP	"SUBM_CMD_TO_STOP"
 #define SUBM_CMD_TO_CHECK	"SUBM_CMD_TO_CHECK"
+#define SUBM_CMD_TO_COUNT	"SUBM_CMD_TO_COUNT"
 #define SUBM_MULTIUSER		"SUBM_MULTIUSER"
 #define SUBM_GROUP			"SUBM_GROUP"
 #define SUBM_QUEUE_HIGH		"SUBM_QUEUE_HIGH"
@@ -242,6 +243,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_cmd_stop = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
 				orm->subm_cmd_check = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_COUNT))
+				orm->subm_cmd_count = target;
 			else if (!strcmp(buffer, SUBM_MULTIUSER)) {
 				orm->subm_multiuser = !strcmp(target, "yes");
 				free(target);
@@ -304,6 +307,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_cmd_cancel = NULL;
 	orm->subm_cmd_stop = NULL;
 	orm->subm_cmd_check = NULL;
+	orm->subm_cmd_count = NULL;
 	orm->subm_multiuser = 0;	// No
 	orm->subm_group = NULL;
 	orm->subm_queue_high = NULL;
@@ -318,11 +322,11 @@ int oph_abort_request(int jobid, char *username, char *command)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
-	pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
 	if (command) {
 #ifdef LOCAL_FRAMEWORK
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
 		char subm_username[10 + (username ? strlen(username) : 0)];
 		if (username && orm->subm_multiuser)
 			sprintf(subm_username, OPH_RMANAGER_SUDO, username);
@@ -439,6 +443,28 @@ int oph_read_job_queue(int **list, char ***username, unsigned int *n)
 	return RMANAGER_SUCCESS;
 }
 
+int oph_get_available_host_number(int *size)
+{
+	if (!size)
+		return RMANAGER_NULL_PARAM;
+	*size = 0;
+#ifndef LOCAL_FRAMEWORK
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to get current cluster size\n");
+	if (orm->subm_cmd_count) {
+#ifdef SSH_SUPPORT
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SSH support to get cluster size is not supported\n");
+		return RMANAGER_ERROR;
+#endif
+		if ((*size = system(orm->subm_cmd_count)) < 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+			return RMANAGER_ERROR;
+		}
+	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Current cluster size is %d\n", *size);
+#endif
+	return RMANAGER_SUCCESS;
+}
+
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type)
 {
 	if (!orm) {
@@ -504,6 +530,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_cmd_check) {
 		free(orm->subm_cmd_check);
 		orm->subm_cmd_check = NULL;
+	}
+	if (orm->subm_cmd_count) {
+		free(orm->subm_cmd_count);
+		orm->subm_cmd_count = NULL;
 	}
 	if (orm->subm_group) {
 		free(orm->subm_group);

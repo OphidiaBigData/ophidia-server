@@ -478,7 +478,7 @@ int oph_odb_insert_user(ophidiadb * oDB, const char *username)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
+int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
 {
 	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
@@ -516,7 +516,7 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 		snprintf(tmp, MYSQL_BUFLEN, "NULL");
 
 	n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_INSERT_USER2, username, password, name ? "'" : "", name ? name : "NULL", name ? "'" : "", surname ? "'" : "", surname ? surname : "NULL",
-		     surname ? "'" : "", email ? "'" : "", email ? email : "NULL", email ? "'" : "", tmp);
+		     surname ? "'" : "", email ? "'" : "", email ? email : "NULL", email ? "'" : "", tmp, max_hosts > 0 ? max_hosts : 0);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -545,7 +545,7 @@ int oph_odb_delete_user(ophidiadb * oDB, const char *username)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
+int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
 {
 	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
@@ -614,6 +614,17 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 		char tmp[MYSQL_BUFLEN];
 		snprintf(tmp, MYSQL_BUFLEN, "%d", idcountry);
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "idcountry", tmp, username);
+		if (n >= MYSQL_BUFLEN)
+			return OPH_ODB_STR_BUFF_OVERFLOW;
+
+		if (mysql_query(oDB->conn, updateQuery))
+			return OPH_ODB_MYSQL_ERROR;
+	}
+	if (max_hosts >= 0) {
+		char tmp[MYSQL_BUFLEN];
+		snprintf(tmp, MYSQL_BUFLEN, "%d", max_hosts);
+
+		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "maxhosts", tmp, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -789,9 +800,43 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 	return OPH_ODB_SUCCESS;
 }
 
+int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
+{
+	if (!oDB || !thosts)
+		return OPH_ODB_NULL_PARAM;
+	*thosts = 0;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB))
+		return OPH_ODB_MYSQL_ERROR;
+
+	char insertQuery[MYSQL_BUFLEN];
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_TOTAL_HOSTS);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, insertQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	res = mysql_store_result(oDB->conn);
+
+	if ((mysql_field_count(oDB->conn) != 1) || (mysql_num_rows(res) != 1)) {
+		mysql_free_result(res);
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	while ((row = mysql_fetch_row(res)) != NULL) {
+		*thosts = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
+	}
+	mysql_free_result(res);
+
+	return OPH_ODB_SUCCESS;
+}
+
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 {
-	if (!oDB || !id_user || !rhosts)
+	if (!oDB || !rhosts)
 		return OPH_ODB_NULL_PARAM;
 	*rhosts = 0;
 
@@ -799,7 +844,11 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 		return OPH_ODB_MYSQL_ERROR;
 
 	char insertQuery[MYSQL_BUFLEN];
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_RESERVED_HOSTS, id_user);
+	int n;
+	if (id_user)
+		n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_RESERVED_HOSTS, id_user);
+	else
+		n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_HOSTS);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 

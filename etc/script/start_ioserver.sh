@@ -36,10 +36,10 @@ myhost=`echo ${hostlist} | tail -c 7`
 myid=`echo ${hostlist} | tail -c 2 | bc`
 
 echo "Add host ${myhost} to partition ${hpid}"
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status='up' WHERE hostname='${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname='${myhost}')); COMMIT;"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
 if [ $? -ne 0 ]; then
-        echo "Query failed"
-        exit 1
+	echo "Query failed"
+	exit 1
 fi
 echo "OphidiaDB updated"
 
@@ -54,10 +54,10 @@ ${IO_SERVER_PATH} -i ${myid} -c ${HOME}/.ophidia/data${myid}/oph_ioserver.conf >
 echo "Exit from IO server ${myid}"
 
 echo "Remove host ${myhost} from partition ${hpid}"
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status='down', importcount=0 WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname='${myhost}'); COMMIT;"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status = 'down', importcount = 0 WHERE hostname='${myhost}'; DELETE FROM hashost WHERE idhostpartition = ${hpid} AND idhost IN (SELECT idhost FROM host WHERE hostname = '${myhost}'); COMMIT;"
 if [ $? -ne 0 ]; then
-        echo "Query failed"
-        exit 1
+	echo "Query failed"
+	exit 1
 fi
 echo "OphidiaDB updated"
 

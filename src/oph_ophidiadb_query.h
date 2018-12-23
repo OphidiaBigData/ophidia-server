@@ -21,14 +21,14 @@
 
 // User management
 #define MYSQL_QUERY_INSERT_USER "INSERT IGNORE INTO `user` (username) VALUES ('%s')"
-#define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified) VALUES ('%s',PASSWORD('%s'),%s%s%s,%s%s%s,%s%s%s,%s,1)"
+#define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s',PASSWORD('%s'),%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
 #define MYSQL_QUERY_SELECT_COUNTRY "SELECT idcountry FROM `country` WHERE country = '%s'"
 #define MYSQL_QUERY_DELETE_USER "DELETE FROM `user` WHERE username = '%s'"
 #define MYSQL_QUERY_UPDATE_USER "UPDATE `user` SET %s = '%s' WHERE username = '%s'"
 #define MYSQL_QUERY_UPDATE_USER2 "UPDATE `user` SET %s = PASSWORD('%s') WHERE username = '%s'"
 
 // Session and job management
-#define MYSQL_RETRIEVE_USER_ID "SELECT iduser from `user` where username = '%s';"
+#define MYSQL_RETRIEVE_USER_ID "SELECT iduser FROM `user` WHERE username = '%s';"
 #define MYSQL_RETRIEVE_SESSION_ID "SELECT idsession FROM session WHERE sessionid = '%s'"
 #define MYSQL_RETRIEVE_JOB_ID "SELECT idjob FROM session INNER JOIN job ON session.idsession = job.idsession WHERE sessionid = '%s' AND markerid = %s"
 #define MYSQL_RETRIEVE_PARENT_JOB_ID "SELECT idparent FROM job WHERE idjob = %d"
@@ -82,7 +82,11 @@
 #define OPHIDIADB_RETRIEVE_RESERVED_PARTITION "SELECT idhostpartition, idjob FROM hostpartition WHERE partitionname = '%s' AND iduser = %d;"
 #define OPHIDIADB_RELEASE_HOSTS "UPDATE host SET status='down', importcount=0 WHERE idhost IN (SELECT idhost FROM hashost WHERE idhostpartition = %d);"
 #define OPHIDIADB_RELEASE_PARTITION "DELETE FROM hostpartition WHERE idhostpartition = %d;"
-#define OPHIDIADB_RETRIEVE_RESERVED_HOSTS "SELECT COUNT(*) FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND iduser = %d;"
+#define OPHIDIADB_RETRIEVE_TOTAL_HOSTS "SELECT COUNT(*) FROM host;"
+#define OPHIDIADB_RETRIEVE_RESERVED_HOSTS "SELECT COUNT(*) FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND reserved AND iduser = %d;"
+#define OPHIDIADB_RETRIEVE_TOTAL_RESERVED_HOSTS "SELECT COUNT(*) FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND reserved;"
+#define OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS "SELECT COUNT(*), partitionname FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition WHERE status = 'up' AND reserved AND iduser = %d GROUP BY hostpartition.idhostpartition;"
+#define OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS "SELECT COUNT(*), partitionname, username, maxhosts FROM host INNER JOIN hashost ON host.idhost = hashost.idhost INNER JOIN hostpartition ON hashost.idhostpartition = hostpartition.idhostpartition INNER JOIN user ON hostpartition.iduser = user.iduser WHERE status = 'up' AND reserved GROUP BY hostpartition.idhostpartition;"
 
 // Job accounting
 #define MYSQL_QUERY_RETRIEVE_LAST_ID "SELECT MAX(idjob) FROM jobaccounting;"

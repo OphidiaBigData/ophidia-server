@@ -40,6 +40,7 @@ struct _oph_rmanager {
 	char *subm_cmd_cancel;
 	char *subm_cmd_stop;
 	char *subm_cmd_check;
+	char *subm_cmd_count;
 	char subm_multiuser;
 	char *subm_group;
 	char *subm_queue_high;
@@ -60,6 +61,7 @@ int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid, char *username);
 int oph_stop_request(int jobid, char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
+int oph_get_available_host_number(int *size);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);
 
 #endif				/* OPH_RMANAGER_H */

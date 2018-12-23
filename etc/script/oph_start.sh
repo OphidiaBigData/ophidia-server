@@ -40,8 +40,8 @@ chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 
 ${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 if [ $? -ne 0 ]; then
-        echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
-        exit 1
+	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
+	exit -1
 fi
 
 rm ${HOME}/.ophidia/${serverid}${taskid}.start.sh
