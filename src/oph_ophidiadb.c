@@ -312,7 +312,7 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	MYSQL_ROW row;
 	res = mysql_store_result(oDB->conn);
 
-	if ((mysql_field_count(oDB->conn) < 4) || (mysql_field_count(oDB->conn) > 6)) {
+	if ((mysql_field_count(oDB->conn) < 3) || (mysql_field_count(oDB->conn) > 6)) {
 		mysql_free_result(res);
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
@@ -336,7 +336,10 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 		list->id[j] = row[0] ? (int) strtol(row[0], NULL, 10) : 0;
 		list->ctime[j] = row[1] ? strndup(row[1], OPH_MAX_STRING_SIZE) : NULL;
 		list->name[j] = row[2] ? strndup(row[2], OPH_MAX_STRING_SIZE) : NULL;
-		list->wid[j] = row[3] ? (int) strtol(row[3], NULL, 10) : 0;
+		if ((mysql_field_count(oDB->conn) > 3) && row[3])
+			list->wid[j] = (int) strtol(row[3], NULL, 10);
+		else
+			list->wid[j] = 0;
 		if ((mysql_field_count(oDB->conn) > 4) && row[4])
 			list->pid[j] = (int) strtol(row[4], NULL, 10);
 		else

@@ -168,5 +168,7 @@
 #define OPH_JSON_OBJKEY_CLUSTER_SUMMARY				"cluster_summary"
 #define OPH_JSON_OBJKEY_CLUSTER_LIST				"cluster_list"
 #define OPH_JSON_OBJKEY_CLUSTER_LIST_SUMMARY		"cluster_list_summary"
+#define OPH_JSON_OBJKEY_CLUSTER_USER				"cluster_user"
+#define OPH_JSON_OBJKEY_CLUSTER_USER_SUMMARY		"cluster_user_summary"
 
 #endif

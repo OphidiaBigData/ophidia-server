@@ -41,6 +41,7 @@
 
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
+#define OPH_RMANAGER_HOST_FILE		"%s/oph_count_%d.log"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -443,7 +444,7 @@ int oph_read_job_queue(int **list, char ***username, unsigned int *n)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_get_available_host_number(int *size)
+int oph_get_available_host_number(int *size, int jobid)
 {
 	if (!size)
 		return RMANAGER_NULL_PARAM;
@@ -455,10 +456,22 @@ int oph_get_available_host_number(int *size)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SSH support to get cluster size is not supported\n");
 		return RMANAGER_ERROR;
 #endif
-		if ((*size = system(orm->subm_cmd_count)) < 0) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+		char workfile[OPH_MAX_STRING_SIZE], command[OPH_MAX_STRING_SIZE];
+		snprintf(workfile, OPH_MAX_STRING_SIZE, OPH_RMANAGER_HOST_FILE, oph_txt_location, jobid);
+		snprintf(command, OPH_MAX_STRING_SIZE, "%s %s", orm->subm_cmd_count, workfile);
+		if (system(command)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error %d during remote submission\n", *size);
 			return RMANAGER_ERROR;
 		}
+		FILE *file = fopen(workfile, "r");
+		if (!file) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to open output file %s\n", workfile);
+			return RMANAGER_ERROR;
+		}
+		char buffer[OPH_SHORT_STRING_SIZE];
+		if (fgets(buffer, OPH_SHORT_STRING_SIZE, file))
+			*size = (int) strtol(buffer, NULL, 10);
+		fclose(file);
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Current cluster size is %d\n", *size);
 #endif

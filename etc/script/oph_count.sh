@@ -19,6 +19,7 @@
 #!/bin/bash
 
 # Input parameters
+WORK_FILE=${1}
 
 # Const
 OPHDB_NAME=ophidiadb
@@ -28,12 +29,12 @@ OPHDB_LOGIN=root
 OPHDB_PWD=abcd
 
 # Body
-COUNT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -s -N -e "SELECT COUNT(*) FROM host WHERE status = 'down';" 2> /tmp/oph_count.log`
-ERROR=`wc -l < /tmp/oph_count.log`
+COUNT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -s -N -e "SELECT COUNT(*) FROM host WHERE status = 'down' AND idhost NOT IN (SELECT idhost FROM hashost);" 2> ${WORK_FILE}`
+ERROR=`wc -l < ${WORK_FILE}`
 if [ $ERROR -gt 1 ]; then
 	echo "Query failed"
 	exit -1
 fi
-echo "Found $COUNT available hosts"
-exit $COUNT
+echo $COUNT > ${WORK_FILE}
+exit 0
 
