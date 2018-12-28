@@ -19,6 +19,19 @@
 #ifndef OPH_SERVICE_INFO_H
 #define OPH_SERVICE_INFO_H
 
+typedef struct _oph_service_info_task {
+	char *operator;
+	char status;
+} oph_service_info_task;
+
+typedef struct _oph_service_info_wf {
+	char *client_address;
+	char status;
+	oph_service_info_task *tasks;
+	unsigned int tasks_num;
+	struct _oph_service_info_wf *next;
+} oph_service_info_wf;
+
 typedef struct _oph_service_info {
 	unsigned long incoming_requests;
 	unsigned long accepted_requests;
@@ -32,6 +45,7 @@ typedef struct _oph_service_info {
 	unsigned long incoming_notifications;
 	unsigned long incoming_responses;
 	unsigned long outcoming_responses;
+	oph_service_info_wf *workflows;
 } oph_service_info;
 
 #endif				/* OPH_SERVICE_INFO_H */
