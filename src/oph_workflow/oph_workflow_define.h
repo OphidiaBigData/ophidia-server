@@ -63,10 +63,21 @@
 #define OPH_WORKFLOW_NO			"no"
 #define OPH_WORKFLOW_NOP		"nop"
 #define OPH_WORKFLOW_SKIP		"skip"
-#define OPH_WORKFLOW_CONTINUE		"continue"
+#define OPH_WORKFLOW_CONTINUE	"continue"
 #define OPH_WORKFLOW_BREAK		"break"
 #define OPH_WORKFLOW_REPEAT		"repeat"
-#define OPH_WORKFLOW_DELETE		"oph_delete"
+
+#define OPH_WORKFLOW_DELETE				"oph_delete"
+#define OPH_WORKFLOW_DELETECONTAINER	"oph_deletecontainer"
+
+#define OPH_WORKFLOW_DELETECONTAINER_HIDDEN	"hidden"
+#define OPH_WORKFLOW_DELETECONTAINER_TYPE	"delete_type"
+#define OPH_WORKFLOW_DELETECONTAINER_VALUE	"physical"
+#define OPH_WORKFLOW_DELETECONTAINER_FORCE	"force"
+
+#define OPH_WORKFLOW_EXIT_ACTION_NOP				0
+#define OPH_WORKFLOW_EXIT_ACTION_DELETE				1
+#define OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER	2
 
 #define OPH_WORKFLOW_CLASSIC		"classic"
 #define OPH_WORKFLOW_COMPACT		"compact"

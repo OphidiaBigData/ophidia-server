@@ -132,9 +132,13 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->on_exit);
 		workflow->on_exit = NULL;
 	}
-	if (workflow->exit_values) {
-		oph_trash_destroy(workflow->exit_values);
-		workflow->exit_values = NULL;
+	if (workflow->exit_cubes) {
+		oph_trash_destroy(workflow->exit_cubes);
+		workflow->exit_cubes = NULL;
+	}
+	if (workflow->exit_containers) {
+		oph_trash_destroy(workflow->exit_containers);
+		workflow->exit_containers = NULL;
 	}
 	oph_workflow_task_out *tmp = NULL;
 	while (workflow->output) {

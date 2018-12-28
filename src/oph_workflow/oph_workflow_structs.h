@@ -269,7 +269,8 @@ typedef struct _oph_workflow_stack {
  * \param tasks_num Number of tasks
  * \param residual_tasks_num Number of residual tasks (initialized to tasks_num)
  * \param response Output of the execution
- * \param exit_values List of the values to be used in the operation executed on the end of workflow
+ * \param exit_cubes List of the cubes to be processed in the final operation
+ * \param exit_containers List of the containers to be processed in the final operation
  * \param run Flag used to enable/disable execution
  * \param parallel_mode Flag used by parallel flow control operator
  * \param vars Global variables
@@ -311,7 +312,8 @@ typedef struct _oph_workflow {
 	int tasks_num;
 	int residual_tasks_num;
 	char *response;
-	oph_trash *exit_values;
+	oph_trash *exit_cubes;
+	oph_trash *exit_containers;
 	int run;
 	oph_workflow_task_out *output;
 	int parallel_mode;

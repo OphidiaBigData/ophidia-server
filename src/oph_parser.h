@@ -32,6 +32,8 @@
 #define OPH_ARG_USER "user"
 #define OPH_ARG_USERNAME "username"
 #define OPH_ARG_USERROLE "userrole"
+#define OPH_ARG_CONTAINER "container"
+#define OPH_ARG_CONTAINER_PID "container_pid"
 #define OPH_ARG_CUBE "cube"
 #define OPH_ARG_CWD "cwd"
 #define OPH_ARG_CDD "cdd"
