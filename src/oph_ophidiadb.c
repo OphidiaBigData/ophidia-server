@@ -624,9 +624,9 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
+int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user)
 {
-	if (!oDB || !name || !parent)
+	if (!oDB || !name || !parent || !id_user)
 		return OPH_ODB_NULL_PARAM;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
@@ -634,7 +634,31 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
 
 	char insertQuery[MYSQL_BUFLEN];
 
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_CREATE_PARTITION, name);
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_PARTITION, parent, id_user);
+	if (n >= MYSQL_BUFLEN)
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+
+	if (mysql_query(oDB->conn, insertQuery))
+		return OPH_ODB_MYSQL_ERROR;
+
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	res = mysql_store_result(oDB->conn);
+
+	if ((mysql_field_count(oDB->conn) != 1) || (mysql_num_rows(res) != 1)) {
+		mysql_free_result(res);
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	int idhostpartition = 0;
+	if ((row = mysql_fetch_row(res)))
+		idhostpartition = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
+	mysql_free_result(res);
+
+	if (!idhostpartition)
+		return OPH_ODB_MYSQL_ERROR;
+
+	n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_CREATE_PARTITION, name);	// Hidden partition name needs to be unique
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -644,7 +668,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
 
-	n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_FILL_PARTITION, parent);
+	n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_FILL_PARTITION, idhostpartition);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -664,7 +688,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 
 	char updateQuery[MYSQL_BUFLEN];
 
-	int n = snprintf(updateQuery, MYSQL_BUFLEN, OPHIDIADB_DESTROY_PARTITION, name);
+	int n = snprintf(updateQuery, MYSQL_BUFLEN, OPHIDIADB_DESTROY_PARTITION, name);	// Hidden partition name needs to be unique
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -739,7 +763,7 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 		return OPH_ODB_MYSQL_ERROR;
 
 	char insertQuery[MYSQL_BUFLEN];
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_PARTITION, name, id_user);
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_RESERVED_PARTITION, name, id_user);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
