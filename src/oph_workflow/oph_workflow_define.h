@@ -70,8 +70,6 @@
 #define OPH_WORKFLOW_DELETE				"oph_delete"
 #define OPH_WORKFLOW_DELETECONTAINER	"oph_deletecontainer"
 
-#define OPH_WORKFLOW_DELETECONTAINER_TYPE	"delete_type"
-#define OPH_WORKFLOW_DELETECONTAINER_VALUE	"physical"
 #define OPH_WORKFLOW_DELETECONTAINER_FORCE	"force"
 
 #define OPH_WORKFLOW_EXIT_ACTION_NOP				0
