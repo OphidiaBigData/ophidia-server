@@ -410,8 +410,7 @@ int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL
 	return OPH_ODB_SUCCESS;
 }
 
-//It also checks if the container is not hidden
-int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int non_hidden, int *folder_id)
+int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int *folder_id)
 {
 	if (!oDB || !folder_id || !container_id) {
 		return OPH_ODB_NULL_PARAM;
@@ -422,11 +421,7 @@ int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, in
 	}
 
 	char query[MYSQL_BUFLEN];
-	int n;
-	if (non_hidden)
-		n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_RETRIEVE_CONTAINER_FOLDER_ID, container_id);
-	else
-		n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_RETRIEVE_CONTAINER_FOLDER_ID2, container_id);
+	int n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_RETRIEVE_CONTAINER_FOLDER_ID, container_id);
 	if (n >= MYSQL_BUFLEN) {
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
@@ -550,39 +545,6 @@ int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb * oDB, 
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb * oDB, int *answer)
-{
-	if (!oDB || !name || !folder_id || !answer) {
-		return OPH_ODB_NULL_PARAM;
-	}
-	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-
-	char query[MYSQL_BUFLEN];
-	MYSQL_RES *res;
-	int num_rows;
-
-	snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_OPH_FS_IS_HIDDEN_CONTAINER, folder_id, name);
-	if (mysql_query(oDB->conn, query)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-	res = mysql_store_result(oDB->conn);
-	num_rows = mysql_num_rows(res);
-	if (num_rows == 0) {
-		*answer = 0;
-		mysql_free_result(res);
-	} else if (num_rows == 1) {
-		*answer = 1;
-		mysql_free_result(res);
-	} else {
-		mysql_free_result(res);
-		return OPH_ODB_ERROR;
-	}
-
-	return OPH_ODB_SUCCESS;
-}
-
 int oph_odb_fs_is_unique(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
 	if (!oDB || !name || !folder_id || !answer) {
@@ -597,36 +559,6 @@ int oph_odb_fs_is_unique(int folder_id, char *name, ophidiadb * oDB, int *answer
 	int num_rows;
 
 	snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_OPH_FS_UNIQUENESS, folder_id, name, folder_id, name);
-	if (mysql_query(oDB->conn, query)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-	res = mysql_store_result(oDB->conn);
-	num_rows = mysql_num_rows(res);
-	if (num_rows == 0) {
-		*answer = 1;
-		mysql_free_result(res);
-	} else {
-		*answer = 0;
-		mysql_free_result(res);
-	}
-
-	return OPH_ODB_SUCCESS;
-}
-
-int oph_odb_fs_is_unique_hidden(int folder_id, char *name, ophidiadb * oDB, int *answer)
-{
-	if (!oDB || !name || !folder_id || !answer) {
-		return OPH_ODB_NULL_PARAM;
-	}
-	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-
-	char query[MYSQL_BUFLEN];
-	MYSQL_RES *res;
-	int num_rows;
-
-	snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_OPH_FS_UNIQUENESS_HIDDEN, folder_id, name);
 	if (mysql_query(oDB->conn, query)) {
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -673,67 +605,6 @@ int oph_odb_fs_is_empty_folder(int folder_id, ophidiadb * oDB, int *answer)
 	return OPH_ODB_SUCCESS;
 }
 
-/*
-int oph_odb_fs_is_allowed_path(const char *absolute_path, const char *user) {
-    char homedir[MYSQL_BUFLEN];
-    int homedir_len;
-
-    homedir_len = snprintf(homedir,MYSQL_BUFLEN,OPH_FRAMEWORK_FS_USER_HOME,user);
-
-    if (!strncasecmp(absolute_path,homedir,homedir_len)) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-int oph_odb_fs_is_home(const char *absolute_path, const char *user) {
-    char homedir[MYSQL_BUFLEN];
-    int homedir_len;
-
-    homedir_len = snprintf(homedir,MYSQL_BUFLEN,OPH_FRAMEWORK_FS_USER_HOME,user);
-
-    if (strlen(absolute_path)==homedir_len) {
-        if (!strcasecmp(absolute_path,homedir))
-            return 1;
-        else
-            return 0;
-    } else if (strlen(absolute_path)==homedir_len-1 && homedir[homedir_len-1]=='/') {
-        if (!strncasecmp(absolute_path,homedir,homedir_len-1))
-            return 1;
-        else
-            return 0;
-    } else if (strlen(absolute_path)==homedir_len+1 && absolute_path[homedir_len]=='/') {
-        if (!strncasecmp(absolute_path,homedir,homedir_len))
-            return 1;
-        else
-            return 0;
-    }
-    return 0;
-}
-*/
-int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidiadb * oDB)
-{
-	if (!oDB || !container_id || hidden < 0 || hidden > 1) {
-		return OPH_ODB_NULL_PARAM;
-	}
-	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-
-	char query[MYSQL_BUFLEN];
-	int n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_CONTAINER_STATUS, hidden, container_id);
-	if (n >= MYSQL_BUFLEN) {
-		return OPH_ODB_STR_BUFF_OVERFLOW;
-	}
-	if (mysql_query(oDB->conn, query)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-
-	return OPH_ODB_SUCCESS;
-}
-
-
 int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, int out_folder_id, char *out_container_name)
 {
 	if (!oDB || !in_container_id || !out_folder_id || !out_container_name) {
@@ -755,7 +626,7 @@ int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, 
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hidden, char *container_name, MYSQL_RES ** information_list)
+int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, char *container_name, MYSQL_RES ** information_list)
 {
 	(*information_list) = NULL;
 
@@ -788,30 +659,16 @@ int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hi
 			n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_0, id_folder);
 			break;
 		case 1:
-			if (!hidden) {
-				if (container_name)
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1_WC, id_folder, container_name);
-				else
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1, id_folder, id_folder);
-			} else {
-				if (container_name)
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1_H_WC, id_folder, container_name, id_folder, container_name);
-				else
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1_H, id_folder, id_folder, id_folder);
-			}
+			if (container_name)
+				n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1_WC, id_folder, container_name);
+			else
+				n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_1, id_folder, id_folder);
 			break;
 		case 2:
-			if (!hidden) {
-				if (container_name)
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2_WC, id_folder, container_name);
-				else
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2, id_folder, id_folder);
-			} else {
-				if (container_name)
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2_H_WC, id_folder, container_name, id_folder, container_name);
-				else
-					n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2_H, id_folder, id_folder, id_folder);
-			}
+			if (container_name)
+				n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2_WC, id_folder, container_name);
+			else
+				n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_FS_LIST_2, id_folder, id_folder);
 			break;
 		default:
 			return OPH_ODB_NULL_PARAM;
