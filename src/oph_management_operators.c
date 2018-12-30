@@ -2721,7 +2721,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int success = 0, success2 = 0, nhosts = 1;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *exec_mode = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
+		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *exec_mode = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
 
@@ -2764,18 +2764,33 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
 			}
+			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
+				host_partition = NULL;
+				if (btype > 1) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Parameter '%s' needs to be set to a value different from '%s' to perform action '%s'!",
+						 OPH_OPERATOR_PARAMETER_HOST_PARTITION, OPH_OPERATOR_CLUSTER_PARAMETER_ALL, type);
+					break;
+				}
+			}
 
-			exec_mode = hashtbl_get(task_tbl, OPH_ARG_MODE);
-			if (!exec_mode) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_MODE);
+			value = hashtbl_get(task_tbl, OPH_ARG_NHOSTS);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_NHOSTS);
 				break;
 			}
-			if (!strcasecmp(exec_mode, OPH_ARG_MODE_SYNC))
-				em = 1;
-			else if (strcasecmp(exec_mode, OPH_ARG_MODE_ASYNC)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_MODE);
+			nhosts = (int) strtol(value, NULL, 10);
+			if (nhosts <= 0) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
 				break;
 			}
+
+			user_filter = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_USER_FILTER);
+			if (!user_filter) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_OPERATOR_PARAMETER_USER_FILTER);
+				break;
+			}
+			if (!strcasecmp(user_filter, OPH_OPERATOR_CLUSTER_PARAMETER_ALL))
+				user_filter = NULL;
 
 			value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
 			if (!value) {
@@ -2874,7 +2889,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							if (max_hosts && (available_hosts > max_hosts - reserved_hosts))
 								available_hosts = max_hosts - reserved_hosts;
-							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user);
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user, host_partition ? host_partition : "%");
 							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
@@ -3351,12 +3366,15 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
 								break;
 							}
-							if (oph_odb_retrieve_list(&oDB, OPHIDIADB_RETRIEVE_USERS, &user_list)) {
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_USERS, user_filter ? user_filter : "%");
+							if (oph_odb_retrieve_list(&oDB, tmp, &user_list)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve user list!");
 								break;
 							}
-							if (oph_odb_retrieve_list(&oDB, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, &list)) {
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, user_filter ? user_filter : "%",
+								 host_partition ? host_partition : "%");
+							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
