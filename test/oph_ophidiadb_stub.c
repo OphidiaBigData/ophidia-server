@@ -239,13 +239,14 @@ int oph_odb_insert_user(ophidiadb * oDB, const char *username)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
+int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
 {
 	UNUSED(password);
 	UNUSED(name);
 	UNUSED(surname);
 	UNUSED(email);
 	UNUSED(country);
+	UNUSED(max_hosts);
 
 	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
@@ -261,13 +262,14 @@ int oph_odb_delete_user(ophidiadb * oDB, const char *username)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country)
+int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
 {
 	UNUSED(password);
 	UNUSED(name);
 	UNUSED(surname);
 	UNUSED(email);
 	UNUSED(country);
+	UNUSED(max_hosts);
 
 	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
@@ -275,9 +277,9 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent)
+int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user)
 {
-	if (!oDB || !name || !parent)
+	if (!oDB || !name || !parent || !id_user)
 		return OPH_ODB_NULL_PARAM;
 
 	return OPH_ODB_SUCCESS;
@@ -325,6 +327,14 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 {
 	if (!oDB || !id_user || !rhosts)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
+{
+	if (!oDB || !thosts)
 		return OPH_ODB_NULL_PARAM;
 
 	return OPH_ODB_SUCCESS;
