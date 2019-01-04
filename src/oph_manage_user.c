@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
 			cleanup();
 			return 1;
-		} else if (oph_odb_insert_user2(&oDB, username, password, name, surname, email, country)) {
+		} else if (oph_odb_insert_user2(&oDB, username, password, name, surname, email, country, max_hosts)) {
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to insert new user data in OphidiaDB.\n");
 			cleanup();
@@ -579,7 +579,7 @@ int main(int argc, char *argv[])
 			fclose(file);
 		}
 		// ophDB
-		if (password || name || surname || email || country) {
+		if (password || name || surname || email || country || (update & 16)) {
 			ophidiadb oDB;
 			oph_odb_initialize_ophidiadb(&oDB);
 			if (oph_odb_read_config_ophidiadb(&oDB)) {
@@ -591,7 +591,7 @@ int main(int argc, char *argv[])
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
 				cleanup();
 				return 1;
-			} else if (oph_odb_update_user(&oDB, username, password, name, surname, email, country)) {
+			} else if (oph_odb_update_user(&oDB, username, password, name, surname, email, country, max_hosts)) {
 				oph_odb_disconnect_from_ophidiadb(&oDB);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to insert new user data in OphidiaDB.\n");
 				cleanup();

@@ -103,6 +103,7 @@
 #endif
 #define OPH_DEFAULT_HOST "localhost"
 #define OPH_DEFAULT_PORT "11732"
+#define OPH_UNKNOWN "unknown"
 #define OPH_CONFIGURATION_FILE "%s/etc/server.conf"
 #define OPH_SERVER_TIMEOUT 3600	// sec
 #define OPH_SERVER_INACTIVITY_TIMEOUT 31536000	// sec

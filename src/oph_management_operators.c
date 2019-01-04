@@ -109,11 +109,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_TYPE);
-			if (!strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_ABORT))
+			if (!strcasecmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_ABORT))
 				btype = 'a';
-			else if (!strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_STOP))
+			else if (!strcasecmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_STOP))
 				btype = 's';
-			else if (*type && strcmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_KILL))
+			else if (*type && strcasecmp(type, OPH_OPERATOR_CANCEL_PARAMETER_TYPE_KILL))
 				break;
 
 			success = 1;
@@ -151,37 +151,37 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		while (!success2) {
 			if (oph_json_alloc(&oper_json)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
 				break;
 			}
 			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
 				break;
 			}
 			char session_code[OPH_MAX_STRING_SIZE];
 			if (oph_get_session_code(sessionid, session_code)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Session Code", session_code)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Workflow", workflowid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Marker", markerid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
 			if (oph_json_add_source_detail(oper_json, "JobID", oph_jobid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_consumer(oper_json, username)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
 				break;
 			}
 
@@ -781,7 +781,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						if (!oph_get_arg(session_args, OPH_SESSION_LAST_ACCESS_TIME, tmp)) {
 							last_access_time = strtol(tmp, NULL, 10);
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "check for %s\n", OPH_SESSION_AUTOREMOVE);
-							if (timeout_value && !oph_get_arg(session_args, OPH_SESSION_AUTOREMOVE, tmp) && !strcmp(tmp, OPH_DEFAULT_YES)) {
+							if (timeout_value && !oph_get_arg(session_args, OPH_SESSION_AUTOREMOVE, tmp) && !strcasecmp(tmp, OPH_DEFAULT_YES)) {
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "found a removable session '%s', last access on %d\n", filename, last_access_time);
 								if (tv.tv_sec > last_access_time + timeout_value * OPH_DEFAULT_DAY_TO_SEC)	// Timeout
 								{
@@ -1204,10 +1204,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					success = 1;
 				while (!success) {
 					for (tmp2 = args; tmp2; tmp2 = tmp2->next) {
-						if (!strcmp(tmp2->key, OPH_SESSION_USERS))
+						if (!strcasecmp(tmp2->key, OPH_SESSION_USERS))
 							continue;	// Use listusers instead
 						if (tmp2->value) {
-							if (!strcmp(tmp2->key, OPH_SESSION_CREATION_TIME) || !strcmp(tmp2->key, OPH_SESSION_LAST_ACCESS_TIME)) {
+							if (!strcasecmp(tmp2->key, OPH_SESSION_CREATION_TIME) || !strcasecmp(tmp2->key, OPH_SESSION_LAST_ACCESS_TIME)) {
 								nowtime = (time_t) strtol(tmp2->value, NULL, 10);
 								if (!localtime_r(&nowtime, &nowtm)) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error getting system time\n");
@@ -1677,7 +1677,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							session_username[pch2 - pch1] = 0;
 						} else
 							snprintf(session_username, OPH_MAX_STRING_SIZE, "%s", pch1);
-						if (strcmp(session_username, owner)) {
+						if (strcasecmp(session_username, owner)) {
 							tmp2 = (oph_argument *) malloc(sizeof(oph_argument));
 							if (!tmp2) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "memory allocation error\n");
@@ -2660,10 +2660,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
-		if (objkeys) {
-			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
-			objkeys = NULL;
-		}
+
+		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 
 		if (!oper_json) {
 			oph_odb_disconnect_from_ophidiadb(&oDB);
@@ -2699,7 +2697,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
-		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], type[OPH_MAX_STRING_SIZE];
+		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], *type = NULL, *value = NULL;
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
@@ -2723,52 +2721,85 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int success = 0, success2 = 0, nhosts = 1;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], host_partition[OPH_MAX_STRING_SIZE], exec_mode[OPH_MAX_STRING_SIZE], em = 0, btype = 1;	// Allocate
+		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *exec_mode = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
+		char **objkeys = NULL;
+		int objkeys_num = 0;
 
 		while (!success) {
 
-			if (!oph_cluster_deployment || strcmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
+			if (!oph_cluster_deployment || strcasecmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
 				break;
 			}
 
-			*type = 0;
-			oph_tp_find_param_in_task_string(request, OPH_ARG_ACTION, &type);
-			if (strlen(type)) {
-				if (!strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_UNDEPLOY))
-					btype = 0;	// Deallocate
-				else if (strcmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_DEPLOY)) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
-					break;
-				}
+			type = hashtbl_get(task_tbl, OPH_ARG_ACTION);
+			if (!type) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_ACTION);
+				break;
 			}
-
-			*type = 0;
-			oph_tp_find_param_in_task_string(request, OPH_ARG_NHOSTS, &type);
-			if (strlen(type)) {
-				nhosts = (int) strtol(type, NULL, 10);
-				if (nhosts <= 0) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
-					break;
-				}
-			}
-
-			*host_partition = 0;
-			oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_HOST_PARTITION, &host_partition);
-			if (!strlen(host_partition)) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
+			if (!strcasecmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_INFO_CLUSTER))
+				btype = 1;	// Get all information about deployed clusters
+			else if (!strcasecmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_DEPLOY))
+				btype = 2;	// Allocate
+			else if (!strcasecmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_UNDEPLOY))
+				btype = 3;	// Deallocate
+			else if (strcasecmp(type, OPH_OPERATOR_CLUSTER_PARAMETER_INFO)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
 				break;
 			}
 
-			*exec_mode = 0;
-			oph_tp_find_param_in_task_string(request, OPH_ARG_MODE, &exec_mode);
-			if (strlen(exec_mode)) {
-				if (!strcmp(exec_mode, OPH_ARG_MODE_SYNC))
-					em = 1;
-				else if (strcmp(exec_mode, OPH_ARG_MODE_ASYNC)) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_MODE);
+			value = hashtbl_get(task_tbl, OPH_ARG_NHOSTS);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_NHOSTS);
+				break;
+			}
+			nhosts = (int) strtol(value, NULL, 10);
+			if (nhosts <= 0) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
+				break;
+			}
+
+			host_partition = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_HOST_PARTITION);
+			if (!host_partition) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
+				break;
+			}
+			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
+				host_partition = NULL;
+				if (btype > 1) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Parameter '%s' needs to be set to a value different from '%s' to perform action '%s'!",
+						 OPH_OPERATOR_PARAMETER_HOST_PARTITION, OPH_OPERATOR_CLUSTER_PARAMETER_ALL, type);
 					break;
 				}
+			}
+
+			value = hashtbl_get(task_tbl, OPH_ARG_NHOSTS);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_NHOSTS);
+				break;
+			}
+			nhosts = (int) strtol(value, NULL, 10);
+			if (nhosts <= 0) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
+				break;
+			}
+
+			user_filter = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_USER_FILTER);
+			if (!user_filter) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_OPERATOR_PARAMETER_USER_FILTER);
+				break;
+			}
+			if (!strcasecmp(user_filter, OPH_OPERATOR_CLUSTER_PARAMETER_ALL))
+				user_filter = NULL;
+
+			value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
+				break;
+			}
+			if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Operator string not valid\n");
+				break;
 			}
 
 			success = 1;
@@ -2779,14 +2810,30 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		oph_odb_start_job_fast(idjob, &oDB);
+
+		if (success && oph_json_alloc(&oper_json)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+			success = 0;
+		}
+
+		ophidiadb_list list;
+		oph_odb_initialize_ophidiadb_list(&list);
+		ophidiadb_list user_list;
+		oph_odb_initialize_ophidiadb_list(&user_list);
 
 		if (success) {
 
@@ -2796,6 +2843,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				int id_user = 0;
 				if (oph_odb_retrieve_user_id(&oDB, username, &id_user)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User id of '%s' cannot be retrieved\n", username);
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "User id of '%s' cannot be retrieved\n", username);
 					break;
 				}
 
@@ -2813,143 +2861,1376 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					}
 				}
 
-				if (btype) {
+				int num_fields, iii, jjj = 0, idp;
+				int total_hosts = 0, reserved_hosts = 0, available_hosts = 0;
+				char **jsonkeys = NULL;
+				char **fieldtypes = NULL;
+				char **jsonvalues = NULL;
+				char tmp[OPH_MAX_STRING_SIZE];
 
-					if (max_hosts) {
-						int rhosts = 0;
-						if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
-							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
-							snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+				switch (btype) {
+
+					case 0:{
+
+							if (oph_odb_get_total_hosts(&oDB, &total_hosts)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of total hosts cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of total hosts!");
+								break;
+							}
+							if (oph_odb_get_reserved_hosts(&oDB, id_user, &reserved_hosts)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+								break;
+							}
+							if (oph_get_available_host_number(&available_hosts, idjob)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
+								break;
+							}
+							if (max_hosts && (available_hosts > max_hosts - reserved_hosts))
+								available_hosts = max_hosts - reserved_hosts;
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user, host_partition ? host_partition : "%");
+							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
+								break;
+							}
+
+							num_fields = 4;
+
+							// Header
+							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
+								success = 0;
+							else
+								success = 1;	// No output
+							while (!success) {
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								jsonkeys[jjj] = strdup("TOTAL CLUSTER SIZE");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("QUOTA");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("RESERVED HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("AVAILABLE HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+
+								if (oph_json_add_grid
+								    (oper_json, OPH_JSON_OBJKEY_CLUSTER_SUMMARY, "Cluster summary", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								success = 2;
+							}
+
+							// Data
+							if (success == 2)
+								success = 0;
+							while (!success) {
+								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonvalues) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", total_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", max_hosts ? max_hosts : total_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", reserved_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_SUMMARY, jsonvalues)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+
+								success = 2;
+							}
+
+							num_fields = 3;
+
+							// Header
+							if ((success == 2) && oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_LIST))
+								success = 0;
+							else
+								success = 1;	// No output
+							while (!success) {
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								jsonkeys[jjj] = strdup("HOST PARTITION");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("SIZE");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("STATUS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+
+								if (oph_json_add_grid
+								    (oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "Reserved partitions", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								success = 2;
+							}
+
+							// Data
+							if (success == 2)
+								success = 0;
+							while (!success) {
+								for (idp = 0; idp < list.size; ++idp) {
+									jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+									if (!jsonvalues) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										break;
+									}
+									jjj = 0;
+									jsonvalues[jjj] = strdup(list.ctime[idp]);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", list.id[idp]);
+									jsonvalues[jjj] = strdup(tmp);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									jsonvalues[jjj] = strdup(list.wid[idp] ? OPH_ODB_STATUS_PENDING_STR : OPH_ODB_STATUS_RUNNING_STR);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, jsonvalues)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+								}
+								if (idp >= list.size)
+									success = 2;
+								else
+									break;
+							}
+
+							if (success == 2) {
+								if (!list.size)
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "No partition found");
+								else
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d partition%s", list.size, list.size == 1 ? "" : "s");
+								if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_LIST_SUMMARY)
+								    && oph_json_add_text(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST_SUMMARY, "Summary", tmp)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+									success = 0;
+								} else
+									success = 1;
+							}
+
 							break;
 						}
-						if (rhosts + nhosts > max_hosts) {
-							nhosts = max_hosts - rhosts;
-							snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: available only %d host%s", nhosts,
-								 nhosts == 1 ? "" : "s");
+
+					case 1:{
+
+							if (oph_odb_get_total_hosts(&oDB, &total_hosts)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of total hosts cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of total hosts!");
+								break;
+							}
+							if (oph_odb_get_reserved_hosts(&oDB, 0, &reserved_hosts)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+								break;
+							}
+							if (oph_get_available_host_number(&available_hosts, idjob)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
+								break;
+							}
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_USERS, user_filter ? user_filter : "%");
+							if (oph_odb_retrieve_list(&oDB, tmp, &user_list)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User list cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve user list!");
+								break;
+							}
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, user_filter ? user_filter : "%",
+								 host_partition ? host_partition : "%");
+							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
+								break;
+							}
+
+							num_fields = 4;
+
+							// Header
+							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
+								success = 0;
+							else
+								success = 1;	// No output
+							while (!success) {
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								jsonkeys[jjj] = strdup("TOTAL CLUSTER SIZE");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("UNUSABLE HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("RESERVED HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("AVAILABLE HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+
+								if (oph_json_add_grid
+								    (oper_json, OPH_JSON_OBJKEY_CLUSTER_SUMMARY, "Cluster summary", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								success = 2;
+							}
+
+							// Data
+							if (success == 2)
+								success = 0;
+							while (!success) {
+								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonvalues) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", total_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", total_hosts - reserved_hosts - available_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", reserved_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								jjj++;
+								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
+								jsonvalues[jjj] = strdup(tmp);
+								if (!jsonvalues[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_SUMMARY, jsonvalues)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+
+								success = 2;
+							}
+
+							num_fields = 3;
+
+							// Header
+							if (success && oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_USER))
+								success = 0;
+							else
+								success = 1;	// No output
+							while (!success) {
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								jsonkeys[jjj] = strdup("USER");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("QUOTA");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("RESERVED HOSTS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+
+								if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_CLUSTER_USER, "Users", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								success = 2;
+							}
+
+							// Data
+							if (success == 2)
+								success = 0;
+							while (!success) {
+								for (idp = 0; idp < user_list.size; ++idp) {
+									jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+									if (!jsonvalues) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										break;
+									}
+									jjj = 0;
+									jsonvalues[jjj] = strdup(user_list.name && user_list.name[idp] ? user_list.name[idp] : OPH_UNKNOWN);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", user_list.wid && user_list.wid[idp] ? user_list.wid[idp] : total_hosts);
+									jsonvalues[jjj] = strdup(tmp);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", user_list.id ? user_list.id[idp] : 0);
+									jsonvalues[jjj] = strdup(tmp);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_USER, jsonvalues)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+								}
+								if (idp >= user_list.size)
+									success = 2;
+								else
+									break;
+							}
+
+							if (success == 2) {
+								if (!user_list.size)
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "No user found");
+								else
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d user%s", user_list.size, user_list.size == 1 ? "" : "s");
+								if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_USER_SUMMARY)
+								    && oph_json_add_text(oper_json, OPH_JSON_OBJKEY_CLUSTER_USER_SUMMARY, "Summary", tmp)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+									success = 0;
+								} else
+									success = 1;
+							}
+
+							num_fields = 4;
+
+							// Header
+							if (success && oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_LIST))
+								success = 0;
+							else
+								success = 1;	// No output
+							while (!success) {
+								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonkeys) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								jjj = 0;
+								jsonkeys[jjj] = strdup("USER");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("HOST PARTITION");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("SIZE");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("STATUS");
+								if (!jsonkeys[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+
+								jjj = 0;
+								fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+								if (!fieldtypes) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_INT);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+
+								if (oph_json_add_grid
+								    (oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "Reserved partitions", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < num_fields; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonkeys[iii])
+										free(jsonkeys[iii]);
+								if (jsonkeys)
+									free(jsonkeys);
+								for (iii = 0; iii < num_fields; iii++)
+									if (fieldtypes[iii])
+										free(fieldtypes[iii]);
+								if (fieldtypes)
+									free(fieldtypes);
+
+								success = 2;
+							}
+
+							// Data
+							if (success == 2)
+								success = 0;
+							while (!success) {
+								for (idp = 0; idp < list.size; ++idp) {
+									jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+									if (!jsonvalues) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										break;
+									}
+									jjj = 0;
+									jsonvalues[jjj] = strdup(list.name && list.name[idp] ? list.name[idp] : OPH_UNKNOWN);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									jsonvalues[jjj] = strdup(list.ctime && list.ctime[idp] ? list.ctime[idp] : OPH_UNKNOWN);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", list.id ? list.id[idp] : 0);
+									jsonvalues[jjj] = strdup(tmp);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									jjj++;
+									jsonvalues[jjj] = strdup(list.wid[idp] ? OPH_ODB_STATUS_PENDING_STR : OPH_ODB_STATUS_RUNNING_STR);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, jsonvalues)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+								}
+								if (idp >= list.size)
+									success = 2;
+								else
+									break;
+							}
+
+							if (success == 2) {
+								if (!list.size)
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "No partition found");
+								else
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "Found %d partition%s", list.size, list.size == 1 ? "" : "s");
+								if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_LIST_SUMMARY)
+								    && oph_json_add_text(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST_SUMMARY, "Summary", tmp)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD TEXT error\n");
+									success = 0;
+								} else
+									success = 1;
+							}
+
 							break;
 						}
-					}
 
-					int id_hostpartition = 0;
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
-					if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
-						break;
-					}
-					if (!id_hostpartition) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
-						break;
-					}
+					case 2:{
 
-					char command[OPH_MAX_STRING_SIZE];
-					snprintf(command, OPH_MAX_STRING_SIZE, "%d", id_hostpartition);
+							if (max_hosts) {
+								int rhosts = 0;
+								if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+									break;
+								}
+								if (rhosts + nhosts > max_hosts) {
+									nhosts = max_hosts - rhosts;
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: available only %d host%s", nhosts,
+										 nhosts == 1 ? "" : "s");
+									break;
+								}
+							}
 
-					char outfile[OPH_MAX_STRING_SIZE];
-					snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
-					if (get_debug_level() == LOG_DEBUG) {
-						char code[OPH_MAX_STRING_SIZE];
-						if (!oph_get_session_code(sessionid, code)) {
-							if (oph_subm_user && strcmp(username, oph_subm_user)) {
-								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
-								oph_mkdir(outfile);
-								snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
-							} else
-								snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
-						}
-					}
+							int id_hostpartition = 0;
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
+							if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
+								break;
+							}
+							if (!id_hostpartition) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
+								break;
+							}
 
-					char *cmd = NULL;
-					if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, username, &cmd, 1)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-						if (cmd) {
+							char command[OPH_MAX_STRING_SIZE];
+							snprintf(command, OPH_MAX_STRING_SIZE, "%d", id_hostpartition);
+
+							char outfile[OPH_MAX_STRING_SIZE];
+							snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+							if (get_debug_level() == LOG_DEBUG) {
+								char code[OPH_MAX_STRING_SIZE];
+								if (!oph_get_session_code(sessionid, code)) {
+									if (oph_subm_user && strcasecmp(username, oph_subm_user)) {
+										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+										oph_mkdir(outfile);
+										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
+									} else
+										snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+								}
+							}
+
+							char *cmd = NULL;
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, username, &cmd, 1)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+								if (cmd) {
+									free(cmd);
+									cmd = NULL;
+								}
+								break;
+							}
+							if (!cmd) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+								break;
+							}
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+							if (oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition)) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Cluster has been stopped!");
+								free(cmd);
+								break;
+							}
 							free(cmd);
-							cmd = NULL;
+
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
+
+							success = 1;
+							break;
 						}
-						break;
-					}
-					if (!cmd) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-						break;
-					}
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-					if (oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition)) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Cluster has been stopped!");
-						free(cmd);
-						break;
-					}
-					free(cmd);
+					case 3:{
 
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retriving host partition '%s'\n", host_partition);
+							int id_hostpartition = 0, id_job = 0;
+							if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
+								break;
+							}
+							if (!id_hostpartition) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
+								break;
+							}
 
-				} else {
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition,
+								   id_hostpartition);
+							if (oph_stop_request(id_job, username))
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
+							else
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
 
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retriving host partition '%s'\n", host_partition);
-					int id_hostpartition = 0, id_job = 0;
-					if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
-						break;
-					}
-					if (!id_hostpartition) {
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to find host partition '%s'!", host_partition);
-						break;
-					}
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Releasing host partition '%s' (%d)\n", host_partition, id_hostpartition);
+							if (oph_odb_release_hp(&oDB, id_hostpartition)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be released\n", host_partition);
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to delete host partition '%s'!", host_partition);
+								break;
+							}
 
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition, id_hostpartition);
-					if (oph_stop_request(id_job, username))
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
-					else
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
+							success = 1;
+							break;
+						}
 
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Releasing host partition '%s' (%d)\n", host_partition, id_hostpartition);
-					if (oph_odb_release_hp(&oDB, id_hostpartition)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be released\n", host_partition);
-						snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to delete host partition '%s'!", host_partition);
-						break;
-					}
+					default:;
 				}
 
-				success = 1;
+				break;
 			}
 		}
 
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_free_ophidiadb_list(&user_list);
+
 		while (!success2) {
-			if (oph_json_alloc(&oper_json)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
-				break;
-			}
 			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
 				break;
 			}
 			char session_code[OPH_MAX_STRING_SIZE];
 			if (oph_get_session_code(sessionid, session_code)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Session Code", session_code)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Workflow", workflowid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_source_detail(oper_json, "Marker", markerid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
 			if (oph_json_add_source_detail(oper_json, "JobID", oph_jobid)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
 				break;
 			}
 			if (oph_json_add_consumer(oper_json, username)) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
 				break;
 			}
 
@@ -2960,6 +4241,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
+
+		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 
 		if (success)
 			*error_message = 0;
