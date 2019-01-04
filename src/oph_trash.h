@@ -43,5 +43,6 @@ int oph_trash_destroy(oph_trash * trash);
 int oph_trash_append(oph_trash * trash, const char *key, int item);
 int oph_trash_extract(oph_trash * trash, const char *key, int *item);
 int oph_trash_order(oph_trash * trash, const char *key);
+int oph_trash_size(oph_trash * trash, const char *key, unsigned int *size);
 
 #endif				/* OPH_TRASH_H */
