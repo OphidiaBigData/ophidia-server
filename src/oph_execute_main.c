@@ -5633,6 +5633,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	else
 		timeout_value = strtol(tmp, NULL, 10);
 
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_OS_USERNAME);
+	if (!oph_get_arg(user_args, OPH_USER_OS_USERNAME, tmp))
+		wf->os_username = strdup(tmp);
+
 	// Check for number of cores
 	if (ncores < OPH_DEFAULT_CORES) {
 		oph_cleanup_args(&user_args);

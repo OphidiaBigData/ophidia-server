@@ -249,6 +249,7 @@ typedef struct _oph_workflow_stack {
  * \param markerid Marker ID of the job
  * \param status Status of the workflow
  * \param username User executing the workflow
+ * \param os_username Username used to submit requests to resource manager
  * \param userrole User role
  * \param ip_address IP address of the submitter
  * \param name Name of the workflow
@@ -292,6 +293,7 @@ typedef struct _oph_workflow {
 	int status;
 	char *username;
 	char *password;
+	char *os_username;
 	int userrole;
 	char *ip_address;
 	char *name;

@@ -105,6 +105,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->password);
 		workflow->password = NULL;
 	}
+	if (workflow->os_username) {
+		free(workflow->os_username);
+		workflow->os_username = NULL;
+	}
 	if (workflow->ip_address) {
 		free(workflow->ip_address);
 		workflow->ip_address = NULL;

@@ -216,20 +216,20 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 
 		char *sessionid = strdup(wf->sessionid);
-		char *username = strdup(wf->username);
+		char *os_username = strdup(wf->os_username ? wf->os_username : wf->username);
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, username);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
 		if (sessionid)
 			free(sessionid);
-		if (username)
-			free(username);
+		if (os_username)
+			free(os_username);
 
 		if (response) {
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system\n");
