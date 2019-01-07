@@ -4456,7 +4456,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETECONTAINER);
 					wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
-					int kk = wf->tasks[wf->tasks_num].arguments_num, incr = 5;	// Specific arguments for this final operation (see below)
+					int kk = wf->tasks[wf->tasks_num].arguments_num, incr = 3;	// Specific arguments for this final operation (see below)
 					if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, incr) || (kk != incr + wf->tasks[wf->tasks_num].arguments_num)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 						*response = OPH_SERVER_SYSTEM_ERROR;
@@ -4476,10 +4476,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(tmp);
 							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER);
 							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NULL);
-							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_HIDDEN);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NO);
-							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_TYPE);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_WORKFLOW_DELETECONTAINER_VALUE);
 							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_FORCE);
 							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_YES);
 							final_task = 1;
