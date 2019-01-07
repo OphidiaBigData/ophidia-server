@@ -1,13 +1,25 @@
 
-## New features
+## Next release
+
+### Added:
+
+- Arguments to OPH_CLUSTER to get info about the host partitions [#38](https://github.com/OphidiaBigData/ophidia-server/issues/38)
+- A new resource manager command to stop host partition [#37](https://github.com/OphidiaBigData/ophidia-server/pull/37)
+- Arguments to specify subsets in OPH_SET [#35](https://github.com/OphidiaBigData/ophidia-server/pull/35)
+- Support for OPH_DELETECONTAINER as workflow exit action [#34](https://github.com/OphidiaBigData/ophidia-server/pull/34)
 
 ### Fixed:
 
-- Fix bug in update OPH_USER_LAST_CDD by means of oph_manage_user
-- Fix name of pre-defined runtime variable NHOST
+- Bug [#33](https://github.com/OphidiaBigData/ophidia-server/issues/33)
+- Bug in reading rmanager configuration file with empty lines
+- Bug in update OPH_USER_LAST_CDD by means of oph_manage_user
+- Name of pre-defined runtime variable NHOST
 
 ### Changed:
 
+- Removed references to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
+- Host partition management according to OphidiaDB refactoring [#36](https://github.com/OphidiaBigData/ophidia-server/issues/36)
+- Output of OPH_SERVICE
 - Raise an error in case any task parameter contains special characters
 
 ## v1.4.0 - 2018-07-27

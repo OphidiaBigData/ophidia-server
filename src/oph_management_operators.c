@@ -2721,7 +2721,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int success = 0, success2 = 0, nhosts = 1;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *exec_mode = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
+		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
 

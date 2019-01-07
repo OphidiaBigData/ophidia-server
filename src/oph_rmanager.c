@@ -325,6 +325,7 @@ int oph_abort_request(int jobid, char *username, char *command)
 		return RMANAGER_NULL_PARAM;
 	if (command) {
 #ifdef LOCAL_FRAMEWORK
+		UNUSED(username);
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Task %d cannot be stopped\n", jobid);
 #else
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
@@ -474,6 +475,8 @@ int oph_get_available_host_number(int *size, int jobid)
 		fclose(file);
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Current cluster size is %d\n", *size);
+#else
+	UNUSED(jobid);
 #endif
 	return RMANAGER_SUCCESS;
 }

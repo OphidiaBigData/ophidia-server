@@ -879,6 +879,9 @@ int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 {
 	if (!oDB || !idjob)
 		return OPH_ODB_NULL_PARAM;
+
+	UNUSED(flag);
+
 	*idjob = 0;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
@@ -937,6 +940,8 @@ int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
 
+	UNUSED(flag);
+
 	int n;
 	char copyQuery[MYSQL_BUFLEN];
 	if (idjob) {
@@ -975,6 +980,8 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
+
+	UNUSED(flag);
 
 	int n;
 	char deleteQuery[MYSQL_BUFLEN];

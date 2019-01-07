@@ -119,7 +119,7 @@ if test "x$debug" = "xyes"; then
 	AC_MSG_WARN("Debug activated")
 	OPT="-g3 -Wall -Wextra -O0 -DLOCAL_FRAMEWORK -DUSE_MPI"
 else
-	OPT="-O2"
+	OPT="-O3"
 fi
 
 AC_ARG_ENABLE(webaccess,
@@ -515,7 +515,7 @@ case "${host}" in
                                     if test "x$debug" = "xyes"; then
 										OPT="-g3 -Wall -Wextra -O0 -DLOCAL_FRAMEWORK -DUSE_MPI"
 									else
-										OPT="-O2"
+										OPT="-O3"
 									fi
 			            if test "x$optimization" = "xyes" ; then
 			                 CFLAGS="-O3 -finline-functions -funswitch-loops -fgcse-after-reload -ftree-loop-linear -ftree-loop-im -ftree-loop-ivcanon -fivopts -ftree-vectorize -ftracer -fgcse-sm -fgcse-las -fgcse-after-reload -funroll-loops -freorder-blocks-and-partition -fweb"

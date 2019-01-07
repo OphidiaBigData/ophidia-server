@@ -544,7 +544,7 @@ char *oph_sha(char *to, const char *passwd)
 		if (!SHA1_Final(hash_stage, &sha1_context))
 			return NULL;
 		*to++ = '*';
-		octet2hex(to, hash_stage, SHA_DIGEST_LENGTH);
+		octet2hex(to, (const char *)hash_stage, SHA_DIGEST_LENGTH);
 	}
 	return result;
 }
@@ -1410,6 +1410,7 @@ void *_oph_check_openid(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 #endif
+	UNUSED(data);
 
 	char *userid = NULL, *token, *user;
 	time_t deadtime;
@@ -1473,6 +1474,7 @@ void *_oph_check_aaa(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 #endif
+	UNUSED(data);
 
 	char *userid = NULL, *token, *user;
 	time_t deadtime;
