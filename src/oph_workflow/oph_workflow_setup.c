@@ -764,6 +764,9 @@ int oph_workflow_set_basic_var(oph_workflow * wf)
 			case 6:
 				var.svalue = strdup(wf->password ? wf->password : "none");
 				break;
+			case 7:
+				var.svalue = strdup(wf->os_username ? wf->os_username : "none");
+				break;
 			default:
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "No basic key available at index %d for workflow '%s'.\n", i, wf->name);
 				var.svalue = strdup("");

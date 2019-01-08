@@ -571,7 +571,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
-		char mk_user_dir = oph_subm_user && strcmp(wf->os_username ? wf->os_username : wf->username, oph_subm_user);
+		char mk_user_dir = oph_subm_user && strcmp(wf->os_username, oph_subm_user);
 		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE, oph_web_server_location, hash);
 		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
@@ -2424,7 +2424,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 	char *sessionid = strdup(wf->sessionid);
 	char *username = strdup(wf->username);
-	char *os_username = strdup(wf->os_username ? wf->os_username : wf->username);
+	char *os_username = strdup(wf->os_username);
 	odb_jobid = wf->idjob;
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: %d task%s prepared for submission\n", ttype, jobid, nn, nn == 1 ? "" : "s");
@@ -2936,11 +2936,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
 								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username ? wf->os_username : wf->username);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
 								}
 						} else {
 							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob, wf->os_username ? wf->os_username : wf->username);
+							oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
 						}
 					}
 			} else {
@@ -2950,12 +2950,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username ? wf->os_username : wf->username);
+									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
 								}
 						}
 					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING) {
 						wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-						oph_cancel_request(wf->tasks[i].idjob, wf->os_username ? wf->os_username : wf->username);
+						oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
 					}
 			}
 		}

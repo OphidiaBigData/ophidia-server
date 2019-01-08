@@ -2686,7 +2686,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int max_hosts = item->wf->max_hosts;
-		char *os_username = strdup(item->wf->os_username ? item->wf->os_username : item->wf->username);
+		char *os_username = strdup(item->wf->os_username);
 		if (!os_username) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 			pthread_mutex_unlock(&global_flag);

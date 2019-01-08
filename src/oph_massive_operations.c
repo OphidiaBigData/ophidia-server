@@ -216,7 +216,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 
 		char *sessionid = strdup(wf->sessionid);
-		char *os_username = strdup(wf->os_username ? wf->os_username : wf->username);
+		char *os_username = strdup(wf->os_username);
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index;
 
