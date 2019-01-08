@@ -981,8 +981,6 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
 
-	UNUSED(flag);
-
 	int n;
 	char deleteQuery[MYSQL_BUFLEN];
 	if (idjob) {
@@ -998,7 +996,7 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
 

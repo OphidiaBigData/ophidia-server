@@ -544,7 +544,7 @@ char *oph_sha(char *to, const char *passwd)
 		if (!SHA1_Final(hash_stage, &sha1_context))
 			return NULL;
 		*to++ = '*';
-		octet2hex(to, (const char *)hash_stage, SHA_DIGEST_LENGTH);
+		octet2hex(to, (const char *) hash_stage, SHA_DIGEST_LENGTH);
 	}
 	return result;
 }
