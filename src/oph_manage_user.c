@@ -187,9 +187,9 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&curl_flag, NULL);
 #endif
 	int ch, msglevel = LOG_ERROR;
-	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0, *cdd = NULL;
+	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0, *cdd = NULL, *os_username = NULL;
 	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, max_hosts = 1, black_listed = 0, update = 0;
-	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hi:lm:n:p:r:s:t:u:vw")) != -1) {
+	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hi:lm:n:o:p:r:s:t:u:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				action = optarg;
@@ -226,6 +226,10 @@ int main(int argc, char *argv[])
 				break;
 			case 'n':
 				name = optarg;
+				break;
+			case 'o':
+				os_username = optarg;	// For GSI it means 'role': read, write...
+				update += 64;
 				break;
 			case 'p':
 				password = optarg;	// For GSI it means 'role': read, write...
@@ -275,6 +279,7 @@ int main(int argc, char *argv[])
 				fprintf(stdout, "-l is used in case a specific folder for user log data has to be created (valid only for type 'add')\n");
 				fprintf(stdout, "-m <maximum number of opened sessions> (default %d)\n", max_sessions);
 				fprintf(stdout, "-n <name>\n");
+				fprintf(stdout, "-o <username used to submit requests to cluster>\n");
 #ifdef INTERFACE_TYPE_IS_GSI
 				fprintf(stdout, "-p <role>\n");
 #else
@@ -413,6 +418,7 @@ int main(int argc, char *argv[])
 		fprintf(file, "%s%s%s\n", OPH_USER_IS_ADMIN, OPH_SEPARATOR_KV, is_admin);
 		fprintf(file, "%s%s%s\n", OPH_USER_LAST_SESSION_ID, OPH_SEPARATOR_KV, "");
 		fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
+		fprintf(file, "%s%s%s\n", OPH_USER_OS_USERNAME, OPH_SEPARATOR_KV, os_username ? os_username : "");
 		fclose(file);
 
 		// ophDB
@@ -573,6 +579,8 @@ int main(int argc, char *argv[])
 					fprintf(file, "%s%s%d\n", OPH_USER_MAX_HOSTS, OPH_SEPARATOR_KV, max_hosts);
 				else if ((update & 32) && (!strcmp(tmp->key, OPH_USER_LAST_CDD)))
 					fprintf(file, "%s%s%s\n", OPH_USER_LAST_CDD, OPH_SEPARATOR_KV, cdd ? cdd : "/");
+				else if ((update & 64) && (!strcmp(tmp->key, OPH_USER_OS_USERNAME)))
+					fprintf(file, "%s%s%s\n", OPH_USER_OS_USERNAME, OPH_SEPARATOR_KV, os_username ? os_username : "");
 				else
 					fprintf(file, "%s%s%s\n", tmp->key, OPH_SEPARATOR_KV, tmp->value);
 			}

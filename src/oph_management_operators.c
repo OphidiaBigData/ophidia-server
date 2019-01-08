@@ -2686,6 +2686,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int max_hosts = item->wf->max_hosts;
+		char *os_username = strdup(item->wf->os_username);
+		if (!os_username) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -2694,6 +2700,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
@@ -2702,6 +2709,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
@@ -2710,12 +2718,14 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
@@ -2812,6 +2822,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -2820,6 +2831,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
+			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -4121,17 +4133,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							if (get_debug_level() == LOG_DEBUG) {
 								char code[OPH_MAX_STRING_SIZE];
 								if (!oph_get_session_code(sessionid, code)) {
-									if (oph_subm_user && strcasecmp(username, oph_subm_user)) {
-										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, username);
+									if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
+										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
 										oph_mkdir(outfile);
-										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, code, markerid);
+										snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
 									} else
 										snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 								}
 							}
 
 							char *cmd = NULL;
-							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, username, &cmd, 1)) {
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, &cmd, 1)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 								if (cmd) {
@@ -4176,7 +4188,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Undeploying cluster associated with host partition '%s' (%d)\n", host_partition,
 								   id_hostpartition);
-							if (oph_stop_request(id_job, username))
+							if (oph_stop_request(id_job, os_username))
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 							else
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
@@ -4241,7 +4253,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
-
+		free(os_username);
 		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 
 		if (success)
