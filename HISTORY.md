@@ -3,6 +3,7 @@
 
 ### Added:
 
+- New configuration option OPH_OS_USERNAME to define the OS user to be used for command submission [#40](https://github.com/OphidiaBigData/ophidia-server/issues/40)
 - Arguments to OPH_CLUSTER to get info about the host partitions [#38](https://github.com/OphidiaBigData/ophidia-server/issues/38)
 - A new resource manager command to stop host partition [#37](https://github.com/OphidiaBigData/ophidia-server/pull/37)
 - Arguments to specify subsets in OPH_SET [#35](https://github.com/OphidiaBigData/ophidia-server/pull/35)
