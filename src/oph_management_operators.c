@@ -2729,7 +2729,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
-		int success = 0, success2 = 0, nhosts = 1;
+		int success = 0, success2 = 0, nhosts = 0;
 		oph_json *oper_json = NULL;
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
@@ -2764,7 +2764,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 			}
 			nhosts = (int) strtol(value, NULL, 10);
-			if (nhosts <= 0) {
+			if (nhosts < 0) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
 				break;
 			}
@@ -2781,17 +2781,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						 OPH_OPERATOR_PARAMETER_HOST_PARTITION, OPH_OPERATOR_CLUSTER_PARAMETER_ALL, type);
 					break;
 				}
-			}
-
-			value = hashtbl_get(task_tbl, OPH_ARG_NHOSTS);
-			if (!value) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_NHOSTS);
-				break;
-			}
-			nhosts = (int) strtol(value, NULL, 10);
-			if (nhosts <= 0) {
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
-				break;
 			}
 
 			user_filter = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_USER_FILTER);
@@ -4098,6 +4087,15 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 2:{
 
+							if (oph_get_available_host_number(&available_hosts, idjob)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
+								break;
+							}
+							if (!available_hosts) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "No host available");
+								break;
+							}
 							if (max_hosts) {
 								int rhosts = 0;
 								if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
@@ -4105,12 +4103,27 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
 									break;
 								}
+								if (!nhosts) {
+									nhosts = max_hosts - rhosts;
+									if (nhosts <= 0) {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
+										break;
+									}
+								}
 								if (rhosts + nhosts > max_hosts) {
 									nhosts = max_hosts - rhosts;
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: available only %d host%s", nhosts,
-										 nhosts == 1 ? "" : "s");
+									if (nhosts > available_hosts)
+										nhosts = available_hosts;
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: only %d host%s available", nhosts,
+										 nhosts == 1 ? " is" : "s are");
 									break;
 								}
+							} else if (!nhosts)
+								nhosts = available_hosts;
+							if (nhosts > available_hosts) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive host number: only %d host%s available", available_hosts,
+									 available_hosts == 1 ? " is" : "s are");
+								break;
 							}
 
 							int id_hostpartition = 0;

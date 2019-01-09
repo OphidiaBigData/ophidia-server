@@ -98,7 +98,7 @@ typedef int oph_auth_user_role;
 #define OPH_DEFAULT_YES "yes"
 #define OPH_DEFAULT_NO "no"
 #define OPH_DEFAULT_CORES 1
-#define OPH_DEFAULT_HOSTS 1
+#define OPH_DEFAULT_HOSTS 0
 #define OPH_DEFAULT_USER_OPENED_SESSIONS 0	// No session
 #define OPH_DEFAULT_USER_MAX_SESSIONS 0	// No limit
 #define OPH_DEFAULT_USER_MAX_CORES 0	// No limit

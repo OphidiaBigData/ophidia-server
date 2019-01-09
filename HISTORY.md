@@ -18,6 +18,7 @@
 
 ### Changed:
 
+- Default value of argument nhost of OPH_CLUSTER
 - Removed references to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
 - Host partition management according to OphidiaDB refactoring [#36](https://github.com/OphidiaBigData/ophidia-server/issues/36)
 - Output of OPH_SERVICE
