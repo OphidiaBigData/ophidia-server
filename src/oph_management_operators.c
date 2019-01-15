@@ -4087,6 +4087,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 2:{
 
+							if (!host_partition) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "'%s' is a reserved word!", OPH_OPERATOR_CLUSTER_PARAMETER_ALL);
+								break;
+							}
+
 							if (oph_get_available_host_number(&available_hosts, idjob)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
@@ -4187,7 +4192,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 3:{
 
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retriving host partition '%s'\n", host_partition);
+							if (!host_partition) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "'%s' is a reserved word!", OPH_OPERATOR_CLUSTER_PARAMETER_ALL);
+								break;
+							}
+
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Retrieving host partition '%s'\n", host_partition);
 							int id_hostpartition = 0, id_job = 0;
 							if (oph_odb_retrieve_hp(&oDB, host_partition, id_user, &id_hostpartition, &id_job)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' not found\n", host_partition);
