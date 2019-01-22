@@ -203,11 +203,8 @@ int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL
 	return OPH_ODB_SUCCESS;
 }
 
-//It also checks if the container is not hidden
-int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int non_hidden, int *folder_id)
+int oph_odb_fs_retrive_container_folder_id(ophidiadb * oDB, int container_id, int *folder_id)
 {
-	UNUSED(non_hidden);
-
 	if (!folder_id || !container_id) {
 		return OPH_ODB_NULL_PARAM;
 	}
@@ -287,35 +284,12 @@ int oph_odb_fs_is_visible_container(int folder_id, char *name, ophidiadb * oDB, 
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_fs_is_hidden_container(int folder_id, char *name, ophidiadb * oDB, int *answer)
-{
-	if (!name || !folder_id || !answer) {
-		return OPH_ODB_NULL_PARAM;
-	}
-	*answer = 0;
-
-	return OPH_ODB_SUCCESS;
-}
-
 int oph_odb_fs_is_unique(int folder_id, char *name, ophidiadb * oDB, int *answer)
 {
 	if (!name || !folder_id || !answer) {
 		return OPH_ODB_NULL_PARAM;
 	}
 	*answer = 1;
-
-	return OPH_ODB_SUCCESS;
-}
-
-int oph_odb_fs_is_unique_hidden(int folder_id, char *name, ophidiadb * oDB, int *answer)
-{
-	if (!name || !folder_id || !answer) {
-		return OPH_ODB_NULL_PARAM;
-	}
-	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
-		return OPH_ODB_MYSQL_ERROR;
-	}
-	*answer = 0;
 
 	return OPH_ODB_SUCCESS;
 }
@@ -330,15 +304,6 @@ int oph_odb_fs_is_empty_folder(int folder_id, ophidiadb * oDB, int *answer)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_fs_set_container_hidden_status(int container_id, int hidden, ophidiadb * oDB)
-{
-	if (!container_id || hidden < 0 || hidden > 1) {
-		return OPH_ODB_NULL_PARAM;
-	}
-
-	return OPH_ODB_SUCCESS;
-}
-
 int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, int out_folder_id, char *out_container_name)
 {
 	if (!in_container_id || !out_folder_id || !out_container_name) {
@@ -348,9 +313,8 @@ int oph_odb_fs_update_container_path_name(ophidiadb * oDB, int in_container_id, 
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, int hidden, char *container_name, MYSQL_RES ** information_list)
+int oph_odb_fs_find_fs_objects(ophidiadb * oDB, int level, int id_folder, char *container_name, MYSQL_RES ** information_list)
 {
-	UNUSED(hidden);
 	UNUSED(container_name);
 
 	(*information_list) = NULL;
