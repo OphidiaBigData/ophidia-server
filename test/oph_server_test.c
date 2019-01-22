@@ -158,6 +158,7 @@ int _check_oph_server(const char *function, int option)
 	wf->markerid = 1;
 	wf->status = OPH_ODB_STATUS_RUNNING;
 	wf->username = strdup("oph-test");
+	wf->os_username = strdup("oph-test");
 	wf->userrole = 31;
 	wf->name = strdup("test");
 	wf->author = strdup("test");

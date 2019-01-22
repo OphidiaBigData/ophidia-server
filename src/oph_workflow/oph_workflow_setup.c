@@ -159,7 +159,7 @@ int oph_workflow_validate(oph_workflow * workflow)
 
 	// Create graph from tasks
 	workflow_node *graph = NULL;
-	graph = (workflow_node *) calloc((unsigned int)workflow->tasks_num, sizeof(workflow_node));
+	graph = (workflow_node *) calloc((unsigned int) workflow->tasks_num, sizeof(workflow_node));
 	if (!graph) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating graph\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
