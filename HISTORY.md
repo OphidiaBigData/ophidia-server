@@ -1,14 +1,6 @@
 
 ## v1.5.0 - 2019-01-24
 
-### Added:
-
-- New configuration option OPH_OS_USERNAME to define the OS user to be used for command submission [#40](https://github.com/OphidiaBigData/ophidia-server/issues/40)
-- Arguments to OPH_CLUSTER to get info about the host partitions [#38](https://github.com/OphidiaBigData/ophidia-server/issues/38)
-- A new resource manager command to stop host partition [#37](https://github.com/OphidiaBigData/ophidia-server/pull/37)
-- Arguments to specify subsets in OPH_SET [#35](https://github.com/OphidiaBigData/ophidia-server/pull/35)
-- Support for OPH_DELETECONTAINER as workflow exit action [#34](https://github.com/OphidiaBigData/ophidia-server/pull/34)
-
 ### Fixed:
 
 - Issue [#41](https://github.com/OphidiaBigData/ophidia-server/issues/41) 
@@ -17,14 +9,26 @@
 - Bug in update OPH_USER_LAST_CDD by means of oph_manage_user
 - Name of pre-defined runtime variable NHOST
 
+### Added:
+
+- New configuration option OPH_OS_USERNAME to define the OS user to be used for command submission [#40](https://github.com/OphidiaBigData/ophidia-server/issues/40)
+- Arguments to OPH_CLUSTER to get info about the host partitions [#38](https://github.com/OphidiaBigData/ophidia-server/issues/38)
+- A new resource manager command to stop host partition [#37](https://github.com/OphidiaBigData/ophidia-server/pull/37)
+- Arguments to specify subsets in OPH_SET [#35](https://github.com/OphidiaBigData/ophidia-server/pull/35)
+- Support for OPH_DELETECONTAINER as workflow exit action [#34](https://github.com/OphidiaBigData/ophidia-server/pull/34)
+
 ### Changed:
 
 - Soap interface files with gSOAP version 2.8.76 [#42](https://github.com/OphidiaBigData/ophidia-analytics-framework/pull/42)
 - Default value of argument nhost of OPH_CLUSTER
-- Removed references to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
 - Host partition management according to OphidiaDB refactoring [#36](https://github.com/OphidiaBigData/ophidia-server/issues/36)
 - Output of OPH_SERVICE
 - Raise an error in case any task parameter contains special characters
+
+### Removed:
+
+- References to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
+
 
 ## v1.4.0 - 2018-07-27
 
