@@ -1,5 +1,5 @@
 
-## Next release
+## v1.5.0 - 2019-01-24
 
 ### Added:
 
@@ -11,6 +11,7 @@
 
 ### Fixed:
 
+- Issue [#41](https://github.com/OphidiaBigData/ophidia-server/issues/41) 
 - Bug [#33](https://github.com/OphidiaBigData/ophidia-server/issues/33)
 - Bug in reading rmanager configuration file with empty lines
 - Bug in update OPH_USER_LAST_CDD by means of oph_manage_user
@@ -18,6 +19,7 @@
 
 ### Changed:
 
+- Soap interface files with gSOAP version 2.8.76 [#42](https://github.com/OphidiaBigData/ophidia-analytics-framework/pull/42)
 - Default value of argument nhost of OPH_CLUSTER
 - Removed references to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
 - Host partition management according to OphidiaDB refactoring [#36](https://github.com/OphidiaBigData/ophidia-server/issues/36)
