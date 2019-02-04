@@ -21,6 +21,9 @@
 
 /* MySQL headers */
 #include <mysql.h>
+#ifdef OPH_ODB_MNG
+#include <mongoc.h>
+#endif
 
 #include "oph_ophidiadb_query.h"
 
@@ -32,6 +35,9 @@
 #define OPH_ODB_TOO_MANY_ROWS 5
 #define OPH_ODB_ERROR 6
 #define OPH_ODB_NO_ROW_FOUND 7
+#ifdef OPH_ODB_MNG
+#define OPH_ODB_MONGODB_ERROR 8
+#endif
 
 #define MYSQL_BUFLEN 2048
 #define OPERATION_QUERY_SIZE 1536
@@ -41,6 +47,18 @@
 #define OPH_CONF_OPHDB_PORT	"OPHDB_PORT"
 #define OPH_CONF_OPHDB_LOGIN	"OPHDB_LOGIN"
 #define OPH_CONF_OPHDB_PWD	"OPHDB_PWD"
+
+#ifdef OPH_ODB_MNG
+#define OPH_CONF_MNGDB_NAME	"MNGDB_NAME"
+#define OPH_CONF_MNGDB_HOST	"MNGDB_HOST"
+#define OPH_CONF_MNGDB_PORT	"MNGDB_PORT"
+#define OPH_CONF_MNGDB_LOGIN	"MNGDB_LOGIN"
+#define OPH_CONF_MNGDB_PWD	"MNGDB_PWD"
+#define OPH_ODB_MNGDB_CONN	"mongodb://%s:%d/?appname=%s"
+#define OPH_ODB_MNGDB_COLL_METADATAINSTANCE	"metadatainstance"
+#define OPH_ODB_MNGDB_COLL_MANAGE	"manage"
+#endif
+
 /**
  * \brief Structure that contain OphidiaDB parameters
  * \param name name of OphidiaDB
@@ -57,6 +75,14 @@ typedef struct {
 	char *username;
 	char *pwd;
 	MYSQL *conn;
+#ifdef OPH_ODB_MNG
+	char *mng_name;
+	char *mng_hostname;
+	int mng_server_port;
+	char *mng_username;
+	char *mng_pwd;
+	mongoc_client_t *mng_conn;
+#endif
 } ophidiadb;
 
 typedef struct {
@@ -107,6 +133,41 @@ int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB);
  * \return 0 if successfull, -1 otherwise
  */
 int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB);
+
+#ifdef OPH_ODB_MNG
+/**
+ * \brief Function to initilize OphidiaDB structure.
+ * \return 0 if successfull, -1 otherwise
+ */
+int oph_odb_init_mongodb(ophidiadb * oDB);
+
+/**
+ * \brief Function to delete OphidiaDB and to free memory allocated in multi-thread environment.
+ * \return 0 if successfull, -1 otherwise
+ */
+int oph_odb_free_mongodb(ophidiadb * oDB);
+
+/**
+ * \brief Function to connect to the OphidiaDB. WARNING: Call this function before any other function or the system will crash
+ * \param structure containing OphidiaDB parameters
+ * \return 0 if successfull, -1 otherwise
+ */
+int oph_odb_connect_to_mongodb(ophidiadb * oDB);
+
+/**
+ * \brief Function to check connect status to the OphidiaDB. WARNING: Do not call this function (or any other) before calling connect_to_ophidiaDB or the client will crash
+ * \param structure containing OphidiaDB parameters
+ * \return 0 if successfull, -1 otherwise
+ */
+int oph_odb_check_connection_to_mongodb(ophidiadb * oDB);
+
+/**
+ * \brief Function to disconnect from the OphidiaDB
+ * \param structure containig OphidiaDB parameters
+ * \return 0 if successfull, -1 otherwise
+ */
+int oph_odb_disconnect_from_mongodb(ophidiadb * oDB);
+#endif
 
 int oph_odb_retrieve_ids(ophidiadb * oDB, const char *query, int **id, char ***ctime, int *n);
 int oph_odb_retrieve_list(ophidiadb * oDB, const char *query, ophidiadb_list * list);

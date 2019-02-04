@@ -115,6 +115,20 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 				ophDB->username = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_PWD, strlen(OPH_CONF_OPHDB_PWD))) {
 				ophDB->pwd = argument_value;
+#ifdef OPH_ODB_MNG
+			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_NAME, strlen(OPH_CONF_MNGDB_NAME))) {
+				oDB->mng_name = argument_value;
+			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_HOST, strlen(OPH_CONF_MNGDB_HOST))) {
+				oDB->mng_hostname = argument_value;
+			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_PORT, strlen(OPH_CONF_MNGDB_PORT))) {
+				oDB->mng_server_port = (int) strtol(argument_value, NULL, 10);
+				free(argument_value);
+				argument_value = NULL;
+			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_LOGIN, strlen(OPH_CONF_MNGDB_LOGIN))) {
+				oDB->mng_username = argument_value;
+			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_PWD, strlen(OPH_CONF_MNGDB_PWD))) {
+				oDB->mng_pwd = argument_value;
+#endif
 			} else {
 				free(argument_value);
 			}
@@ -124,7 +138,10 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 
 		fclose(file);
 
-		ophDB->conn = 0;
+		ophDB->conn = NULL;
+#ifdef OPH_ODB_MNG
+		ophDB->mng_conn = NULL;
+#endif
 	}
 
 	oDB->name = ophDB->name;
@@ -132,6 +149,13 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 	oDB->server_port = ophDB->server_port;
 	oDB->username = ophDB->username;
 	oDB->pwd = ophDB->pwd;
+
+#ifdef OPH_ODB_MNG
+	oDB->mng_name = ophDB->mng_name;
+	oDB->mng_hostname = ophDB->mng_hostname;
+	oDB->mng_username = ophDB->mng_username;
+	oDB->mng_pwd = ophDB->mng_pwd;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -146,6 +170,14 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	oDB->username = NULL;
 	oDB->pwd = NULL;
 	oDB->conn = NULL;
+
+#ifdef OPH_ODB_MNG
+	oDB->mng_name = NULL;
+	oDB->mng_hostname = NULL;
+	oDB->mng_username = NULL;
+	oDB->mng_pwd = NULL;
+	oDB->mng_conn = NULL;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -175,6 +207,28 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->conn = NULL;
 	}
+#ifdef OPH_ODB_MNG
+	if (oDB->mng_name) {
+		free(oDB->mng_name);
+		oDB->mng_name = NULL;
+	}
+	if (oDB->mng_hostname) {
+		free(oDB->mng_hostname);
+		oDB->mng_hostname = NULL;
+	}
+	if (oDB->mng_username) {
+		free(oDB->mng_username);
+		oDB->mng_username = NULL;
+	}
+	if (oDB->mng_pwd) {
+		free(oDB->mng_pwd);
+		oDB->mng_pwd = NULL;
+	}
+	if (oDB->mng_conn) {
+		oph_odb_disconnect_from_mongodb(oDB);
+		oDB->mng_conn = NULL;
+	}
+#endif
 
 	free(oDB);
 
@@ -233,6 +287,85 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 
 	return OPH_ODB_SUCCESS;
 }
+
+#ifdef OPH_ODB_MNG
+int oph_odb_init_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	mongoc_init();
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_free_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	mongoc_cleanup();
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_connect_to_mongodb(ophidiadb * oDB)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oDB->mng_conn)
+		return OPH_ODB_MONGODB_ERROR;
+
+	oDB->mng_conn = NULL;
+
+	char uri_string[OPERATION_QUERY_SIZE];
+	snprintf(uri_string, OPERATION_QUERY_SIZE, OPH_ODB_MNGDB_CONN, oDB->mng_hostname, oDB->mng_server_port, "ophidia");
+
+	mongoc_uri_t *uri = mongoc_uri_new(uri_string);
+	if (!uri)
+		return OPH_ODB_MONGODB_ERROR;
+
+	/* Connect to database */
+	if (!(oDB->mng_conn = mongoc_client_new_from_uri(uri))) {
+		mongoc_uri_destroy(uri);
+		return OPH_ODB_MONGODB_ERROR;
+	}
+
+	mongoc_uri_destroy(uri);
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_check_connection_to_mongodb(ophidiadb * oDB)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (!oDB->mng_conn || !oDB->mng_name)
+		return OPH_ODB_MONGODB_ERROR;
+
+	bson_error_t error;
+	bson_t *command = BCON_NEW("ping", BCON_INT32(1)), reply;
+	int retval = mongoc_client_command_simple(oDB->mng_conn, oDB->mng_name, command, NULL, &reply, &error);
+	if (!retval) {
+		bson_destroy(command);
+		return OPH_ODB_MONGODB_ERROR;
+	}
+
+	bson_destroy(command);
+	bson_destroy(&reply);
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_disconnect_from_mongodb(ophidiadb * oDB)
+{
+	if (!oDB)
+		return OPH_ODB_NULL_PARAM;
+
+	if (oDB->mng_conn) {
+		mongoc_client_destroy(oDB->mng_conn);
+		oDB->mng_conn = NULL;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
+#endif
 
 int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char ***ctime, int *nn)
 {
