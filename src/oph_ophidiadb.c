@@ -1008,3 +1008,37 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 
 	return OPH_ODB_SUCCESS;
 }
+
+#ifdef OPH_ODB_MNG
+
+mongoc_collection_t *oph_mongoc_client_get_collection(mongoc_client_t * client, const char *db, const char *collection)
+{
+	return mongoc_client_get_collection(client, db, collection);
+}
+
+void oph_mongoc_collection_destroy(mongoc_collection_t * collection)
+{
+	mongoc_collection_destroy(collection);
+}
+
+mongoc_cursor_t *oph_mongoc_collection_find(mongoc_collection_t * collection, const bson_t * query)
+{
+	return mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, query, NULL, NULL);
+}
+
+bool oph_mongoc_cursor_next(mongoc_cursor_t * cursor, bson_error_t * error, const bson_t ** bson)
+{
+	return !mongoc_cursor_error(cursor, error) && mongoc_cursor_more(cursor) && mongoc_cursor_next(cursor, bson);
+}
+
+bool oph_mongoc_cursor_error(mongoc_cursor_t * cursor, bson_error_t * error)
+{
+	return !mongoc_cursor_error(cursor, error);
+}
+
+void oph_mongoc_cursor_destroy(mongoc_cursor_t * cursor)
+{
+	mongoc_cursor_destroy(cursor);
+}
+
+#endif

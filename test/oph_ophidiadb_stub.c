@@ -42,6 +42,14 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	oDB->pwd = NULL;
 	oDB->conn = NULL;
 
+#ifdef OPH_ODB_MNG
+	oDB->mng_name = NULL;
+	oDB->mng_hostname = NULL;
+	oDB->mng_username = NULL;
+	oDB->mng_pwd = NULL;
+	oDB->mng_conn = NULL;
+#endif
+
 	return OPH_ODB_SUCCESS;
 }
 
@@ -70,6 +78,28 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->conn = NULL;
 	}
+#ifdef OPH_ODB_MNG
+	if (oDB->mng_name) {
+		free(oDB->mng_name);
+		oDB->mng_name = NULL;
+	}
+	if (oDB->mng_hostname) {
+		free(oDB->mng_hostname);
+		oDB->mng_hostname = NULL;
+	}
+	if (oDB->mng_username) {
+		free(oDB->mng_username);
+		oDB->mng_username = NULL;
+	}
+	if (oDB->mng_pwd) {
+		free(oDB->mng_pwd);
+		oDB->mng_pwd = NULL;
+	}
+	if (oDB->mng_conn) {
+		oph_odb_disconnect_from_mongodb(oDB);
+		oDB->mng_conn = NULL;
+	}
+#endif
 
 	free(oDB);
 
@@ -102,6 +132,40 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 
 	return OPH_ODB_SUCCESS;
 }
+
+#ifdef OPH_ODB_MNG
+
+int oph_odb_init_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_free_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_connect_to_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_check_connection_to_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_disconnect_from_mongodb(ophidiadb * oDB)
+{
+	UNUSED(oDB);
+	return OPH_ODB_SUCCESS;
+}
+
+#endif
 
 int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char ***ctime, int *nn)
 {
@@ -339,3 +403,35 @@ int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 
 	return OPH_ODB_SUCCESS;
 }
+
+#ifdef OPH_ODB_MNG
+
+mongoc_collection_t *oph_mongoc_client_get_collection(mongoc_client_t * client, const char *db, const char *collection)
+{
+	return (mongoc_collection_t *) 1;
+}
+
+void oph_mongoc_collection_destroy(mongoc_collection_t * collection)
+{
+}
+
+mongoc_cursor_t *oph_mongoc_collection_find(mongoc_collection_t * collection, const bson_t * query)
+{
+	return NULL;
+}
+
+bool oph_mongoc_cursor_next(mongoc_cursor_t * cursor, bson_error_t * error, const bson_t ** bson)
+{
+	return false;
+}
+
+bool oph_mongoc_cursor_error(mongoc_cursor_t * cursor, bson_error_t * error)
+{
+	return true;
+}
+
+void oph_mongoc_cursor_destroy(mongoc_cursor_t * cursor)
+{
+}
+
+#endif

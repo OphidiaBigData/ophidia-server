@@ -187,4 +187,13 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts);
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts);
 
+#ifdef OPH_ODB_MNG
+mongoc_collection_t *oph_mongoc_client_get_collection(mongoc_client_t * client, const char *db, const char *collection);
+void oph_mongoc_collection_destroy(mongoc_collection_t * collection);
+mongoc_cursor_t *oph_mongoc_collection_find(mongoc_collection_t * collection, const bson_t * query);
+bool oph_mongoc_cursor_next(mongoc_cursor_t * cursor, bson_error_t * error, const bson_t ** bson);
+bool oph_mongoc_cursor_error(mongoc_cursor_t * cursor, bson_error_t * error);
+void oph_mongoc_cursor_destroy(mongoc_cursor_t * cursor);
+#endif
+
 #endif				/* OPH_OPHIDIADB_H */

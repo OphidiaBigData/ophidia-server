@@ -87,6 +87,10 @@ ADDITIONAL_CFLAGS += -DMATHEVAL_SUPPORT $(MATHEVAL_CFLAGS)
 ADDITIONAL_LIBS += $(MATHEVAL_LIBS)
 endif
 
+if HAVE_MONGO
+ADDITIONAL_CFLAGS += -DOPH_ODB_MNG
+endif
+
 LIBRARY =
 
 LIBRARY += libhashtbl.la
@@ -211,13 +215,13 @@ liboph_memory_job_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_job_list
 
 LIBRARY += liboph_ophidiadb.la
 liboph_ophidiadb_la_SOURCES = oph_ophidiadb_stub.c
-liboph_ophidiadb_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
+liboph_ophidiadb_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MONGOC_CFLAGS)
 liboph_ophidiadb_la_LDFLAGS = -shared
-liboph_ophidiadb_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS}
+liboph_ophidiadb_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} ${MONGOC_LIBS}
 
 LIBRARY += liboph_ophidiadb_fs_library.la
 liboph_ophidiadb_fs_library_la_SOURCES = oph_ophidiadb_fs_library_stub.c
-liboph_ophidiadb_fs_library_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
+liboph_ophidiadb_fs_library_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MONGOC_CFLAGS)
 liboph_ophidiadb_fs_library_la_LDFLAGS = -shared
 liboph_ophidiadb_fs_library_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_ophidiadb
 
@@ -229,55 +233,55 @@ liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${XML_LIBS}
 
 LIBRARY += liboph_filters.la
 liboph_filters_la_SOURCES = ../src/oph_filters.c
-liboph_filters_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+liboph_filters_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MONGOC_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 liboph_filters_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
-liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_task_parser_library -loph_ophidiadb_fs_library -loph_subset_library
+liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) ${MONGOC_LIBS} -L. -loph_task_parser_library -loph_ophidiadb_fs_library -loph_subset_library
 
 LIBRARY += liboph_massive_operations.la
 liboph_massive_operations_la_SOURCES = ../src/oph_massive_operations.c
-liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(CODE_COVERAGE_CFLAGS)
+liboph_massive_operations_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MONGOC_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 liboph_massive_operations_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
 liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters
 
 LIBRARY += liboph_odb_job.la
 liboph_odb_job_la_SOURCES = oph_odb_job_stub.c
-liboph_odb_job_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
+liboph_odb_job_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MONGOC_CFLAGS)
 liboph_odb_job_la_LDFLAGS = -shared
 liboph_odb_job_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS}
 
 LIBRARY += liboph_workflow_engine.la
 liboph_workflow_engine_la_SOURCES = ../src/oph_workflow_engine.c
-liboph_workflow_engine_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -I../src/oph_workflow
+liboph_workflow_engine_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -I../src/oph_workflow $(MONGOC_CFLAGS)
 liboph_workflow_engine_la_LDFLAGS = -shared ${LIBCURL_LIB}
 liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_rmanager -loph_trash
 
 LIBRARY += liboph_execute_main.la
 liboph_execute_main_la_SOURCES = ../src/oph_execute_main.c
-liboph_execute_main_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MYCFLAGS_THREADS)
+liboph_execute_main_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MYCFLAGS_THREADS) $(MONGOC_CFLAGS)
 liboph_execute_main_la_LDFLAGS = -shared
 liboph_execute_main_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 LIBRARY += liboph_notify.la
 liboph_notify_la_SOURCES = ../src/oph_notify.c
-liboph_notify_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CURL_CFLAGS) -I../src/oph_workflow $(MYCFLAGS_THREADS)
+liboph_notify_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(CURL_CFLAGS) -I../src/oph_workflow $(MYCFLAGS_THREADS) $(MONGOC_CFLAGS)
 liboph_notify_la_LDFLAGS = -shared
 liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_engine
 
 LIBRARY += liboph_flow_control_operators.la
 liboph_flow_control_operators_la_SOURCES = ../src/oph_flow_control_operators.c
-liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(CODE_COVERAGE_CFLAGS)
+liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MONGOC_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 liboph_flow_control_operators_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
 liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 LIBRARY += liboph_management_operators.la
 liboph_management_operators_la_SOURCES = ../src/oph_management_operators.c
-liboph_management_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
+liboph_management_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MONGOC_CFLAGS)
 liboph_management_operators_la_LDFLAGS = -shared
 liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = ../src/oph_known_operators.c
-liboph_known_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
+liboph_known_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(MONGOC_CFLAGS)
 liboph_known_operators_la_LDFLAGS = -shared
 liboph_known_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_flow_control_operators -loph_management_operators
 
@@ -294,7 +298,7 @@ endif
 check_LTLIBRARIES = $(LIBRARY)
 
 oph_server_test_SOURCES= oph_server_test.c
-oph_server_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS) $(CODE_COVERAGE_CFLAGS)
+oph_server_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS) $(MONGOC_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 oph_server_test_LDFLAGS= $(MYLDFLAGS_THREADS) $(CODE_COVERAGE_LDLAGS)
 oph_server_test_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_known_operators
 

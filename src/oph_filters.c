@@ -324,19 +324,11 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 
 	unsigned int s;
 	int i, key_num = 0;
-	char **key_list = NULL;
+	char **key_list = NULL, found = 1;
 	if (oph_tp_parse_multiple_value_param(value, &key_list, &key_num) || !key_num)
 		return OPH_MF_ERROR;
 
 #ifdef OPH_ODB_MNG
-
-	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1)) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
-			return OPH_MF_ERROR;
-		}
-		strncat(where_clause, OPH_FILTER_AND1, s);
-	}
 
 	char *cube_list = NULL, *tmp = NULL;
 	int current_cube = 0, ttt;
@@ -347,7 +339,7 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 		return OPH_MF_ERROR;
 	}
 
-	mongoc_collection_t *collection = mongoc_client_get_collection(oDB->mng_conn, oDB->mng_name, OPH_ODB_MNGDB_COLL_METADATAINSTANCE);
+	mongoc_collection_t *collection = oph_mongoc_client_get_collection(oDB->mng_conn, oDB->mng_name, OPH_ODB_MNGDB_COLL_METADATAINSTANCE);
 	if (!collection) {
 		oph_odb_disconnect_from_mongodb(oDB);
 		oph_tp_free_multiple_value_param_list(key_list, key_num);
@@ -358,9 +350,8 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 	bson_error_t error;
 	const bson_t *target;
 	bson_iter_t iter;
-	char buf[64];
-	const char *key;
 
+	found = 0;
 	for (i = 0; i < key_num; ++i) {
 
 		doc = bson_new();
@@ -369,14 +360,14 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 
 		BSON_APPEND_UTF8(doc, "label", key_list[i]);
 
-		cursor = mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, doc, NULL, NULL);
-		if (!cursor) {
-			bson_destroy(doc);
-			break;
-		}
+		cursor = oph_mongoc_collection_find(collection, doc);
+
 		bson_destroy(doc);
 
-		while (!mongoc_cursor_error(cursor, &error) && mongoc_cursor_more(cursor) && mongoc_cursor_next(cursor, &target)) {
+		if (!cursor)
+			continue;
+
+		while (!oph_mongoc_cursor_next(cursor, &error, &target)) {
 			if (bson_iter_init(&iter, target) && bson_iter_find(&iter, "iddatacube") && BSON_ITER_HOLDS_INT32(&iter)) {
 				current_cube = bson_iter_int32(&iter);
 				if (cube_list) {
@@ -388,21 +379,29 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 			}
 		}
 
-		if (mongoc_cursor_error(cursor, &error)) {
-			mongoc_cursor_destroy(cursor);
+		if (oph_mongoc_cursor_error(cursor, &error)) {
+			oph_mongoc_cursor_destroy(cursor);
 			break;
 		}
-		mongoc_cursor_destroy(cursor);
+		oph_mongoc_cursor_destroy(cursor);
 
 		if (!cube_list)
 			continue;
 
-		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1)) {
+		if (!found) {
+			found = 1;
+			if (*where_clause) {
+				if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND2))
+					return OPH_MF_ERROR;
+				strncat(where_clause, OPH_FILTER_AND2, s);
+			} else
+				snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
+		} else {
+			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR)) {
 				free(cube_list);
 				break;
 			}
-			strncat(where_clause, not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1, s);
+			strncat(where_clause, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE, "%s.iddatacube %sIN (%s)", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT2 : "", cube_list);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
@@ -415,28 +414,21 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 		cube_list = NULL;
 	}
 
-	mongoc_collection_destroy(collection);
+	oph_mongoc_collection_destroy(collection);
 	oph_odb_disconnect_from_mongodb(oDB);
 
 #else
 
-	if (*tables) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
-			return OPH_MF_ERROR;
-		}
-		strncat(tables, ",", s);
-	}
 	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1)) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND2))
 			return OPH_MF_ERROR;
-		}
-		strncat(where_clause, OPH_FILTER_AND1, s);
-	}
+		strncat(where_clause, OPH_FILTER_AND2, s);
+	} else
+		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
 	for (i = 0; i < key_num; ++i) {
-		if (i) {
+
+		if (*tables) {
 			if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1)
 				break;
 			strncat(tables, ",", s);
@@ -447,9 +439,9 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 		strncat(tables, condition, s);
 
 		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1))
+			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR))
 				break;
-			strncat(where_clause, not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1, s);
+			strncat(where_clause, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance%d.iddatacube=%s.iddatacube AND metadatainstance%d.label%s='%s'", i, OPH_MF_ARG_DATACUBE, i,
 			 not_clause ? OPH_FILTER_NOT1 : "", key_list[i]);
@@ -465,6 +457,12 @@ int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *wh
 	if (i < key_num)
 		return OPH_MF_ERROR;
 
+	if (found) {
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= 1)
+			return OPH_MF_ERROR;
+		strncat(where_clause, ")", s);
+	}
+
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
@@ -478,7 +476,8 @@ int _oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *ta
 
 	char condition[OPH_MAX_STRING_SIZE];
 
-	int key_num = 0, value_num;
+	unsigned int s;
+	int i, key_num = 0, value_num;
 	char **key_list = NULL;
 	char **value_list = NULL;
 	if (oph_tp_parse_multiple_value_param(key, &key_list, &key_num) || !key_num)
@@ -493,27 +492,15 @@ int _oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *ta
 		return OPH_MF_ERROR;
 	}
 
-	unsigned int s;
-	if (*tables) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
-			oph_tp_free_multiple_value_param_list(value_list, value_num);
-			return OPH_MF_ERROR;
-		}
-		strncat(tables, ",", s);
-	}
 	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1)) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
-			oph_tp_free_multiple_value_param_list(value_list, value_num);
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND2))
 			return OPH_MF_ERROR;
-		}
-		strncat(where_clause, OPH_FILTER_AND1, s);
-	}
+		strncat(where_clause, OPH_FILTER_AND2, s);
+	} else
+		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
-	int i;
 	for (i = 0; i < key_num; ++i) {
-		if (i) {
+		if (*tables) {
 			if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
 				oph_tp_free_multiple_value_param_list(key_list, key_num);
 				oph_tp_free_multiple_value_param_list(value_list, value_num);
@@ -530,12 +517,12 @@ int _oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *ta
 		strncat(tables, condition, s);
 
 		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1)) {
+			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR)) {
 				oph_tp_free_multiple_value_param_list(key_list, key_num);
 				oph_tp_free_multiple_value_param_list(value_list, value_num);
 				return OPH_MF_ERROR;
 			}
-			strncat(where_clause, not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1, s);
+			strncat(where_clause, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE,
 			 "metadatainstance%dk%d.iddatacube=%s.iddatacube AND metadatainstance%dk%d.label='%s' AND CONVERT(metadatainstance%dk%d.value USING latin1) %sLIKE '%%%s%%'", prefix, i,
@@ -547,6 +534,11 @@ int _oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *ta
 		}
 		strncat(where_clause, condition, s);
 	}
+
+	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= 1)
+		return OPH_MF_ERROR;
+	strncat(where_clause, ")", s);
+
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
 	oph_tp_free_multiple_value_param_list(value_list, value_num);
 
