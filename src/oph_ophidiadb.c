@@ -117,17 +117,17 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 				ophDB->pwd = argument_value;
 #ifdef OPH_ODB_MNG
 			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_NAME, strlen(OPH_CONF_MNGDB_NAME))) {
-				oDB->mng_name = argument_value;
+				ophDB->mng_name = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_HOST, strlen(OPH_CONF_MNGDB_HOST))) {
-				oDB->mng_hostname = argument_value;
+				ophDB->mng_hostname = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_PORT, strlen(OPH_CONF_MNGDB_PORT))) {
-				oDB->mng_server_port = (int) strtol(argument_value, NULL, 10);
+				ophDB->mng_server_port = (int) strtol(argument_value, NULL, 10);
 				free(argument_value);
 				argument_value = NULL;
 			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_LOGIN, strlen(OPH_CONF_MNGDB_LOGIN))) {
-				oDB->mng_username = argument_value;
+				ophDB->mng_username = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_MNGDB_PWD, strlen(OPH_CONF_MNGDB_PWD))) {
-				oDB->mng_pwd = argument_value;
+				ophDB->mng_pwd = argument_value;
 #endif
 			} else {
 				free(argument_value);
@@ -153,6 +153,7 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 #ifdef OPH_ODB_MNG
 	oDB->mng_name = ophDB->mng_name;
 	oDB->mng_hostname = ophDB->mng_hostname;
+	oDB->mng_server_port = ophDB->mng_server_port;
 	oDB->mng_username = ophDB->mng_username;
 	oDB->mng_pwd = ophDB->mng_pwd;
 #endif

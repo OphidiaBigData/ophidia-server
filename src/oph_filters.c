@@ -34,6 +34,16 @@ extern pthread_mutex_t global_flag;
 #define OPH_FILTER_NOT1 "!"
 #define OPH_FILTER_NOT2 "NOT "
 
+#ifdef OPH_ODB_MNG
+void _print_bson(const bson_t * b)
+{
+	char *str;
+	str = bson_as_json(b, NULL);
+	pmesg(LOG_INFO, __FILE__, __LINE__, "%s\n", str);
+	bson_free(str);
+}
+#endif
+
 int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
 	UNUSED(tables);
@@ -304,7 +314,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 	return OPH_MF_OK;
 }
 
-int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_metadata_key(char *value, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
@@ -312,12 +322,104 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 
 	char condition[OPH_MAX_STRING_SIZE];
 
-	int key_num = 0;
+	unsigned int s;
+	int i, key_num = 0;
 	char **key_list = NULL;
 	if (oph_tp_parse_multiple_value_param(value, &key_list, &key_num) || !key_num)
 		return OPH_MF_ERROR;
 
-	unsigned int s;
+#ifdef OPH_ODB_MNG
+
+	if (*where_clause) {
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1)) {
+			oph_tp_free_multiple_value_param_list(key_list, key_num);
+			return OPH_MF_ERROR;
+		}
+		strncat(where_clause, OPH_FILTER_AND1, s);
+	}
+
+	char *cube_list = NULL, *tmp = NULL;
+	int current_cube = 0, ttt;
+	bson_t *doc = NULL;
+
+	if (oph_odb_connect_to_mongodb(oDB)) {
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		return OPH_MF_ERROR;
+	}
+
+	mongoc_collection_t *collection = mongoc_client_get_collection(oDB->mng_conn, oDB->mng_name, OPH_ODB_MNGDB_COLL_METADATAINSTANCE);
+	if (!collection) {
+		oph_odb_disconnect_from_mongodb(oDB);
+		oph_tp_free_multiple_value_param_list(key_list, key_num);
+		return OPH_MF_ERROR;
+	}
+
+	mongoc_cursor_t *cursor = NULL;
+	bson_error_t error;
+	const bson_t *target;
+	bson_iter_t iter;
+	char buf[64];
+	const char *key;
+
+	for (i = 0; i < key_num; ++i) {
+
+		doc = bson_new();
+		if (!doc)
+			break;
+
+		BSON_APPEND_UTF8(doc, "label", key_list[i]);
+
+		cursor = mongoc_collection_find(collection, MONGOC_QUERY_NONE, 0, 0, 0, doc, NULL, NULL);
+		if (!cursor) {
+			bson_destroy(doc);
+			break;
+		}
+		bson_destroy(doc);
+
+		while (!mongoc_cursor_error(cursor, &error) && mongoc_cursor_more(cursor) && mongoc_cursor_next(cursor, &target)) {
+			if (bson_iter_init(&iter, target) && bson_iter_find(&iter, "iddatacube") && BSON_ITER_HOLDS_INT32(&iter)) {
+				current_cube = bson_iter_int32(&iter);
+				if (cube_list) {
+					tmp = cube_list;
+					ttt = asprintf(&cube_list, "%s,%d", tmp, current_cube);
+					free(tmp);
+				} else
+					ttt = asprintf(&cube_list, "%d", current_cube);
+			}
+		}
+
+		if (mongoc_cursor_error(cursor, &error)) {
+			mongoc_cursor_destroy(cursor);
+			break;
+		}
+		mongoc_cursor_destroy(cursor);
+
+		if (!cube_list)
+			continue;
+
+		if (i) {
+			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1)) {
+				free(cube_list);
+				break;
+			}
+			strncat(where_clause, not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1, s);
+		}
+		snprintf(condition, OPH_MAX_STRING_SIZE, "%s.iddatacube %sIN (%s)", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT2 : "", cube_list);
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
+			free(cube_list);
+			break;
+		}
+		strncat(where_clause, condition, s);
+
+		free(cube_list);
+		cube_list = NULL;
+	}
+
+	mongoc_collection_destroy(collection);
+	oph_odb_disconnect_from_mongodb(oDB);
+
+#else
+
 	if (*tables) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
 			oph_tp_free_multiple_value_param_list(key_list, key_num);
@@ -333,42 +435,41 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
 
-	int i;
 	for (i = 0; i < key_num; ++i) {
 		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1) {
-				oph_tp_free_multiple_value_param_list(key_list, key_num);
-				return OPH_MF_ERROR;
-			}
+			if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1)
+				break;
 			strncat(tables, ",", s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance AS metadatainstance%d", i);
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= strlen(condition))
-			return OPH_MF_ERROR;
+			break;
 		strncat(tables, condition, s);
 
 		if (i) {
-			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1)) {
-				oph_tp_free_multiple_value_param_list(key_list, key_num);
-				return OPH_MF_ERROR;
-			}
+			if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1))
+				break;
 			strncat(where_clause, not_clause ? OPH_FILTER_OR : OPH_FILTER_AND1, s);
 		}
 		snprintf(condition, OPH_MAX_STRING_SIZE, "metadatainstance%d.iddatacube=%s.iddatacube AND metadatainstance%d.label%s='%s'", i, OPH_MF_ARG_DATACUBE, i,
 			 not_clause ? OPH_FILTER_NOT1 : "", key_list[i]);
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition)) {
-			oph_tp_free_multiple_value_param_list(key_list, key_num);
-			return OPH_MF_ERROR;
-		}
+		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
+			break;
 		strncat(where_clause, condition, s);
 	}
+
+#endif
+
 	oph_tp_free_multiple_value_param_list(key_list, key_num);
+
+	if (i < key_num)
+		return OPH_MF_ERROR;
 
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_METADATA_KEY, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
 	return OPH_MF_OK;
 }
 
-int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t * flag, unsigned int prefix, char not_clause)
+int _oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, unsigned int prefix, char not_clause)
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
@@ -453,12 +554,12 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 	return OPH_MF_OK;
 }
 
-int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_metadata_value(char *key, char *value, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
-	return _oph_filter_metadata_value(key, value, tables, where_clause, flag, 0, not_clause);
+	return _oph_filter_metadata_value(key, value, oDB, tables, where_clause, flag, 0, not_clause);
 }
 
-int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * oDB, int recursive_flag, pthread_mutex_t * flag, char not_clause)
+int oph_add_folder(int folder_id, int *counter, ophidiadb * oDB, char *where_clause, int recursive_flag, pthread_mutex_t * flag, char not_clause)
 {
 	unsigned int s;
 	char condition[OPH_MAX_STRING_SIZE];
@@ -480,7 +581,7 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 		if (oph_odb_fs_get_subfolders(folder_id, &subfolder_id, &num_subfolders, oDB))
 			return OPH_MF_ERROR;
 		for (i = 0; i < num_subfolders; ++i)
-			if (oph_add_folder(subfolder_id[i], counter, where_clause, oDB, recursive_flag, flag, not_clause))
+			if (oph_add_folder(subfolder_id[i], counter, oDB, where_clause, recursive_flag, flag, not_clause))
 				break;
 		if (subfolder_id)
 			free(subfolder_id);
@@ -527,7 +628,7 @@ int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, o
 	} else
 		snprintf(where_clause, OPH_MAX_STRING_SIZE, "(");
 
-	if (oph_add_folder(folder_id, &counter, where_clause, oDB, recursive_flag, flag, not_clause)) {
+	if (oph_add_folder(folder_id, &counter, oDB, where_clause, recursive_flag, flag, not_clause)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Folder '%s' cannot be explored\n", path);
 		return OPH_MF_ERROR;
 	}
@@ -542,13 +643,13 @@ int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, o
 	return OPH_MF_OK;
 }
 
-int oph_filter_free_kvp(HASHTBL * task_tbl, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_free_kvp(HASHTBL * task_tbl, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
 	unsigned int i, j = 0;
 	struct hashnode_s *node;
 	for (i = 0; i < task_tbl->size; ++i)
 		for (node = task_tbl->nodes[i]; node; node = node->next)
-			if (_oph_filter_metadata_value(node->key, (char *) node->data, tables, where_clause, flag, ++j, not_clause))
+			if (_oph_filter_metadata_value(node->key, (char *) node->data, oDB, tables, where_clause, flag, ++j, not_clause))
 				return OPH_MF_ERROR;
 
 	return OPH_MF_OK;
@@ -641,21 +742,21 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 		if (metadata_key && strlen(metadata_key)) {
 			metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE);
 			if (metadata_value && strlen(metadata_value)) {
-				if (oph_filter_metadata_value(metadata_key, metadata_value, tables, where_clause, flag, 0)) {
+				if (oph_filter_metadata_value(metadata_key, metadata_value, oDB, tables, where_clause, flag, 0)) {
 					pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong arguments '%s' and '%s'\n", OPH_MF_ARG_METADATA_KEY, OPH_MF_ARG_METADATA_VALUE);
 					return OPH_MF_ERROR;
 				}
 			} else {
 				metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT);
 				if (metadata_value && strlen(metadata_value)) {
-					if (oph_filter_metadata_value(metadata_key, metadata_value, tables, where_clause, flag, 1)) {
+					if (oph_filter_metadata_value(metadata_key, metadata_value, oDB, tables, where_clause, flag, 1)) {
 						pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong arguments '%s' and '%s'\n", OPH_MF_ARG_METADATA_KEY, OPH_MF_ARG_METADATA_VALUE);
 						return OPH_MF_ERROR;
 					}
 				} else
 					metadata_value = NULL;	// In case strlen() returns 0
 			}
-			if (!metadata_value && oph_filter_metadata_key(metadata_key, tables, where_clause, flag, 0)) {
+			if (!metadata_value && oph_filter_metadata_key(metadata_key, oDB, tables, where_clause, flag, 0)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", OPH_MF_ARG_METADATA_KEY);
 				return OPH_MF_ERROR;
 			}
@@ -691,7 +792,7 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 			if (hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE) || hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Negation cannot be used for '%s' in case '%s' is also set\n", OPH_MF_ARG_METADATA_KEY, OPH_MF_ARG_METADATA_VALUE);
 				return OPH_MF_ERROR;
-			} else if (oph_filter_metadata_key(metadata_key, tables, where_clause, flag, 1)) {
+			} else if (oph_filter_metadata_key(metadata_key, oDB, tables, where_clause, flag, 1)) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", OPH_MF_ARG_METADATA_KEY);
 				return OPH_MF_ERROR;
 			}

@@ -315,6 +315,9 @@ void cleanup()
 	}
 
 	mysql_library_end();
+#ifdef OPH_ODB_MNG
+	oph_odb_free_mongodb(NULL);
+#endif
 	soap_destroy(psoap);
 	soap_end(psoap);
 	soap_done(psoap);	/* MUST call before CRYPTO_thread_cleanup */
@@ -772,6 +775,10 @@ int main(int argc, char **argv)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
 		exit(1);
 	}
+#ifdef OPH_ODB_MNG
+	oph_odb_init_mongodb(NULL);
+#endif
+
 	oph_tp_start_xml_parser();
 	soap_init(&soap);
 
