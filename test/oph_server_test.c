@@ -3732,22 +3732,25 @@ int _check_oph_server(const char *function, int option)
 		char tables[OPH_MAX_STRING_SIZE], where_clause[OPH_MAX_STRING_SIZE], query[OPH_MAX_STRING_SIZE];
 		*tables = *where_clause = 0;
 
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+
 		switch (option) {
 
 			case 0:
-				res = oph_filter_level(NULL, tables, where_clause, NULL);
+				res = oph_filter_level(NULL, tables, where_clause, NULL, 0);
 				break;
 
 			case 1:
-				res = oph_filter_level("", tables, where_clause, NULL);
+				res = oph_filter_level("", tables, where_clause, NULL, 0);
 				break;
 
 			case 2:
-				res = oph_filter_level("level=", tables, where_clause, NULL);
+				res = oph_filter_level("level=", tables, where_clause, NULL, 0);
 				break;
 
 			case 3:
-				res = oph_filter_level("1", tables, where_clause, NULL);
+				res = oph_filter_level("1", tables, where_clause, NULL, 0);
 				break;
 
 			case 4:
@@ -3755,7 +3758,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_level("1", tables, where_clause, NULL);
+					res = oph_filter_level("1", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
@@ -3766,7 +3769,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_level("1|2|3", tables, where_clause, NULL);
+					res = oph_filter_level("1|2|3", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
@@ -3777,26 +3780,26 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_measure("measure", tables, where_clause, NULL);
+					res = oph_filter_measure("measure", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 7:
-				res = oph_filter_parent("wrong", tables, where_clause, NULL);
+				res = oph_filter_parent("wrong", tables, where_clause, NULL, 0);
 				break;
 
 			case 8:
-				res = oph_filter_parent("http://localhostwrong", tables, where_clause, NULL);
+				res = oph_filter_parent("http://localhostwrong", tables, where_clause, NULL, 0);
 				break;
 
 			case 9:
-				res = oph_filter_parent("http://localhost/", tables, where_clause, NULL);
+				res = oph_filter_parent("http://localhost/", tables, where_clause, NULL, 0);
 				break;
 
 			case 10:
-				res = oph_filter_parent("http://localhost/wrong", tables, where_clause, NULL);
+				res = oph_filter_parent("http://localhost/wrong", tables, where_clause, NULL, 0);
 				break;
 
 			case 11:
@@ -3804,7 +3807,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL);
+					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
@@ -3815,14 +3818,14 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						tables[i] = ' ';
 					*where_clause = tables[i] = 0;
-					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL);
+					res = oph_filter_parent("http://localhost/1/1", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 13:
-				res = oph_filter_using_subset("1:1:1:1", tables, where_clause, NULL);
+				res = oph_filter_using_subset("1:1:1:1", tables, where_clause, NULL, 0);
 				break;
 
 			case 14:
@@ -3830,14 +3833,14 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					where_clause[i] = 0;
-					res = oph_filter_using_subset("1:2,3", tables, where_clause, NULL);
+					res = oph_filter_using_subset("1:2,3", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 15:
-				res = oph_filter_container("", tables, where_clause, NULL);
+				res = oph_filter_container("", tables, where_clause, NULL, 0);
 				break;
 
 			case 16:
@@ -3845,22 +3848,22 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					where_clause[i] = 0;
-					res = oph_filter_container("container", tables, where_clause, NULL);
+					res = oph_filter_container("container", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 17:
-				res = oph_filter_container_pid("", tables, where_clause, NULL);
+				res = oph_filter_container_pid("", tables, where_clause, NULL, 0);
 				break;
 
 			case 18:
-				res = oph_filter_container_pid("wrong", tables, where_clause, NULL);
+				res = oph_filter_container_pid("wrong", tables, where_clause, NULL, 0);
 				break;
 
 			case 19:
-				res = oph_filter_container_pid("http://localhostwrong", tables, where_clause, NULL);
+				res = oph_filter_container_pid("http://localhostwrong", tables, where_clause, NULL, 0);
 				break;
 
 			case 20:
@@ -3868,18 +3871,18 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					where_clause[i] = 0;
-					res = oph_filter_container_pid("http://localhost/1", tables, where_clause, NULL);
+					res = oph_filter_container_pid("http://localhost/1", tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 21:
-				res = oph_filter_metadata_key("", NULL, tables, where_clause, NULL, 0);
+				res = oph_filter_metadata_key("", &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 22:
-				res = oph_filter_metadata_key("key=", NULL, tables, where_clause, NULL, 0);
+				res = oph_filter_metadata_key("key=", &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 23:
@@ -3887,7 +3890,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_metadata_key("key1|key2", NULL, tables, where_clause, NULL, 0);
+					res = oph_filter_metadata_key("key1|key2", &oDB, tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
@@ -3898,30 +3901,30 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						tables[i] = ' ';
 					*where_clause = tables[i] = 0;
-					res = oph_filter_metadata_key("key1|key2", NULL, tables, where_clause, NULL, 0);
+					res = oph_filter_metadata_key("key1|key2", &oDB, tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 25:
-				res = oph_filter_metadata_value("", "", NULL, tables, where_clause, NULL, 0, 0);
+				res = oph_filter_metadata_value("", "", &oDB, tables, where_clause, NULL, 0, 0);
 				break;
 
 			case 26:
-				res = oph_filter_metadata_value("", "value=", NULL, tables, where_clause, NULL, 0, 0);
+				res = oph_filter_metadata_value("", "value=", &oDB, tables, where_clause, NULL, 0, 0);
 				break;
 
 			case 27:
-				res = oph_filter_metadata_value("key1|key2", "value=", NULL, tables, where_clause, NULL, 0, 0);
+				res = oph_filter_metadata_value("key1|key2", "value=", &oDB, tables, where_clause, NULL, 0, 0);
 				break;
 
 			case 28:
-				res = oph_filter_metadata_value("key1|key2", "value", NULL, tables, where_clause, NULL, 0, 0);
+				res = oph_filter_metadata_value("key1|key2", "value", &oDB, tables, where_clause, NULL, 0, 0);
 				break;
 
 			case 29:
-				res = oph_filter_metadata_value("key=", "value", NULL, tables, where_clause, NULL, 0, 0);
+				res = oph_filter_metadata_value("key=", "value", &oDB, tables, where_clause, NULL, 0, 0);
 				break;
 
 			case 30:
@@ -3929,7 +3932,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					*tables = where_clause[i] = 0;
-					res = oph_filter_metadata_value("key1|key2", "value1|value2", NULL, tables, where_clause, NULL, 0, 0);
+					res = oph_filter_metadata_value("key1|key2", "value1|value2", &oDB, tables, where_clause, NULL, 0, 0);
 					if (!res)
 						break;
 				}
@@ -3940,26 +3943,26 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						tables[i] = ' ';
 					*where_clause = tables[i] = 0;
-					res = oph_filter_metadata_value("key1|key2", "value1|value2", NULL, tables, where_clause, NULL, 0, 0);
+					res = oph_filter_metadata_value("key1|key2", "value1|value2", &oDB, tables, where_clause, NULL, 0, 0);
 					if (!res)
 						break;
 				}
 				break;
 
 			case 32:
-				res = oph_filter_path("", "yes", "2", sessionid, NULL, tables, where_clause, NULL);
+				res = oph_filter_path("", "yes", "2", sessionid, &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 33:
-				res = oph_filter_path("/", "yes", "2", sessionid, NULL, tables, where_clause, NULL);
+				res = oph_filter_path("/", "yes", "2", sessionid, &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 34:
-				res = oph_filter_path("/123/", "yes", "2", NULL, NULL, tables, where_clause, NULL);
+				res = oph_filter_path("/123/", "yes", "2", NULL, &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 35:
-				res = oph_filter_path("/123/", "yes", "2", sessionid, NULL, tables, where_clause, NULL);
+				res = oph_filter_path("/123/", "yes", "2", sessionid, &oDB, tables, where_clause, NULL, 0);
 				break;
 
 			case 36:
@@ -3967,7 +3970,7 @@ int _check_oph_server(const char *function, int option)
 					for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 						where_clause[i] = ' ';
 					where_clause[i] = 0;
-					res = oph_filter_path("/123/path/to/container", "yes", "2", sessionid, NULL, tables, where_clause, NULL);
+					res = oph_filter_path("/123/path/to/container", "yes", "2", sessionid, &oDB, tables, where_clause, NULL, 0);
 					if (!res)
 						break;
 				}
@@ -3985,7 +3988,7 @@ int _check_oph_server(const char *function, int option)
 						for (i = 0; i < OPH_MAX_STRING_SIZE - j - 2; ++i)
 							where_clause[i] = ' ';
 						*tables = where_clause[i] = 0;
-						res = oph_filter_free_kvp(task_tbl, NULL, tables, where_clause, NULL, 0);
+						res = oph_filter_free_kvp(task_tbl, &oDB, tables, where_clause, NULL, 0);
 						if (!res)
 							break;
 					}
@@ -3994,15 +3997,15 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 38:
-				res = _oph_filter(NULL, NULL, NULL, NULL, NULL, NULL);
+				res = _oph_filter(NULL, NULL, NULL, NULL, &oDB, NULL);
 				break;
 
 			case 39:
-				res = _oph_filter(NULL, "", NULL, "", NULL, NULL);
+				res = _oph_filter(NULL, "", NULL, "", &oDB, NULL);
 				break;
 
 			case 40:
-				res = _oph_filter(NULL, query, " path ", sessionid, NULL, NULL);
+				res = _oph_filter(NULL, query, " path ", sessionid, &oDB, NULL);
 				break;
 
 			case 41:
@@ -4012,7 +4015,7 @@ int _check_oph_server(const char *function, int option)
 					if (!task_tbl)
 						break;
 					hashtbl_insert(task_tbl, OPH_MF_ARG_LEVEL, "=");
-					res = _oph_filter(task_tbl, query, "/123/", sessionid, NULL, NULL);
+					res = _oph_filter(task_tbl, query, "/123/", sessionid, &oDB, NULL);
 					hashtbl_destroy(task_tbl);
 				}
 				break;
@@ -4024,7 +4027,7 @@ int _check_oph_server(const char *function, int option)
 					if (!task_tbl)
 						break;
 					hashtbl_insert(task_tbl, OPH_MF_ARG_PARENT, "////");
-					res = _oph_filter(task_tbl, query, "/123/", sessionid, NULL, NULL);
+					res = _oph_filter(task_tbl, query, "/123/", sessionid, &oDB, NULL);
 					hashtbl_destroy(task_tbl);
 				}
 				break;
@@ -4036,7 +4039,7 @@ int _check_oph_server(const char *function, int option)
 					if (!task_tbl)
 						break;
 					hashtbl_insert(task_tbl, OPH_MF_ARG_DATACUBE_FILTER, "1:2:3:4:5");
-					res = _oph_filter(task_tbl, query, "/123/", sessionid, NULL, NULL);
+					res = _oph_filter(task_tbl, query, "/123/", sessionid, &oDB, NULL);
 					hashtbl_destroy(task_tbl);
 				}
 				break;
@@ -4048,7 +4051,7 @@ int _check_oph_server(const char *function, int option)
 					if (!task_tbl)
 						break;
 					hashtbl_insert(task_tbl, OPH_MF_ARG_CONTAINER_PID, "////");
-					res = _oph_filter(task_tbl, query, "/123/", sessionid, NULL, NULL);
+					res = _oph_filter(task_tbl, query, "/123/", sessionid, &oDB, NULL);
 					hashtbl_destroy(task_tbl);
 				}
 				break;
@@ -4064,7 +4067,7 @@ int _check_oph_server(const char *function, int option)
 						break;
 					hashtbl_insert(task_tbl, OPH_MF_ARG_METADATA_KEY, "key");
 					hashtbl_insert(task_tbl, OPH_MF_ARG_METADATA_VALUE, "value|value");
-					res = _oph_filter(task_tbl, query, "/123/", sessionid, NULL, NULL);
+					res = _oph_filter(task_tbl, query, "/123/", sessionid, &oDB, NULL);
 					hashtbl_destroy(task_tbl);
 				}
 				break;

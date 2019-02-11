@@ -408,30 +408,52 @@ int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 
 mongoc_collection_t *oph_mongoc_client_get_collection(mongoc_client_t * client, const char *db, const char *collection)
 {
-	return (mongoc_collection_t *) 1;
+	UNUSED(client);
+	UNUSED(db);
+	UNUSED(collection);
+
+	mongoc_collection_t *object = (mongoc_collection_t *) malloc(1);	// False struct (original is opaque)
+	if (!object)
+		return NULL;
+
+	return object;
 }
 
 void oph_mongoc_collection_destroy(mongoc_collection_t * collection)
 {
+	if (collection)
+		free(collection);
 }
 
 mongoc_cursor_t *oph_mongoc_collection_find(mongoc_collection_t * collection, const bson_t * query)
 {
+	UNUSED(collection);
+	UNUSED(query);
+
 	return NULL;
 }
 
 bool oph_mongoc_cursor_next(mongoc_cursor_t * cursor, bson_error_t * error, const bson_t ** bson)
 {
+	UNUSED(cursor);
+	UNUSED(error);
+	UNUSED(bson);
+
 	return false;
 }
 
 bool oph_mongoc_cursor_error(mongoc_cursor_t * cursor, bson_error_t * error)
 {
+	UNUSED(cursor);
+	UNUSED(error);
+
 	return true;
 }
 
 void oph_mongoc_cursor_destroy(mongoc_cursor_t * cursor)
 {
+	if (cursor)
+		free(cursor);
 }
 
 #endif
