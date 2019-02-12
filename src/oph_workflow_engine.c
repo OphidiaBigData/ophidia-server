@@ -4078,9 +4078,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							case OPH_WORKFLOW_EXIT_ACTION_DELETE:
 								strcpy(target, OPH_ARG_CUBE);
 								break;
-							case OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER:
-								strcpy(target, OPH_ARG_CONTAINER_PID);
-								break;
 							default:
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: unknown code for 'exit action'\n", ttype, jobid);
 								*target = 0;
@@ -4146,32 +4143,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 														return SOAP_OK;
 													}
 													oph_trash_append(wf->exit_cubes, NULL, strtol(objectid, NULL, 10));
-													pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype,
-													      jobid, objectid);
-													objectid = strrchr(output_objects, OPH_SEPARATOR_SUBPARAM_STR[0]);
-													if (objectid)
-														*objectid = 0;
-												}
-												while (objectid);
-												break;
-											}
-										case OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER:{
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to select containers for final operation\n",
-												      ttype, jobid, output_objects);
-												do {
-													objectid = strrchr(output_objects, OPH_SEPARATOR_FOLDER[0]);
-													if (!objectid)
-														break;
-													objectid++;
-													if (!wf->exit_containers && oph_trash_create(&wf->exit_containers)) {
-														pmesg(LOG_WARNING, __FILE__, __LINE__,
-														      "%c%d: error in allocating the list of exit containers\n", ttype, jobid);
-														free(output_objects);
-														pthread_mutex_unlock(&global_flag);
-														*response = OPH_SERVER_SYSTEM_ERROR;
-														return SOAP_OK;
-													}
-													oph_trash_append(wf->exit_containers, NULL, strtol(objectid, NULL, 10));
 													pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to KV pair for final operation\n", ttype,
 													      jobid, objectid);
 													objectid = strrchr(output_objects, OPH_SEPARATOR_SUBPARAM_STR[0]);
@@ -4445,56 +4416,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 				oph_trash_destroy(wf->exit_cubes);
 				wf->exit_cubes = NULL;
-			} else if (wf->exit_containers) {
-
-				// Warning:only one container can be deleted
-				unsigned int size = 0;
-				oph_trash_size(wf->exit_containers, NULL, &size);
-				if (size) {
-
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
-					if (size > 1)
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: only the first container will be considered even if %d containers was created\n", ttype, jobid, size);
-
-					wf->tasks[wf->tasks_num].name = strdup(OPH_WORKFLOW_FINAL_TASK);
-					wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETECONTAINER);
-					wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
-
-					int kk = wf->tasks[wf->tasks_num].arguments_num, incr = 3;	// Specific arguments for this final operation (see below)
-					if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, incr) || (kk != incr + wf->tasks[wf->tasks_num].arguments_num)) {
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
-						*response = OPH_SERVER_SYSTEM_ERROR;
-						error = 1;
-					} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num), incr)
-						   || (kk != wf->tasks[wf->tasks_num].arguments_num)) {
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
-						*response = OPH_SERVER_SYSTEM_ERROR;
-						error = 1;
-					} else {
-						kk -= incr;
-						int containerid = 0;
-						oph_trash_extract(wf->exit_containers, NULL, &containerid);
-						if (containerid) {
-							snprintf(tmp, OPH_MAX_STRING_SIZE, "%s/%d", oph_web_server, containerid);
-							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER_PID);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(tmp);
-							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NULL);
-							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_FORCE);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_YES);
-							final_task = 1;
-							final = 0;
-						} else {
-							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in extracting the pid of container\n", ttype, jobid);
-							*response = OPH_SERVER_SYSTEM_ERROR;
-							error = 1;
-						}
-					}
-				} else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: no container has been created during the execution of workflow '%s'", ttype, jobid, wf->name);
-
-				oph_trash_destroy(wf->exit_containers);
-				wf->exit_containers = NULL;
 			} else {
 				oph_drop_from_job_list(state->job_info, item, prev);
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: workflow '%s' dropped from the list\n", ttype, jobid, wf->name);

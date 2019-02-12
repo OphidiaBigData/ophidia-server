@@ -583,8 +583,6 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_NOP;
 			else if (!strcmp(on_exit_task, OPH_WORKFLOW_DELETE))
 				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_DELETE;
-			else if (!strcmp(on_exit_task, OPH_WORKFLOW_DELETECONTAINER))
-				(*workflow)->tasks[i].exit_action = OPH_WORKFLOW_EXIT_ACTION_DELETECONTAINER;
 			else {
 				oph_workflow_free(*workflow);
 				if (jansson)
@@ -940,7 +938,6 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->response = NULL;
 	(*workflow)->command = NULL;
 	(*workflow)->exit_cubes = NULL;
-	(*workflow)->exit_containers = NULL;
 	(*workflow)->workflowid = -1;
 	(*workflow)->vars = NULL;
 	(*workflow)->stack = NULL;
