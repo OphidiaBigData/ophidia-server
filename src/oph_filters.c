@@ -242,68 +242,6 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 	return OPH_MF_OK;
 }
 
-int oph_filter_container(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
-{
-	UNUSED(tables);
-
-	if (!value || !strlen(value))
-		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
-
-	char condition[OPH_MAX_STRING_SIZE];
-	unsigned int s;
-
-	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
-			return OPH_MF_ERROR;
-		strncat(where_clause, OPH_FILTER_AND1, s);
-	}
-
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.containername%s='%s'", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT1 : "", value);
-
-	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
-		return OPH_MF_ERROR;
-	strncat(where_clause, condition, s);
-
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
-	return OPH_MF_OK;
-}
-
-int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
-{
-	UNUSED(tables);
-
-	if (!value || !strlen(value))
-		return OPH_MF_OK;
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Process argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
-
-	if (strncasecmp(value, oph_web_server, strlen(oph_web_server))) {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
-		return OPH_MF_ERROR;
-	}
-	char *pointer = value + strlen(oph_web_server);
-	if (*pointer != OPH_MF_ROOT_FOLDER[0]) {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Wrong argument '%s'\n", value);
-		return OPH_MF_ERROR;
-	}
-	pointer++;
-	int idcontainer = (int) strtol(pointer, NULL, 10);
-	char condition[OPH_MAX_STRING_SIZE];
-	unsigned int s;
-	if (*where_clause) {
-		if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(OPH_FILTER_AND1))
-			return OPH_MF_ERROR;
-		strncat(where_clause, OPH_FILTER_AND1, s);
-	}
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idcontainer%s='%d'", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT1 : "", idcontainer);
-	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
-		return OPH_MF_ERROR;
-	strncat(where_clause, condition, s);
-
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Processed argument %s%s='%s'\n", OPH_MF_ARG_CONTAINER_PID, not_clause ? OPH_MF_SYMBOL_NOT : "", value);
-	return OPH_MF_OK;
-}
-
 int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
 {
 	if (!value || !strlen(value))
@@ -563,8 +501,6 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 
 	char tables[OPH_MAX_STRING_SIZE], where_clause[OPH_MAX_STRING_SIZE];
 
-	char *container = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER) : NULL;
-	char *container_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER "" OPH_MF_SYMBOL_NOT) : NULL;
 	char *path = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH) : cwd;
 	char *path_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH "" OPH_MF_SYMBOL_NOT) : NULL;
 
@@ -630,13 +566,6 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 			return OPH_MF_ERROR;
 		if (oph_filter_using_subset(value = hashtbl_get(task_tbl, OPH_MF_ARG_DATACUBE_FILTER), tables, where_clause, flag, 0))
 			return OPH_MF_ERROR;
-		if (container && strlen(container)) {
-			if (oph_filter_container(container, tables, where_clause, flag, 0))
-				return OPH_MF_ERROR;
-		} else {
-			if (oph_filter_container_pid(value = hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER_PID), tables, where_clause, flag, 0))
-				return OPH_MF_ERROR;
-		}
 		metadata_key = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_KEY);
 		if (metadata_key && strlen(metadata_key)) {
 			metadata_value = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE);
@@ -679,13 +608,6 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 			return OPH_MF_ERROR;
 		if (oph_filter_using_subset(value = hashtbl_get(task_tbl, OPH_MF_ARG_DATACUBE_FILTER "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
 			return OPH_MF_ERROR;
-		if (container_n && strlen(container_n)) {
-			if (oph_filter_container(container_n, tables, where_clause, flag, 1))
-				return OPH_MF_ERROR;
-		} else {
-			if (oph_filter_container_pid(value = hashtbl_get(task_tbl, OPH_MF_ARG_CONTAINER_PID "" OPH_MF_SYMBOL_NOT), tables, where_clause, flag, 1))
-				return OPH_MF_ERROR;
-		}
 		metadata_key = hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_KEY "" OPH_MF_SYMBOL_NOT);
 		if (metadata_key && strlen(metadata_key)) {
 			if (hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE) || hashtbl_get(task_tbl, OPH_MF_ARG_METADATA_VALUE "" OPH_MF_SYMBOL_NOT)) {
