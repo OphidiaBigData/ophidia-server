@@ -143,7 +143,7 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 	}
 
 	int unsigned s;
-	int idcontainer = (int) strtol(pointer1, NULL, 10), idparent = (int) strtol(pointer2, NULL, 10);
+	int idparent = (int) strtol(pointer2, NULL, 10);
 
 	if (*tables) {
 		if ((s = OPH_MAX_STRING_SIZE - strlen(tables) - 1) <= 1)
@@ -160,8 +160,8 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 		strncat(where_clause, OPH_FILTER_AND1, s);
 	}
 	snprintf(condition, OPH_MAX_STRING_SIZE,
-		 "%s.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube%s='%d' AND datacubep.idcontainer='%d'",
-		 OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT1 : "", idparent, idcontainer);
+		 "%s.iddatacube=taskp.idoutputcube AND taskp.idtask=hasinputp.idtask AND hasinputp.iddatacube=datacubep.iddatacube AND datacubep.iddatacube%s='%d'", OPH_MF_ARG_DATACUBE,
+		 not_clause ? OPH_FILTER_NOT1 : "", idparent);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -405,7 +405,7 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 			return OPH_MF_ERROR;
 		strncat(where_clause, not_clause ? OPH_FILTER_AND1 : OPH_FILTER_OR, s);
 	}
-	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idfolder%s='%d'", OPH_MF_ARG_CONTAINER, not_clause ? OPH_FILTER_NOT1 : "", folder_id);
+	snprintf(condition, OPH_MAX_STRING_SIZE, "%s.idfolder%s='%d'", OPH_MF_ARG_DATACUBE, not_clause ? OPH_FILTER_NOT1 : "", folder_id);
 	if ((s = OPH_MAX_STRING_SIZE - strlen(where_clause) - 1) <= strlen(condition))
 		return OPH_MF_ERROR;
 	strncat(where_clause, condition, s);
@@ -505,8 +505,8 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	char *path_n = task_tbl ? hashtbl_get(task_tbl, OPH_MF_ARG_PATH "" OPH_MF_SYMBOL_NOT) : NULL;
 
 	// Basic tables and where_clause
-	snprintf(tables, OPH_MAX_STRING_SIZE, "%s,%s", OPH_MF_ARG_DATACUBE, OPH_MF_ARG_CONTAINER);
-	snprintf(where_clause, OPH_MAX_STRING_SIZE, "%s.idcontainer=%s.idcontainer", OPH_MF_ARG_DATACUBE, OPH_MF_ARG_CONTAINER);
+	snprintf(tables, OPH_MAX_STRING_SIZE, "%s", OPH_MF_ARG_DATACUBE);
+	*where_clause = 0;
 
 	// Filter on current session
 	char ext_path[OPH_MAX_STRING_SIZE], ext_path_n[OPH_MAX_STRING_SIZE];
