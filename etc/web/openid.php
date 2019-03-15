@@ -138,7 +138,7 @@ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
 					session_destroy();
 			} else {
 				$continue = true;
-				$nonce = openssl_random_pseudo_bytes(10);
+				$nonce = hexdec(bin2hex(openssl_random_pseudo_bytes(4)));
 				header('Location: '.$oph_openid_endpoint.'/authorize?response_type=code&client_id='.$oph_openid_client_id.'&scope=openid+profile+offline_access&redirect_uri='.$oph_web_server_secure.'/openid.php&nonce='.$nonce);
 			}
 		}
