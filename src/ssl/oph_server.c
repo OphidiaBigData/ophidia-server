@@ -131,6 +131,7 @@ char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
+char *oph_openid_user = 0;
 #endif
 #ifdef OPH_AAA_SUPPORT
 char *oph_aaa_endpoint = 0;
@@ -332,6 +333,7 @@ void set_global_values(const char *configuration_file)
 	oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
 	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
+	oph_openid_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_USER);
 #endif
 #ifdef OPH_AAA_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_TOKEN_CHECK_TIME)))

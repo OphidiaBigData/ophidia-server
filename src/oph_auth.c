@@ -88,6 +88,7 @@ extern char *oph_openid_client_id;
 extern char *oph_openid_client_secret;
 extern unsigned int oph_openid_token_timeout;
 extern unsigned int oph_openid_token_check_time;
+extern char *oph_openid_user;
 
 char *oph_openid_endpoint_public_key = NULL;
 
@@ -1103,8 +1104,20 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 		return OPH_SERVER_ERROR;
 	}
 
+	if (oph_openid_user) {
+
+		if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_SUB)) {
+		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_PREFERRED)) {
+		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_NAME)) {
+		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_EMAIL)) {
+		} else {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: wrong '%s'\n", OPH_SERVER_CONF_OPENID_USER);
+			return OPH_SERVER_ERROR;
+		}
+	}
+
 	char *error = NULL, *subject_identifier = NULL;
-	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, "sub", &subject_identifier);
+	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, oph_openid_user ? oph_openid_user : OPH_SERVER_CONF_OPENID_USER_SUB, &subject_identifier);
 
 	if (error) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET returns an error code\n");
@@ -1124,6 +1137,8 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 	}
 
 	json_decref(userinfo_json);
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: retrieve username '%s'\n", *userid);
 
 	return OPH_SERVER_OK;
 }
