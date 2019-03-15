@@ -1104,18 +1104,6 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 		return OPH_SERVER_ERROR;
 	}
 
-	if (oph_openid_user) {
-
-		if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_SUB)) {
-		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_PREFERRED)) {
-		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_NAME)) {
-		} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_EMAIL)) {
-		} else {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: wrong '%s'\n", OPH_SERVER_CONF_OPENID_USER);
-			return OPH_SERVER_ERROR;
-		}
-	}
-
 	char *error = NULL, *subject_identifier = NULL;
 	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, oph_openid_user ? oph_openid_user : OPH_SERVER_CONF_OPENID_USER_SUB, &subject_identifier);
 

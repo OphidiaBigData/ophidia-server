@@ -334,6 +334,14 @@ void set_global_values(const char *configuration_file)
 	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
 	oph_openid_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_USER);
+	if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_SUB)) {
+	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_PREFERRED)) {
+	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_NAME)) {
+	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_EMAIL)) {
+	} else {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_USER, OPH_SERVER_CONF_OPENID_USER_SUB);
+		oph_openid_user = NULL;
+	}
 #endif
 #ifdef OPH_AAA_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AAA_TOKEN_CHECK_TIME)))
