@@ -131,7 +131,8 @@ char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
-char *oph_openid_user = 0;
+char *oph_openid_user_name = 0;
+char oph_openid_allow_local_user = 0;
 #endif
 #ifdef OPH_AAA_SUPPORT
 char *oph_aaa_endpoint = 0;
@@ -333,14 +334,20 @@ void set_global_values(const char *configuration_file)
 	oph_openid_endpoint = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ENDPOINT);
 	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
-	oph_openid_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_USER);
-	if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_SUB)) {
-	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_PREFERRED)) {
-	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_NAME)) {
-	} else if (!strcmp(oph_openid_user, OPH_SERVER_CONF_OPENID_USER_EMAIL)) {
+	oph_openid_user_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_USER_NAME);
+	if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_SUB)) {
+	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_PREFERRED)) {
+	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_NAME)) {
+	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_EMAIL)) {
 	} else {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_USER, OPH_SERVER_CONF_OPENID_USER_SUB);
-		oph_openid_user = NULL;
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_USER_NAME, OPH_SERVER_CONF_OPENID_USER_NAME_SUB);
+		oph_openid_user_name = NULL;
+	}
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ALLOW_LOCAL_USER))) {
+		if (!strcmp(value, OPH_COMMON_YES))
+			oph_openid_allow_local_user = 1;
+		else if (strcmp(value, OPH_COMMON_NO))
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_ALLOW_LOCAL_USER, OPH_COMMON_NO);
 	}
 #endif
 #ifdef OPH_AAA_SUPPORT

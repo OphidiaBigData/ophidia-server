@@ -68,6 +68,10 @@ extern pthread_cond_t termination_flag;
 extern pthread_mutex_t curl_flag;
 #endif
 
+#ifdef OPH_OPENID_SUPPORT
+extern char oph_openid_allow_local_user;
+#endif
+
 void free_string_vector(char **ctime, int n)
 {
 	if (ctime) {
@@ -270,7 +274,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 #ifdef INTERFACE_TYPE_IS_SSL
 	int free_userid = 0, free_actual_userid = 0;
-	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE], *actual_userid = NULL;
+	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE], *actual_userid = NULL, userid_exist = 0;
 	*_new_token = 0;
 	state->authorization = OPH_AUTH_WRITE;
 
@@ -285,14 +289,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				if (oph_auth_is_user_black_listed(userid)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
 					result = OPH_SERVER_AUTH_ERROR;
-				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid))) {
+				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid, &userid_exist))) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
 					switch (token_type) {
 						case 1:
 							{
 								oph_argument *token_args = NULL;
 								if (!(result = oph_auth_read_token(soap->passwd, &token_args)))
-									result = oph_auth_vo(token_args, &actual_userid);
+									result = oph_auth_vo(token_args, &actual_userid);	// Return the userid associated with VO in configuration file
 								oph_cleanup_args(&token_args);
 								break;
 							}
@@ -307,8 +311,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized globally\n", jobid, userid, result ? "not " : "");
 				} else
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
-				if (actual_userid)
+#ifdef OPH_OPENID_SUPPORT
+				if (actual_userid && userid_exist && oph_openid_allow_local_user) {
+					free(actual_userid);
+					actual_userid = NULL;
+				}
+#endif
+				if (actual_userid) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: cache user '%s' as '%s'\n", jobid, userid, actual_userid);
+					if (userid_exist)
+						pmesg(strcmp(userid, actual_userid) ? LOG_WARNING : LOG_DEBUG, __FILE__, __LINE__, "R%d: found user '%s' in local authorization list\n", jobid, userid);
+				}
 				oph_auth_enable_user(userid, result, actual_userid);
 				if (actual_userid)
 					free_actual_userid = 1;
@@ -322,7 +335,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		free_userid = 1;
 	} else
-		result = oph_auth_user(userid, soap->passwd, _host, NULL);
+		result = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
 
 	pthread_mutex_unlock(&global_flag);
 

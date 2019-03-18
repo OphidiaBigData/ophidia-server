@@ -136,7 +136,7 @@ int oph_auth_vo(oph_argument * args, char **username);
 int oph_auth_user_enabling(const char *userid, int *result, char **actual_userid);
 int oph_auth_enable_user(const char *userid, int result, char *actual_userid);
 int oph_auth_save_token(const char *access_token, const char *refresh_token, const char *userinifo);
-int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_username);
+int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_userid, char *usedid_exist);
 int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb);
 int oph_save_user(const char *userid, oph_argument * args);
 int oph_auth_session(const char *userid, const char *sessionid, const char *serverid, oph_argument ** args, int *active, oph_auth_user_role * role);

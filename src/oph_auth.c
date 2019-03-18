@@ -88,7 +88,7 @@ extern char *oph_openid_client_id;
 extern char *oph_openid_client_secret;
 extern unsigned int oph_openid_token_timeout;
 extern unsigned int oph_openid_token_check_time;
-extern char *oph_openid_user;
+extern char *oph_openid_user_name;
 
 char *oph_openid_endpoint_public_key = NULL;
 
@@ -1105,7 +1105,7 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 	}
 
 	char *error = NULL, *subject_identifier = NULL;
-	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, oph_openid_user ? oph_openid_user : OPH_SERVER_CONF_OPENID_USER_SUB, &subject_identifier);
+	json_unpack(userinfo_json, "{s?s,s?s}", "error", &error, oph_openid_user_name ? oph_openid_user_name : OPH_SERVER_CONF_OPENID_USER_NAME_SUB, &subject_identifier);
 
 	if (error) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET returns an error code\n");
@@ -1882,10 +1882,14 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_username)
+int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_userid, char *userid_exist)
 {
 	if (!userid || !passwd)
 		return OPH_SERVER_NULL_POINTER;
+	if (actual_userid)
+		*actual_userid = NULL;
+	if (userid_exist)
+		*userid_exist = 0;
 
 	char oph_auth_file[OPH_MAX_STRING_SIZE], deadline[OPH_MAX_STRING_SIZE];
 	snprintf(oph_auth_file, OPH_MAX_STRING_SIZE, OPH_AUTH_FILE, oph_auth_location);
@@ -1919,6 +1923,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 					result = OPH_SERVER_AUTH_ERROR;
 					break;
 				}
+				if (userid_exist)
+					*userid_exist = 1;
 				password = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
 				if (!password) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_auth_file);
@@ -1937,8 +1943,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 #endif
 				else if (!count)
 					oph_add_to_bl(&bl_head, userid, host);
-				if (!result && actual_username)
-					*actual_username = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
+				if (!result && actual_userid)
+					*actual_userid = strtok_r(NULL, OPH_SEPARATOR_BASIC, &savepointer);
 				break;
 			}
 		}
