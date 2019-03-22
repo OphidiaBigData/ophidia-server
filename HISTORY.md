@@ -1,4 +1,11 @@
 
+## New features
+
+### Changed:
+
+- Default value of parameter 'action' of OPH_MANAGE_SESSION
+
+
 ## v1.5.0 - 2019-01-24
 
 ### Fixed:
