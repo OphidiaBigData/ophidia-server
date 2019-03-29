@@ -676,7 +676,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							break;
 						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
 					}
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: found %d users in clause %s\n", jobid, nnee, OPH_OPERATOR_PARAMETER_ENABLE);
+					if (!nnee) {
+						free(value_copy);
+						continue;
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: found %d user%s in clause %s\n", jobid, nnee, nnee == 1 ? "" : "s", OPH_OPERATOR_PARAMETER_ENABLE);
 					user_to_be_enabled = (char **) calloc(nnee, sizeof(char *));
 					if (!user_to_be_enabled) {
 						free(value_copy);
@@ -699,8 +703,12 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							break;
 						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
 					}
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: found %d users in clause %s\n", jobid, nnee, OPH_OPERATOR_PARAMETER_DISABLE);
-					user_to_be_disabled = (char **) calloc(nnee, sizeof(char *));
+					if (!nndd) {
+						free(value_copy);
+						continue;
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: found %d user%s in clause %s\n", jobid, nndd, nndd == 1 ? "" : "s", OPH_OPERATOR_PARAMETER_DISABLE);
+					user_to_be_disabled = (char **) calloc(nndd, sizeof(char *));
 					if (!user_to_be_disabled) {
 						free(value_copy);
 						nndd = 0;
@@ -717,8 +725,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		if (user_to_be_enabled) {
 
 			if ((nnee == 1) && !strcmp(user_to_be_enabled[0], OPH_OPERATOR_SERVICE_PARAMETER_ALL)) {	// Enable all users
-
-				// TODO
+				pthread_mutex_lock(&global_flag);
+				result = oph_enable_all_users(1);
+				pthread_mutex_unlock(&global_flag);
+				if (result)
+					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to set '%s' for all users\n", jobid, OPH_USER_ENABLED);
 			}
 
 			while (nnee)
@@ -761,12 +772,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		if (user_to_be_disabled) {
 
 			if ((nndd == 1) && !strcmp(user_to_be_disabled[0], OPH_OPERATOR_SERVICE_PARAMETER_ALL)) {	// Disable all users
-
-				// TODO
+				pthread_mutex_lock(&global_flag);
+				result = oph_enable_all_users(0);
+				pthread_mutex_unlock(&global_flag);
+				if (result)
+					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to set '%s' for all users\n", jobid, OPH_USER_ENABLED);
 			}
 
 			while (nndd)
-				if (user_to_be_enabled[--nndd]) {
+				if (user_to_be_disabled[--nndd]) {
 					if (strcmp(user_to_be_disabled[nndd], OPH_OPERATOR_SERVICE_PARAMETER_ALL)) {
 						user_args = NULL;
 						oph_init_args(&user_args);
@@ -2048,7 +2062,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	if (current_service_status) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_ENABLED);
-		if (oph_get_arg(user_args, OPH_USER_ENABLED, tmp) && !strcasecmp(tmp, OPH_COMMON_NO))
+		if (!oph_get_arg(user_args, OPH_USER_ENABLED, tmp) && !strcasecmp(tmp, OPH_COMMON_NO))
 			current_service_status = 0;
 	}
 

@@ -2055,6 +2055,15 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		else
 			*args = tmp;
 		tail = tmp;
+		tmp = (oph_argument *) malloc(sizeof(oph_argument));
+		tmp->key = strdup(OPH_USER_ENABLED);
+		tmp->value = strdup(OPH_DEFAULT_YES);
+		tmp->next = NULL;
+		if (tail)
+			tail->next = tmp;
+		else
+			*args = tmp;
+		tail = tmp;
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Saving configuration data of '%s'\n", userid);
 		if (*args && oph_save_user(userid, *args)) {
@@ -2633,4 +2642,63 @@ int oph_auth_autocheck_tokens()
 #endif
 
 	return OPH_SERVER_OK;
+}
+
+int oph_enable_all_users(char flag)
+{
+	int result = OPH_SERVER_OK, rresult;
+	oph_argument *args = NULL;
+	struct dirent *entry, save_entry;
+	char dirname[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE], *userid = NULL;
+	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_USERS_DIR, oph_auth_location);
+	struct stat file_stat;
+
+	DIR *dirp = opendir(dirname);
+	if (!dirp)
+		return OPH_SERVER_IO_ERROR;
+
+	while (!readdir_r(dirp, &save_entry, &entry) && entry) {
+
+		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+			continue;
+
+		snprintf(filename, OPH_MAX_STRING_SIZE, "%s/%s", dirname, entry->d_name);
+		lstat(filename, &file_stat);
+		if (!S_ISDIR(file_stat.st_mode))
+			continue;
+
+		userid = entry->d_name;
+
+		oph_init_args(&args);
+		rresult = oph_load_user(userid, &args, NULL);
+		if (rresult) {
+			oph_cleanup_args(&args);
+			if (!result)
+				result = rresult;
+			continue;
+		}
+		if (!oph_get_arg(args, OPH_USER_ENABLED, filename) && !strncasecmp(filename, flag ? OPH_COMMON_YES : OPH_COMMON_NO, OPH_MAX_STRING_SIZE)) {
+			oph_cleanup_args(&args);
+			continue;
+		}
+		rresult = oph_set_arg(&args, OPH_USER_ENABLED, flag ? OPH_COMMON_YES : OPH_COMMON_NO);
+		if (rresult) {
+			oph_cleanup_args(&args);
+			if (!result)
+				result = rresult;
+			continue;
+		}
+		rresult = oph_save_user(userid, args);
+		if (rresult) {
+			oph_cleanup_args(&args);
+			if (!result)
+				result = rresult;
+			continue;
+		}
+		oph_cleanup_args(&args);
+	}
+
+	closedir(dirp);
+
+	return result;
 }
