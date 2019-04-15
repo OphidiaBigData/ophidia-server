@@ -3027,8 +3027,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					time(&nowtime);
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
-						wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].light_tasks[light_task_index].idjob, wf->idjob,
+						wf->tasks[task_index].operator, wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
 						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
@@ -3787,7 +3787,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (wf->tasks[wf->tasks_num].name)
 					update_wf_data = final = 1;
 				// Log into TASK_LOGFILE
-				if (task_logfile && !wf->tasks[task_index].light_tasks_num) {
+				if (task_logfile) {
 					time_t nowtime;
 					struct tm nowtm;
 					struct timeval tv;
@@ -3799,7 +3799,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
-						wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						wf->tasks[task_index].light_tasks_num ? 0 : wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
 						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
