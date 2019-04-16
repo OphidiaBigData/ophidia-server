@@ -35,6 +35,7 @@
 #define OPH_ARG_CONTAINER "container"
 #define OPH_ARG_CONTAINER_PID "container_pid"
 #define OPH_ARG_CUBE "cube"
+#define OPH_ARG_CUBES "cubes"
 #define OPH_ARG_CWD "cwd"
 #define OPH_ARG_CDD "cdd"
 #define OPH_ARG_SRC_PATH "src_path"
@@ -61,7 +62,7 @@
 #define OPH_ARG_LINK "link"
 #define OPH_ARG_OFFSET "offset"
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
 #define OPH_ARG_USERINFO "userinfo"

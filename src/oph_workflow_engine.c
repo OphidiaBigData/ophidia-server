@@ -809,14 +809,21 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	}
 
 	int res = OPH_SERVER_OK;
-	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *cdd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0;
+	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *cdd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0, ncubes = 0;
 	for (i = 0; i < task->arguments_num; ++i) {
 		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
 			src_path_key = task->arguments_keys[i];
 			src_path = task->arguments_values[i];
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBE)) {
+			if (!ncubes) {
+				datacube_input_key = task->arguments_keys[i];
+				datacube_input = task->arguments_values[i];
+				ncubes = 1;
+			}
+		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBES)) {
 			datacube_input_key = task->arguments_keys[i];
 			datacube_input = task->arguments_values[i];
+			ncubes = 2;
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_MEASURE)) {
 			measure_key = task->arguments_keys[i];
 			measure = task->arguments_values[i];
@@ -842,7 +849,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: variable substitution for task '%s'\n", ttype, jobid, task->name);
-		if (oph_workflow_var_substitute(wf, task_index, -1, &target_base, NULL, src_path ? OPH_ARG_SRC_PATH : OPH_ARG_CUBE)) {
+		if (oph_workflow_var_substitute(wf, task_index, -1, &target_base, NULL, src_path ? OPH_ARG_SRC_PATH : (ncubes > 1 ? OPH_ARG_CUBES : OPH_ARG_CUBE))) {
 			free(target_base);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in variable substitution for task '%s'\n", ttype, jobid, task->name);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -867,37 +874,69 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			int j;
 			if (running) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation\n", ttype, jobid, task->name);
-				task->light_tasks_num = task->residual_light_tasks_num = number;
-				task->light_tasks = (oph_workflow_light_task *) malloc(number * sizeof(oph_workflow_light_task));
 
-				int add_measure = src_path && !measure_key && measure_name, arguments_num;
-				for (i = 0; i < (int) number; ++i) {
-					arguments_num = task->arguments_num + (add_measure && measure_name[i] ? 1 : 0);
-					task->light_tasks[i].idjob = 0;
-					task->light_tasks[i].markerid = 0;
-					task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
-					task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
-					task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
-					task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
-					task->light_tasks[i].arguments_num = arguments_num;
-					task->light_tasks[i].response = NULL;
+				if (!src_path && (ncubes > 1)) {
+
+					// Build a string with the list of datacubes
+					int n = 0;
+					char datacube_list[number * OPH_SHORT_STRING_SIZE];
+					for (i = 0; i < (int) number; ++i)
+						n += snprintf(datacube_list + n, OPH_SHORT_STRING_SIZE, "%s%s", i ? OPH_SEPARATOR_SUBPARAM_STR : "", datacube_inputs[i]);
+
+					task->light_tasks_num = task->residual_light_tasks_num = 1;
+					task->light_tasks = (oph_workflow_light_task *) malloc(sizeof(oph_workflow_light_task));
+
+					task->light_tasks[0].idjob = 0;
+					task->light_tasks[0].markerid = 0;
+					task->light_tasks[0].status = OPH_ODB_STATUS_UNKNOWN;
+					task->light_tasks[0].ncores = task->ncores;	// Basic policy for ncores
+					task->light_tasks[0].arguments_keys = (char **) malloc(task->arguments_num * sizeof(char *));
+					task->light_tasks[0].arguments_values = (char **) malloc(task->arguments_num * sizeof(char *));
+					task->light_tasks[0].arguments_num = task->arguments_num;
+					task->light_tasks[0].response = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
-						task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
-						if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
-							task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
-						else if (task->arguments_keys[j] == measure_key) {
-							if (measure_name && measure_name[i])
-								task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
-							else
-								task->light_tasks[i].arguments_values[j] = strdup(measure);
-						} else
-							task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
+						task->light_tasks[0].arguments_keys[j] = strdup(task->arguments_keys[j]);
+						if (task->arguments_keys[j] == datacube_input_key)
+							task->light_tasks[0].arguments_values[j] = strdup(datacube_list);
+						else
+							task->light_tasks[0].arguments_values[j] = strdup(task->arguments_values[j]);
 					}
-					if (add_measure && measure_name[i]) {
-						task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);
-						task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
+
+				} else {
+
+					task->light_tasks_num = task->residual_light_tasks_num = number;
+					task->light_tasks = (oph_workflow_light_task *) malloc(number * sizeof(oph_workflow_light_task));
+
+					int add_measure = src_path && !measure_key && measure_name, arguments_num;
+					for (i = 0; i < (int) number; ++i) {
+						arguments_num = task->arguments_num + (add_measure && measure_name[i] ? 1 : 0);
+						task->light_tasks[i].idjob = 0;
+						task->light_tasks[i].markerid = 0;
+						task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+						task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
+						task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
+						task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
+						task->light_tasks[i].arguments_num = arguments_num;
+						task->light_tasks[i].response = NULL;
+						for (j = 0; j < task->arguments_num; ++j) {
+							task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
+							if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
+								task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
+							else if (task->arguments_keys[j] == measure_key) {
+								if (measure_name && measure_name[i])
+									task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
+								else
+									task->light_tasks[i].arguments_values[j] = strdup(measure);
+							} else
+								task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
+						}
+						if (add_measure && measure_name[i]) {
+							task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);
+							task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
+						}
 					}
 				}
+
 				for (i = 0; i < (int) number; ++i)
 					if (datacube_inputs[i])
 						free(datacube_inputs[i]);
@@ -2680,7 +2719,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	char *ctmp, *sessionid = NULL;
 	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	char *access_token = NULL, *refresh_token = NULL, *userinfo = NULL;
 #endif
 	char **outputs_keys = NULL;
@@ -2710,7 +2749,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			sessionid = strdup(ctmp);
 		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
 			marker_id = strtol(ctmp, NULL, 10);
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 		else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
 			access_token = ctmp;
 		else if (!strncmp(aitem->key, OPH_ARG_REFRESH_TOKEN, OPH_MAX_STRING_SIZE))
@@ -2724,9 +2763,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		}
 	}
 
-#ifdef OPH_OPENID_ENDPOINT
+#ifdef OPH_OPENID_SUPPORT
 	if (access_token) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: found tokens to be saved\n", ttype, jobid);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: found tokens to be saved\n", ttype, jobid);
 		oph_auth_save_token(access_token, refresh_token, userinfo);
 		*response = OPH_SERVER_OK;
 		oph_cleanup_args(&args);
@@ -3027,8 +3066,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					time(&nowtime);
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
-						wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].light_tasks[light_task_index].idjob, wf->idjob,
+						wf->tasks[task_index].operator, wf->tasks[task_index].light_tasks[light_task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
 						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}
@@ -3787,7 +3826,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (wf->tasks[wf->tasks_num].name)
 					update_wf_data = final = 1;
 				// Log into TASK_LOGFILE
-				if (task_logfile && !wf->tasks[task_index].light_tasks_num) {
+				if (task_logfile) {
 					time_t nowtime;
 					struct tm nowtm;
 					struct timeval tv;
@@ -3799,7 +3838,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (localtime_r(&nowtime, &nowtm))
 						strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
 					fprintf(task_logfile, "%s\t%d\t%d\t%s\t%d\t%d\t%f\n", buffer, wf->tasks[task_index].idjob, wf->idjob, wf->tasks[task_index].operator,
-						wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
+						wf->tasks[task_index].light_tasks_num ? 0 : wf->tasks[task_index].ncores, status == OPH_ODB_STATUS_COMPLETED,
 						(double) tv.tv_sec + ((double) tv.tv_usec / 1000000.0) - wf->tasks[task_index].timestamp);
 					pthread_mutex_unlock(&curl_flag);
 				}

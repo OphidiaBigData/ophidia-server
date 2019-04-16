@@ -450,16 +450,15 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			}
 			success = 1;
 		}
-
-		if (!success) {
+		if (!success)
 			snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
-		}
-		if (!action) {
-			snprintf(error_message, OPH_MAX_STRING_SIZE, "Expected parameter '%s'!", OPH_ARG_ACTION);
-			success = 0;
-		}
+
+		char _action[OPH_SHORT_STRING_SIZE] = OPH_ARG_ACTION_VALUE_LIST;
+		if (!action)
+			action = _action;
+
 		// Commands for any user
-		else if (!strncasecmp(action, OPH_ARG_ACTION_VALUE_LIST, OPH_MAX_STRING_SIZE)) {
+		if (!strncasecmp(action, OPH_ARG_ACTION_VALUE_LIST, OPH_MAX_STRING_SIZE)) {
 			num_fields = 8;
 			if (success) {
 				// Header
