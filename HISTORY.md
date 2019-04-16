@@ -1,8 +1,18 @@
 
-## New features
+## v1.5.1 - 2019-04-16
+
+### Fixed:
+
+- Bug [#44](https://github.com/OphidiaBigData/ophidia-server/issues/44) related to OpenID token
+- Bug [#43](https://github.com/OphidiaBigData/ophidia-server/issues/43) when OPH_OS_USERNAME is not set
+
+### Added:
+
+- Support for massive operations on parameter 'cubes' [#46](https://github.com/OphidiaBigData/ophidia-server/pull/46)
 
 ### Changed:
 
+- Accounting features to log a line for each massive task [#45](https://github.com/OphidiaBigData/ophidia-server/pull/45)
 - Default value of parameter 'action' of OPH_MANAGE_SESSION
 
 
