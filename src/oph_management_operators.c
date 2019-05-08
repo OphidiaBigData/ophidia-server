@@ -2277,11 +2277,15 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char **objkeys = NULL;
 		int objkeys_num, success = 0, nlines;
 		oph_json *oper_json = NULL;
-		char *value, username[OPH_MAX_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], error_message[OPH_MAX_STRING_SIZE];
+		char *value, username[OPH_MAX_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], error_message[OPH_MAX_STRING_SIZE],
+		    *log_file = 0, task_file[OPH_MAX_STRING_SIZE], task_id[OPH_MAX_STRING_SIZE];
 		*error_message = 0;
 
 		value = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_LOG_TYPE);
-		if (!value || strncasecmp(value, OPH_OPERATOR_LOG_INFO_PARAMETER_SERVER, OPH_MAX_STRING_SIZE)) {
+		short int is_server = 0, is_task = 0;
+		is_server = !strncasecmp(value, OPH_OPERATOR_LOG_INFO_PARAMETER_SERVER, OPH_MAX_STRING_SIZE);
+		is_task = !strncasecmp(value, OPH_OPERATOR_LOG_INFO_PARAMETER_TASK, OPH_MAX_STRING_SIZE);
+		if (!value || (!is_server && !is_task)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_OPERATOR_PARAMETER_LOG_TYPE);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
@@ -2335,11 +2339,23 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			value = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_LINES_NUMBER);
 			if (!value) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_OPERATOR_PARAMETER_LINES_NUMBER);
 				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 				break;
 			}
 			nlines = strtol(value, NULL, 10);
+
+			if (is_task) {
+				value = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_TASK_ID);
+				if (!value) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_OPERATOR_PARAMETER_TASK_ID);
+					error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+					break;
+				}
+				strncpy(task_id, value, OPH_MAX_STRING_SIZE);
+
+			}
+
 
 			if (oph_json_alloc(&oper_json)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
@@ -2370,124 +2386,89 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 			}
 
-			if (oph_log_file_name) {
-				value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
-				if (!value) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
-					error = OPH_SERVER_WRONG_PARAMETER_ERROR;
-					break;
-				}
-				if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
-					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
-					error = OPH_SERVER_WRONG_PARAMETER_ERROR;
-					break;
+			if (is_task) {
+				//Set proper file name
+				if (oph_txt_location) {
+					snprintf(task_file, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, username, session_code, task_id);
+					log_file = task_file;
 				}
 
-				int is_objkey_printable = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_LOG_INFO);
-				if (is_objkey_printable) {
-					int num_fields = 3, iii, jjj = 0;
+				if (log_file) {
+					value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
+					if (!value) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
+						error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						break;
+					}
+					if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+						error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						break;
+					}
 
-					// Header
-					char **jsonkeys = NULL;
-					char **fieldtypes = NULL;
-					jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
-					if (!jsonkeys) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						break;
-					}
-					jsonkeys[jjj] = strdup("TIMESTAMP");
-					if (!jsonkeys[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < jjj; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						break;
-					}
-					jjj++;
-					jsonkeys[jjj] = strdup("TYPE");
-					if (!jsonkeys[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < jjj; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						break;
-					}
-					jjj++;
-					jsonkeys[jjj] = strdup("MESSAGE");
-					if (!jsonkeys[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < jjj; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						break;
-					}
-					jjj = 0;
-					fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
-					if (!fieldtypes) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < num_fields; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						break;
-					}
-					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-					if (!fieldtypes[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < num_fields; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						for (iii = 0; iii < jjj; iii++)
-							if (fieldtypes[iii])
-								free(fieldtypes[iii]);
-						if (fieldtypes)
-							free(fieldtypes);
-						break;
-					}
-					jjj++;
-					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-					if (!fieldtypes[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < num_fields; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						for (iii = 0; iii < jjj; iii++)
-							if (fieldtypes[iii])
-								free(fieldtypes[iii]);
-						if (fieldtypes)
-							free(fieldtypes);
-						break;
-					}
-					jjj++;
-					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
-					if (!fieldtypes[jjj]) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-						for (iii = 0; iii < num_fields; iii++)
-							if (jsonkeys[iii])
-								free(jsonkeys[iii]);
-						if (jsonkeys)
-							free(jsonkeys);
-						for (iii = 0; iii < jjj; iii++)
-							if (fieldtypes[iii])
-								free(fieldtypes[iii]);
-						if (fieldtypes)
-							free(fieldtypes);
-						break;
-					}
-					if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_LOG_INFO, "Log Data", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+					int is_objkey_printable = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_LOG_INFO);
+					if (is_objkey_printable) {
+						int num_fields = 1, iii, jjj = 0;
+
+						// Header
+						char **jsonkeys = NULL;
+						char **fieldtypes = NULL;
+						jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+						if (!jsonkeys) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							break;
+						}
+						jsonkeys[jjj] = strdup("MESSAGE");
+						if (!jsonkeys[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						jjj = 0;
+						fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+						if (!fieldtypes) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						if (!fieldtypes[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < jjj; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
+						if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_LOG_INFO, "Log Data", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < num_fields; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
 						for (iii = 0; iii < num_fields; iii++)
 							if (jsonkeys[iii])
 								free(jsonkeys[iii]);
@@ -2498,163 +2479,431 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								free(fieldtypes[iii]);
 						if (fieldtypes)
 							free(fieldtypes);
+					}
+
+					char *lines;
+					if (nlines > 0) {
+						lines = (char *) malloc(nlines * OPH_MAX_STRING_SIZE + 1);
+						if (!lines) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							break;
+						}
+					} else {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid lines_number value\n");
 						break;
 					}
-					for (iii = 0; iii < num_fields; iii++)
-						if (jsonkeys[iii])
-							free(jsonkeys[iii]);
-					if (jsonkeys)
-						free(jsonkeys);
-					for (iii = 0; iii < num_fields; iii++)
-						if (fieldtypes[iii])
-							free(fieldtypes[iii]);
-					if (fieldtypes)
-						free(fieldtypes);
-				}
 
-				char *lines;
-				if (nlines > 0) {
-					lines = (char *) malloc(nlines * OPH_MAX_STRING_SIZE + 1);
-					if (!lines) {
-						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+					FILE *file;
+					file = fopen(log_file, "r");
+					if (file == NULL) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "File %s cannot be opened\n", log_file);
+						free(lines);
 						break;
 					}
-				} else {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid lines_number value\n");
-					break;
-				}
 
-				FILE *file;
-				file = fopen(oph_log_file_name, "r");
-				if (file == NULL) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "File %s cannot be opened\n", oph_log_file_name);
-					free(lines);
-					break;
-				}
+					fseek(file, 0, SEEK_END);
+					if (!ftell(file)) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Task log is empty");
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "File %s is empty\n", log_file);
+						fclose(file);
+						free(lines);
+						success = 1;
+						break;
+					}
 
-				fseek(file, 0, SEEK_END);
-				if (!ftell(file)) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Server log is empty");
-					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "File %s is empty\n", oph_log_file_name);
+					memset(lines, 0, nlines * OPH_MAX_STRING_SIZE + 1);
+
+					fseek(file, -1, SEEK_END);
+					char c;
+					int i = nlines * OPH_MAX_STRING_SIZE - 1;
+					int count = 0;
+					int flag = 0;
+					do {
+						c = getc(file);
+						if (c == '\n' && i != (nlines * OPH_MAX_STRING_SIZE - 1)) {
+							count++;
+							if (count == nlines) {
+								flag = 1;
+								break;
+							}
+						}
+						lines[i] = c;
+						i--;
+					} while ((fseek(file, -2, SEEK_CUR)) == 0);
 					fclose(file);
-					free(lines);
-					success = 1;
-					break;
-				}
 
-				memset(lines, 0, nlines * OPH_MAX_STRING_SIZE + 1);
-
-				fseek(file, -1, SEEK_END);
-				char c;
-				int i = nlines * OPH_MAX_STRING_SIZE - 1;
-				int count = 0;
-				int flag = 0;
-				do {
-					c = getc(file);
-					if (c == '\n' && i != (nlines * OPH_MAX_STRING_SIZE - 1)) {
+					if (flag == 0)
 						count++;
-						if (count == nlines) {
-							flag = 1;
+
+
+
+					char *ptr = 0;
+					for (i = 0; i < nlines * OPH_MAX_STRING_SIZE + 1; i++) {
+						if (lines[i] != '\0') {
+							ptr = lines + i;
 							break;
 						}
 					}
-					lines[i] = c;
-					i--;
-				} while ((fseek(file, -2, SEEK_CUR)) == 0);
-				fclose(file);
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", ptr ? ptr : "");
 
-				if (flag == 0)
-					count++;
+					if (ptr && is_objkey_printable) {
+						int num_fields = 1, iii, jjj = 0, kkk = 0, print_data, k;
+						char *jsontmp[num_fields];
+						char **jsonvalues = NULL;
+						char *my_ptr = ptr;
 
-				char *ptr = 0;
-				for (i = 0; i < nlines * OPH_MAX_STRING_SIZE + 1; i++) {
-					if (lines[i] != '\0') {
-						ptr = lines + i;
-						break;
-					}
-				}
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", ptr ? ptr : "");
-
-				if (ptr && is_objkey_printable) {
-					int num_fields = 3, iii, jjj = 0, kkk = 0, print_data, k;
-					char *jsontmp[num_fields];
-					char **jsonvalues = NULL;
-					char *my_ptr = ptr;
-
-					while (my_ptr) {
-						for (k = 0; k < num_fields; ++k)
-							jsontmp[k] = 0;
-						k = 0;
-						while (my_ptr && (*my_ptr != '\n') && (*my_ptr != '\0')) {
-							if (*my_ptr == '[') {
-								if (k < num_fields)
-									jsontmp[k++] = my_ptr + 1;
-							} else if (*my_ptr == ']') {
-								if (!jsontmp[1] || !jsontmp[2])
-									*my_ptr = '\0';
-								else if (*(jsontmp[2]) != '\t')
-									jsontmp[2] = my_ptr + 1;
+						while (my_ptr) {
+							jsontmp[0] = my_ptr;
+							k = 0;
+							while (my_ptr && (*my_ptr != '\n') && (*my_ptr != '\0')) {
+								my_ptr++;
 							}
+
+							if (!my_ptr || (*my_ptr == '\0'))
+								break;
+
+							*my_ptr = '\0';
 							my_ptr++;
-						}
 
-						if (!my_ptr || (*my_ptr == '\0'))
-							break;
+							if (jsontmp[0] && (*(jsontmp[0]) == '\t'))
+								(jsontmp[0])++;
 
-						*my_ptr = '\0';
-						my_ptr++;
-
-						if (jsontmp[2] && (*(jsontmp[2]) == '\t'))
-							(jsontmp[2])++;
-
-						print_data = 1;
-						for (k = 0; k < num_fields; ++k)
-							if (!jsontmp[k]) {
+							print_data = 1;
+							if (*(jsontmp[0]) == '\0') {
 								print_data = 0;
-								break;
 							}
-						if (print_data) {
-							jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
-							if (!jsonvalues) {
-								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-								break;
-							}
-							for (jjj = 0; jjj < num_fields; jjj++) {
-								jsonvalues[jjj] = strdup(jsontmp[jjj]);
-								if (!jsonvalues[jjj]) {
+
+							if (print_data) {
+								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonvalues) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-									for (iii = 0; iii < jjj; iii++)
+									break;
+								}
+								for (jjj = 0; jjj < num_fields; jjj++) {
+									jsonvalues[jjj] = strdup(jsontmp[jjj]);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+								}
+								if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_LOG_INFO, jsonvalues)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+									for (iii = 0; iii < num_fields; iii++)
 										if (jsonvalues[iii])
 											free(jsonvalues[iii]);
 									if (jsonvalues)
 										free(jsonvalues);
 									break;
 								}
-							}
-							if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_LOG_INFO, jsonvalues)) {
-								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
 								for (iii = 0; iii < num_fields; iii++)
 									if (jsonvalues[iii])
 										free(jsonvalues[iii]);
 								if (jsonvalues)
 									free(jsonvalues);
+							}
+							kkk++;
+						}
+					}
+
+					free(lines);
+					success = 1;
+				} else
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Requested log file not found!");
+				break;
+
+			} else {
+				log_file = oph_log_file_name;
+				if (log_file) {
+					value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
+					if (!value) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
+						error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						break;
+					}
+					if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
+						oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+						error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						break;
+					}
+
+					int is_objkey_printable = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_LOG_INFO);
+					if (is_objkey_printable) {
+						int num_fields = 3, iii, jjj = 0;
+
+						// Header
+						char **jsonkeys = NULL;
+						char **fieldtypes = NULL;
+						jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
+						if (!jsonkeys) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							break;
+						}
+						jsonkeys[jjj] = strdup("TIMESTAMP");
+						if (!jsonkeys[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						jjj++;
+						jsonkeys[jjj] = strdup("TYPE");
+						if (!jsonkeys[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						jjj++;
+						jsonkeys[jjj] = strdup("MESSAGE");
+						if (!jsonkeys[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < jjj; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						jjj = 0;
+						fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+						if (!fieldtypes) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							break;
+						}
+						fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						if (!fieldtypes[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < jjj; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
+						jjj++;
+						fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						if (!fieldtypes[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < jjj; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
+						jjj++;
+						fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+						if (!fieldtypes[jjj]) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < jjj; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
+						if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_LOG_INFO, "Log Data", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+							for (iii = 0; iii < num_fields; iii++)
+								if (jsonkeys[iii])
+									free(jsonkeys[iii]);
+							if (jsonkeys)
+								free(jsonkeys);
+							for (iii = 0; iii < num_fields; iii++)
+								if (fieldtypes[iii])
+									free(fieldtypes[iii]);
+							if (fieldtypes)
+								free(fieldtypes);
+							break;
+						}
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < num_fields; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+					}
+
+					char *lines;
+					if (nlines > 0) {
+						lines = (char *) malloc(nlines * OPH_MAX_STRING_SIZE + 1);
+						if (!lines) {
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+							break;
+						}
+					} else {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid lines_number value\n");
+						break;
+					}
+
+					FILE *file;
+					file = fopen(log_file, "r");
+					if (file == NULL) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "File %s cannot be opened\n", log_file);
+						free(lines);
+						break;
+					}
+
+					fseek(file, 0, SEEK_END);
+					if (!ftell(file)) {
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Server log is empty");
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "File %s is empty\n", log_file);
+						fclose(file);
+						free(lines);
+						success = 1;
+						break;
+					}
+
+					memset(lines, 0, nlines * OPH_MAX_STRING_SIZE + 1);
+
+					fseek(file, -1, SEEK_END);
+					char c;
+					int i = nlines * OPH_MAX_STRING_SIZE - 1;
+					int count = 0;
+					int flag = 0;
+					do {
+						c = getc(file);
+						if (c == '\n' && i != (nlines * OPH_MAX_STRING_SIZE - 1)) {
+							count++;
+							if (count == nlines) {
+								flag = 1;
 								break;
 							}
-							for (iii = 0; iii < num_fields; iii++)
-								if (jsonvalues[iii])
-									free(jsonvalues[iii]);
-							if (jsonvalues)
-								free(jsonvalues);
 						}
-						kkk++;
-					}
-				}
+						lines[i] = c;
+						i--;
+					} while ((fseek(file, -2, SEEK_CUR)) == 0);
+					fclose(file);
 
-				free(lines);
-				success = 1;
-			} else
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Server log not found!");
-			break;
+					if (flag == 0)
+						count++;
+
+					char *ptr = 0;
+					for (i = 0; i < nlines * OPH_MAX_STRING_SIZE + 1; i++) {
+						if (lines[i] != '\0') {
+							ptr = lines + i;
+							break;
+						}
+					}
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "%s", ptr ? ptr : "");
+
+					if (ptr && is_objkey_printable) {
+						int num_fields = 3, iii, jjj = 0, kkk = 0, print_data, k;
+						char *jsontmp[num_fields];
+						char **jsonvalues = NULL;
+						char *my_ptr = ptr;
+
+						while (my_ptr) {
+							for (k = 0; k < num_fields; ++k)
+								jsontmp[k] = 0;
+							k = 0;
+							while (my_ptr && (*my_ptr != '\n') && (*my_ptr != '\0')) {
+								if (*my_ptr == '[') {
+									if (k < num_fields)
+										jsontmp[k++] = my_ptr + 1;
+								} else if (*my_ptr == ']') {
+									if (!jsontmp[1] || !jsontmp[2])
+										*my_ptr = '\0';
+									else if (*(jsontmp[2]) != '\t')
+										jsontmp[2] = my_ptr + 1;
+								}
+								my_ptr++;
+							}
+
+							if (!my_ptr || (*my_ptr == '\0'))
+								break;
+
+							*my_ptr = '\0';
+							my_ptr++;
+
+							if (jsontmp[2] && (*(jsontmp[2]) == '\t'))
+								(jsontmp[2])++;
+
+							print_data = 1;
+							for (k = 0; k < num_fields; ++k)
+								if (!jsontmp[k]) {
+									print_data = 0;
+									break;
+								}
+							if (print_data) {
+								jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
+								if (!jsonvalues) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+									break;
+								}
+								for (jjj = 0; jjj < num_fields; jjj++) {
+									jsonvalues[jjj] = strdup(jsontmp[jjj]);
+									if (!jsonvalues[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonvalues[iii])
+												free(jsonvalues[iii]);
+										if (jsonvalues)
+											free(jsonvalues);
+										break;
+									}
+								}
+								if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_LOG_INFO, jsonvalues)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonvalues[iii])
+											free(jsonvalues[iii]);
+									if (jsonvalues)
+										free(jsonvalues);
+									break;
+								}
+								for (iii = 0; iii < num_fields; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+							}
+							kkk++;
+						}
+					}
+
+					free(lines);
+					success = 1;
+				} else
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Requested log file not found!");
+				break;
+			}
 		}
 
 		if (task_tbl)
