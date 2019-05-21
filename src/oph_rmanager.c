@@ -28,8 +28,10 @@
 
 #define SUBM_CMD_TO_SUBMIT	"SUBM_CMD_TO_SUBMIT"
 #define SUBM_CMD_TO_START	"SUBM_CMD_TO_START"
+#define SUBM_CMD_TO_MOUNT	"SUBM_CMD_TO_MOUNT"
 #define SUBM_CMD_TO_CANCEL	"SUBM_CMD_TO_CANCEL"
 #define SUBM_CMD_TO_STOP	"SUBM_CMD_TO_STOP"
+#define SUBM_CMD_TO_UMOUNT	"SUBM_CMD_TO_UMOUNT"
 #define SUBM_CMD_TO_CHECK	"SUBM_CMD_TO_CHECK"
 #define SUBM_CMD_TO_COUNT	"SUBM_CMD_TO_COUNT"
 #define SUBM_MULTIUSER		"SUBM_MULTIUSER"
@@ -238,10 +240,14 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_cmd_submit = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_START))
 				orm->subm_cmd_start = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_MOUNT))
+				orm->subm_cmd_mount = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL))
 				orm->subm_cmd_cancel = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_STOP))
 				orm->subm_cmd_stop = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_UMOUNT))
+				orm->subm_cmd_umount = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CHECK))
 				orm->subm_cmd_check = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_COUNT))
@@ -305,8 +311,10 @@ int initialize_rmanager(oph_rmanager * orm)
 
 	orm->subm_cmd_submit = NULL;
 	orm->subm_cmd_start = NULL;
+	orm->subm_cmd_mount = NULL;
 	orm->subm_cmd_cancel = NULL;
 	orm->subm_cmd_stop = NULL;
+	orm->subm_cmd_umount = NULL;
 	orm->subm_cmd_check = NULL;
 	orm->subm_cmd_count = NULL;
 	orm->subm_multiuser = 0;	// No
@@ -365,6 +373,16 @@ int oph_stop_request(int jobid, char *username)
 		return RMANAGER_NULL_PARAM;
 	if (orm && orm->subm_cmd_stop)
 		return oph_abort_request(jobid, username, orm->subm_cmd_stop);
+	else
+		return RMANAGER_SUCCESS;
+}
+
+int oph_umount_request(int jobid, char *username)
+{
+	if (!jobid)
+		return RMANAGER_NULL_PARAM;
+	if (orm && orm->subm_cmd_umount)
+		return oph_abort_request(jobid, username, orm->subm_cmd_umount);
 	else
 		return RMANAGER_SUCCESS;
 }
@@ -491,8 +509,34 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Interactive submission is not longer supported\n");
 		return RMANAGER_ERROR;
 	}
-	if (type && !orm->subm_cmd_start) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_START);
+
+	char *command = NULL;
+	switch (type) {
+		case 0:
+			command = orm->subm_cmd_submit;
+			break;
+		case 1:
+			if (!orm->subm_cmd_start) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_START);
+				return RMANAGER_ERROR;
+			}
+			command = orm->subm_cmd_start;
+			break;
+		case 2:
+			if (!orm->subm_cmd_mount) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_MOUNT);
+				return RMANAGER_ERROR;
+			}
+			command = orm->subm_cmd_mount;
+			break;
+		default:
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unknown command type\n");
+			return RMANAGER_ERROR;
+	}
+
+
+	if ((type == 2) && !orm->subm_cmd_mount) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_MOUNT);
 		return RMANAGER_ERROR;
 	}
 
@@ -513,8 +557,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	if (get_debug_level() != LOG_DEBUG)
 		outfile = NULL;
 
-	sprintf(*cmd, "%s %s %s %d %d %s \"%s\" %s %s%s %s", orm->subm_prefix, subm_username, type ? orm->subm_cmd_start : orm->subm_cmd_submit, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
-		request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
+	sprintf(*cmd, "%s %s %s %d %d %s \"%s\" %s %s%s %s", orm->subm_prefix, subm_username, command, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
+		ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
@@ -535,6 +579,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_cmd_start);
 		orm->subm_cmd_start = NULL;
 	}
+	if (orm->subm_cmd_mount) {
+		free(orm->subm_cmd_mount);
+		orm->subm_cmd_mount = NULL;
+	}
 	if (orm->subm_cmd_cancel) {
 		free(orm->subm_cmd_cancel);
 		orm->subm_cmd_cancel = NULL;
@@ -542,6 +590,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_cmd_stop) {
 		free(orm->subm_cmd_stop);
 		orm->subm_cmd_stop = NULL;
+	}
+	if (orm->subm_cmd_umount) {
+		free(orm->subm_cmd_umount);
+		orm->subm_cmd_umount = NULL;
 	}
 	if (orm->subm_cmd_check) {
 		free(orm->subm_cmd_check);

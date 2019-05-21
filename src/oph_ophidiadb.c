@@ -712,7 +712,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition)
+int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition)
 {
 	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
@@ -722,7 +722,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 		return OPH_ODB_MYSQL_ERROR;
 
 	char insertQuery[MYSQL_BUFLEN];
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RESERVE_PARTITION, name, id_user, id_job, hosts);
+	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RESERVE_PARTITION, name, id_user, id_job, hosts, type);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -765,13 +765,15 @@ int oph_odb_release_hp2(int id_hostpartition)
 	return oph_odb_release_hp(ophDB, id_hostpartition);
 }
 
-int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job)
+int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
 {
 	if (!oDB || !name || !id_user || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 	*id_hostpartition = 0;
 	if (id_job)
 		*id_job = 0;
+	if (*host_type)
+		*host_type = 0;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
@@ -788,7 +790,7 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 	MYSQL_ROW row;
 	res = mysql_store_result(oDB->conn);
 
-	if ((mysql_field_count(oDB->conn) != 2) || (mysql_num_rows(res) != 1)) {
+	if ((mysql_field_count(oDB->conn) != 3) || (mysql_num_rows(res) != 1)) {
 		mysql_free_result(res);
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
@@ -797,6 +799,8 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 		*id_hostpartition = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
 		if (id_job && row[1])
 			*id_job = (int) strtol(row[1], NULL, 10);
+		if (host_type && row[2])
+			*host_type = (int) strtol(row[2], NULL, 10);
 	}
 	mysql_free_result(res);
 

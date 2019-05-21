@@ -119,10 +119,10 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 
 int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user);
 int oph_odb_destroy_hp(ophidiadb * oDB, const char *name);
-int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, int *id_hostpartition);
+int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition);
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition);
 int oph_odb_release_hp2(int id_hostpartition);
-int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job);
+int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type);
 int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts);
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts);
 
