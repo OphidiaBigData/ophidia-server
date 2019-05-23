@@ -40,7 +40,8 @@ typedef struct _oph_wait_data {
 } oph_wait_data;
 
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name);
+				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
+				    const char *operator_name);
 
 int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output);
 int oph_else_impl(oph_workflow * wf, int i, char *error_message, int *exit_output);

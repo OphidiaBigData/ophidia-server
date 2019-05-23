@@ -54,12 +54,12 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username);
 int initialize_rmanager(oph_rmanager * orm);
 int oph_read_rmanager_conf(oph_rmanager * orm);
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type);
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type);
 int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
-int oph_cancel_request(int jobid, char *username);
-int oph_stop_request(int jobid, char *username);
+int oph_cancel_request(int jobid, const char *username);
+int oph_stop_request(int jobid, const char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_get_available_host_number(int *size, int jobid);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);

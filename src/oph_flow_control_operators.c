@@ -2049,13 +2049,14 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 }
 
 int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
-				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output,
+				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
 				     const char *operator_name, pthread_t * tid)
 {
 	UNUSED(ncores);
 	UNUSED(request);
 	UNUSED(jobid_response);
 	UNUSED(exit_output);
+	UNUSED(os_username);
 
 	int error = OPH_SERVER_UNKNOWN;
 
@@ -2918,8 +2919,9 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 }
 
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
-				    int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+				    int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
+				    const char *operator_name)
 {
 	return _oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
-						operator_name, NULL);
+						os_username, operator_name, NULL);
 }
