@@ -2724,6 +2724,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
+		char random_name[OPH_SHORT_STRING_SIZE];
 
 		while (!success) {
 
@@ -2765,9 +2766,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 			}
 			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
-				host_partition = NULL;
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set parameter '%s' to reserved word!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
-				break;
+				snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
+				host_partition = random_name;
 			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
@@ -4125,7 +4126,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							int id_hostpartition = 0;
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partition '%s'\n", host_partition);
 							if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
