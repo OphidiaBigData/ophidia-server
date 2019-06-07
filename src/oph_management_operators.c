@@ -2764,6 +2764,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
 			}
+			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
+				host_partition = NULL;
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set parameter '%s' to reserved word!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
+				break;
+			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
 				if (btype > 1) {
