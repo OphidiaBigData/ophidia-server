@@ -2724,6 +2724,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, host_type = 0, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
+		char random_name[OPH_SHORT_STRING_SIZE];
 
 		while (!success) {
 
@@ -2763,6 +2764,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (!host_partition) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
+			}
+			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
+				snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
+				host_partition = random_name;
 			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
@@ -3318,7 +3324,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										break;
 									}
 									jjj++;
-									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", list.pid
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", list.pid
 										 && list.pid[idp] ? OPH_OPERATOR_CLUSTER_VALUE_COMPUTE : OPH_OPERATOR_CLUSTER_VALUE_IO);
 									jsonvalues[jjj] = strdup(tmp);
 									if (!jsonvalues[jjj]) {
