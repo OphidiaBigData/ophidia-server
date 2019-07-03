@@ -74,7 +74,7 @@
 #define OPHIDIADB_DATACUBE_LIST "SELECT iddatacube, datacubename FROM datacube"
 
 // Host partitions
-#define OPHIDIADB_RETRIEVE_PARTITION "SELECT idhostpartition FROM hostpartition WHERE partitionname = '%s' AND (NOT reserved OR iduser = %d);"
+#define OPHIDIADB_RETRIEVE_PARTITION "SELECT idhostpartition FROM hostpartition WHERE (NOT reserved OR iduser = %d)"
 #define OPHIDIADB_CREATE_PARTITION "INSERT INTO hostpartition (partitionname, hidden) VALUES ('%s', 1);"
 #define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, importcount) SELECT LAST_INSERT_ID(), idhost, importcount FROM host WHERE idhost IN ( SELECT idhost FROM hashost WHERE idhostpartition = %d );"
 #define OPHIDIADB_DESTROY_PARTITION "DELETE FROM hostpartition WHERE partitionname = '%s' AND hidden = 1;"

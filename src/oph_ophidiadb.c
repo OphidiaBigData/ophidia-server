@@ -648,7 +648,11 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 
 	char insertQuery[MYSQL_BUFLEN], select_by_name = strcmp(parent, OPH_COMMON_AUTO);
 
-	int n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_PARTITION, select_by_name ? parent : "%", id_user);
+	int n;
+	if (select_by_name)
+		n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_PARTITION "AND partitionname = '%s'", id_user, parent);
+	else
+		n = snprintf(insertQuery, MYSQL_BUFLEN, OPHIDIADB_RETRIEVE_PARTITION, id_user);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
@@ -659,7 +663,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 	MYSQL_ROW row;
 	res = mysql_store_result(oDB->conn);
 
-	if ((mysql_field_count(oDB->conn) != 1) || (select_by_name && (mysql_num_rows(res) != 1) || !select_by_name && (mysql_num_rows(res) < 1))) {
+	if ((mysql_field_count(oDB->conn) != 1) || (select_by_name && (mysql_num_rows(res) != 1) || !select_by_name && !mysql_num_rows(res))) {
 		mysql_free_result(res);
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
