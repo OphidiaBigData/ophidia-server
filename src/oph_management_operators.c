@@ -47,7 +47,7 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 				       enum oph__oph_odb_job_status *exit_code);
 
 int oph_serve_management_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *operator_name)
 {
 	UNUSED(ncores);
 	UNUSED(odb_wf_id);
@@ -1047,6 +1047,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			oph_workflow *wf = (oph_workflow *) calloc(1, sizeof(oph_workflow));
 			wf->username = strdup(username);
+			wf->os_username = strdup(os_username);
 			wf->command = strdup("");
 
 			pthread_mutex_lock(&global_flag);
@@ -2685,12 +2686,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int max_hosts = item->wf->max_hosts;
-		char *os_username = strdup(item->wf->os_username);
-		if (!os_username) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-			pthread_mutex_unlock(&global_flag);
-			return OPH_SERVER_SYSTEM_ERROR;
-		}
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -2699,7 +2694,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
@@ -2708,7 +2702,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
@@ -2717,14 +2710,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
@@ -2733,6 +2724,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
+		char random_name[OPH_SHORT_STRING_SIZE];
 
 		while (!success) {
 
@@ -2773,6 +2765,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
 			}
+			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
+				snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
+				host_partition = random_name;
+			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
 				if (btype > 1) {
@@ -2810,7 +2807,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -2819,7 +2815,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -4131,7 +4126,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							int id_hostpartition = 0;
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partition '%s'\n", host_partition);
 							if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
@@ -4275,7 +4270,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
-		free(os_username);
 		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 
 		if (success)

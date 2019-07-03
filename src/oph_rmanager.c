@@ -327,7 +327,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_abort_request(int jobid, char *username, char *command)
+int oph_abort_request(int jobid, const char *username, char *command)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
@@ -357,7 +357,7 @@ int oph_abort_request(int jobid, char *username, char *command)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_cancel_request(int jobid, char *username)
+int oph_cancel_request(int jobid, const char *username)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
@@ -367,7 +367,7 @@ int oph_cancel_request(int jobid, char *username)
 		return RMANAGER_SUCCESS;
 }
 
-int oph_stop_request(int jobid, char *username)
+int oph_stop_request(int jobid, const char *username)
 {
 	if (!jobid)
 		return RMANAGER_NULL_PARAM;
@@ -489,7 +489,7 @@ int oph_get_available_host_number(int *size, int jobid)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -669,8 +669,8 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 
 	int result;
 	if ((result =
-	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
-				      exit_output)) != OPH_SERVER_UNKNOWN)
+	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
+				      username)) != OPH_SERVER_UNKNOWN)
 		return result;
 
 	char *cmd = NULL;
