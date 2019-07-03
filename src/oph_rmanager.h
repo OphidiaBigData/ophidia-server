@@ -49,6 +49,7 @@ struct _oph_rmanager {
 	char *subm_queue_low;
 	char *subm_prefix;
 	char *subm_postfix;
+	int subm_taskid;
 };
 typedef struct _oph_rmanager oph_rmanager;
 

@@ -203,18 +203,21 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		return RMANAGER_NULL_PARAM;
 	}
 
+	pthread_mutex_lock(&global_flag);
+
 	char config[OPH_MAX_STRING_SIZE];
 	snprintf(config, sizeof(config), "%s", oph_rmanager_conf_file);
 
 	FILE *file = fopen(config, "r");
 	if (file == NULL) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Configuration file not found\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Configuration file not found\n");
+		pthread_mutex_unlock(&global_flag);
 		return RMANAGER_ERROR;
 	}
 
 	char buffer[OPH_MAX_STRING_SIZE];
 	char *position, *target;
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reading resource manager configuration file '%s'\n", config);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Reading resource manager configuration file '%s'\n", config);
 
 	while (!feof(file)) {
 
@@ -231,11 +234,12 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 			*position = 0;
 			target = strdup(++position);
 			if (!target) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				pthread_mutex_unlock(&global_flag);
 				fclose(file);
 				return RMANAGER_MEMORY_ERROR;
 			}
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Load parameter '%s=%s'\n", buffer, target);
 			if (!strcmp(buffer, SUBM_CMD_TO_SUBMIT))
 				orm->subm_cmd_submit = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_START))
@@ -266,7 +270,7 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 			else if (!strcmp(buffer, SUBM_POSTFIX))
 				orm->subm_postfix = target;
 			else {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
 				free(target);
 			}
 		}
@@ -276,20 +280,21 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	fclose(file);
 
 	if (!orm->subm_cmd_submit) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is mandatory\n", SUBM_CMD_TO_SUBMIT);
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is mandatory\n", SUBM_CMD_TO_SUBMIT);
+		pthread_mutex_unlock(&global_flag);
 		return RMANAGER_ERROR;
 	}
 	if (!orm->subm_queue_high || !strlen(orm->subm_queue_high)) {
 		if (orm->subm_queue_high) {
 			free(orm->subm_queue_high);
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_HIGH, OPH_RMANAGER_DEFAULT_QUEUE);
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_HIGH, OPH_RMANAGER_DEFAULT_QUEUE);
 		}
 		orm->subm_queue_high = strdup(OPH_RMANAGER_DEFAULT_QUEUE);
 	}
 	if (!orm->subm_queue_low || !strlen(orm->subm_queue_low)) {
 		if (orm->subm_queue_low) {
 			free(orm->subm_queue_low);
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_LOW, OPH_RMANAGER_DEFAULT_QUEUE);
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be set to '%s'\n", SUBM_QUEUE_LOW, OPH_RMANAGER_DEFAULT_QUEUE);
 		}
 		orm->subm_queue_low = strdup(OPH_RMANAGER_DEFAULT_QUEUE);
 	}
@@ -297,6 +302,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 		orm->subm_prefix = strdup("");
 	if (!orm->subm_postfix)
 		orm->subm_postfix = strdup("");
+
+	pthread_mutex_unlock(&global_flag);
 
 	return RMANAGER_SUCCESS;
 
@@ -323,6 +330,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_queue_low = NULL;
 	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
+	orm->subm_taskid = 0;	// Used only for internal requests
 
 	return RMANAGER_SUCCESS;
 }
@@ -557,8 +565,16 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	if (get_debug_level() != LOG_DEBUG)
 		outfile = NULL;
 
-	sprintf(*cmd, "%s %s %s %d %d %s \"%s\" %s %s%s %s", orm->subm_prefix, subm_username, command, jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
-		ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
+	char internal_request = 0;
+	if (!jobid) {
+		pthread_mutex_lock(&global_flag);
+		jobid = ++orm->subm_taskid;
+		pthread_mutex_unlock(&global_flag);
+		internal_request = 1;
+	}
+
+	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores,
+		outfile ? outfile : OPH_NULL_FILENAME, request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
