@@ -139,18 +139,22 @@ char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
 #endif
 
-void set_global_values(const char *configuration_file)
+int set_global_values(const char *configuration_file)
 {
-	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin))
+	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdin\n");
+		return OPH_SERVER_IO_ERROR;
+	}
 
 	if (!configuration_file)
-		return;
+		return OPH_SERVER_NULL_POINTER;
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Loading configuration from '%s'\n", configuration_file);
 
 	oph_server_params = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
-	if (!oph_server_params)
-		return;
+	if (!oph_server_params) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 
 	char tmp[OPH_MAX_STRING_SIZE];
 	char *value;
@@ -274,6 +278,10 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER, tmp);
 		oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER);
 	}
+	if (strlen(oph_web_server) > OPH_LONG_STRING_SIZE) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Length of parameter '%s' is too high\n", OPH_LONG_STRING_SIZE);
+		return OPH_SERVER_WRONG_PARAMETER_ERROR;
+	}
 	if (!(oph_web_server_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION))) {
 		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_WEB_SERVER_LOCATION);
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION, tmp);
@@ -356,6 +364,8 @@ void set_global_values(const char *configuration_file)
 	else
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Last idjob is not available: starting with 0\n");
 	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_SERVER_OK;
 }
 
 /******************************************************************************\
@@ -508,7 +518,7 @@ int main(int argc, char *argv[])
 #else
 	oph_server_location = getenv(OPH_SERVER_LOCATION_STR);
 	if (!oph_server_location) {
-		fprintf(stderr, "OPH_SERVER_LOCATION has to be set\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPH_SERVER_LOCATION has to be set\n");
 		return 1;
 	}
 #endif
@@ -516,7 +526,10 @@ int main(int argc, char *argv[])
 
 	char configuration_file[OPH_MAX_STRING_SIZE];
 	snprintf(configuration_file, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, oph_server_location);
-	set_global_values(configuration_file);
+	if (set_global_values(configuration_file)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in loading server configuration\n");
+		return 1;
+	}
 
 	service_info = (oph_service_info *) calloc(1, sizeof(oph_service_info));
 
@@ -524,7 +537,7 @@ int main(int argc, char *argv[])
 		if (logfile)
 			fclose(logfile);
 		if (!(logfile = fopen(oph_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", oph_log_file_name);
@@ -539,7 +552,7 @@ int main(int argc, char *argv[])
 		if (wf_logfile)
 			fclose(wf_logfile);
 		if (!(wf_logfile = fopen(oph_wf_csv_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected workflow log file '%s'\n", oph_wf_csv_log_file_name);
@@ -548,7 +561,7 @@ int main(int argc, char *argv[])
 		if (task_logfile)
 			fclose(task_logfile);
 		if (!(task_logfile = fopen(oph_task_csv_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
@@ -812,7 +825,7 @@ void *status_logger(struct soap *soap)
 	while (oph_status_log_file_name) {
 
 		if (!(statuslogfile = fopen(oph_status_log_file_name, "w"))) {
-			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Wrong status log file name '%s'\n", oph_status_log_file_name);
 			break;
 		}
 

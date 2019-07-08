@@ -124,15 +124,17 @@ int _delete_files(const char *path, const struct stat *st, int flag, struct FTW 
 	return remove(path);
 }
 
-void set_global_values(const char *configuration_file)
+int set_global_values(const char *configuration_file)
 {
 	if (!configuration_file)
-		return;
+		return OPH_SERVER_NULL_POINTER;
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Loading configuration from '%s'\n", configuration_file);
 
 	oph_server_params = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
-	if (!oph_server_params)
-		return;
+	if (!oph_server_params) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 
 	char tmp[OPH_MAX_STRING_SIZE];
 	char *value;
@@ -178,6 +180,12 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER, tmp);
 		oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER);
 	}
+	if (strlen(oph_web_server) > OPH_LONG_STRING_SIZE) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Length of parameter '%s' is too high\n", OPH_LONG_STRING_SIZE);
+		return OPH_SERVER_WRONG_PARAMETER_ERROR;
+	}
+
+	return OPH_SERVER_OK;
 }
 
 int main(int argc, char *argv[])
@@ -314,7 +322,10 @@ int main(int argc, char *argv[])
 
 	char filename[OPH_MAX_STRING_SIZE];
 	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, oph_server_location);
-	set_global_values(filename);
+	if (set_global_values(filename)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in loading server configuration\n");
+		return 1;
+	}
 
 	FILE *file;
 	oph_argument *tmp;

@@ -153,6 +153,7 @@
 // Other consts
 #define OPH_MAX_PROGRAM_SIZE 1048576
 #define OPH_MAX_STRING_SIZE 4096
+#define OPH_LONG_STRING_SIZE 512
 #define OPH_SHORT_STRING_SIZE 128
 #define OPH_EXEC_TIME "execution_time"
 #define OPH_COMMON_AUTO "auto"
