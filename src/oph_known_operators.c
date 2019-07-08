@@ -115,7 +115,7 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char *request,
 	}
 
 	char operator_name[OPH_MAX_STRING_SIZE];
-	if (oph_tp_find_param_in_task_string(request, OPH_ARG_OPERATOR, &operator_name)) {
+	if (oph_tp_find_param_in_task_string(request, OPH_ARG_OPERATOR, operator_name)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s not found\n", OPH_ARG_OPERATOR);
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}

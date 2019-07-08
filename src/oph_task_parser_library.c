@@ -338,7 +338,7 @@ int oph_tp_validate_task_string(const char *task_string)
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char (*value)[OPH_TP_TASKLEN])
+int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char *value)
 {
 	if (!task_string || !param || !value)
 		return OPH_TP_TASK_SYSTEM_ERROR;
@@ -359,8 +359,8 @@ int oph_tp_find_param_in_task_string(const char *task_string, const char *param,
 				start_char++;
 				stop_char--;
 			}
-			strncpy(*value, start_char, strlen(start_char) - strlen(stop_char));
-			(*value)[strlen(start_char) - strlen(stop_char)] = 0;
+			strncpy(value, start_char, strlen(start_char) - strlen(stop_char));
+			value[strlen(start_char) - strlen(stop_char)] = 0;
 			return OPH_TP_TASK_PARSER_SUCCESS;
 		}
 		ptr_begin = ptr_end + 1;
@@ -427,16 +427,19 @@ int oph_tp_match_value_in_xml_value_list(const char *value, const xmlChar * valu
 	return OPH_TP_TASK_PARSER_ERROR;
 }
 
-int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_node, const char *param, char (*value)[OPH_TP_TASKLEN])
+int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_node, const char *param, char *value)
 {
 	if (!task_string || !param || !value || !xml_node)
 		return OPH_TP_TASK_SYSTEM_ERROR;
 
 	xmlChar *attribute_type, *attribute_mandatory, *attribute_minvalue, *attribute_maxvalue, *attribute_default, *attribute_values;
-	char tmp_value[OPH_TP_TASKLEN];
-
+	char *tmp_value = strdup(task_string);
+	if (!tmp_value) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_TP_TASK_PARSER_ERROR;
+	}
 	//Find param in task string
-	if (oph_tp_find_param_in_task_string(task_string, param, &tmp_value)) {
+	if (oph_tp_find_param_in_task_string(task_string, param, tmp_value)) {
 
 		//Check if the parameter is mandatory
 		attribute_mandatory = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_MANDATORY);
@@ -444,14 +447,16 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 			xmlFree(attribute_mandatory);
 			attribute_default = xmlGetProp(xml_node, (const xmlChar *) OPH_TP_XML_ATTRIBUTE_DEFAULT);
 			if (attribute_default != NULL) {
-				strncpy(*value, (char *) attribute_default, xmlStrlen(attribute_default));
-				(*value)[xmlStrlen(attribute_default)] = 0;
+				strncpy(value, (char *) attribute_default, xmlStrlen(attribute_default));
+				value[xmlStrlen(attribute_default)] = 0;
 				xmlFree(attribute_default);
 			} else {
+				free(tmp_value);
 				return OPH_TP_TASK_PARSER_ERROR;
 			}
 		} else {
 			xmlFree(attribute_mandatory);
+			free(tmp_value);
 			return OPH_TP_TASK_PARSER_ERROR;
 		}
 	} else {
@@ -476,10 +481,12 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					} else {
 						if (numeric_value < min_value) {
 							xmlFree(attribute_type);
+							free(tmp_value);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 						if (numeric_value > max_value) {
 							xmlFree(attribute_type);
+							free(tmp_value);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 					}
@@ -488,6 +495,7 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_minvalue);
 					if (numeric_value < min_value) {
 						xmlFree(attribute_type);
+						free(tmp_value);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				} else if (attribute_maxvalue != NULL) {
@@ -495,6 +503,7 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_maxvalue);
 					if (numeric_value > max_value) {
 						xmlFree(attribute_type);
+						free(tmp_value);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				}
@@ -516,11 +525,13 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 						if (numeric_value < min_value) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Param '%s' is lower than minvalue %f\n", param, min_value);
 							xmlFree(attribute_type);
+							free(tmp_value);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 						if (numeric_value > max_value) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Param '%s' is higher than maxvalue %f\n", param, max_value);
 							xmlFree(attribute_type);
+							free(tmp_value);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 					}
@@ -529,6 +540,7 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_minvalue);
 					if (numeric_value < min_value) {
 						xmlFree(attribute_type);
+						free(tmp_value);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				} else if (attribute_maxvalue != NULL) {
@@ -536,6 +548,7 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_maxvalue);
 					if (numeric_value > max_value) {
 						xmlFree(attribute_type);
+						free(tmp_value);
 						return OPH_TP_TASK_PARSER_ERROR;
 					}
 				}
@@ -547,16 +560,20 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 				if (oph_tp_match_value_in_xml_value_list(tmp_value, attribute_values)) {
 					xmlFree(attribute_type);
 					xmlFree(attribute_values);
+					free(tmp_value);
 					return OPH_TP_TASK_PARSER_ERROR;
 				}
 				xmlFree(attribute_values);
 			}
 
-			strncpy(*value, tmp_value, strlen(tmp_value));
-			(*value)[strlen(tmp_value)] = 0;
+			strncpy(value, tmp_value, strlen(tmp_value));
+			value[strlen(tmp_value)] = 0;
 			xmlFree(attribute_type);
 		}
 	}
+
+	free(tmp_value);
+
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
@@ -625,7 +642,7 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 	//Parse till args section
 	long number_arguments = 0;
 	char key1[OPH_TP_TASKLEN];
-	char value1[OPH_TP_TASKLEN] = { '\0' };
+	char *value1 = NULL;
 	node = root->children;
 	while (node) {
 		if (!xmlStrcmp(node->name, (const xmlChar *) OPH_TP_XML_ARGS)) {
@@ -643,11 +660,17 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 					//Look for param names (xml content)
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
 					if (content != NULL) {
-						memset(value1, 0, OPH_TP_TASKLEN);
-						//Get and check value for parameter
-						if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, &value1)) {
+						value1 = strdup(task_string);
+						if (!value1) {
 							xmlFree(content);
 							xmlFreeDoc(document);
+							return OPH_TP_TASK_PARSER_ERROR;
+						}
+						//Get and check value for parameter
+						if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1)) {
+							xmlFree(content);
+							xmlFreeDoc(document);
+							free(value1);
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 						hashtbl_insert(*hashtbl, (char *) content, value1);
@@ -655,16 +678,18 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 						if (attribute_allownot) {
 							if (!xmlStrcmp((const xmlChar *) "yes", attribute_allownot)) {
 								snprintf(key1, OPH_TP_TASKLEN, "%s!", (char *) content);
-								if (oph_tp_validate_task_string_param(task_string, subnode, key1, &value1)) {
+								if (oph_tp_validate_task_string_param(task_string, subnode, key1, value1)) {
 									xmlFree(attribute_allownot);
 									xmlFree(content);
 									xmlFreeDoc(document);
+									free(value1);
 									return OPH_TP_TASK_PARSER_ERROR;
 								}
 								hashtbl_insert(*hashtbl, key1, value1);
 							}
 							xmlFree(attribute_allownot);
 						}
+						free(value1);
 					}
 					xmlFree(content);
 				}
@@ -734,7 +759,7 @@ int oph_tp_task_param_checker_and_role(const char *operator, const char *task_st
 	xmlChar *content;
 
 	//Parse till args section
-	char value1[OPH_TP_TASKLEN] = { '\0' };
+	char *value1 = NULL;
 	node = root->children;
 	while (node) {
 		if (!xmlStrcmp(node->name, (const xmlChar *) OPH_TP_XML_ARGS)) {
@@ -746,15 +771,22 @@ int oph_tp_task_param_checker_and_role(const char *operator, const char *task_st
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
 					if (content) {
 						if (!strncmp((char *) content, key, OPH_TP_TASKLEN)) {
-							memset(value1, 0, OPH_TP_TASKLEN);
-							//Get and check value for parameter
-							if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, &value1)) {
+							value1 = strdup(task_string);
+							if (!value1) {
 								xmlFree(content);
 								xmlFreeDoc(document);
 								return OPH_TP_TASK_PARSER_ERROR;
 							}
+							//Get and check value for parameter
+							if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1)) {
+								xmlFree(content);
+								xmlFreeDoc(document);
+								free(value1);
+								return OPH_TP_TASK_PARSER_ERROR;
+							}
 							strcpy(value, value1);
 							xmlFree(content);
+							free(value1);
 							break;
 						}
 						xmlFree(content);
@@ -798,8 +830,7 @@ int oph_tp_parse_multiple_value_param(char *values, char ***value_list, int *val
 	if (!values || !value_list || !value_num)
 		return OPH_TP_TASK_SYSTEM_ERROR;
 
-	int param_num = 1;
-	int j, i;
+	int param_num = 1, i, j, msize = 0, csize = 0;
 
 	*value_list = NULL;
 
@@ -810,15 +841,23 @@ int oph_tp_parse_multiple_value_param(char *values, char ***value_list, int *val
 	}
 
 	//Count number of parameters
-	for (i = 0; values[i]; i++)
-		if (values[i] == OPH_TP_MULTI_VALUE_SEPARATOR)
+	for (i = 0; values[i]; i++) {
+		csize++;
+		if (values[i] == OPH_TP_MULTI_VALUE_SEPARATOR) {
 			param_num++;
+			if (msize < csize)
+				msize = csize;
+			csize = 0;
+		}
+	}
+	if (msize < csize)
+		msize = csize;
 
 	*value_list = (char **) malloc(param_num * sizeof(char *));
 	if (!(*value_list))
 		return OPH_TP_TASK_SYSTEM_ERROR;
 	for (i = 0; i < param_num; i++)
-		(*value_list)[i] = (char *) malloc(OPH_TP_TASKLEN * sizeof(char));
+		(*value_list)[i] = (char *) malloc((1 + msize) * sizeof(char));
 
 	char *ptr_begin, *ptr_end;
 
