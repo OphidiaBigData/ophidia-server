@@ -144,12 +144,12 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	if (!data)
 		return RMANAGER_ERROR;
 
-	data->command = strndup(command, OPH_MAX_STRING_SIZE);
+	data->command = strdup(command);
 	if (!data->command)
 		return RMANAGER_ERROR;
 
 	if (error) {
-		data->error = strndup(error, OPH_MAX_STRING_SIZE);
+		data->error = strdup(error);
 		if (!data->error) {
 			free(data->command);
 			free(data);
@@ -168,7 +168,7 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	}
 	memcpy(data->state, (struct oph_plugin_data *) state, sizeof(struct oph_plugin_data));
 	if (state->serverid)
-		data->state->serverid = strndup(state->serverid, OPH_MAX_STRING_SIZE);
+		data->state->serverid = strdup(state->serverid);
 	else
 		data->state->serverid = NULL;
 	data->state->is_copy = 1;
