@@ -27,6 +27,7 @@
 extern int oph_server_workflow_timeout;
 extern unsigned int oph_server_farm_size;
 extern unsigned int oph_server_queue_size;
+extern char *oph_status_log_file_name;
 
 #include "oph_parser.h"
 
@@ -51,7 +52,7 @@ int oph_create_job_list(oph_job_list ** list)
 	*list = (oph_job_list *) malloc(sizeof(oph_job_list));
 	if (!(*list))
 		return OPH_JOB_LIST_ERROR;
-	(*list)->head = (*list)->tail = 0;
+	(*list)->head = (*list)->tail = (*list)->saved = NULL;
 	(*list)->counter = 0;
 	return OPH_JOB_LIST_OK;
 }
@@ -59,7 +60,7 @@ int oph_create_job_list(oph_job_list ** list)
 oph_job_info *oph_find_job_in_job_list(oph_job_list * list, int jobid, oph_job_info ** prev)
 {
 	if (!list)
-		return 0;
+		return NULL;
 	oph_job_info *temp, *temp_prev = 0, *next;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -136,12 +137,38 @@ int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_inf
 	return OPH_JOB_LIST_OK;
 }
 
+int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item)
+{
+	if (!list)
+		return OPH_JOB_LIST_ERROR;
+	if (oph_status_log_file_name) {
+		item->next = list->saved;
+		list->saved = item;
+	} else {
+		oph_workflow_free(item->wf);
+		free(item);
+	}
+	return OPH_JOB_LIST_OK;
+}
+
 int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev)
 {
 	if (oph_drop_from_job_list(list, item, prev))
 		return OPH_JOB_LIST_ERROR;
-	oph_workflow_free(item->wf);
-	free(item);
+	return oph_save_job_in_job_list(list, item);
+}
+
+int oph_delete_saved_jobs_from_job_list(oph_job_list * list)
+{
+	if (!list)
+		return OPH_JOB_LIST_ERROR;
+	oph_job_info *temp, *next;
+	for (temp = list->saved; temp; temp = next) {
+		next = temp->next;
+		oph_workflow_free(temp->wf);
+		free(temp);
+	}
+	list->saved = NULL;
 	return OPH_JOB_LIST_OK;
 }
 
@@ -174,7 +201,7 @@ int oph_destroy_job_list(oph_job_list * list)
 oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid, oph_job_info ** prev)
 {
 	if (!list)
-		return 0;
+		return NULL;
 	oph_job_info *temp, *temp_prev = 0, *next;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -218,7 +245,7 @@ oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid,
 oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const char *sessionid, int workflowid, oph_job_info ** prev)
 {
 	if (!list)
-		return 0;
+		return NULL;
 	if (prev)
 		*prev = NULL;
 	oph_job_info *temp, *temp_prev = NULL, *next, *result = NULL;
@@ -284,7 +311,7 @@ oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *ses
 oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessionid, int markerid, int *task_index, int *light_task_index)
 {
 	if (!list)
-		return 0;
+		return NULL;
 	if (task_index)
 		*task_index = -1;
 	if (light_task_index)
@@ -340,7 +367,7 @@ oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessi
 oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list)
 {
 	if (!list)
-		return 0;
+		return NULL;
 	oph_job_info *temp, *temp_prev = 0, *next;
 	struct timeval tv;
 	gettimeofday(&tv, NULL);

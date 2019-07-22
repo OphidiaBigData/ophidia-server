@@ -816,7 +816,7 @@ void *status_logger(struct soap *soap)
 	oph_status_object *users, *workflows, *massives, *tmp;
 	unsigned long prev, _value[10];
 	long tau = 0, eps = 0, _eps;
-	char name[OPH_MAX_STRING_SIZE];
+	char name[OPH_MAX_STRING_SIZE], saved;
 
 	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
 	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
@@ -862,7 +862,8 @@ void *status_logger(struct soap *soap)
 		miw = eval_load_average(load_average);
 
 		job_info = state->job_info;
-		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
+		saved = job_info->head ? 1 : 0;
+		for (temp = saved ? job_info->head : job_info->saved; temp;) {	// Loop on workflows
 			if (!(wf = temp->wf))
 				continue;
 			aw++;
@@ -921,7 +922,15 @@ void *status_logger(struct soap *soap)
 						ft++;
 				}
 			}
+
+			temp = temp->next;
+			if (!temp && saved) {
+				temp = job_info->saved;
+				saved = 0;
+			}
 		}
+
+		oph_delete_saved_jobs_from_job_list(job_info);
 
 		pthread_mutex_unlock(&global_flag);
 

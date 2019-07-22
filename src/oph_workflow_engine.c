@@ -49,6 +49,7 @@ extern char *oph_txt_location;
 extern FILE *wf_logfile;
 extern FILE *task_logfile;
 extern oph_service_info *service_info;
+extern char *oph_status_log_file_name;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -5739,8 +5740,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: sending termination signal for workflow '%s'\n", ttype, jobid, wf->name);
 			pthread_cond_broadcast(&termination_flag);
 			pthread_mutex_unlock(&global_flag);
-		} else
-			oph_workflow_free(wf);
+		} else {
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+		}
 
 		pthread_mutex_lock(&global_flag);
 		if (service_info)

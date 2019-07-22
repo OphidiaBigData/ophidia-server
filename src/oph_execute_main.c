@@ -57,6 +57,7 @@ extern char *oph_web_server_location;
 extern char *oph_base_src_path;
 extern FILE *wf_logfile;
 extern oph_service_info *service_info;
+extern char *oph_status_log_file_name;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_max_cores;
 extern unsigned int oph_default_max_hosts;
@@ -6092,14 +6093,32 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			if (!response->response)
 				response->response = soap_strdup(soap, wf->response);
-			oph_workflow_free(wf);
+
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+
 			pthread_mutex_lock(&global_flag);
 			if (service_info)
 				service_info->outcoming_responses++;
 			pthread_mutex_unlock(&global_flag);
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
-			oph_workflow_free(wf);
+
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+
 			if (!response->error)
 				response->error = OPH_SERVER_SYSTEM_ERROR;
 			return SOAP_OK;

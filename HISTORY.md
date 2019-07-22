@@ -5,6 +5,10 @@
 
 - Use unique job identifiers also for internal requests associated with massive operations [#47](https://github.com/OphidiaBigData/ophidia-server/pull/47)
 
+### Added:
+
+- Status log of the workflows started and completed in last period
+
 
 ## v1.5.1 - 2019-04-16
 
