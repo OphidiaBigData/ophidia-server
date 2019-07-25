@@ -868,12 +868,13 @@ void *status_logger(struct soap *soap)
 				continue;
 			aw++;
 			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
+			_value[2] = wf->tasks_num;	// Total number of tasks
 			if (oph_get_progress_ratio_of(wf, &wpr, NULL))
-				_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);	// Workflow progress ratio
+				_value[0] = (unsigned long) (_value[1] * 100.0 / _value[2]);	// Workflow progress ratio
 			else
 				_value[0] = (unsigned long) (wpr * 100.0);
 			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
-			oph_status_add(&workflows, name, NULL, _value, 2);
+			oph_status_add(&workflows, name, NULL, _value, 3);
 			if (wf->username)
 				oph_status_add(&users, wf->username, &un, NULL, 0);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
@@ -899,9 +900,10 @@ void *status_logger(struct soap *soap)
 								rlt++;
 						}
 						_value[1] = wf->tasks[i].light_tasks_num - wf->tasks[i].residual_light_tasks_num;	// Completed/failed light tasks
+						_value[2] = wf->tasks[i].light_tasks_num;	// Total number of light tasks
 						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);	// Task progress ratio
 						snprintf(name, OPH_MAX_STRING_SIZE, "%s.%s #%d?%d", wf->name, wf->tasks[i].name, wf->workflowid, wf->tasks[i].markerid);
-						oph_status_add(&massives, name, NULL, _value, 2);
+						oph_status_add(&massives, name, NULL, _value, 3);
 					}
 					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
 						pt++;
@@ -961,11 +963,13 @@ void *status_logger(struct soap *soap)
 				if (tmp->key) {
 					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
 					fprintf(statuslogfile, "workflow\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
+					fprintf(statuslogfile, "workflow\\ total\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[2], (int) tv.tv_sec);
 				}
 			for (tmp = massives; tmp; tmp = tmp->next)
 				if (tmp->key) {
 					fprintf(statuslogfile, "massive\\ progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
 					fprintf(statuslogfile, "massive\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
+					fprintf(statuslogfile, "massive\\ total\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[2], (int) tv.tv_sec);
 				}
 			fclose(statuslogfile);
 			statuslogfile = NULL;
