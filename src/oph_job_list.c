@@ -24,6 +24,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#define OPH_STATUS_LOG_HYSTERESIS_PERIOD 2
+
 extern int oph_server_workflow_timeout;
 extern unsigned int oph_server_farm_size;
 extern unsigned int oph_server_queue_size;
@@ -142,6 +144,9 @@ int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item)
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
 	if (oph_status_log_file_name) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		item->timestamp = tv.tv_sec;
 		item->next = list->saved;
 		list->saved = item;
 	} else {
@@ -162,13 +167,23 @@ int oph_delete_saved_jobs_from_job_list(oph_job_list * list)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
-	oph_job_info *temp, *next;
-	for (temp = list->saved; temp; temp = next) {
-		next = temp->next;
-		oph_workflow_free(temp->wf);
-		free(temp);
-	}
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	oph_job_info *current = list->saved, *next, *prev = NULL;
 	list->saved = NULL;
+	for (; current; current = next) {
+		next = current->next;
+		if (current->timestamp < tv.tv_sec - OPH_STATUS_LOG_HYSTERESIS_PERIOD) {
+			oph_workflow_free(current->wf);
+			free(current);
+			if (prev)
+				prev->next = next;
+		} else {
+			prev = current;
+			if (!list->saved)
+				list->saved = current;
+		}
+	}
 	return OPH_JOB_LIST_OK;
 }
 
