@@ -131,7 +131,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			if (!(item = oph_find_workflow_in_job_list(state->job_info, sessionid, wid)))
 				success = 0;
-			else if (item->wf->status < (int) OPH_ODB_STATUS_ABORTED) {
+			else if (!item->wf->is_closed && (item->wf->status < (int) OPH_ODB_STATUS_ABORTED)) {
 				item->wf->status = OPH_ODB_STATUS_ABORTED;
 				item->wf->cancel_type = btype;
 				snprintf(error_notification, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, item->wf->idjob, 0, -1, item->wf->idjob, OPH_ODB_STATUS_ABORTED, item->wf->sessionid,

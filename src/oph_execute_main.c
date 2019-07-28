@@ -584,7 +584,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			oph_known_operator = OPH_LOG_INFO_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_SERVICE, OPH_MAX_STRING_SIZE)) {
 			if (!is_admin) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: the user is not authorized to submit the command '%s'\n", jobid, wf->tasks[i].operator);
@@ -592,19 +592,19 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			oph_known_operator = OPH_SERVICE_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_GET_CONFIG, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_GET_CONFIG_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_RESUME, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_RESUME_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_MANAGE_SESSION, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_MANAGE_SESSION_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_CANCEL, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_CANCEL_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_CLUSTER_OPERATOR;
 			if (!is_admin) {
@@ -616,7 +616,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						break;
 					}
 			}
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else
 			nstandardcommands++;
 	}
@@ -5907,7 +5907,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (mode_type == OPH_MODE_SYNC) {
 		// Block the master thread until workflow is completed
 		pthread_mutex_lock(&global_flag);
-		while (wf->status < (int) OPH_ODB_STATUS_ABORTED) {
+		while (!wf->is_closed && (wf->status < (int) OPH_ODB_STATUS_ABORTED)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: waiting for workflow end\n", jobid);
 			pthread_cond_wait(&termination_flag, &global_flag);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: a workflow is finished; status of '%s' is %s\n", jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
@@ -5915,7 +5915,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: the workflow '%s' is completed\n", jobid, wf->name);
 		pthread_mutex_unlock(&global_flag);
 
-		if (wf->response && (wf->status == OPH_ODB_STATUS_CLOSED)) {
+		if (wf->response && wf->is_closed) {
 
 			unsigned int nextra = 1;
 

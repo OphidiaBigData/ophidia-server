@@ -120,7 +120,7 @@ typedef struct _oph_workflow_dep {
  * \param on_exit Action to be taken at the end of workflow execution
  * \param is_skipped Flag used to skip task execution
  * \param branch_num Number of selection blocks which the task is involved in
- * \param isknown Flag set only for known operators
+ * \param is_known Flag set only for known operators
  * \param forward Flag set only for selection interface
  * \param timestamp Reference to creation date of the struct
  */
@@ -162,9 +162,9 @@ typedef struct _oph_workflow_task {
 	HASHTBL *vars;
 	char *on_error;
 	char *on_exit;
-	int is_skipped;
+	char is_skipped;
 	int branch_num;
-	char isknown;
+	char is_known;
 	char forward;
 	double timestamp;
 } oph_workflow_task;
@@ -248,6 +248,7 @@ typedef struct _oph_workflow_stack {
  * \param workflowid Workflow ID of the job
  * \param markerid Marker ID of the job
  * \param status Status of the workflow
+ * \param is_closed Flag used to broadcast termination of a synchronous workflow
  * \param username User executing the workflow
  * \param os_username Username used to submit requests to resource manager
  * \param userrole User role
@@ -291,6 +292,7 @@ typedef struct _oph_workflow {
 	int workflowid;
 	int markerid;
 	int status;
+	char is_closed;
 	char *username;
 	char *password;
 	char *os_username;

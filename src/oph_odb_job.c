@@ -529,8 +529,6 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 			return OPH_ODB_STATUS_UNSELECTED_STR;
 		case OPH_ODB_STATUS_EXPIRED:
 			return OPH_ODB_STATUS_EXPIRED_STR;
-		case OPH_ODB_STATUS_CLOSED:
-			return OPH_ODB_STATUS_CLOSED_STR;
 		default:
 			return OPH_ODB_STATUS_UNKNOWN_STR;
 	}
@@ -565,9 +563,6 @@ int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_
 			}
 			n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_DELETE_OPHIDIADB_JOB, id_job);
 			break;
-		case OPH_ODB_STATUS_CLOSED:
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Status %s is not allowed\n", OPH_ODB_STATUS_UNKNOWN_STR);
-			return OPH_ODB_MYSQL_ERROR;
 		case OPH_ODB_STATUS_PENDING:
 		case OPH_ODB_STATUS_WAIT:
 		case OPH_ODB_STATUS_START:

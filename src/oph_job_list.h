@@ -61,7 +61,7 @@ int oph_insert_into_job_list(oph_job_list * list, oph_job_info * item);
 int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
 int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
 int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item);
-int oph_delete_saved_jobs_from_job_list(oph_job_list * list);
+int oph_delete_saved_jobs_from_job_list(oph_job_list * list, int hysteresis);
 
 int oph_free_job_list(oph_job_list * list);
 

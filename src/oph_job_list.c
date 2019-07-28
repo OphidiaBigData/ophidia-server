@@ -24,8 +24,6 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define OPH_STATUS_LOG_HYSTERESIS_PERIOD 2
-
 extern int oph_server_workflow_timeout;
 extern unsigned int oph_server_farm_size;
 extern unsigned int oph_server_queue_size;
@@ -163,7 +161,7 @@ int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_i
 	return oph_save_job_in_job_list(list, item);
 }
 
-int oph_delete_saved_jobs_from_job_list(oph_job_list * list)
+int oph_delete_saved_jobs_from_job_list(oph_job_list * list, int hysteresis)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -173,7 +171,7 @@ int oph_delete_saved_jobs_from_job_list(oph_job_list * list)
 	list->saved = NULL;
 	for (; current; current = next) {
 		next = current->next;
-		if (current->timestamp < tv.tv_sec - OPH_STATUS_LOG_HYSTERESIS_PERIOD) {
+		if (!hysteresis || (current->timestamp < tv.tv_sec - hysteresis)) {
 			oph_workflow_free(current->wf);
 			free(current);
 			if (prev)
@@ -200,6 +198,7 @@ int oph_free_job_list(oph_job_list * list)
 	}
 	list->tail = NULL;
 	list->counter = 0;
+	oph_delete_saved_jobs_from_job_list(list, 0);
 	return OPH_JOB_LIST_OK;
 }
 

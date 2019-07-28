@@ -279,7 +279,7 @@ void *_oph_wait(oph_notify_data * data)
 }
 
 // Thread unsafe
-int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, int skip_the_next, int *exit_output)
+int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, char skip_the_next, int *exit_output)
 {
 	if (wf->tasks[task_index].dependents_indexes_num) {
 		if (!wf->tasks[task_index].dependents_indexes) {
@@ -354,7 +354,8 @@ int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 {
 	*error_message = 0;
 
-	int j, check = 0;
+	int j;
+	char check = 0;
 	if (!wf->tasks[i].is_skipped) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Extract arguments of task '%s'.\n", wf->tasks[i].name);
 
@@ -2089,7 +2090,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2194,7 +2195,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2298,7 +2299,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, ret;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		char error_message[OPH_MAX_STRING_SIZE];
 		snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing oph_endfor!");
@@ -2399,7 +2400,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, idjob = wf->tasks[i].idjob;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2501,7 +2502,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, idjob = wf->tasks[i].idjob;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2599,7 +2600,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		oph_workflow *wf = item->wf;
 
 		int i = *task_id, idjob = wf->tasks[i].idjob, first = wf->status < (int) OPH_ODB_STATUS_RUNNING;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;
@@ -2832,7 +2833,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		}
 		oph_workflow *wf = item->wf;
 		int i = *task_id, idjob = wf->tasks[i].idjob;
-		wf->tasks[i].isknown = 1;
+		wf->tasks[i].is_known = 1;
 
 		// JSON Response creation
 		int success = 0;

@@ -2869,7 +2869,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			status = OPH_ODB_STATUS_RUNNING;
 			break;
 		case OPH_ODB_STATUS_UNSELECTED:
-		case OPH_ODB_STATUS_CLOSED:
 			status = OPH_ODB_STATUS_COMPLETED;
 			break;
 		case OPH_ODB_STATUS_PENDING_ERROR:
@@ -2959,7 +2958,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 
-	if (wf->status < (int) OPH_ODB_STATUS_ABORTED)
+	if (!wf->is_closed && (wf->status < (int) OPH_ODB_STATUS_ABORTED))
 		final = 0;
 	else {
 		oph_output_data_free(outputs_keys, outputs_num);
@@ -5333,7 +5332,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 				// Data
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: inserting data into JSON file\n", ttype, jobid);
-				oph_workflow_task_out *wtmp = wf->output;	// It should be already order by markerid
+				oph_workflow_task_out *wtmp = wf->output;	// It should be already ordered by markerid
 				while (wtmp) {
 					if (wtmp->status && (wtmp->status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
 					{
@@ -5619,7 +5618,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		if (wf->exec_mode && !strncasecmp(wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
 			pthread_mutex_lock(&global_flag);
-			wf->status = OPH_ODB_STATUS_CLOSED;	// Effective termination
+			wf->is_closed = 1;	// Effective termination
 #if defined(LEVEL1) || defined(LEVEL2) || defined(LEVEL3) || defined(COMMAND_TO_JSON)
 			if (!my_output_json && !output_json) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Missed receipt of JSON Response from framework: %s\n", ttype, jobid, data);
@@ -5963,7 +5962,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 				if (temp->wf) {
 					for (i = 0; i <= temp->wf->tasks_num; ++i)
 						if (temp->wf->tasks[i].name && (temp->wf->tasks[i].status > (int) OPH_ODB_STATUS_PENDING)
-						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED) && !temp->wf->tasks[i].isknown) {
+						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED) && !temp->wf->tasks[i].is_known) {
 							if (temp->wf->tasks[i].light_tasks_num) {
 								for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
 									if ((temp->wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_PENDING)

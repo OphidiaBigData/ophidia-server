@@ -35,6 +35,7 @@
 #include <mysql.h>
 
 #define OPH_STATUS_LOG_PERIOD 1
+#define OPH_STATUS_LOG_HYSTERESIS_PERIOD 2
 #define OPH_STATUS_LOG_ALPHA 0.5
 #define OPH_STATUS_LOG_AVG_PERIOD 60
 
@@ -54,7 +55,7 @@ void oph_child_signal_handler(int sig);
 
 /******************************************************************************\
  *
- *	Global variable;
+ *	Global variables
  *
 \******************************************************************************/
 
@@ -370,7 +371,7 @@ int set_global_values(const char *configuration_file)
 
 /******************************************************************************\
  *
- *	Main
+ *	Clean up
  *
 \******************************************************************************/
 
@@ -442,6 +443,12 @@ void cleanup()
 #endif
 	oph_tp_end_xml_parser();
 }
+
+/******************************************************************************\
+ *
+ *	Main
+ *
+\******************************************************************************/
 
 int main(int argc, char *argv[])
 {
@@ -693,13 +700,14 @@ void *process_request(struct soap *soap)
 
 typedef struct _oph_status_object {
 	char *key;
+	char *tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 	unsigned long value[OPH_SERVER_MAX_WF_LOG_PARAM];
 	struct _oph_status_object *next;
 } oph_status_object;
 
-int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, unsigned long *new_value, size_t number_of_new_values)
+int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, char **tag, size_t number_of_tags, unsigned long *new_value, size_t number_of_new_values)
 {
-	if (!list || !key || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
+	if (!list || !key || (number_of_tags > OPH_SERVER_MAX_WF_LOG_PARAM) || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
 		return 1;
 
 	size_t i, j, key_size = strlen(key);
@@ -725,9 +733,16 @@ int oph_status_add(oph_status_object ** list, const char *key, unsigned long *ol
 	tmp->key = strdup(_key);
 	if (!tmp->key)
 		return 3;
+	i = 0;
+	if (tag)
+		for (; i < number_of_tags; ++i)
+			tmp->tag[i] = tag[i];
+	for (; i < OPH_SERVER_MAX_WF_LOG_PARAM; ++i)
+		tmp->tag[i] = NULL;
 	if (new_value)
 		for (i = 0; i < number_of_new_values; ++i)
 			tmp->value[i] = new_value[i];
+
 	tmp->next = *list;
 	*list = tmp;
 
@@ -742,11 +757,15 @@ int oph_status_destroy(oph_status_object ** list)
 	if (!list)
 		return 1;
 
+	int i;
 	oph_status_object *tmp, *next;
 	for (tmp = *list; tmp; tmp = next) {
 		next = tmp->next;
 		if (tmp->key)
 			free(tmp->key);
+		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
+			if (tmp->tag[i])
+				free(tmp->tag[i]);
 		free(tmp);
 	}
 	*list = NULL;
@@ -814,9 +833,9 @@ void *status_logger(struct soap *soap)
 	struct timeval tv, tv2;
 	int i, j;
 	oph_status_object *users, *workflows, *massives, *tmp;
-	unsigned long prev, _value[10];
+	unsigned long prev, _value[OPH_SERVER_MAX_WF_LOG_PARAM];
 	long tau = 0, eps = 0, _eps;
-	char name[OPH_MAX_STRING_SIZE], saved;
+	char name[OPH_MAX_STRING_SIZE], saved, *_tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 
 	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
 	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
@@ -840,6 +859,8 @@ void *status_logger(struct soap *soap)
 		aw = pw = ww = rw = at = pt = wt = rt = mt = st = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
 		wpr = 0.0;
 		users = workflows = massives = NULL;
+		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
+			_tag[i] = NULL;
 
 		pthread_mutex_lock(&global_flag);
 
@@ -867,6 +888,8 @@ void *status_logger(struct soap *soap)
 			if (!(wf = temp->wf))
 				continue;
 			aw++;
+			_tag[0] = strdup(wf->username ? wf->username : OPH_UNKNOWN);
+			_tag[1] = strdup(oph_odb_convert_status_to_str(wf->status));
 			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
 			_value[2] = wf->tasks_num;	// Total number of tasks
 			if (oph_get_progress_ratio_of(wf, &wpr, NULL))
@@ -874,9 +897,8 @@ void *status_logger(struct soap *soap)
 			else
 				_value[0] = (unsigned long) (wpr * 100.0);
 			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
-			oph_status_add(&workflows, name, NULL, _value, 3);
-			if (wf->username)
-				oph_status_add(&users, wf->username, &un, NULL, 0);
+			oph_status_add(&workflows, name, NULL, _tag, 2, _value, 3);
+			oph_status_add(&users, wf->username ? wf->username : OPH_UNKNOWN, &un, NULL, 0, NULL, 0);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
 			else if (wf->status == (int) OPH_ODB_STATUS_WAIT)
@@ -903,7 +925,7 @@ void *status_logger(struct soap *soap)
 						_value[2] = wf->tasks[i].light_tasks_num;	// Total number of light tasks
 						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);	// Task progress ratio
 						snprintf(name, OPH_MAX_STRING_SIZE, "%s.%s #%d?%d", wf->name, wf->tasks[i].name, wf->workflowid, wf->tasks[i].markerid);
-						oph_status_add(&massives, name, NULL, _value, 3);
+						oph_status_add(&massives, name, NULL, NULL, 0, _value, 3);
 					}
 					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
 						pt++;
@@ -932,7 +954,7 @@ void *status_logger(struct soap *soap)
 			}
 		}
 
-		oph_delete_saved_jobs_from_job_list(job_info);
+		oph_delete_saved_jobs_from_job_list(job_info, OPH_STATUS_LOG_HYSTERESIS_PERIOD);
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -960,17 +982,11 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
 			fprintf(statuslogfile, "core,status=active value=%ld %d000000000\n", cn, (int) tv.tv_sec);
 			for (tmp = workflows; tmp; tmp = tmp->next)
-				if (tmp->key) {
-					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
-					fprintf(statuslogfile, "workflow\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
-					fprintf(statuslogfile, "workflow\\ total\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[2], (int) tv.tv_sec);
-				}
+				fprintf(statuslogfile, "workflow\\ status,name=%s,user=%s,status=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->tag[0], tmp->tag[1],
+					tmp->value[0], tmp->value[1], tmp->value[2], (int) tv.tv_sec);
 			for (tmp = massives; tmp; tmp = tmp->next)
-				if (tmp->key) {
-					fprintf(statuslogfile, "massive\\ progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
-					fprintf(statuslogfile, "massive\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
-					fprintf(statuslogfile, "massive\\ total\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[2], (int) tv.tv_sec);
-				}
+				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
+					(int) tv.tv_sec);
 			fclose(statuslogfile);
 			statuslogfile = NULL;
 		}
