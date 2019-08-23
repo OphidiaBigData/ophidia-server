@@ -4178,19 +4178,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-							if (oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition)) {
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "Cluster has been stopped!");
-								free(cmd);
-								break;
-							}
+							success = !oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition);
 							free(cmd);
-
 							if (!em)
 								oph_detach_task(idjob);
 
-							snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
+							if (!success) {
+								pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error during remote submission\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+								break;
+							}
 
-							success = 1;
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
 							break;
 						}
 
