@@ -4185,7 +4185,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							free(cmd);
 
-							if (em)
+							if (!em)
 								oph_detach_task(idjob);
 
 							snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);

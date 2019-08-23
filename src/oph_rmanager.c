@@ -782,6 +782,7 @@ int oph_detach_task(int id)
 		tmp->id = id;
 		tmp->next = orm->subm_detached_tasks;
 		orm->subm_detached_tasks = tmp;
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added task %d to list of detached tasks\n", id);
 	}
 
 	return RMANAGER_SUCCESS;
@@ -803,6 +804,8 @@ int oph_is_detached_task(int id)
 			res = 1;
 	}
 
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d %sis in list of detached tasks\n", id, res ? "" : "not ");
+
 	return res;
 }
 
@@ -823,6 +826,7 @@ int oph_remove_detached_task(int id)
 			else
 				orm->subm_detached_tasks = tmp->next;
 			free(tmp);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Removed task %d from list of detached tasks\n", id);
 		}
 	}
 
