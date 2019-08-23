@@ -773,7 +773,7 @@ int oph_detach_task(int id)
 		return RMANAGER_NULL_PARAM;
 	}
 
-	if (!id) {
+	if (id) {
 		oph_detached_task *tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
 		if (!tmp) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
@@ -782,7 +782,7 @@ int oph_detach_task(int id)
 		tmp->id = id;
 		tmp->next = orm->subm_detached_tasks;
 		orm->subm_detached_tasks = tmp;
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added task %d to list of detached tasks\n", id);
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d added to list of detached tasks\n", id);
 	}
 
 	return RMANAGER_SUCCESS;
@@ -796,7 +796,7 @@ int oph_is_detached_task(int id)
 	}
 
 	int res = 0;
-	if (!id) {
+	if (id) {
 		oph_detached_task *tmp = orm->subm_detached_tasks;
 		while (tmp && (tmp->id != id))
 			tmp = tmp->next;
@@ -816,7 +816,7 @@ int oph_remove_detached_task(int id)
 		return RMANAGER_NULL_PARAM;
 	}
 
-	if (!id) {
+	if (id) {
 		oph_detached_task *tmp = orm->subm_detached_tasks, *prev = NULL;
 		while (tmp && (tmp->id != id))
 			tmp = tmp->next;
@@ -826,7 +826,7 @@ int oph_remove_detached_task(int id)
 			else
 				orm->subm_detached_tasks = tmp->next;
 			free(tmp);
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Removed task %d from list of detached tasks\n", id);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d removed from list of detached tasks\n", id);
 		}
 	}
 
