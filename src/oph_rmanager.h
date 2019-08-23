@@ -34,6 +34,11 @@
 
 #define OPH_NULL_FILENAME "/dev/null"
 
+typedef struct _oph_detached_task {
+	int id;
+	struct _oph_detached_task *next;
+} oph_detached_task;
+
 struct _oph_rmanager {
 	char *subm_cmd_submit;
 	char *subm_cmd_start;
@@ -48,6 +53,7 @@ struct _oph_rmanager {
 	char *subm_prefix;
 	char *subm_postfix;
 	int subm_taskid;
+	oph_detached_task *subm_detached_tasks;
 };
 typedef struct _oph_rmanager oph_rmanager;
 
@@ -64,5 +70,9 @@ int oph_stop_request(int jobid, const char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_get_available_host_number(int *size, int jobid);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);
+
+int oph_detach_task(int id);
+int oph_is_detached_task(int id);
+int oph_remove_detached_task(int id);
 
 #endif				/* OPH_RMANAGER_H */

@@ -6066,7 +6066,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 				}
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
-				if (list[k] < 0)
+				if ((list[k] < 0) && !oph_is_detached_task(-list[k]))
 					oph_cancel_request(-list[k], username[k] ? username[k] : NULL);
 		}
 

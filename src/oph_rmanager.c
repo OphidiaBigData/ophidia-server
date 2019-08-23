@@ -323,6 +323,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
 	orm->subm_taskid = 0;	// Used only for internal requests
+	orm->subm_detached_tasks = NULL;
 
 	return RMANAGER_SUCCESS;
 }
@@ -587,6 +588,12 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_postfix);
 		orm->subm_postfix = NULL;
 	}
+	oph_detached_task *tmp;
+	while (orm->subm_detached_tasks) {
+		tmp = orm->subm_detached_tasks->next;
+		free(orm->subm_detached_tasks);
+		orm->subm_detached_tasks = tmp;
+	}
 	free(orm);
 	return RMANAGER_SUCCESS;
 
@@ -757,4 +764,67 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	}
 
 	return OPH_SERVER_OK;
+}
+
+int oph_detach_task(int id)
+{
+	if (!orm) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return RMANAGER_NULL_PARAM;
+	}
+
+	if (!id) {
+		oph_detached_task *tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
+		if (!tmp) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+			return RMANAGER_MEMORY_ERROR;
+		}
+		tmp->id = id;
+		tmp->next = orm->subm_detached_tasks;
+		orm->subm_detached_tasks = tmp;
+	}
+
+	return RMANAGER_SUCCESS;
+}
+
+int oph_is_detached_task(int id)
+{
+	if (!orm) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return RMANAGER_NULL_PARAM;
+	}
+
+	int res = 0;
+	if (!id) {
+		oph_detached_task *tmp = orm->subm_detached_tasks;
+		while (tmp && (tmp->id != id))
+			tmp = tmp->next;
+		if (tmp)
+			res = 1;
+	}
+
+	return res;
+}
+
+int oph_remove_detached_task(int id)
+{
+	if (!orm) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return RMANAGER_NULL_PARAM;
+	}
+
+	if (!id) {
+		oph_detached_task *tmp = orm->subm_detached_tasks, *prev = NULL;
+		while (tmp && (tmp->id != id))
+			tmp = tmp->next;
+		if (tmp) {
+			if (prev)
+				prev->next = tmp->next;
+			else
+				orm->subm_detached_tasks = tmp->next;
+			free(tmp);
+		}
+	}
+
+	return RMANAGER_SUCCESS;
 }
