@@ -53,6 +53,7 @@ int oph_server_workflow_timeout = OPH_SERVER_WORKFLOW_TIMEOUT;
 FILE *wf_logfile = 0;
 FILE *task_logfile = 0;
 char *oph_log_file_name = 0;
+char *oph_status_log_file_name = 0;
 char *oph_rmanager_conf_file = 0;
 char *oph_json_location = 0;
 char *oph_auth_location = 0;
@@ -1771,6 +1772,8 @@ int _check_oph_server(const char *function, int option)
 		enum oph__oph_odb_job_status exit_code = OPH_ODB_STATUS_COMPLETED;
 		int exit_output = 0;
 		char operator_name[OPH_SHORT_STRING_SIZE];
+		char os_username[OPH_SHORT_STRING_SIZE];
+		snprintf(os_username, OPH_SHORT_STRING_SIZE, "%s", wf->os_username);
 
 		// Tasks
 		wf->tasks_num = wf->residual_tasks_num = 10;
@@ -2285,11 +2288,11 @@ int _check_oph_server(const char *function, int option)
 		if ((option >= 4) && (option <= 10))
 			res =
 			    _oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
-							     operator_name, &tid);
+							     os_username, operator_name, &tid);
 		else
 			res =
 			    oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
-							    operator_name);
+							    os_username, operator_name);
 
 		if (response)
 			free(response);

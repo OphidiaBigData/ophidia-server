@@ -143,7 +143,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	int result;
 	if ((result =
 	     oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
-				      exit_output)) != OPH_SERVER_UNKNOWN)
+				      exit_output, username)) != OPH_SERVER_UNKNOWN)
 		return result;
 
 	if (strstr(request, "oph_fs")) {
@@ -192,7 +192,7 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	return OPH_SERVER_OK;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, char *username, char **cmd, char type)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type)
 {
 	return OPH_SERVER_OK;
 }
@@ -212,12 +212,12 @@ int free_oph_rmanager(oph_rmanager * orm)
 	return OPH_SERVER_OK;
 }
 
-int oph_cancel_request(int jobid, char *username)
+int oph_cancel_request(int jobid, const char *username)
 {
 	return OPH_SERVER_OK;
 }
 
-int oph_stop_request(int jobid, char *username)
+int oph_stop_request(int jobid, const char *username)
 {
 	return OPH_SERVER_OK;
 }

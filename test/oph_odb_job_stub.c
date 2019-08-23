@@ -288,8 +288,6 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 			return OPH_ODB_STATUS_UNSELECTED_STR;
 		case OPH_ODB_STATUS_EXPIRED:
 			return OPH_ODB_STATUS_EXPIRED_STR;
-		case OPH_ODB_STATUS_CLOSED:
-			return OPH_ODB_STATUS_CLOSED_STR;
 		default:
 			return OPH_ODB_STATUS_UNKNOWN_STR;
 	}

@@ -49,6 +49,7 @@ extern char *oph_txt_location;
 extern FILE *wf_logfile;
 extern FILE *task_logfile;
 extern oph_service_info *service_info;
+extern char *oph_status_log_file_name;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -868,72 +869,52 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		}
 		free(target_base);
 
+		// Do not consider operations with parameter 'cubes' as massive 
+		if (datacube_input && !src_path && (ncubes > 1)) {
+			for (i = 0; i < (int) number; ++i)
+				if (datacube_inputs[i])
+					free(datacube_inputs[i]);
+			free(datacube_inputs);
+			datacube_inputs = NULL;
+		}
+
 		if (datacube_inputs) {
+
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: found %d light tasks\n", ttype, jobid, number);
 
 			int j;
 			if (running) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation\n", ttype, jobid, task->name);
 
-				if (!src_path && (ncubes > 1)) {
+				task->light_tasks_num = task->residual_light_tasks_num = number;
+				task->light_tasks = (oph_workflow_light_task *) malloc(number * sizeof(oph_workflow_light_task));
 
-					// Build a string with the list of datacubes
-					int n = 0;
-					char datacube_list[number * OPH_SHORT_STRING_SIZE];
-					for (i = 0; i < (int) number; ++i)
-						n += snprintf(datacube_list + n, OPH_SHORT_STRING_SIZE, "%s%s", i ? OPH_SEPARATOR_SUBPARAM_STR : "", datacube_inputs[i]);
-
-					task->light_tasks_num = task->residual_light_tasks_num = 1;
-					task->light_tasks = (oph_workflow_light_task *) malloc(sizeof(oph_workflow_light_task));
-
-					task->light_tasks[0].idjob = 0;
-					task->light_tasks[0].markerid = 0;
-					task->light_tasks[0].status = OPH_ODB_STATUS_UNKNOWN;
-					task->light_tasks[0].ncores = task->ncores;	// Basic policy for ncores
-					task->light_tasks[0].arguments_keys = (char **) malloc(task->arguments_num * sizeof(char *));
-					task->light_tasks[0].arguments_values = (char **) malloc(task->arguments_num * sizeof(char *));
-					task->light_tasks[0].arguments_num = task->arguments_num;
-					task->light_tasks[0].response = NULL;
+				int add_measure = src_path && !measure_key && measure_name, arguments_num;
+				for (i = 0; i < (int) number; ++i) {
+					arguments_num = task->arguments_num + (add_measure && measure_name[i] ? 1 : 0);
+					task->light_tasks[i].idjob = 0;
+					task->light_tasks[i].markerid = 0;
+					task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
+					task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
+					task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
+					task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
+					task->light_tasks[i].arguments_num = arguments_num;
+					task->light_tasks[i].response = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
-						task->light_tasks[0].arguments_keys[j] = strdup(task->arguments_keys[j]);
-						if (task->arguments_keys[j] == datacube_input_key)
-							task->light_tasks[0].arguments_values[j] = strdup(datacube_list);
-						else
-							task->light_tasks[0].arguments_values[j] = strdup(task->arguments_values[j]);
+						task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
+						if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
+							task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
+						else if (task->arguments_keys[j] == measure_key) {
+							if (measure_name && measure_name[i])
+								task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
+							else
+								task->light_tasks[i].arguments_values[j] = strdup(measure);
+						} else
+							task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
 					}
-
-				} else {
-
-					task->light_tasks_num = task->residual_light_tasks_num = number;
-					task->light_tasks = (oph_workflow_light_task *) malloc(number * sizeof(oph_workflow_light_task));
-
-					int add_measure = src_path && !measure_key && measure_name, arguments_num;
-					for (i = 0; i < (int) number; ++i) {
-						arguments_num = task->arguments_num + (add_measure && measure_name[i] ? 1 : 0);
-						task->light_tasks[i].idjob = 0;
-						task->light_tasks[i].markerid = 0;
-						task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
-						task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
-						task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
-						task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
-						task->light_tasks[i].arguments_num = arguments_num;
-						task->light_tasks[i].response = NULL;
-						for (j = 0; j < task->arguments_num; ++j) {
-							task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
-							if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
-								task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
-							else if (task->arguments_keys[j] == measure_key) {
-								if (measure_name && measure_name[i])
-									task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
-								else
-									task->light_tasks[i].arguments_values[j] = strdup(measure);
-							} else
-								task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
-						}
-						if (add_measure && measure_name[i]) {
-							task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);
-							task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
-						}
+					if (add_measure && measure_name[i]) {
+						task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);
+						task->light_tasks[i].arguments_values[j] = strdup(measure_name[i]);
 					}
 				}
 
@@ -941,7 +922,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					if (datacube_inputs[i])
 						free(datacube_inputs[i]);
 				free(datacube_inputs);
-				datacube_inputs = 0;
+				datacube_inputs = NULL;
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: light tasks loaded from task '%s'\n", ttype, jobid, task->name);
 			} else {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation without effective execution\n", ttype, jobid, task->name);
@@ -1516,9 +1497,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	int i, j, k, odb_jobid, first = 1, res, nn = 0;
-	char *submission_string, *sss, *errore, str_markerid[OPH_SHORT_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], submission_string_ext[OPH_MAX_STRING_SIZE],
-	    *output_json = NULL;
+	int i, j, k, odb_jobid, first = 1, res, nn = 0, nnn;
+	char *submission_string, *sss, *errore, str_markerid[OPH_SHORT_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], *submission_string_ext =
+	    NULL, *output_json = NULL;
 
 	oph_request_data *request_data[tasks_indexes_num];
 	int request_data_dim[tasks_indexes_num];
@@ -1573,7 +1554,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 					if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
+
+					nnn = 1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
+					submission_string_ext = (char *) malloc(nnn * sizeof(char));
+					snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
 						 wf->tasks[i].markerid);
 
 					request_data_dim[k] = 1;
@@ -1581,7 +1565,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					oph_request_data_init(request_data[k]);
 
 					request_data[k]->serve_request = 0;
-					request_data[k]->error_notification = strdup(submission_string_ext);
+					request_data[k]->error_notification = submission_string_ext;
 
 					continue;
 				}
@@ -1604,8 +1588,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 				if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
-					 wf->tasks[i].markerid);
+
+				nnn = 1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
 
 				if (!oph_odb_create_job_unsafe(oDB, sss ? sss : "-", task_tbl, wf->tasks[i].light_tasks_num ? wf->tasks[i].light_tasks_num : -1, &odb_jobid))
 					oph_odb_abort_job_fast(odb_jobid, oDB);
@@ -1620,7 +1606,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				oph_request_data_init(request_data[k]);
 
 				request_data[k]->serve_request = 0;
-				request_data[k]->error_notification = strdup(submission_string_ext);
+				request_data[k]->error_notification = submission_string_ext;
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->error = errore;
 
@@ -2218,7 +2204,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				if (odb_jobid && oph_odb_set_job_status_and_nchildrencompleted(wf->tasks[i].idjob, wf->tasks[i].status, -1, 0, oDB))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
 
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+
 				if (submission_string)
 					free(submission_string);
 				if (sss)
@@ -2230,15 +2219,21 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 0;
 				request_data[k]->jobid = odb_jobid;
+				request_data[k]->submission_string = submission_string_ext;
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->task_id = i;
 				request_data[k]->light_task_id = -1;
 				if (output_json)
 					request_data[k]->output_json = strdup(output_json);
 
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, odb_jobid,
+				nnn =
+				    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, odb_jobid, wf->tasks[i].status,
+						 wf->sessionid, wf->tasks[i].markerid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, odb_jobid,
 					 wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
-				request_data[k]->error_notification = strdup(submission_string_ext);
+
+				request_data[k]->error_notification = submission_string_ext;
 
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is finished\n", ttype, jobid, wf->tasks[i].name);
 
@@ -2251,8 +2246,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
 				if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid,
-					 wf->tasks[i].markerid);
+
+				nnn = 1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid);
 
 				if (submission_string)
 					free(submission_string);
@@ -2264,7 +2261,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				oph_request_data_init(request_data[k]);
 
 				request_data[k]->serve_request = 0;
-				request_data[k]->error_notification = strdup(submission_string_ext);
+				request_data[k]->error_notification = submission_string_ext;
 
 				continue;
 			}
@@ -2296,11 +2293,16 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							      oph_odb_convert_status_to_str(wf->tasks[i].light_tasks[j].status));
 							wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
 						}
-						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
+
+						nnn =
+						    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status,
+								 wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
+						submission_string_ext = (char *) malloc(nnn * sizeof(char));
+						snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
 							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						request_data[k][j].serve_request = 0;
-						request_data[k][j].error_notification = strdup(submission_string_ext);
+						request_data[k][j].error_notification = submission_string_ext;
 
 						continue;
 					}
@@ -2309,11 +2311,16 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					    (state, ttype, jobid, wf, NULL, 0, 0, &(wf->tasks[i].light_tasks[j].markerid), str_markerid, NULL, NULL, oph_jobid, wf->tasks[i].light_tasks[j].markerid)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: anew markerid cannot be created... aborting\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
-						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
+
+						nnn =
+						    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status,
+								 wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
+						submission_string_ext = (char *) malloc(nnn * sizeof(char));
+						snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
 							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						request_data[k][j].serve_request = 0;
-						request_data[k][j].error_notification = strdup(submission_string_ext);
+						request_data[k][j].error_notification = submission_string_ext;
 
 						continue;
 					}
@@ -2328,7 +2335,12 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (oph_workflow_get_submission_string(wf, i, j, &submission_string, &sss, &errore)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: submission string cannot be loaded\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
-						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
+
+						nnn =
+						    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status,
+								 wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
+						submission_string_ext = (char *) malloc(nnn * sizeof(char));
+						snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
 							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						if (!oph_odb_create_job_unsafe(oDB, sss ? sss : "-", task_tbl, -1, &odb_jobid))
@@ -2340,7 +2352,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							free(sss);
 
 						request_data[k][j].serve_request = 0;
-						request_data[k][j].error_notification = strdup(submission_string_ext);
+						request_data[k][j].error_notification = submission_string_ext;
 						request_data[k][j].markerid = strdup(str_markerid);
 						request_data[k][j].error = errore;
 
@@ -2352,7 +2364,12 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					if (oph_odb_create_job_unsafe(oDB, sss, task_tbl, -1, &odb_jobid)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save job parameters into OphidiaDB. Check access parameters.\n", ttype, jobid);
 						wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ERROR;
-						snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
+
+						nnn =
+						    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob, wf->tasks[i].light_tasks[j].status,
+								 wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
+						submission_string_ext = (char *) malloc(nnn * sizeof(char));
+						snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, j, wf->tasks[i].light_tasks[j].idjob,
 							 wf->tasks[i].light_tasks[j].status, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
 
 						if (submission_string)
@@ -2361,14 +2378,17 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							free(sss);
 
 						request_data[k][j].serve_request = 0;
-						request_data[k][j].error_notification = strdup(submission_string_ext);
+						request_data[k][j].error_notification = submission_string_ext;
 						request_data[k][j].markerid = strdup(str_markerid);
 
 						continue;
 					}
 					wf->tasks[i].light_tasks[j].idjob = odb_jobid;
 
-					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+					submission_string_ext = (char *) malloc(nnn * sizeof(char));
+					snprintf(submission_string_ext, nnn, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+
 					if (submission_string)
 						free(submission_string);
 					if (sss)
@@ -2376,7 +2396,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k][j].serve_request = 1;
 					request_data[k][j].jobid = odb_jobid;
-					request_data[k][j].submission_string = strdup(submission_string_ext);
+					request_data[k][j].submission_string = submission_string_ext;
 					request_data[k][j].markerid = strdup(str_markerid);
 					request_data[k][j].ncores = wf->tasks[i].light_tasks[j].ncores;
 					request_data[k][j].status = &(wf->tasks[i].light_tasks[j].status);
@@ -2385,9 +2405,13 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].run = wf->tasks[i].run;
 					request_data[k][j].delay = 0;
 
-					snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
+					nnn =
+					    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
+							 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
+					submission_string_ext = (char *) malloc(nnn * sizeof(char));
+					snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
 						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].light_tasks[j].markerid);
-					request_data[k][j].error_notification = strdup(submission_string_ext);
+					request_data[k][j].error_notification = submission_string_ext;
 
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
@@ -2402,7 +2426,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			} else	// Single operation
 			{
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+
 				if (submission_string)
 					free(submission_string);
 				if (sss)
@@ -2414,7 +2441,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 1;
 				request_data[k]->jobid = wf->tasks[i].idjob;
-				request_data[k]->submission_string = strdup(submission_string_ext);
+				request_data[k]->submission_string = submission_string_ext;
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->ncores = wf->tasks[i].ncores;
 				request_data[k]->status = &(wf->tasks[i].status);
@@ -2422,6 +2449,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->light_task_id = -1;
 				request_data[k]->run = wf->tasks[i].run;
 				request_data[k]->delay = 0;
+
 				if (oph_base_backoff) {
 					int retry_num = 0;
 					if (wf->tasks[i].retry_num)
@@ -2440,9 +2468,13 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					}
 				}
 
-				snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id,
-					 wf->tasks[i].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
-				request_data[k]->error_notification = strdup(submission_string_ext);
+				nnn =
+				    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, wf->tasks[i].idjob,
+						 OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
+				submission_string_ext = (char *) malloc(nnn * sizeof(char));
+				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, wf->tasks[i].idjob,
+					 OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid);
+				request_data[k]->error_notification = submission_string_ext;
 
 				struct timeval tv;
 				gettimeofday(&tv, 0);
@@ -2471,10 +2503,10 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	pthread_mutex_unlock(&global_flag);
 
 	// Submit the commands
-	int response, nnn = 0, nnnn = 0, exit_output;
+	int response, nnnn = 0, exit_output;
 	char *json_response = NULL;
 	enum oph__oph_odb_job_status exit_code = OPH_ODB_STATUS_PENDING;
-	nn = 0;
+	nn = nnn = 0;
 	for (k = 0; k < tasks_indexes_num; ++k) {
 		if (!request_data[k])
 			continue;
@@ -2837,7 +2869,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			status = OPH_ODB_STATUS_RUNNING;
 			break;
 		case OPH_ODB_STATUS_UNSELECTED:
-		case OPH_ODB_STATUS_CLOSED:
 			status = OPH_ODB_STATUS_COMPLETED;
 			break;
 		case OPH_ODB_STATUS_PENDING_ERROR:
@@ -2927,7 +2958,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 
-	if (wf->status < (int) OPH_ODB_STATUS_ABORTED)
+	if (!wf->is_closed && (wf->status < (int) OPH_ODB_STATUS_ABORTED))
 		final = 0;
 	else {
 		oph_output_data_free(outputs_keys, outputs_num);
@@ -5222,7 +5253,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 				// Data
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: inserting data into JSON file\n", ttype, jobid);
-				oph_workflow_task_out *wtmp = wf->output;	// It should be already order by markerid
+				oph_workflow_task_out *wtmp = wf->output;	// It should be already ordered by markerid
 				while (wtmp) {
 					if (wtmp->status && (wtmp->status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
 					{
@@ -5508,7 +5539,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		if (wf->exec_mode && !strncasecmp(wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
 			pthread_mutex_lock(&global_flag);
-			wf->status = OPH_ODB_STATUS_CLOSED;	// Effective termination
+			wf->is_closed = 1;	// Effective termination
 #if defined(LEVEL1) || defined(LEVEL2) || defined(LEVEL3) || defined(COMMAND_TO_JSON)
 			if (!my_output_json && !output_json) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Missed receipt of JSON Response from framework: %s\n", ttype, jobid, data);
@@ -5629,8 +5660,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: sending termination signal for workflow '%s'\n", ttype, jobid, wf->name);
 			pthread_cond_broadcast(&termination_flag);
 			pthread_mutex_unlock(&global_flag);
-		} else
-			oph_workflow_free(wf);
+		} else {
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+		}
 
 		pthread_mutex_lock(&global_flag);
 		if (service_info)
@@ -5844,7 +5883,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 				if (temp->wf) {
 					for (i = 0; i <= temp->wf->tasks_num; ++i)
 						if (temp->wf->tasks[i].name && (temp->wf->tasks[i].status > (int) OPH_ODB_STATUS_PENDING)
-						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED) && !temp->wf->tasks[i].isknown) {
+						    && (temp->wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED) && !temp->wf->tasks[i].is_known) {
 							if (temp->wf->tasks[i].light_tasks_num) {
 								for (j = 0; j < temp->wf->tasks[i].light_tasks_num; ++j)
 									if ((temp->wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_PENDING)

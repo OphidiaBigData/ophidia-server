@@ -93,7 +93,7 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 }
 
 int oph_serve_known_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-			     int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output)
+			     int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username)
 {
 	int error = OPH_SERVER_UNKNOWN;
 	if (exit_code)
@@ -115,18 +115,18 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char *request,
 	}
 
 	char operator_name[OPH_MAX_STRING_SIZE];
-	if (oph_tp_find_param_in_task_string(request, OPH_ARG_OPERATOR, &operator_name)) {
+	if (oph_tp_find_param_in_task_string(request, OPH_ARG_OPERATOR, operator_name)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s not found\n", OPH_ARG_OPERATOR);
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
 
 	if ((error =
-	     oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
+	     oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
 					     operator_name)) != OPH_SERVER_UNKNOWN)
 		return error;
 
 	if ((error =
-	     oph_serve_management_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
+	     oph_serve_management_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
 					   operator_name)) != OPH_SERVER_UNKNOWN)
 		return error;
 

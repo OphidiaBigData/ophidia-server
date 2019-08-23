@@ -47,7 +47,7 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 				       enum oph__oph_odb_job_status *exit_code);
 
 int oph_serve_management_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *operator_name)
+				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *operator_name)
 {
 	UNUSED(ncores);
 	UNUSED(odb_wf_id);
@@ -71,7 +71,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 
 		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], type[OPH_MAX_STRING_SIZE];
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
@@ -79,20 +79,20 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, &username)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 		*type = 0;
-		oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_TYPE, &type);
+		oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_TYPE, type);
 
 		int wid, success = 0, success2 = 0;
 		oph_json *oper_json = NULL;
@@ -131,7 +131,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			if (!(item = oph_find_workflow_in_job_list(state->job_info, sessionid, wid)))
 				success = 0;
-			else if (item->wf->status < (int) OPH_ODB_STATUS_ABORTED) {
+			else if (!item->wf->is_closed && (item->wf->status < (int) OPH_ODB_STATUS_ABORTED)) {
 				item->wf->status = OPH_ODB_STATUS_ABORTED;
 				item->wf->cancel_type = btype;
 				snprintf(error_notification, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, item->wf->idjob, 0, -1, item->wf->idjob, OPH_ODB_STATUS_ABORTED, item->wf->sessionid,
@@ -220,7 +220,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		const char *session;
 		int result, save_user = 0, save_session = 0, num_sessions = -1;
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -240,7 +240,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		oph_odb_start_job_fast(idjob, &oDB);
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, &username)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -349,7 +349,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
@@ -1047,6 +1047,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			oph_workflow *wf = (oph_workflow *) calloc(1, sizeof(oph_workflow));
 			wf->username = strdup(username);
+			wf->os_username = strdup(os_username);
 			wf->command = strdup("");
 
 			pthread_mutex_lock(&global_flag);
@@ -2288,7 +2289,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_UNKNOWN;
 		}
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
@@ -2320,14 +2321,14 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 				break;
 			}
-			if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
+			if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 				break;
 			}
 			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
 
-			if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, &username)) {
+			if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 				break;
@@ -2685,12 +2686,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int max_hosts = item->wf->max_hosts;
-		char *os_username = strdup(item->wf->os_username);
-		if (!os_username) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-			pthread_mutex_unlock(&global_flag);
-			return OPH_SERVER_SYSTEM_ERROR;
-		}
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -2699,32 +2694,28 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
 		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], *type = NULL, *value = NULL;
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, &oph_jobid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, &username)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, &workflowid)) {
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
@@ -2733,6 +2724,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
+		char random_name[OPH_SHORT_STRING_SIZE];
 
 		while (!success) {
 
@@ -2773,6 +2765,16 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
 			}
+			size_t length = strlen(host_partition);
+			if (!length || (length > OPH_ODB_PARTITION_NAME_SIZE)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s': its size exceeds limit!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
+				break;
+			}
+			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
+				snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
+				host_partition = random_name;
+			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
 				if (btype > 1) {
@@ -2810,7 +2812,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -2819,7 +2820,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			free(os_username);
 			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -4131,7 +4131,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							int id_hostpartition = 0;
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partition '%s'\n", host_partition);
 							if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, &id_hostpartition)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
@@ -4275,7 +4275,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
-		free(os_username);
 		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
 
 		if (success)

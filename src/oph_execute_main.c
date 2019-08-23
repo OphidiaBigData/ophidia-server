@@ -57,6 +57,7 @@ extern char *oph_web_server_location;
 extern char *oph_base_src_path;
 extern FILE *wf_logfile;
 extern oph_service_info *service_info;
+extern char *oph_status_log_file_name;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_max_cores;
 extern unsigned int oph_default_max_hosts;
@@ -583,7 +584,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			oph_known_operator = OPH_LOG_INFO_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_SERVICE, OPH_MAX_STRING_SIZE)) {
 			if (!is_admin) {
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: the user is not authorized to submit the command '%s'\n", jobid, wf->tasks[i].operator);
@@ -591,19 +592,19 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				break;
 			}
 			oph_known_operator = OPH_SERVICE_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_GET_CONFIG, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_GET_CONFIG_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_RESUME, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_RESUME_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_MANAGE_SESSION, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_MANAGE_SESSION_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_CANCEL, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_CANCEL_OPERATOR;
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_CLUSTER_OPERATOR;
 			if (!is_admin) {
@@ -615,7 +616,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						break;
 					}
 			}
-			wf->tasks[i].isknown = 1;
+			wf->tasks[i].is_known = 1;
 		} else
 			nstandardcommands++;
 	}
@@ -5634,7 +5635,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		timeout_value = strtol(tmp, NULL, 10);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_OS_USERNAME);
-	wf->os_username = strdup(oph_get_arg(user_args, OPH_USER_OS_USERNAME, tmp) && strlen(tmp) ? wf->username : tmp);
+	wf->os_username = strdup(oph_get_arg(user_args, OPH_USER_OS_USERNAME, tmp) || !strlen(tmp) ? wf->username : tmp);
 
 	// Check for number of cores
 	if (ncores < OPH_DEFAULT_CORES) {
@@ -5906,7 +5907,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (mode_type == OPH_MODE_SYNC) {
 		// Block the master thread until workflow is completed
 		pthread_mutex_lock(&global_flag);
-		while (wf->status < (int) OPH_ODB_STATUS_ABORTED) {
+		while (!wf->is_closed && (wf->status < (int) OPH_ODB_STATUS_ABORTED)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: waiting for workflow end\n", jobid);
 			pthread_cond_wait(&termination_flag, &global_flag);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: a workflow is finished; status of '%s' is %s\n", jobid, wf->name, oph_odb_convert_status_to_str(wf->status));
@@ -5914,7 +5915,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: the workflow '%s' is completed\n", jobid, wf->name);
 		pthread_mutex_unlock(&global_flag);
 
-		if (wf->response && (wf->status == OPH_ODB_STATUS_CLOSED)) {
+		if (wf->response && wf->is_closed) {
 
 			unsigned int nextra = 1;
 
@@ -6092,14 +6093,32 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			if (!response->response)
 				response->response = soap_strdup(soap, wf->response);
-			oph_workflow_free(wf);
+
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+
 			pthread_mutex_lock(&global_flag);
 			if (service_info)
 				service_info->outcoming_responses++;
 			pthread_mutex_unlock(&global_flag);
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
-			oph_workflow_free(wf);
+
+			if (oph_status_log_file_name) {
+				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
+				item->wf = wf;
+				pthread_mutex_lock(&global_flag);
+				oph_save_job_in_job_list(state->job_info, item);
+				pthread_mutex_unlock(&global_flag);
+			} else
+				oph_workflow_free(wf);
+
 			if (!response->error)
 				response->error = OPH_SERVER_SYSTEM_ERROR;
 			return SOAP_OK;

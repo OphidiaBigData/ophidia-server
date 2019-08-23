@@ -61,7 +61,7 @@
 int oph_tp_retrieve_function_xml_file(const char *function_name, const char *function_version, char (*xml_filename)[OPH_TP_BUFLEN], const char *folder);
 
 //Look for value of param in task string
-int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char (*value)[OPH_TP_TASKLEN]);
+int oph_tp_find_param_in_task_string(const char *task_string, const char *param, char *value);
 
 //Load the operator parameters from task_string and XML into the hash table
 int oph_tp_task_params_parser(const char *operator_name, const char *task_string, HASHTBL ** hashtbl);

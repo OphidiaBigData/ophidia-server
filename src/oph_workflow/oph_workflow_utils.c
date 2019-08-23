@@ -27,6 +27,23 @@
 #include "debug.h"
 #include "oph_auth.h"
 
+int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t * max)
+{
+	if (!workflow || !max)
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+
+	if (*max < 1)
+		*max = 1;
+
+	size_t current;
+	int i;
+	for (i = 0; i < workflow->tasks[task_index].arguments_num; ++i) {
+		current = 3 + strlen(workflow->tasks[task_index].arguments_keys[i]) + strlen(workflow->tasks[task_index].arguments_values[i]);
+		if (*max < current)
+			*max = current;
+	}
+}
+
 int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
 {
 	if (!value || !index)
@@ -296,9 +313,12 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		}
 	}
 
+	size_t max_size = OPH_WORKFLOW_MAX_STRING;
+	oph_workflow_get_argument_size(workflow, task_index, &max_size);
+
 	int i, j;
 	char *long_submit_string = NULL, *short_submit_string = NULL;
-	char key_value[OPH_WORKFLOW_MAX_STRING];
+	char key_value[max_size];
 	char *key, *value, *value2;
 	char *path_key[OPH_WORKFLOW_PATH_SET_SIZE] = OPH_WORKFLOW_PATH_SET;
 	char path_value[OPH_WORKFLOW_MAX_STRING];
@@ -363,7 +383,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 						break;
 					}
 			}
-			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
+			snprintf(key_value, max_size, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
 			if (oph_workflow_strcat(&long_submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 				if (long_submit_string)
@@ -374,8 +394,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			}
 			if (short_submission_string) {
 				if (value != value2)
-					snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value2, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key,
-						 value2);
+					snprintf(key_value, max_size, strchr(value2, OPH_WORKFLOW_VALUE_SEPARATOR) ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value2);
 				if (oph_workflow_strcat(&short_submit_string, key_value)) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 					if (long_submit_string)
@@ -435,9 +454,12 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 		}
 	}
 
+	size_t max_size = OPH_WORKFLOW_MAX_STRING;
+	oph_workflow_get_argument_size(workflow, task_index, &max_size);
+
 	int j;
 	char *submit_string = NULL;
-	char key_value[OPH_WORKFLOW_MAX_STRING];
+	char key_value[max_size];
 	char *key, *value;
 	if (asprintf(&submit_string, "%s ", workflow->tasks[task_index].operator) <= 0) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
@@ -471,7 +493,7 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 		    : workflow->tasks[task_index].arguments_values[j];
 		if (key && value && strlen(key)
 		    && strlen(value)) {
-			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR)
+			snprintf(key_value, max_size, strchr(value, OPH_WORKFLOW_VALUE_SEPARATOR)
 				 ? OPH_WORKFLOW_KEY_VALUE_STRING2 : OPH_WORKFLOW_KEY_VALUE_STRING, key, value);
 			if (oph_workflow_strcat(&submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");

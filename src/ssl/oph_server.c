@@ -35,6 +35,7 @@
 #include <mysql.h>
 
 #define OPH_STATUS_LOG_PERIOD 1
+#define OPH_STATUS_LOG_HYSTERESIS_PERIOD 2
 #define OPH_STATUS_LOG_ALPHA 0.5
 #define OPH_STATUS_LOG_AVG_PERIOD 60
 
@@ -54,7 +55,7 @@ void oph_child_signal_handler(int sig);
 
 /******************************************************************************\
  *
- *	Global variable;
+ *	Global variables
  *
 \******************************************************************************/
 
@@ -139,18 +140,22 @@ char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
 #endif
 
-void set_global_values(const char *configuration_file)
+int set_global_values(const char *configuration_file)
 {
-	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin))
+	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in redirect stdin\n");
+		return OPH_SERVER_IO_ERROR;
+	}
 
 	if (!configuration_file)
-		return;
+		return OPH_SERVER_NULL_POINTER;
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Loading configuration from '%s'\n", configuration_file);
 
 	oph_server_params = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
-	if (!oph_server_params)
-		return;
+	if (!oph_server_params) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
 
 	char tmp[OPH_MAX_STRING_SIZE];
 	char *value;
@@ -274,6 +279,10 @@ void set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER, tmp);
 		oph_web_server = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER);
 	}
+	if (strlen(oph_web_server) > OPH_LONG_STRING_SIZE) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Length of parameter '%s' is too high\n", OPH_LONG_STRING_SIZE);
+		return OPH_SERVER_WRONG_PARAMETER_ERROR;
+	}
 	if (!(oph_web_server_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION))) {
 		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_WEB_SERVER_LOCATION);
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_WEB_SERVER_LOCATION, tmp);
@@ -356,11 +365,13 @@ void set_global_values(const char *configuration_file)
 	else
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Last idjob is not available: starting with 0\n");
 	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_SERVER_OK;
 }
 
 /******************************************************************************\
  *
- *	Main
+ *	Clean up
  *
 \******************************************************************************/
 
@@ -432,6 +443,12 @@ void cleanup()
 #endif
 	oph_tp_end_xml_parser();
 }
+
+/******************************************************************************\
+ *
+ *	Main
+ *
+\******************************************************************************/
 
 int main(int argc, char *argv[])
 {
@@ -508,7 +525,7 @@ int main(int argc, char *argv[])
 #else
 	oph_server_location = getenv(OPH_SERVER_LOCATION_STR);
 	if (!oph_server_location) {
-		fprintf(stderr, "OPH_SERVER_LOCATION has to be set\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPH_SERVER_LOCATION has to be set\n");
 		return 1;
 	}
 #endif
@@ -516,7 +533,10 @@ int main(int argc, char *argv[])
 
 	char configuration_file[OPH_MAX_STRING_SIZE];
 	snprintf(configuration_file, OPH_MAX_STRING_SIZE, OPH_CONFIGURATION_FILE, oph_server_location);
-	set_global_values(configuration_file);
+	if (set_global_values(configuration_file)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in loading server configuration\n");
+		return 1;
+	}
 
 	service_info = (oph_service_info *) calloc(1, sizeof(oph_service_info));
 
@@ -524,7 +544,7 @@ int main(int argc, char *argv[])
 		if (logfile)
 			fclose(logfile);
 		if (!(logfile = fopen(oph_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log file '%s'\n", oph_log_file_name);
@@ -539,7 +559,7 @@ int main(int argc, char *argv[])
 		if (wf_logfile)
 			fclose(wf_logfile);
 		if (!(wf_logfile = fopen(oph_wf_csv_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_wf_csv_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected workflow log file '%s'\n", oph_wf_csv_log_file_name);
@@ -548,7 +568,7 @@ int main(int argc, char *argv[])
 		if (task_logfile)
 			fclose(task_logfile);
 		if (!(task_logfile = fopen(oph_task_csv_log_file_name, "a"))) {
-			fprintf(stderr, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong log file name '%s'\n", oph_task_csv_log_file_name);
 			return 1;
 		}
 		pmesg(LOG_INFO, __FILE__, __LINE__, "Selected task log file '%s'\n", oph_task_csv_log_file_name);
@@ -680,13 +700,14 @@ void *process_request(struct soap *soap)
 
 typedef struct _oph_status_object {
 	char *key;
+	char *tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 	unsigned long value[OPH_SERVER_MAX_WF_LOG_PARAM];
 	struct _oph_status_object *next;
 } oph_status_object;
 
-int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, unsigned long *new_value, size_t number_of_new_values)
+int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, char **tag, size_t number_of_tags, unsigned long *new_value, size_t number_of_new_values)
 {
-	if (!list || !key || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
+	if (!list || !key || (number_of_tags > OPH_SERVER_MAX_WF_LOG_PARAM) || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
 		return 1;
 
 	size_t i, j, key_size = strlen(key);
@@ -712,9 +733,16 @@ int oph_status_add(oph_status_object ** list, const char *key, unsigned long *ol
 	tmp->key = strdup(_key);
 	if (!tmp->key)
 		return 3;
+	i = 0;
+	if (tag)
+		for (; i < number_of_tags; ++i)
+			tmp->tag[i] = tag[i];
+	for (; i < OPH_SERVER_MAX_WF_LOG_PARAM; ++i)
+		tmp->tag[i] = NULL;
 	if (new_value)
 		for (i = 0; i < number_of_new_values; ++i)
 			tmp->value[i] = new_value[i];
+
 	tmp->next = *list;
 	*list = tmp;
 
@@ -729,11 +757,15 @@ int oph_status_destroy(oph_status_object ** list)
 	if (!list)
 		return 1;
 
+	int i;
 	oph_status_object *tmp, *next;
 	for (tmp = *list; tmp; tmp = next) {
 		next = tmp->next;
 		if (tmp->key)
 			free(tmp->key);
+		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
+			if (tmp->tag[i])
+				free(tmp->tag[i]);
 		free(tmp);
 	}
 	*list = NULL;
@@ -801,9 +833,9 @@ void *status_logger(struct soap *soap)
 	struct timeval tv, tv2;
 	int i, j;
 	oph_status_object *users, *workflows, *massives, *tmp;
-	unsigned long prev, _value[10];
+	unsigned long prev, _value[OPH_SERVER_MAX_WF_LOG_PARAM];
 	long tau = 0, eps = 0, _eps;
-	char name[OPH_MAX_STRING_SIZE];
+	char name[OPH_MAX_STRING_SIZE], saved, *_tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 
 	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
 	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
@@ -812,7 +844,7 @@ void *status_logger(struct soap *soap)
 	while (oph_status_log_file_name) {
 
 		if (!(statuslogfile = fopen(oph_status_log_file_name, "w"))) {
-			fprintf(stderr, "Wrong status log file name '%s'\n", oph_status_log_file_name);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Wrong status log file name '%s'\n", oph_status_log_file_name);
 			break;
 		}
 
@@ -827,6 +859,8 @@ void *status_logger(struct soap *soap)
 		aw = pw = ww = rw = at = pt = wt = rt = mt = st = lt = plt = rlt = ct = ft = un = cn = 0;	// Initialization
 		wpr = 0.0;
 		users = workflows = massives = NULL;
+		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
+			_tag[i] = NULL;
 
 		pthread_mutex_lock(&global_flag);
 
@@ -849,19 +883,22 @@ void *status_logger(struct soap *soap)
 		miw = eval_load_average(load_average);
 
 		job_info = state->job_info;
-		for (temp = job_info->head; temp; temp = temp->next) {	// Loop on workflows
+		saved = job_info->head ? 1 : 0;
+		for (temp = saved ? job_info->head : job_info->saved; temp;) {	// Loop on workflows
 			if (!(wf = temp->wf))
 				continue;
 			aw++;
+			_tag[0] = strdup(wf->username ? wf->username : OPH_UNKNOWN);
+			_tag[1] = strdup(oph_odb_convert_status_to_str(wf->status));
 			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
+			_value[2] = wf->tasks_num;	// Total number of tasks
 			if (oph_get_progress_ratio_of(wf, &wpr, NULL))
-				_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks_num);	// Workflow progress ratio
+				_value[0] = (unsigned long) (_value[1] * 100.0 / _value[2]);	// Workflow progress ratio
 			else
 				_value[0] = (unsigned long) (wpr * 100.0);
 			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
-			oph_status_add(&workflows, name, NULL, _value, 2);
-			if (wf->username)
-				oph_status_add(&users, wf->username, &un, NULL, 0);
+			oph_status_add(&workflows, name, NULL, _tag, 2, _value, 3);
+			oph_status_add(&users, wf->username ? wf->username : OPH_UNKNOWN, &un, NULL, 0, NULL, 0);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
 			else if (wf->status == (int) OPH_ODB_STATUS_WAIT)
@@ -885,9 +922,10 @@ void *status_logger(struct soap *soap)
 								rlt++;
 						}
 						_value[1] = wf->tasks[i].light_tasks_num - wf->tasks[i].residual_light_tasks_num;	// Completed/failed light tasks
+						_value[2] = wf->tasks[i].light_tasks_num;	// Total number of light tasks
 						_value[0] = (unsigned long) (_value[1] * 100.0 / wf->tasks[i].light_tasks_num);	// Task progress ratio
 						snprintf(name, OPH_MAX_STRING_SIZE, "%s.%s #%d?%d", wf->name, wf->tasks[i].name, wf->workflowid, wf->tasks[i].markerid);
-						oph_status_add(&massives, name, NULL, _value, 2);
+						oph_status_add(&massives, name, NULL, NULL, 0, _value, 3);
 					}
 					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
 						pt++;
@@ -908,7 +946,15 @@ void *status_logger(struct soap *soap)
 						ft++;
 				}
 			}
+
+			temp = temp->next;
+			if (!temp && saved) {
+				temp = job_info->saved;
+				saved = 0;
+			}
 		}
+
+		oph_delete_saved_jobs_from_job_list(job_info, OPH_STATUS_LOG_HYSTERESIS_PERIOD);
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -936,15 +982,11 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
 			fprintf(statuslogfile, "core,status=active value=%ld %d000000000\n", cn, (int) tv.tv_sec);
 			for (tmp = workflows; tmp; tmp = tmp->next)
-				if (tmp->key) {
-					fprintf(statuslogfile, "progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
-					fprintf(statuslogfile, "workflow\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
-				}
+				fprintf(statuslogfile, "workflow\\ status,name=%s,user=%s,status=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->tag[0], tmp->tag[1],
+					tmp->value[0], tmp->value[1], tmp->value[2], (int) tv.tv_sec);
 			for (tmp = massives; tmp; tmp = tmp->next)
-				if (tmp->key) {
-					fprintf(statuslogfile, "massive\\ progress\\ ratio,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[0], (int) tv.tv_sec);
-					fprintf(statuslogfile, "massive\\ task,name=%s value=%ld %d000000000\n", tmp->key, tmp->value[1], (int) tv.tv_sec);
-				}
+				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
+					(int) tv.tv_sec);
 			fclose(statuslogfile);
 			statuslogfile = NULL;
 		}
