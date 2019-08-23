@@ -2781,6 +2781,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			sessionid = strdup(ctmp);
 		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
 			marker_id = strtol(ctmp, NULL, 10);
+		else if (!strncmp(aitem->key, OPH_ARG_INFO, OPH_MAX_STRING_SIZE)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, ctmp);
+			if (sessionid)
+				free(sessionid);
+			oph_cleanup_args(&args);
+			return SOAP_OK;
+		}
 #ifdef OPH_OPENID_SUPPORT
 		else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
 			access_token = ctmp;
@@ -2799,7 +2806,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (access_token) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: found tokens to be saved\n", ttype, jobid);
 		oph_auth_save_token(access_token, refresh_token, userinfo);
-		*response = OPH_SERVER_OK;
+		if (sessionid)
+			free(sessionid);
 		oph_cleanup_args(&args);
 		return SOAP_OK;
 	}

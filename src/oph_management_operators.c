@@ -4178,12 +4178,13 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-							success = !oph_system(cmd, "Error during remote submission", state, 0, em, &oph_odb_release_hp2, id_hostpartition);
+							snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_INFO, OPH_SEPARATOR_KV, "Cluster has been stopped", OPH_SEPARATOR_PARAM);
+							success = !oph_system(cmd, tmp, state, 0, em, &oph_odb_release_hp2, id_hostpartition);
 							free(cmd);
 
 							if (!success) {
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
-								pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
 								break;
 							}
 

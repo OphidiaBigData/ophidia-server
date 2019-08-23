@@ -62,6 +62,7 @@
 #define OPH_ARG_LINK "link"
 #define OPH_ARG_OFFSET "offset"
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
+#define OPH_ARG_INFO "info"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
