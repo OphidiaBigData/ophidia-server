@@ -4294,7 +4294,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							int id_hostpartition = 0;
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partiton '%s'\n", host_partition);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Reserving host partition '%s'\n", host_partition);
 							if (oph_odb_reserve_hp(&oDB, host_partition, id_user, idjob, nhosts, host_type, &id_hostpartition)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Host partition '%s' cannot be reserved\n", host_partition);
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to create host partition '%s', maybe it already exists!", host_partition);
