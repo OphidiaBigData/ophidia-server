@@ -4185,7 +4185,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							free(cmd);
 
-							if (!em)
+							if (em)
 								oph_detach_task(idjob);
 
 							snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly reserved", host_partition);
@@ -4219,7 +4219,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to stop host partition '%s'", host_partition);
 							else
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition '%s' correctly released", host_partition);
-							oph_detach_task(id_job);
+							oph_remove_detached_task(id_job);
 
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Releasing host partition '%s' (%d)\n", host_partition, id_hostpartition);
 							if (oph_odb_release_hp(&oDB, id_hostpartition)) {
