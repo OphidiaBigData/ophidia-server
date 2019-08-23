@@ -2733,6 +2733,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 			}
 
+			em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
+
 			type = hashtbl_get(task_tbl, OPH_ARG_ACTION);
 			if (!type) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_ACTION);
