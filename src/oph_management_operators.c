@@ -2772,10 +2772,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s': its size exceeds limit!", OPH_OPERATOR_PARAMETER_HOST_PARTITION);
 				break;
 			}
-			if ((btype == 2) && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
-				snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
-				snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
-				host_partition = random_name;
+			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO)) {
+				if (btype < 2)
+					host_partition = NULL;
+				else if (btype == 2) {
+					snprintf(random_name, OPH_SHORT_STRING_SIZE, "_%d", idjob);
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Host partition name will be set to '%s'!", random_name);
+					host_partition = random_name;
+				} else {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Parameter '%s' needs to be set to a value different from '%s' to perform action '%s'!",
+						 OPH_OPERATOR_PARAMETER_HOST_PARTITION, OPH_OPERATOR_CLUSTER_PARAMETER_AUTO, type);
+					break;
+				}
 			}
 			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
