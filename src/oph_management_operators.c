@@ -2785,7 +2785,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					break;
 				}
 			}
-			if (!strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
+			if (host_partition && !strcasecmp(host_partition, OPH_OPERATOR_CLUSTER_PARAMETER_ALL)) {
 				host_partition = NULL;
 				if (btype > 1) {
 					snprintf(error_message, OPH_MAX_STRING_SIZE, "Parameter '%s' needs to be set to a value different from '%s' to perform action '%s'!",
