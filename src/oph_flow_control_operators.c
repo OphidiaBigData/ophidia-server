@@ -1022,7 +1022,9 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				}
 			} else if (!wid && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_ID)) {
 				wid = strtol(arg_value, NULL, 10);
-				if (wid != wf->workflowid) {
+				if (!wid)
+					wid = wf->workflowid;
+				else if (wid != wf->workflowid) {
 					oph_job_info *item = NULL;
 					if ((wid <= 0) || !(item = oph_find_workflow_in_job_list(state->job_info, wf->sessionid, wid))) {
 						snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Wrong workflow identifier '%d'!", wid);
