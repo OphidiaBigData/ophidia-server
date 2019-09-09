@@ -6217,24 +6217,23 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 	int i, j, k, n = 0, try_in_list = list.size, nfound;
 	for (i = 0; i <= wf->tasks_num; ++i)
 		if (wf->tasks[i].name) {
+			n++;
 			if (wf->tasks[i].light_tasks_num) {
-				n += wf->tasks[i].light_tasks_num;
 				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j) {
 					nfound = 1;
 					if (try_in_list) {
 						for (k = 0; k < list.size; ++k)
 							if (list.id[k] && (list.id[k] == wf->tasks[i].light_tasks[j].idjob)) {
-								*wpr += (double) list.pid[k] / (double) list.wid[k];
+								*wpr += (double) list.pid[k] / (double) (list.wid[k] * wf->tasks[i].light_tasks_num);	// Lessere weight for light tasks
 								list.id[k] = nfound = 0;
 								try_in_list--;
 								break;
 							}
 					}
 					if (nfound && (wf->tasks[i].light_tasks[j].status >= (int) OPH_ODB_STATUS_COMPLETED))
-						++ * wpr;
+						*wpr += 1.0 / wf->tasks[i].light_tasks_num;	// Lessere weight for light tasks
 				}
 			} else {
-				n++;
 				nfound = 1;
 				if (try_in_list) {
 					for (k = 0; k < list.size; ++k)
