@@ -475,7 +475,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	pthread_mutex_lock(&global_flag);
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_SESSIONID);
-	if (wf->sessionid && strncasecmp(wf->sessionid, OPH_NULL_VALUE, strlen(OPH_NULL_VALUE))) {
+	if (wf->sessionid && !strncasecmp(wf->sessionid, OPH_NULL_VALUE, strlen(OPH_NULL_VALUE))) {
 		free(wf->sessionid);
 		wf->sessionid = NULL;
 		load_previous_session = 1;
