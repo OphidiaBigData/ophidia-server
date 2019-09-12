@@ -516,10 +516,10 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 
 		snprintf(tmp, MYSQL_BUFLEN, "%d", idcountry);
 	} else
-		snprintf(tmp, MYSQL_BUFLEN, "NULL");
+		snprintf(tmp, MYSQL_BUFLEN, OPH_NULL_VALUE);
 
-	n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_INSERT_USER2, username, password, name ? "'" : "", name ? name : "NULL", name ? "'" : "", surname ? "'" : "", surname ? surname : "NULL",
-		     surname ? "'" : "", email ? "'" : "", email ? email : "NULL", email ? "'" : "", tmp, max_hosts > 0 ? max_hosts : 0);
+	n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_INSERT_USER2, username, password, name ? "'" : "", name ? name : OPH_NULL_VALUE, name ? "'" : "", surname ? "'" : "",
+		     surname ? surname : OPH_NULL_VALUE, surname ? "'" : "", email ? "'" : "", email ? email : OPH_NULL_VALUE, email ? "'" : "", tmp, max_hosts > 0 ? max_hosts : 0);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 

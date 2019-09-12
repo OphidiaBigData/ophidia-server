@@ -140,6 +140,30 @@ char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
 #endif
 
+int oph_status_code(enum oph__oph_odb_job_status code)
+{
+	switch (code) {
+		case OPH_ODB_STATUS_ERROR:
+		case OPH_ODB_STATUS_START_ERROR:
+			return 1;
+		case OPH_ODB_STATUS_ABORTED:
+			return 2;
+		case OPH_ODB_STATUS_EXPIRED:
+			return 3;
+		case OPH_ODB_STATUS_PENDING:
+			return 4;
+		case OPH_ODB_STATUS_WAIT:
+			return 5;
+		case OPH_ODB_STATUS_RUNNING:
+			return 6;
+		case OPH_ODB_STATUS_COMPLETED:
+			return 7;
+		default:
+			return 0;
+	}
+	return 0;
+}
+
 int set_global_values(const char *configuration_file)
 {
 	if (!freopen(OPH_SERVER_DEV_NULL, "r", stdin)) {
@@ -892,12 +916,13 @@ void *status_logger(struct soap *soap)
 			_tag[1] = strdup(oph_odb_convert_status_to_str(wf->status));
 			_value[1] = wf->tasks_num - wf->residual_tasks_num;	// Completed/failed tasks
 			_value[2] = wf->tasks_num;	// Total number of tasks
+			_value[3] = oph_status_code(wf->status);
 			if (oph_get_progress_ratio_of(wf, &wpr, NULL))
 				_value[0] = (unsigned long) (_value[1] * 100.0 / _value[2]);	// Workflow progress ratio
 			else
 				_value[0] = (unsigned long) (wpr * 100.0);
 			snprintf(name, OPH_MAX_STRING_SIZE, "%s #%d", wf->name, wf->workflowid);
-			oph_status_add(&workflows, name, NULL, _tag, 2, _value, 3);
+			oph_status_add(&workflows, name, NULL, _tag, 2, _value, 4);
 			oph_status_add(&users, wf->username ? wf->username : OPH_UNKNOWN, &un, NULL, 0, NULL, 0);
 			if (wf->status == (int) OPH_ODB_STATUS_PENDING)
 				pw++;
@@ -982,8 +1007,8 @@ void *status_logger(struct soap *soap)
 			fprintf(statuslogfile, "user,status=active value=%ld %d000000000\n", un, (int) tv.tv_sec);
 			fprintf(statuslogfile, "core,status=active value=%ld %d000000000\n", cn, (int) tv.tv_sec);
 			for (tmp = workflows; tmp; tmp = tmp->next)
-				fprintf(statuslogfile, "workflow\\ status,name=%s,user=%s,status=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->tag[0], tmp->tag[1],
-					tmp->value[0], tmp->value[1], tmp->value[2], (int) tv.tv_sec);
+				fprintf(statuslogfile, "workflow\\ status,name=%s,user=%s,status=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld,status\\ value=%ld %d000000000\n", tmp->key,
+					tmp->tag[0], tmp->tag[1], tmp->value[0], tmp->value[1], tmp->value[2], tmp->value[3], (int) tv.tv_sec);
 			for (tmp = massives; tmp; tmp = tmp->next)
 				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
 					(int) tv.tv_sec);

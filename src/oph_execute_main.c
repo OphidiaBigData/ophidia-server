@@ -471,9 +471,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	} else
 		wf->nhosts = nhosts;
 
+	char load_previous_session = 0;
+
 	pthread_mutex_lock(&global_flag);
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_ARG_SESSIONID);
-	if (wf->sessionid && strncmp(wf->sessionid, state->serverid, strlen(state->serverid))) {
+	if (wf->sessionid && strncasecmp(wf->sessionid, OPH_NULL_VALUE, strlen(OPH_NULL_VALUE))) {
+		free(wf->sessionid);
+		wf->sessionid = NULL;
+		load_previous_session = 1;
+	} else if (wf->sessionid && strncmp(wf->sessionid, state->serverid, strlen(state->serverid))) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong sessionid '%s'\n", jobid, wf->sessionid);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
@@ -5597,6 +5603,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		service_info->incoming_workflows++;
 	pthread_mutex_unlock(&global_flag);
 
+	// Load previous session (if any)
+	if (load_previous_session && wf->sessionid && !oph_get_arg(user_args, OPH_USER_LAST_SESSION_ID, tmp))
+		wf->sessionid = strdup(tmp);
+
 	// Test user data
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s\n", jobid, OPH_USER_OPENED_SESSIONS);
 	int num_sessions = oph_get_arg(user_args, OPH_USER_OPENED_SESSIONS, tmp);
@@ -5684,7 +5694,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	// Change and save user specific data
 	snprintf(tmp, OPH_SHORT_STRING_SIZE, "%d", num_sessions);
 	if (oph_set_arg(&user_args, OPH_USER_OPENED_SESSIONS, tmp)) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to set '%s'\n", jobid, OPH_USER_LAST_SESSION_ID);
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to set '%s'\n", jobid, OPH_USER_OPENED_SESSIONS);
 		oph_cleanup_args(&user_args);
 		oph_workflow_free(wf);
 		response->error = OPH_SERVER_SYSTEM_ERROR;

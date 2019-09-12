@@ -43,6 +43,9 @@
 #define OPH_CONF_OPHDB_PORT	"OPHDB_PORT"
 #define OPH_CONF_OPHDB_LOGIN	"OPHDB_LOGIN"
 #define OPH_CONF_OPHDB_PWD	"OPHDB_PWD"
+
+#define OPH_NULL_VALUE "NULL"
+
 /**
  * \brief Structure that contain OphidiaDB parameters
  * \param name name of OphidiaDB

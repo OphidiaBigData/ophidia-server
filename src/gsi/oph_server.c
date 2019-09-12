@@ -633,7 +633,7 @@ int load_voms_system_privileges(struct oph_plugin_data *data, char **fqans)
 					free(role);
 				continue;
 			}
-			if (role && !strcasecmp(role, "NULL")) {
+			if (role && !strcasecmp(role, OPH_NULL_VALUE)) {
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "No role associated with VO '%s'\n", vo);
 				if (vo)
 					free(vo);
