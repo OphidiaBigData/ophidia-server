@@ -5604,7 +5604,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pthread_mutex_unlock(&global_flag);
 
 	// Load previous session (if any)
-	if (load_previous_session && wf->sessionid && !oph_get_arg(user_args, OPH_USER_LAST_SESSION_ID, tmp))
+	if (load_previous_session && !wf->sessionid && !oph_get_arg(user_args, OPH_USER_LAST_SESSION_ID, tmp))
 		wf->sessionid = strdup(tmp);
 
 	// Test user data
