@@ -3,12 +3,28 @@
 
 ### Fixed:
 
+- Bug related to requests where sessionid is set to NULL
+- Server core functions to support longer input strings for commands and workflows
+- OPH_MANAGE_SESSION when action 'new' is called
 - Use unique job identifiers also for internal requests associated with massive operations [#47](https://github.com/OphidiaBigData/ophidia-server/pull/47)
 
 ### Added:
 
+- Sync execution mode when oph_cluster is used for deploying
+- Creation date of host partitions to output of OPH_CLUSTER [#50](https://github.com/OphidiaBigData/ophidia-server/pull/50)
+- Feature to enable and disable users selectively [#49](https://github.com/OphidiaBigData/ophidia-server/pull/49)
+- New options in configuration file to set OpenID username as Ophidia user [#48](https://github.com/OphidiaBigData/ophidia-server/pull/48)
 - Status log of the workflows started and completed in last period
 
+### Changed:
+
+- OPH_SET and OPH_INPUT to allow 0 as a value for the 'id' argument
+- Log system in order to provide additional information regarding tasks/workflows
+- Host partion option in worklow specification to support 'auto' keyword  
+
+### Removed:
+
+- Status OPH_ODB_STATUS_CLOSED from list of possible states
 
 ## v1.5.1 - 2019-04-16
 
