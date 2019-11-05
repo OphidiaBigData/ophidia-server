@@ -24,6 +24,7 @@
 // Files
 #define OPH_AUTH_FILE "%s/users.dat"
 #define OPH_AUTH_DN_FILE "%s/dn.dat"
+#define OPH_USERS_DIR "%s/users"
 #define OPH_USER_DIR "%s/users/%s"
 #define OPH_USER_FILE "%s/users/%s/user.dat"
 #define OPH_SESSION_DIR "%s/users/%s/sessions"
@@ -41,6 +42,7 @@
 #define OPH_USER_MAX_HOSTS "OPH_MAX_HOSTS"
 #define OPH_USER_IS_ADMIN "OPH_IS_ADMIN"
 #define OPH_USER_OS_USERNAME "OPH_OS_USERNAME"
+#define OPH_USER_ENABLED "OPH_ENABLED"
 // User status
 #define OPH_USER_LAST_SESSION_ID "OPH_SESSION_ID"
 #define OPH_USER_LAST_EXEC_MODE "OPH_EXEC_MODE"
@@ -145,6 +147,7 @@ int oph_save_user_session(const char *userid, const char *sessionid, oph_argumen
 int oph_get_session_code(const char *sessionid, char *code);
 int oph_auth_free();
 int oph_auth_autocheck_tokens();
+int oph_enable_all_users(char value);
 
 oph_auth_user_role oph_string_to_role(const char *role);
 oph_auth_user_role oph_code_role(const char *role);
