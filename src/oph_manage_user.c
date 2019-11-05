@@ -65,6 +65,8 @@ char *oph_openid_client_id = 0;
 char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
+char *oph_openid_user_name = 0;
+char *oph_openid_allow_local_user = 0;
 #endif
 #ifdef OPH_AAA_SUPPORT
 char *oph_aaa_endpoint = 0;
