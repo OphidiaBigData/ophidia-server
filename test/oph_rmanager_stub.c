@@ -222,12 +222,32 @@ int oph_stop_request(int jobid, const char *username)
 	return OPH_SERVER_OK;
 }
 
+int oph_umount_request(int jobid, const char *username)
+{
+	return OPH_SERVER_OK;
+}
+
 int oph_read_job_queue(int **list, char ***username, unsigned int *n)
 {
 	return OPH_SERVER_OK;
 }
 
 int oph_get_available_host_number(int *size, int jobid)
+{
+	return OPH_SERVER_OK;
+}
+
+int oph_detach_task(int id)
+{
+	return OPH_SERVER_OK;
+}
+
+int oph_is_detached_task(int id)
+{
+	return OPH_SERVER_OK;
+}
+
+int oph_remove_detached_task(int id)
 {
 	return OPH_SERVER_OK;
 }
