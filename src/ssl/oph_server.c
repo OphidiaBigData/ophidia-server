@@ -368,13 +368,15 @@ int set_global_values(const char *configuration_file)
 	oph_openid_client_id = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_ID);
 	oph_openid_client_secret = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_CLIENT_SECRET);
 	oph_openid_user_name = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_USER_NAME);
-	if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_SUB)) {
-	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_PREFERRED)) {
-	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_NAME)) {
-	} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_EMAIL)) {
-	} else {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_USER_NAME, OPH_SERVER_CONF_OPENID_USER_NAME_SUB);
-		oph_openid_user_name = NULL;
+	if (oph_openid_user_name) {
+		if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_SUB)) {
+		} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_PREFERRED)) {
+		} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_NAME)) {
+		} else if (!strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_EMAIL)) {
+		} else {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: wrong '%s': it will set to '%s'\n", OPH_SERVER_CONF_OPENID_USER_NAME, OPH_SERVER_CONF_OPENID_USER_NAME_SUB);
+			oph_openid_user_name = NULL;
+		}
 	}
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_ALLOW_LOCAL_USER))) {
 		if (!strcmp(value, OPH_COMMON_YES))
