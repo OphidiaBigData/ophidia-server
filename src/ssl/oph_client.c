@@ -29,6 +29,7 @@
 #define OPH_DEFAULT_QUERY "OPH_NULL"
 #define CLIENT_USERID "oph-test"
 #define CLIENT_PASSWORD "abcd"
+#define SESSIONID "http://127.0.0.1/ophidia/sessions/0/experiment"
 
 #include <inttypes.h>
 #include <string.h>
@@ -239,12 +240,12 @@ int oph_execute(struct soap *soap, char *server, xsd__string query, int b64)
 	return response.error;
 }
 
-int oph_notify(struct soap *soap, char *server, xsd__int jobid, enum oph__oph_odb_job_status status)
+int oph_notify(struct soap *soap, char *server, xsd__int jobid, enum oph__oph_odb_job_status status, char *sessionid, int markerid)
 {
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Sending notification to %s\n", server);
 	xsd__int response;
 	char data[OPH_MAX_STRING_SIZE];
-	snprintf(data, OPH_MAX_STRING_SIZE, "jobid=%d;status=%d;parentid=0;taskindex=0;lighttaskindex=0;", (int) jobid, status);
+	snprintf(data, OPH_MAX_STRING_SIZE, "jobid=%d;status=%d;parentid=0;taskindex=0;lighttaskindex=0;markerid=%d;sessionid=%s;", (int) jobid, status, markerid, sessionid);
 	if (soap_call_oph__oph_notify(soap, server, "", data, NULL, &response)) {
 		soap_print_fault(soap, stderr);
 		return 1;
@@ -273,14 +274,16 @@ int main(int argc, char *argv[])
 
 	char _query[OPH_MAX_PROGRAM_SIZE];
 	char server[OPH_MAX_STRING_SIZE];
-	int ch, msglevel = LOG_ERROR, job = 0, b64 = 0;
-	char *query = OPH_DEFAULT_QUERY, *host = OPH_DEFAULT_HOST, *port = OPH_DEFAULT_PORT, *username = CLIENT_USERID, *password = CLIENT_PASSWORD, *key = 0, *filename = 0;
+	int ch, msglevel = LOG_ERROR, job = 0, b64 = 0, markerid = 0, help = 1;
+	char *query = OPH_DEFAULT_QUERY, *host = OPH_DEFAULT_HOST, *port = OPH_DEFAULT_PORT, *username = CLIENT_USERID, *password = CLIENT_PASSWORD, *key = 0, *filename = 0, *sessionid = SESSIONID;
 	enum oph__oph_odb_job_status status = OPH_ODB_STATUS_UNKNOWN;
 
 	fprintf(stdout, "%s", OPH_VERSION);
 	fprintf(stdout, "%s", OPH_DISCLAIMER2);
 
-	while ((ch = getopt(argc, argv, "bc:df:h:j:k:p:q:u:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "bc:df:h:j:k:m:p:q:s:u:vwxz")) != -1) {
+		if (help == 1)
+			help = 0;
 		switch (ch) {
 			case 'b':
 				b64 = 1;
@@ -303,11 +306,17 @@ int main(int argc, char *argv[])
 			case 'k':
 				password = optarg;
 				break;
+			case 'm':
+				markerid = (int) strtol(optarg, NULL, 10);
+				break;
 			case 'p':
 				port = optarg;
 				break;
 			case 'q':
 				query = optarg;
+				break;
+			case 's':
+				sessionid = optarg;
 				break;
 			case 'u':
 				username = optarg;
@@ -325,11 +334,18 @@ int main(int argc, char *argv[])
 			case 'z':
 				fprintf(stdout, "%s", OPH_CONDITIONS);
 				return 0;
-			default:
-				fprintf(stdout, "Usage:\noph_client -f <JSON Request file> [-d] [-p <port>] [-h <host>] [-u <username>] [-v] [-w]\n");
-				return 0;
+			default:;
+				help = 2;
 		}
 	}
+
+	if (help) {
+		fprintf(stdout,
+			"Usage:\n%s -f <JSON Request file>\n%s -q <query>\n%s -j <jobid> [-s <sessionid>] [-m <markerid>]\n%s -c <configuration key>\nOther options:\n[-p <port>] [-h <host>] [-u <username>] [-k <password>] [-d] [-v] [-w]\n",
+			argv[0], argv[0], argv[0], argv[0]);
+		return 0;
+	}
+
 	set_debug_level(msglevel + 10);
 
 	if (filename) {
@@ -377,8 +393,8 @@ int main(int argc, char *argv[])
 			query = _query;
 		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Request: %s\n", query);
-	} else {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Current version support option -f or -q only... use: oph_client -f <JSON Request file>\n");
+	} else if (!key && !job) {
+		fprintf(stdout, "Wrong usage. Type '%s' for additional information.\n", argv[0]);
 		return 1;
 	}
 
@@ -414,7 +430,7 @@ int main(int argc, char *argv[])
 	if (key)
 		return_code = oph_get_configuration(&soap, server, key);
 	else if (job)
-		return_code = oph_notify(&soap, server, job, status);
+		return_code = oph_notify(&soap, server, job, status, sessionid, markerid);
 	else
 		return_code = oph_execute(&soap, server, query, b64);
 
