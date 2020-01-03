@@ -927,6 +927,8 @@ int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload *
 	return OPH_SERVER_OK;
 }
 
+#endif
+
 #if defined(OPH_OPENID_SUPPORT) || defined(OPH_AAA_SUPPORT)
 
 int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
@@ -946,6 +948,8 @@ int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 }
 
 #endif
+
+#ifdef OPH_OPENID_SUPPORT
 
 void *_oph_refresh(oph_refresh_token * refresh)
 {
