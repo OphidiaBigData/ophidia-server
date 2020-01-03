@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Code definition related to OpenID Connect
 - Bug related to requests where sessionid is set to NULL
 - Server core functions to support longer input strings for commands and workflows
 - OPH_MANAGE_SESSION when action 'new' is called

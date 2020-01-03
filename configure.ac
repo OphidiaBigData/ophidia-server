@@ -79,7 +79,7 @@ AC_ARG_ENABLE(optimization,
 matheval_support=no
 MATHEVAL_CONFIG=
 AC_ARG_WITH(matheval_path,
-           [  --with-matheval-path=PATH  Set the MathEval library root dir],
+           [  --with-matheval-path=PATH  Set the MathEval library directory],
            [
                 matheval_path="$withval"
                                 matheval_support=yes
@@ -296,29 +296,9 @@ AC_ARG_WITH(web_server_path,
 OPH_WEB_SERVER_LOCATION=${web_server_path}
 AC_SUBST(OPH_WEB_SERVER_LOCATION)
 
-AC_ARG_ENABLE(openid, [ --disable-openid	Disable OpenID. (Enabled by default)], [ openid="no" ], [ openid="yes" ])
-if test "x$openid" = "xyes"; then
-	AC_MSG_NOTICE(OpenID enabled)
-else
-	AC_MSG_NOTICE(OpenID disabled)
-fi
-AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
-OPH_OPENID_SUPPORT=$openid
-AC_SUBST(OPH_OPENID_SUPPORT)
-
-AC_ARG_ENABLE(aaa, [ --disable-aaa	Disable AAA. (Enabled by default)], [ aaa="no" ], [ aaa="yes" ])
-if test "x$aaa" = "xyes"; then
-	AC_MSG_NOTICE(AAA enabled)
-else
-	AC_MSG_NOTICE(AAA disabled)
-fi
-AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
-OPH_AAA_SUPPORT=$aaa
-AC_SUBST(OPH_AAA_SUPPORT)
-
 PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,
-	   [  --with-libxml-header-path=PATH 		Location of libxml2 includes directory],
+	   [  --with-libxml-header-path=PATH 		Location of libxml2 include directory],
 	   [
 		libxml_header_path="$withval"
 	   ],
@@ -341,7 +321,7 @@ AC_SUBST(LIBXML_LIB)
 
 PKG_CHECK_MODULES(CURL, libcurl >= 0.23)
 AC_ARG_WITH(libcurl_header_path,
-	   [  --with-libcurl-header-path=PATH 		Location of libcurl includes directory],
+	   [  --with-libcurl-header-path=PATH 		Location of libcurl include directory],
 	   [
 		libcurl_header_path="$withval"
 	   ],
@@ -364,7 +344,7 @@ AC_SUBST(LIBCURL_LIB)
 
 PKG_CHECK_MODULES(OPENSSL, openssl >= 1.0.0)
 AC_ARG_WITH(libopenssl_header_path,
-	   [  --with-libopenssl-header-path=PATH 		Location of openssl includes directory],
+	   [  --with-libopenssl-header-path=PATH 		Location of openssl include directory],
 	   [
 		libopenssl_header_path="$withval"
 	   ],
@@ -396,7 +376,7 @@ AM_CONDITIONAL([SSH_SUPPORT], [test "x$ssh_lib" = "xyes"])
 if test "x${ssh_lib}" = "xyes"; then
 PKG_CHECK_MODULES(SSH2, libssh2 >= 0.23)
 AC_ARG_WITH(libssh2_header_path,
-	   [  --with-libssh2-header-path=PATH 		Location of libssh2 includes directory],
+	   [  --with-libssh2-header-path=PATH 		Location of libssh2 include directory],
 	   [
 		libssh2_header_path="$withval"
 	   ],
@@ -441,7 +421,7 @@ fi
 
 PKG_CHECK_MODULES(JANSSON, jansson >= 2.3)
 AC_ARG_WITH(jansson_header_path,
-       [  --with-jansson-header-path=PATH        Location of Jansson includes directory],
+       [  --with-jansson-header-path=PATH        Location of Jansson include directory],
        [
         jansson_header_path="$withval"
        ],
@@ -463,11 +443,12 @@ AC_SUBST(JANSON_LIBS)
 JANSSON_LIBDIR=`pkg-config --variable=libdir jansson`
 AC_SUBST(JANSSON_LIBDIR)
 
+AC_ARG_ENABLE(openid, [ --disable-openid	Disable OpenID. (Enabled by default)], [ openid="no" ], [ openid="yes" ])
 if test "x$openid" = "xyes"; then
 openid=no
 CJOSE_CONFIG=
 AC_ARG_WITH(cjose_path,
-           [  --with-cjose-path=PATH  Set the cjose library root dir],
+           [  --with-cjose-path=PATH  Set the cjose library directory],
            [
                 cjose_path="$withval"
                                 openid=yes
@@ -488,16 +469,28 @@ if test "x${openid}" = "xyes"; then
     if test "x${CJOSE_LIBS}" != "x"; then
             AC_SUBST(CJOSE_CFLAGS)
             AC_SUBST(CJOSE_LIBS)
-            AC_MSG_NOTICE(openid enabled)
+            AC_MSG_NOTICE(OpenID enabled)
     else
-            AC_MSG_NOTICE(openid disabled)
+            AC_MSG_NOTICE(OpenID disabled)
             openid=no
     fi
 else
-	AC_MSG_NOTICE(openid disabled)
+	AC_MSG_NOTICE(OpenID disabled)
+fi
 fi
 AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
+OPH_OPENID_SUPPORT=$openid
+AC_SUBST(OPH_OPENID_SUPPORT)
+
+AC_ARG_ENABLE(aaa, [ --disable-aaa	Disable AAA. (Enabled by default)], [ aaa="no" ], [ aaa="yes" ])
+if test "x$aaa" = "xyes"; then
+	AC_MSG_NOTICE(AAA enabled)
+else
+	AC_MSG_NOTICE(AAA disabled)
 fi
+AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
+OPH_AAA_SUPPORT=$aaa
+AC_SUBST(OPH_AAA_SUPPORT)
 
 
 
