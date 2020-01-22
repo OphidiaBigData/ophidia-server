@@ -24,6 +24,7 @@
 #include "oph_json_library.h"
 #include "oph_workflow_engine.h"
 #include "oph_subset_library.h"
+#include "oph_service_info.h"
 
 #include <math.h>
 #include <time.h>
@@ -41,6 +42,7 @@ extern pthread_mutex_t curl_flag;
 #endif
 extern char *oph_base_src_path;
 extern char *oph_web_server_location;
+extern oph_service_info *service_info;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -48,8 +50,13 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (data && data->detach)
+	if (data && data->detach) {
 		pthread_detach(pthread_self());
+		pthread_mutex_lock(&global_flag);
+		if (service_info)
+			service_info->thread_number++;
+		pthread_mutex_unlock(&global_flag);
+	}
 #endif
 
 	if (!data || !data->data) {
@@ -272,6 +279,10 @@ void *_oph_wait(oph_notify_data * data)
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 

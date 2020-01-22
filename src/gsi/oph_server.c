@@ -387,6 +387,10 @@ void *process_request(void *arg)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 
 	soap = (struct soap *) arg;
@@ -428,7 +432,13 @@ void *process_request(void *arg)
 	soap_end(soap);
 	soap_free(soap);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
+#endif
 
 	return (void *) NULL;
 }
