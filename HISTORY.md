@@ -11,6 +11,7 @@
 
 ### Added:
 
+- Systemd unit file for the server
 - Sync execution mode when oph_cluster is used for deploying
 - Creation date of host partitions to output of OPH_CLUSTER [#50](https://github.com/OphidiaBigData/ophidia-server/pull/50)
 - Feature to enable and disable users selectively [#49](https://github.com/OphidiaBigData/ophidia-server/pull/49)
