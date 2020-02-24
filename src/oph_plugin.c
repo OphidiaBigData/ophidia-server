@@ -37,8 +37,6 @@ int oph_plugin(struct soap *soap, struct soap_plugin *p, void *arg)
 		return SOAP_EOM;
 	}
 
-	((struct oph_plugin_data *) p->data)->max_proc = 0;
-	((struct oph_plugin_data *) p->data)->max_host = 0;
 	((struct oph_plugin_data *) p->data)->jobid = malloc(sizeof(int));
 	*((int *) ((struct oph_plugin_data *) p->data)->jobid) = 0;
 	((struct oph_plugin_data *) p->data)->is_copy = 0;

@@ -26,8 +26,6 @@
 #include "oph_trash.h"
 
 struct oph_plugin_data {
-	int max_proc;
-	int max_host;
 	int *jobid;
 	int is_copy;
 	char *serverid;
