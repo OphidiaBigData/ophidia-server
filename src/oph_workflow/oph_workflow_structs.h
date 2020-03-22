@@ -43,6 +43,7 @@ typedef struct _oph_workflow_var {
  * \param status Status of the task
  * \param ncores Number of ncores to be used in task execution
  * \param nhosts Number of nhosts to be used in task execution
+ * \param nthreads Number of nthreads to be used in task execution
  * \param arguments_keys Array of explicit parameters keys for the operator
  * \param arguments_values Array of explicit parameters values for the operator
  * \param arguments_num Number of explicit parameters for the operator
@@ -54,6 +55,7 @@ typedef struct _oph_workflow_light_task {
 	int status;
 	int ncores;
 	int nhosts;
+	int nthreads;
 	char **arguments_keys;
 	char **arguments_values;
 	int arguments_num;
@@ -90,6 +92,7 @@ typedef struct _oph_workflow_dep {
  * \param role Permission needed to execute the operator
  * \param ncores Number of ncores to be used in task execution
  * \param nhosts Number of nhosts to be used in task execution
+ * \param nthreads Number of nthreads to be used in task execution
  * \param arguments_keys Array of explicit parameters keys for the operator
  * \param arguments_values Array of explicit parameters values for the operator
  * \param arguments_num Number of explicit parameters for the operator
@@ -133,6 +136,7 @@ typedef struct _oph_workflow_task {
 	int role;
 	int ncores;
 	int nhosts;
+	int nthreads;
 	char **arguments_keys;
 	char **arguments_values;
 	int arguments_num;
@@ -261,6 +265,7 @@ typedef struct _oph_workflow_stack {
  * \param exec_mode Execution mode for the entire workflow
  * \param ncores Number of cores for the entire workflow
  * \param nhosts Number of hosts for the entire workflow
+ * \param nthreads Number of hosts for the entire workflow
  * \param max_hosts Maximum number of hosts for the user
  * \param cwd CWD for the entire workflow
  * \param cdd CDD for the entire workflow
@@ -306,6 +311,7 @@ typedef struct _oph_workflow {
 	char *exec_mode;
 	int ncores;
 	int nhosts;
+	int nthreads;
 	int max_hosts;
 	char *command;
 	char *cwd;

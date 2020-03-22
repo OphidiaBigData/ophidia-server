@@ -8,6 +8,7 @@
 - Server core functions to support longer input strings for commands and workflows
 - OPH_MANAGE_SESSION when action 'new' is called
 - Use unique job identifiers also for internal requests associated with massive operations [#47](https://github.com/OphidiaBigData/ophidia-server/pull/47)
+- Check for argument 'nthreads'
 
 ### Added:
 
@@ -23,6 +24,7 @@
 - OPH_SET and OPH_INPUT to allow 0 as a value for the 'id' argument
 - Log system in order to provide additional information regarding tasks/workflows
 - Host partion option in worklow specification to support 'auto' keyword  
+- Check for arguments 'ncores' and 'nhost'
 
 ### Removed:
 
