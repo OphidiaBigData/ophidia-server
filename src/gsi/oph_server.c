@@ -100,7 +100,8 @@ unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
-char *oph_cluster_deployment = 0;
+char oph_cluster_deployment = 0;
+char oph_auth_enabled = 1;
 
 int set_global_values(const char *configuration_file)
 {
@@ -294,7 +295,12 @@ int set_global_values(const char *configuration_file)
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH, OPH_BASE_SRC_PATH);
 		oph_base_src_path = hashtbl_get(oph_server_params, OPH_SERVER_CONF_BASE_SRC_PATH);
 	}
-	oph_cluster_deployment = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT);
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT);
+	if (value && !strcasecmp(value, OPH_DEFAULT_YES))
+		oph_cluster_deployment = 1;
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_AUTHORIZATION);
+	if (value && !strcasecmp(value, OPH_DEFAULT_NO))
+		oph_auth_enabled = 0;
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 
@@ -704,8 +710,11 @@ int main(int argc, char **argv)
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "dhl:mp:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "adhl:mp:vwxz")) != -1) {
 		switch (ch) {
+			case 'a':
+				oph_auth_enabled = 0;
+				break;
 			case 'd':
 				msglevel = LOG_DEBUG;
 				break;
@@ -743,6 +752,9 @@ int main(int argc, char **argv)
 
 	set_debug_level(msglevel + 10);
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
+
+	if (!oph_auth_enabled)
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Authorization procedure disabled\n");
 
 #ifdef OPH_SERVER_LOCATION
 	oph_server_location = strdup(OPH_SERVER_LOCATION);
