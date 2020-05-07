@@ -1117,7 +1117,7 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 		return OPH_SERVER_AUTH_ERROR;
 	}
 	if (!subject_identifier) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET does not contain the subject identifier\n");
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: userinfo does not contain the claim '%s'\n", oph_openid_user_name ? oph_openid_user_name : OPH_SERVER_CONF_OPENID_USER_NAME_SUB);
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
