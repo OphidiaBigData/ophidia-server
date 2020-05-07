@@ -23,6 +23,7 @@
 
 ### Changed:
 
+- Support for OpenId Connect [#51](https://github.com/OphidiaBigData/ophidia-server/pull/51)
 - OPH_SET and OPH_INPUT to allow 0 as a value for the 'id' argument
 - Log system in order to provide additional information regarding tasks/workflows
 - Host partion option in worklow specification to support 'auto' keyword  
