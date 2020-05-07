@@ -121,6 +121,7 @@ typedef int oph_auth_user_role;
 typedef struct _oph_auth_user_bl {
 	char *userid;
 	char *host;
+	char verified;
 	char *value;
 	short count;
 	int timestamp;
@@ -131,6 +132,7 @@ typedef struct _oph_auth_user_bl {
 int oph_load_file(const char *filename, oph_argument ** args);
 int oph_load_file2(const char *filename, oph_argument ** args);
 int oph_auth_token(const char *token, const char *host, char **userid, char **new_token, short *type);
+int oph_auth_check_forged_tokens(const char *token);
 int oph_auth_read_token(const char *token, oph_argument ** args);
 int oph_auth_check(const char *token, const char *userid);
 int oph_auth_is_user_black_listed(const char *userid);

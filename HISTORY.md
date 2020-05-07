@@ -12,6 +12,7 @@
 
 ### Added:
 
+- New argument 'OPENID_ALLOW_OFFLINE_ACCESS' in main configuration file
 - New argument 'ENABLE_AUTHORIZATION' in main configuration file and option 'a' to disable authorization procedure
 - Systemd unit file for the server
 - Sync execution mode when oph_cluster is used for deploying
