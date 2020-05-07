@@ -1552,7 +1552,27 @@ void *_oph_check_aaa(void *data)
 
 #endif
 
-int oph_auth_read_token(const char *token, oph_argument ** args)
+int oph_auth_check_forged_tokens(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef OPH_OPENID_SUPPORT
+
+	char verified = 0;
+	if (!oph_get_user_by_token(&tokens_openid, token, NULL, NULL, &verified) && verified)
+		return OPH_SERVER_OK;
+	else
+		return OPH_SERVER_AUTH_ERROR;
+
+#else
+
+	return OPH_SERVER_AUTH_ERROR;
+
+#endif
+}
+
+int oph_auth_read_token(const char *token, const char *userid, oph_argument ** args)
 {
 	if (!token || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -1567,14 +1587,26 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 	if (!userinfo)
 		return OPH_SERVER_AUTH_ERROR;
 
-	json_t *info = json_loads(userinfo, 0, NULL);
-	if (!info) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
-		return OPH_SERVER_ERROR;
-	}
-
+	json_t *info = NULL;
 	char *organisation_name = NULL;
-	json_unpack(info, "{s?s}", "organisation_name", &organisation_name);	// TODO: to be adapted
+
+	if (oph_auth_check_forged_tokens(token)) {
+
+		info = json_loads(userinfo, 0, NULL);
+		if (!info) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
+			return OPH_SERVER_ERROR;
+		}
+
+		json_unpack(info, "{s?s}", OPH_SERVER_CONF_OPENID_ORGANISATION_NAME, &organisation_name);
+
+	} else {
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token forged by the server\n");	// Considering email provider
+		organisation_name = strstr(userid, "@");
+		if (organisation_name)
+			organisation_name++;
+	}
 
 	if (!organisation_name) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: organisation name not found\n");
@@ -1585,11 +1617,12 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 	oph_argument *tmp, *tail = NULL;
 
 	tmp = (oph_argument *) malloc(sizeof(oph_argument));
-	tmp->key = strdup("organisation_name");
+	tmp->key = strdup(OPH_SERVER_CONF_OPENID_ORGANISATION_NAME);
 	if (!(tmp->value = strdup(organisation_name))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		oph_cleanup_args(&tmp);
-		json_decref(info);
+		if (info)
+			json_decref(info);
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 	tmp->next = NULL;
@@ -1599,7 +1632,8 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 		*args = tmp;
 	tail = tmp;
 
-	json_decref(info);
+	if (info)
+		json_decref(info);
 
 	return OPH_SERVER_OK;
 
@@ -1835,25 +1869,6 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 
 	return result;
 
-#else
-
-	return OPH_SERVER_AUTH_ERROR;
-
-#endif
-}
-
-int oph_auth_check_forged_tokens(const char *token)
-{
-	if (!token)
-		return OPH_SERVER_NULL_POINTER;
-
-#ifdef OPH_OPENID_SUPPORT
-
-	char verified;
-	if (oph_get_user_by_token(&tokens_openid, token, NULL, NULL, &verified) && verified)
-		return OPH_SERVER_OK;
-	else
-		return OPH_SERVER_AUTH_ERROR;
 #else
 
 	return OPH_SERVER_AUTH_ERROR;
