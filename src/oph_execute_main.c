@@ -293,7 +293,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					if (oph_auth_is_user_black_listed(userid)) {
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
 						result = OPH_SERVER_AUTH_ERROR;
-					} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid, &userid_exist))) {
+					} else if ((result = !oph_auth_check_forged_tokens(soap->passwd)) && (result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid, &userid_exist))) {
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
 						switch (token_type) {
 							case 1:
