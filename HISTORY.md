@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in parsing multivalue arguments
 - Code definition related to OpenID Connect
 - Bug related to requests where sessionid is set to NULL
 - Server core functions to support longer input strings for commands and workflows
