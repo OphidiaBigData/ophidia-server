@@ -301,8 +301,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		//unpack name and operator
-		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL;
-		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task);
+		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *type = NULL;
+		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "type", &type);
 
 		//add name and operator
 		if (!name || !operator) {
@@ -322,6 +322,24 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		}
 		(*workflow)->tasks[i].operator =(char *) strdup((const char *) operator);
 		if (!((*workflow)->tasks[i].operator)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating task operator\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		if (type) {
+			if (strcmp(type, "ophidia") && strcmp(type, "cdo")) {
+				oph_workflow_free(*workflow);
+				if (jansson)
+					json_decref(jansson);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: type not allowed\n");
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+			(*workflow)->tasks[i].type = (char *) strdup((const char *) type);
+		} else
+			(*workflow)->tasks[i].type = (char *) strdup("ophidia");
+		if (!((*workflow)->tasks[i].type)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
 				json_decref(jansson);
@@ -470,9 +488,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 								return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 							}
 							(*workflow)->tasks[i].deps[j].type = (char *) strdup((const char *) type);
-						} else {
+						} else if (argument)
+							(*workflow)->tasks[i].deps[j].type = (char *) strdup((const char *) "all");
+						else
 							(*workflow)->tasks[i].deps[j].type = (char *) strdup((const char *) "embedded");
-						}
 						if (!((*workflow)->tasks[i].deps[j].type)) {
 							oph_workflow_free(*workflow);
 							if (jansson)

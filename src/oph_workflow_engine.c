@@ -3123,7 +3123,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						// Save well-known parameters and publish them on web
 						char linkname[OPH_SHORT_STRING_SIZE];
 						for (i = 0; i < outputs_num; ++i) {
-							if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
+							if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+								if (wf->cube)
+									free(wf->cube);
+								wf->cube = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
+								snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_CUBE, wf->tasks[task_index].light_tasks[light_task_index].markerid);
+								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'C');
+							} else if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
 								if (wf->cdd)
 									free(wf->cdd);
 								wf->cdd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
@@ -3131,15 +3137,23 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if (wf->cwd)
 									free(wf->cwd);
 								wf->cwd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
-							} else if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-								if (wf->cube)
-									free(wf->cube);
-								wf->cube = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
-								snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_CUBE, wf->tasks[task_index].light_tasks[light_task_index].markerid);
-								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'C');
 							} else if (!strncmp(outputs_keys[i], OPH_ARG_LINK, OPH_MAX_STRING_SIZE)) {
 								snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_LINK, wf->tasks[task_index].light_tasks[light_task_index].markerid);
 								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
+							}
+						}
+						for (i = 0; i < outputs_num; ++i) {
+							if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
+								for (j = 0; j < outputs_num; ++j) {
+									if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+										free(outputs_values[j]);
+										outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Value of '%s' is overwritten with value of '%s'\n", ttype, jobid,
+										      OPH_ARG_CUBE, OPH_ARG_FILE);
+										break;
+									}
+								}
+								break;
 							}
 						}
 
@@ -4028,7 +4042,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					// Save well-known parameters and publish it on web
 					char linkname[OPH_SHORT_STRING_SIZE];
 					for (i = 0; i < outputs_num; ++i) {
-						if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
+						if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+							if (wf->cube)
+								free(wf->cube);
+							wf->cube = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
+							snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_CUBE, wf->tasks[task_index].markerid);
+							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'C');
+						} else if (!strncmp(outputs_keys[i], OPH_ARG_CDD, OPH_MAX_STRING_SIZE)) {
 							if (wf->cdd)
 								free(wf->cdd);
 							wf->cdd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
@@ -4036,15 +4056,23 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							if (wf->cwd)
 								free(wf->cwd);
 							wf->cwd = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
-						} else if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-							if (wf->cube)
-								free(wf->cube);
-							wf->cube = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
-							snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_CUBE, wf->tasks[task_index].markerid);
-							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'C');
 						} else if (!strncmp(outputs_keys[i], OPH_ARG_LINK, OPH_MAX_STRING_SIZE)) {
 							snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_LINK, wf->tasks[task_index].markerid);
 							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
+						}
+					}
+					for (i = 0; i < outputs_num; ++i) {
+						if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
+							for (j = 0; j < outputs_num; ++j) {
+								if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+									free(outputs_values[j]);
+									outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
+									      OPH_ARG_FILE);
+									break;
+								}
+							}
+							break;
 						}
 					}
 

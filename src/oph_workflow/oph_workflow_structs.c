@@ -224,6 +224,10 @@ int oph_workflow_task_free(oph_workflow_task * task)
 		free(task->operator);
 		task->operator= NULL;
 	}
+	if (task->type) {
+		free(task->type);
+		task->type = NULL;
+	}
 	if (task->outputs_num) {
 		for (i = 0; i < task->outputs_num; i++) {
 			if (task->outputs_keys[i]) {
