@@ -3148,10 +3148,26 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 										free(outputs_values[j]);
 										outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
-										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Value of '%s' is overwritten with value of '%s'\n", ttype, jobid,
+										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid,
 										      OPH_ARG_CUBE, OPH_ARG_FILE);
 										break;
 									}
+								}
+								if (j == outputs_num) {	// parameter 'cube' not found
+									char **outputs_keys_new = (char **) realloc(outputs_keys, (1 + outputs_num) * sizeof(char *));
+									if (outputs_keys_new) {
+										outputs_keys = outputs_keys_new;
+										outputs_keys[outputs_num] = strdup(OPH_ARG_CUBE);
+									} else
+										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+									char **outputs_values_new = (char **) realloc(outputs_values, (1 + outputs_num) * sizeof(char *));
+									if (outputs_values_new) {
+										outputs_values = outputs_values_new;
+										outputs_values[outputs_num] = strdup(outputs_values[i]);
+									} else
+										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
+									outputs_num++;
 								}
 								break;
 							}
@@ -4024,21 +4040,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 					task_completed = 1;
 
-					if (wf->tasks[task_index].outputs_keys) {
-						if (!wf->tasks[task_index].parallel_mode && (!wf->tasks[task_index].light_tasks_num || wf->tasks[task_index].residual_light_tasks_num)) {
-							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: workflow '%s' has already an output list but it is not massive\n", ttype, jobid, wf->name);
-							pthread_mutex_unlock(&global_flag);
-							*response = OPH_SERVER_SYSTEM_ERROR;
-							oph_output_data_free(outputs_keys, outputs_num);
-							oph_output_data_free(outputs_values, outputs_num);
-							return SOAP_OK;
-						}
-					} else {
-						wf->tasks[task_index].outputs_keys = outputs_keys;
-						wf->tasks[task_index].outputs_values = outputs_values;
-						wf->tasks[task_index].outputs_num = outputs_num;
-					}
-
 					// Save well-known parameters and publish it on web
 					char linkname[OPH_SHORT_STRING_SIZE];
 					for (i = 0; i < outputs_num; ++i) {
@@ -4067,13 +4068,44 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 									free(outputs_values[j]);
 									outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: Value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
 									      OPH_ARG_FILE);
 									break;
 								}
 							}
+							if (j == outputs_num) {	// parameter 'cube' not found
+								char **outputs_keys_new = (char **) realloc(outputs_keys, (1 + outputs_num) * sizeof(char *));
+								if (outputs_keys_new) {
+									outputs_keys = outputs_keys_new;
+									outputs_keys[outputs_num] = strdup(OPH_ARG_CUBE);
+								} else
+									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+								char **outputs_values_new = (char **) realloc(outputs_values, (1 + outputs_num) * sizeof(char *));
+								if (outputs_values_new) {
+									outputs_values = outputs_values_new;
+									outputs_values[outputs_num] = strdup(outputs_values[i]);
+								} else
+									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+								outputs_num++;
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
+							}
 							break;
 						}
+					}
+
+					if (wf->tasks[task_index].outputs_keys) {
+						if (!wf->tasks[task_index].parallel_mode && (!wf->tasks[task_index].light_tasks_num || wf->tasks[task_index].residual_light_tasks_num)) {
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: workflow '%s' has already an output list but it is not massive\n", ttype, jobid, wf->name);
+							pthread_mutex_unlock(&global_flag);
+							*response = OPH_SERVER_SYSTEM_ERROR;
+							oph_output_data_free(outputs_keys, outputs_num);
+							oph_output_data_free(outputs_values, outputs_num);
+							return SOAP_OK;
+						}
+					} else {
+						wf->tasks[task_index].outputs_keys = outputs_keys;
+						wf->tasks[task_index].outputs_values = outputs_values;
+						wf->tasks[task_index].outputs_num = outputs_num;
 					}
 
 					outputs_keys = outputs_values = NULL;
