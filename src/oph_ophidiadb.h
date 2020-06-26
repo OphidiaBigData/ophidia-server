@@ -131,4 +131,6 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts);
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts);
 
+int oph_odb_retrieve_user_from_mail(ophidiadb * oDB, const char *mail, char **username, pthread_mutex_t * flag);
+int oph_odb_retrieve_user_from_mail2(const char *mail, char **username, pthread_mutex_t * flag);
 #endif				/* OPH_OPHIDIADB_H */

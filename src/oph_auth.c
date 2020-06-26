@@ -34,6 +34,7 @@
 #ifdef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
+#include "oph_ophidiadb.h"
 #include <curl/curl.h>
 #include <jansson.h>
 #include <cjose/cjose.h>
@@ -89,6 +90,7 @@ extern char *oph_openid_client_secret;
 extern unsigned int oph_openid_token_timeout;
 extern unsigned int oph_openid_token_check_time;
 extern char *oph_openid_user_name;
+extern char oph_openid_allow_local_user;
 
 char *oph_openid_endpoint_public_key = NULL;
 
@@ -1129,8 +1131,16 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
+	// Check for stored emails
+	char *new_subject_identifier = NULL;
+	if (oph_openid_allow_local_user && !strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_EMAIL) && !oph_odb_retrieve_user_from_mail2(subject_identifier, &new_subject_identifier, NULL)
+	    && new_subject_identifier) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: found known email '%s' associated with username '%s'\n", subject_identifier, new_subject_identifier);
+		*userid = new_subject_identifier;
+	} else
+		*userid = strdup(subject_identifier);
 
-	if (!(*userid = strdup(subject_identifier))) {
+	if (!*userid) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_ERROR;
@@ -1930,7 +1940,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 
 int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_userid, char *userid_exist)
 {
-	if (!userid || !passwd)
+	if (!userid)
 		return OPH_SERVER_NULL_POINTER;
 	if (actual_userid)
 		*actual_userid = NULL;
@@ -1942,7 +1952,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 
 #ifdef INTERFACE_TYPE_IS_SSL
 	char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
-	oph_sha(sha_passwd, passwd);
+	if (passwd)
+		oph_sha(sha_passwd, passwd);
 #endif
 
 	int result = OPH_SERVER_ERROR;
@@ -1975,13 +1986,19 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 				if (!password) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_auth_file);
 					result = OPH_SERVER_IO_ERROR;
-				} else if (!strcmp(passwd, password)) {
+#ifndef INTERFACE_TYPE_IS_GSI
+				} else if (!passwd) {	// If passwd == NULL, password check is skipped (used only in case of tokens)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
+					oph_drop_from_bl(&bl_head, userid, host);
+					result = OPH_SERVER_OK;
+#endif
+				} else if (passwd && !strcmp(passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
 					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #ifdef INTERFACE_TYPE_IS_SSL
-				else if (!strcmp(sha_passwd, password)) {
+				else if (passwd && !strcmp(sha_passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
 					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
