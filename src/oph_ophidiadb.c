@@ -30,9 +30,6 @@ extern pthread_mutex_t global_flag;
 
 int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 {
-	if (!oDB)
-		return OPH_ODB_NULL_PARAM;
-
 	if (!ophDB) {
 		ophDB = (ophidiadb *) malloc(sizeof(ophidiadb));
 		if (!ophDB)
@@ -127,11 +124,13 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 		ophDB->conn = 0;
 	}
 
-	oDB->name = ophDB->name;
-	oDB->hostname = ophDB->hostname;
-	oDB->server_port = ophDB->server_port;
-	oDB->username = ophDB->username;
-	oDB->pwd = ophDB->pwd;
+	if (oDB) {
+		oDB->name = ophDB->name;
+		oDB->hostname = ophDB->hostname;
+		oDB->server_port = ophDB->server_port;
+		oDB->username = ophDB->username;
+		oDB->pwd = ophDB->pwd;
+	}
 
 	return OPH_ODB_SUCCESS;
 }
@@ -766,7 +765,13 @@ int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 
 int oph_odb_release_hp2(int id_hostpartition)
 {
-	return oph_odb_release_hp(ophDB, id_hostpartition);
+	int result = OPH_ODB_MYSQL_ERROR;
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (!oph_odb_read_config_ophidiadb(&oDB) && !oph_odb_connect_to_ophidiadb(&oDB))
+		result = oph_odb_release_hp(&oDB, id_hostpartition);
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+	return result;
 }
 
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
@@ -881,4 +886,68 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 	mysql_free_result(res);
 
 	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_retrieve_user_from_mail(ophidiadb * oDB, const char *mail, char **username, pthread_mutex_t * flag)
+{
+	if (!oDB || !mail || !username) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return OPH_ODB_NULL_PARAM;
+	}
+	*username = NULL;
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to reconnect to OphidiaDB.\n");
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	char query[MYSQL_BUFLEN];
+
+	int n = snprintf(query, MYSQL_BUFLEN, MYSQL_QUERY_SELECT_USER_FROM_MAIL, mail);
+	if (n >= MYSQL_BUFLEN) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+	}
+
+	if (mysql_query(oDB->conn, query)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	MYSQL_RES *res;
+	MYSQL_ROW row;
+	res = mysql_store_result(oDB->conn);
+
+	if (mysql_num_rows(res) < 1) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "No row found by query\n");
+		mysql_free_result(res);
+		return OPH_ODB_NO_ROW_FOUND;
+	}
+
+	if (mysql_num_rows(res) > 1)
+		pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "More than one row found by query\n");
+
+	if (mysql_field_count(oDB->conn) != 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Not enough fields found by query\n");
+		mysql_free_result(res);
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if ((row = mysql_fetch_row(res)) != NULL)
+		*username = strdup(row[0]);
+
+	mysql_free_result(res);
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_retrieve_user_from_mail2(const char *mail, char **username, pthread_mutex_t * flag)
+{
+	int result = OPH_ODB_MYSQL_ERROR;
+	ophidiadb oDB;
+	oph_odb_initialize_ophidiadb(&oDB);
+	if (!oph_odb_read_config_ophidiadb(&oDB) && !oph_odb_connect_to_ophidiadb(&oDB))
+		result = oph_odb_retrieve_user_from_mail(&oDB, mail, username, flag);
+	oph_odb_disconnect_from_ophidiadb(&oDB);
+	return result;
 }

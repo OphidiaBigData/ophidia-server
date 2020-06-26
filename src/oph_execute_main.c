@@ -264,6 +264,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		service_info->accepted_requests++;
 	pthread_mutex_unlock(&global_flag);
 
+#ifdef INTERFACE_TYPE_IS_GSI
+	struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
+	if (!data) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error on lookup gsi plugin struct\n", jobid);
+		response->error = OPH_SERVER_SYSTEM_ERROR;
+		return SOAP_OK;
+	}
+	userid = data->client_identity;
+#endif
+
 #ifdef INTERFACE_TYPE_IS_SSL
 	int free_userid = 0, free_actual_userid = 0;
 	char __userid[OPH_MAX_STRING_SIZE], *new_token = NULL, _new_token[OPH_MAX_STRING_SIZE], *actual_userid = NULL, userid_exist = 0;
@@ -271,16 +281,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	state->authorization = OPH_AUTH_WRITE;
 
 	if (oph_auth_enabled) {
-
-#ifdef INTERFACE_TYPE_IS_GSI
-		struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
-		if (!data) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error on lookup gsi plugin struct\n", jobid);
-			response->error = OPH_SERVER_SYSTEM_ERROR;
-			return SOAP_OK;
-		}
-		userid = data->client_identity;
-#endif
 
 		pthread_mutex_lock(&global_flag);
 
@@ -293,7 +293,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					if (oph_auth_is_user_black_listed(userid)) {
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
 						result = OPH_SERVER_AUTH_ERROR;
-					} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid, &userid_exist))) {
+					} else if ((result = oph_auth_user(userid, NULL, _host, &actual_userid, &userid_exist))) {
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
 						switch (token_type) {
 							case 1:
@@ -339,8 +339,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				new_token = NULL;
 			}
 			free_userid = 1;
-		} else
+		} else if (soap->passwd)
 			result = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
+		else
+			result = OPH_SERVER_AUTH_ERROR;
 
 		pthread_mutex_unlock(&global_flag);
 

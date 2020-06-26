@@ -26,6 +26,7 @@
 #define MYSQL_QUERY_DELETE_USER "DELETE FROM `user` WHERE username = '%s'"
 #define MYSQL_QUERY_UPDATE_USER "UPDATE `user` SET %s = '%s' WHERE username = '%s'"
 #define MYSQL_QUERY_UPDATE_USER2 "UPDATE `user` SET %s = PASSWORD('%s') WHERE username = '%s'"
+#define MYSQL_QUERY_SELECT_USER_FROM_MAIL "SELECT `username` FROM `user` WHERE mail = '%s'"
 
 // Session and job management
 #define MYSQL_RETRIEVE_USER_ID "SELECT iduser FROM `user` WHERE username = '%s';"
