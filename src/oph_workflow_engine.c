@@ -2731,7 +2731,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
 	*response = OPH_SERVER_OK;
 
 	if (!state) {
@@ -6004,7 +6004,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 										break;
 									}
 								if (k >= n) {
-									if (temp->wf->tasks[i].light_tasks[j].is_marked_to_be_aborted) {
+									if (temp->wf->tasks[i].is_marked_to_be_aborted) {
 										snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
 											 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid, temp->wf->tasks[i].markerid);
 										error_notification[nn++] = strdup(submission_string_ext);
