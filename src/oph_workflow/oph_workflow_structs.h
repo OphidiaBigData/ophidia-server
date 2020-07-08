@@ -60,6 +60,7 @@ typedef struct _oph_workflow_light_task {
 	char **arguments_values;
 	int arguments_num;
 	char *response;
+	char is_marked_to_be_aborted;
 } oph_workflow_light_task;
 
 /* \brief Struct for an OPH_WORKFLOW dependency
@@ -173,6 +174,7 @@ typedef struct _oph_workflow_task {
 	char is_known;
 	char forward;
 	double timestamp;
+	char is_marked_to_be_aborted;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

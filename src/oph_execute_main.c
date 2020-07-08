@@ -417,7 +417,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 #endif
 	}
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
 
 	// Remember the password
 	if (soap->passwd)
