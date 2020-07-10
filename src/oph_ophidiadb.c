@@ -121,7 +121,10 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 
 		fclose(file);
 
-		ophDB->conn = 0;
+		ophDB->conn = NULL;
+#ifndef OPH_DB_SUPPORT
+		ophDB->db = NULL;
+#endif
 	}
 
 	if (oDB) {
@@ -145,6 +148,9 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	oDB->username = NULL;
 	oDB->pwd = NULL;
 	oDB->conn = NULL;
+#ifndef OPH_DB_SUPPORT
+	oDB->db = NULL;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -174,6 +180,12 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->conn = NULL;
 	}
+#ifndef OPH_DB_SUPPORT
+	if (oDB->db) {
+		oph_odb_disconnect_from_ophidiadb(oDB);
+		oDB->db = NULL;
+	}
+#endif
 
 	free(oDB);
 
@@ -184,6 +196,15 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
+
+#ifndef OPH_DB_SUPPORT
+	oDB->db = NULL;
+	if (sqlite3_open(oDB->name, &oDB->db)) {
+		oph_odb_disconnect_from_ophidiadb(oDB);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+	return OPH_ODB_SUCCESS;
+#endif
 
 	oDB->conn = NULL;
 	if (!(oDB->conn = mysql_init(NULL))) {
@@ -202,6 +223,10 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 
 int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
 {
+#ifndef OPH_DB_SUPPORT
+	return OPH_ODB_SUCCESS;
+#endif
+
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
 
@@ -221,9 +246,16 @@ int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
 
 int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 {
-	if (!oDB) {
+	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
+
+#ifndef OPH_DB_SUPPORT
+	if (oDB->db) {
+		sqlite3_close(oDB->db);
+		oDB->db = NULL;
 	}
+	return OPH_ODB_SUCCESS;
+#endif
 
 	if (oDB->conn) {
 		mysql_close(oDB->conn);

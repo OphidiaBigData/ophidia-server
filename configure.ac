@@ -81,17 +81,16 @@ MATHEVAL_CONFIG=
 AC_ARG_WITH(matheval_path,
            [  --with-matheval-path=PATH  Set the MathEval library directory],
            [
-                matheval_path="$withval"
-                                matheval_support=yes
-                                MATHEVAL_CONFIG="${withval}/pkgconfig/libmatheval.pc"
+				matheval_path="$withval"
+				matheval_support=yes
+				MATHEVAL_CONFIG="${withval}/pkgconfig/libmatheval.pc"
            ],
            [
-                        MATHEVAL_CONFIG="/usr/local/lib/pkgconfig/libmatheval.pc"
-                        echo -n "checking for $MATHEVAL_CONFIG... "
-                        if test -e "$MATHEVAL_CONFIG" ; then
-                                matheval_support=yes
-                        fi
-                        echo "$matheval_support"
+				MATHEVAL_CONFIG="/usr/local/lib/pkgconfig/libmatheval.pc"
+				echo -n "checking for $MATHEVAL_CONFIG... "
+				if test -e "$MATHEVAL_CONFIG" ; then
+					matheval_support=yes
+				fi
            ]
            )
 if test "x${matheval_support}" = "xyes"; then
@@ -502,6 +501,30 @@ fi
 AM_CONDITIONAL([DB_SUPPORT], [test "x$db" = "xyes"])
 OPH_DB_SUPPORT=$db
 AC_SUBST(OPH_DB_SUPPORT)
+
+if test "x$db" = "xno"; then
+	PKG_CHECK_MODULES(SQLITE, sqlite3 >= 3.7.11)
+	AC_ARG_WITH(sqlite_header_path,
+		   [  --with-sqlite-header-path=PATH 		Location of sqlite include directory],
+		   [
+			sqlite_header_path="$withval"
+		   ],
+		   [
+			sqlite_header_path="$SQLITE_CFLAGS"
+		   ])
+	AC_ARG_WITH(sqlite_lib_path,
+		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
+		   [
+			sqlite_lib_path="$withval"
+		   ],
+	 	   [
+			sqlite_lib_path="$SQLITE_LIBS"
+	   	   ])
+	SQLITE_INCLUDE="$sqlite_header_path"
+	AC_SUBST(SQLITE_INCLUDE)
+	SQLITE_LIB="$sqlite_lib_path"
+	AC_SUBST(SQLITE_LIB)
+fi
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS

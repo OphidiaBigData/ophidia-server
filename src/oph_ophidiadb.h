@@ -21,6 +21,9 @@
 
 /* MySQL headers */
 #include <mysql.h>
+#ifndef OPH_DB_SUPPORT
+#include <sqlite3.h>
+#endif
 
 #include "oph_ophidiadb_query.h"
 
@@ -62,6 +65,9 @@ typedef struct {
 	char *username;
 	char *pwd;
 	MYSQL *conn;
+#ifndef OPH_DB_SUPPORT
+	sqlite3 *db;
+#endif
 } ophidiadb;
 
 typedef struct {
