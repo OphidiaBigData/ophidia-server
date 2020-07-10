@@ -1568,6 +1568,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					snprintf(error_message, OPH_MAX_STRING_SIZE, "Expected parameter '%s'!", OPH_ARG_KEY);
 					success = 0;
 				} else if (!strncasecmp(key, OPH_ARG_KEY_VALUE_LABEL, OPH_MAX_STRING_SIZE) || !strncasecmp(key, OPH_SESSION_LABEL, OPH_MAX_STRING_SIZE)) {
+#ifndef OPH_DB_SUPPORT
+					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "unable to change session parameters\n");
+					oph_cleanup_args(&args);
+					oph_cleanup_args(&user_args);
+					if (task_tbl)
+						hashtbl_destroy(task_tbl);
+					oph_json_free(oper_json);
+					oph_odb_disconnect_from_ophidiadb(&oDB);
+					oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+					return OPH_SERVER_SYSTEM_ERROR;
+#endif
 					char label[OPH_MAX_STRING_SIZE];
 					if (!value)
 						*label = 0;
@@ -2676,6 +2687,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE)) {
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
+#ifndef OPH_DB_SUPPORT
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Operator cannot be excuted as Ophidia DB is disabled\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+#endif
 
 		pthread_mutex_lock(&global_flag);
 

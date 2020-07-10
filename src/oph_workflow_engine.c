@@ -6217,6 +6217,11 @@ int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
 	if (!wf->host_partition || !strlen(wf->host_partition))
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be created\n");
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+#endif
+
 	int id_user = 0;
 	if (oph_odb_retrieve_user_id(oDB, wf->username, &id_user))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -6243,6 +6248,11 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 	if (!wf->host_partition || !strlen(wf->host_partition))
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be destroyed\n");
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+#endif
+
 	if (oph_odb_destroy_hp(oDB, wf->host_partition))
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 
@@ -6251,6 +6261,11 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 
 int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Unsupported function\n");
+	return OPH_WORKFLOW_EXIT_UNSUPPORTED_ERROR;
+#endif
+
 	if (!wf || !wpr) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -6356,6 +6371,10 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 
 int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Unsupported function\n");
+	return OPH_WORKFLOW_EXIT_UNSUPPORTED_ERROR;
+#endif
 
 	if (!sessionid || !workflowid || !status || !cdate) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");

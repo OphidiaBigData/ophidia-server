@@ -227,6 +227,11 @@ int oph_odb_retrieve_job_id_unsafe(ophidiadb * oDB, char *sessionid, char *marke
 
 int _oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_folder, pthread_mutex_t * flag)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !folder_name || !id_folder) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -270,6 +275,11 @@ int oph_odb_update_folder_table_unsafe(ophidiadb * oDB, char *folder_name, int *
 
 int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session, pthread_mutex_t * flag)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !sessionid || !id_session) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -431,7 +441,8 @@ int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, 
 		return res;
 	}
 
-	int id_session;
+	int id_session = 0;
+#ifdef OPH_DB_SUPPORT
 	if ((res = _oph_odb_retrieve_session_id(oDB, sessionid, &id_session, flag))) {
 		if (res != OPH_ODB_NO_ROW_FOUND) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve session id\n");
@@ -442,6 +453,7 @@ int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, 
 			return res;
 		}
 	}
+#endif
 
 	if ((res = _oph_odb_retrieve_job_id(oDB, sessionid, markerid, id_job, flag))) {
 		if (res != OPH_ODB_NO_ROW_FOUND) {
@@ -823,6 +835,11 @@ int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb 
 
 int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *label, pthread_mutex_t * flag)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !sessionid) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;

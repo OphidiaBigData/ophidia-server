@@ -492,7 +492,16 @@ AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
 OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
-
+OPH_DB_SUPPORT=
+AC_ARG_ENABLE(db, [ --disable-db	Disable Ophidia DB support. (Enabled by default)], [ db="no" ], [ db="yes" ])
+if test "x$db" = "xyes"; then
+	AC_MSG_NOTICE(Ophidia DB enabled)
+else
+	AC_MSG_NOTICE(Ophidia DB disabled)
+fi
+AM_CONDITIONAL([DB_SUPPORT], [test "x$db" = "xyes"])
+OPH_DB_SUPPORT=$db
+AC_SUBST(OPH_DB_SUPPORT)
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS

@@ -639,6 +639,11 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 
 int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be created\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !name || !parent || !id_user)
 		return OPH_ODB_NULL_PARAM;
 
@@ -697,6 +702,11 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 
 int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be destroyed\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !name)
 		return OPH_ODB_NULL_PARAM;
 
@@ -717,6 +727,11 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 
 int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be reserverd\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 	*id_hostpartition = 0;
@@ -739,6 +754,11 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be released\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 
@@ -765,6 +785,11 @@ int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 
 int oph_odb_release_hp2(int id_hostpartition)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be released\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	int result = OPH_ODB_MYSQL_ERROR;
 	ophidiadb oDB;
 	oph_odb_initialize_ophidiadb(&oDB);
@@ -776,6 +801,11 @@ int oph_odb_release_hp2(int id_hostpartition)
 
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be accessed\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !name || !id_user || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 	*id_hostpartition = 0;
@@ -818,6 +848,11 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 
 int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Hosts cannot be accessed\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !thosts)
 		return OPH_ODB_NULL_PARAM;
 	*thosts = 0;
@@ -852,6 +887,11 @@ int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 {
+#ifndef OPH_DB_SUPPORT
+	pmesg(LOG_WARNING, __FILE__, __LINE__, "Hosts cannot be accessed\n");
+	return OPH_ODB_MYSQL_ERROR;
+#endif
+
 	if (!oDB || !rhosts)
 		return OPH_ODB_NULL_PARAM;
 	*rhosts = 0;
