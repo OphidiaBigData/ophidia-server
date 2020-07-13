@@ -27,10 +27,31 @@ extern pthread_mutex_t global_flag;
 #endif
 
 typedef struct {
-	int *idjob;
+	int *id;
 	int number_of_rows;
 	int number_of_cols;
-} oph_sqlite_idjob;
+} oph_sqlite_id;
+
+int _oph_odb_get_id_callback(void *res, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	if (!res)
+		return OPH_ODB_NULL_PARAM;
+
+	((oph_sqlite_id *) res)->number_of_cols = argc;
+
+	if (!argc)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	if (argv && argv[0]) {
+		if (!((oph_sqlite_id *) res)->number_of_rows)
+			*((oph_sqlite_id *) res)->id = strtol(argv[0], NULL, 10);
+		((oph_sqlite_id *) res)->number_of_rows++;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
 
 int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pthread_mutex_t * flag)
 {
@@ -105,11 +126,6 @@ int oph_odb_retrieve_user_id_unsafe(ophidiadb * oDB, char *username, int *id_use
 
 int _oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id_session, pthread_mutex_t * flag)
 {
-#ifndef OPH_DB_SUPPORT
-	*id_session = 1;
-	return OPH_ODB_SUCCESS;
-#endif
-
 	if (!oDB || !sessionid || !id_session) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -128,6 +144,7 @@ int _oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
+#ifdef OPH_DB_SUPPORT
 
 	if (mysql_query(oDB->conn, query)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
@@ -161,6 +178,33 @@ int _oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id
 
 	mysql_free_result(res);
 
+#else
+
+	oph_sqlite_id res;
+	res.id = id_session;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_id_callback, &res, NULL)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", query);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (res.number_of_rows < 1) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "No row found by query\n");
+		return OPH_ODB_NO_ROW_FOUND;
+	}
+
+	if (res.number_of_rows > 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "More than one row found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if (res.number_of_cols != 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Not enough fields found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+#endif
+
 	return OPH_ODB_SUCCESS;
 }
 
@@ -176,11 +220,6 @@ int oph_odb_retrieve_session_id_unsafe(ophidiadb * oDB, const char *sessionid, i
 
 int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, int *id_job, pthread_mutex_t * flag)
 {
-#ifdef OPH_DB_SUPPORT
-	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
-	return OPH_ODB_MYSQL_ERROR;
-#endif
-
 	if (!oDB || !sessionid || !markerid || !id_job) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -200,6 +239,8 @@ int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, i
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
 	pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Find job with markerid '%s'\n", markerid);
+
+#ifdef OPH_DB_SUPPORT
 
 	if (mysql_query(oDB->conn, query)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
@@ -233,6 +274,33 @@ int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, i
 
 	mysql_free_result(res);
 
+#else
+
+	oph_sqlite_id res;
+	res.id = id_job;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_id_callback, &res, NULL)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", query);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (res.number_of_rows < 1) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "No row found by query\n");
+		return OPH_ODB_NO_ROW_FOUND;
+	}
+
+	if (res.number_of_rows > 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "More than one row found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if (res.number_of_cols != 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Not enough fields found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+#endif
+
 	return OPH_ODB_SUCCESS;
 }
 
@@ -249,8 +317,9 @@ int oph_odb_retrieve_job_id_unsafe(ophidiadb * oDB, char *sessionid, char *marke
 int _oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_folder, pthread_mutex_t * flag)
 {
 #ifndef OPH_DB_SUPPORT
-	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
-	return OPH_ODB_MYSQL_ERROR;
+	*id_folder = 0;		// Needs to be updated to anew value by the framework
+	pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Unable to create a new folder in Ophidia DB\n");
+	return OPH_ODB_SUCCESS;
 #endif
 
 	if (!oDB || !folder_name || !id_folder) {
@@ -296,11 +365,6 @@ int oph_odb_update_folder_table_unsafe(ophidiadb * oDB, char *folder_name, int *
 
 int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session, pthread_mutex_t * flag)
 {
-#ifndef OPH_DB_SUPPORT
-	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
-	return OPH_ODB_MYSQL_ERROR;
-#endif
-
 	if (!oDB || !sessionid || !id_session) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -324,11 +388,11 @@ int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user,
 
 	char insertQuery[MYSQL_BUFLEN];
 	int n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION, id_user, sessionid, id_folder);
-
 	if (n >= MYSQL_BUFLEN) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
+#ifdef OPH_DB_SUPPORT
 
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
@@ -346,6 +410,30 @@ int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user,
 	}
 
 	return OPH_ODB_SUCCESS;
+
+#else
+
+	int result = OPH_ODB_SUCCESS;
+
+	if (flag)
+		pthread_mutex_lock(flag);
+
+	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", insertQuery);
+		result = OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (!result && !(*id_session = sqlite3_last_insert_rowid(oDB->db))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to find last inserted session id\n");
+		result = OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if (flag)
+		pthread_mutex_unlock(flag);
+
+	return result;
+
+#endif
 }
 
 int oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session)
@@ -413,13 +501,11 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
 #ifdef OPH_DB_SUPPORT
-
 	if (mysql_query(oDB->conn, insertQuery)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
 #else
-
 	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", insertQuery);
 		return OPH_ODB_MYSQL_ERROR;
@@ -481,7 +567,6 @@ int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, 
 			return res;
 		}
 	}
-#ifdef OPH_DB_SUPPORT
 
 	if ((res = _oph_odb_retrieve_job_id(oDB, sessionid, markerid, id_job, flag))) {
 		if (res != OPH_ODB_NO_ROW_FOUND) {
@@ -498,16 +583,6 @@ int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, 
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Found a job with the same identifier '%s'\n", markerid);
 		return res;
 	}
-
-#else
-
-	if ((res =
-	     _oph_odb_update_job_table(oDB, markerid, task_string, OPH_ODB_STATUS_PENDING_STR, id_user, id_session, nchildren, id_job, hashtbl_get(task_tbl, OPH_ARG_PARENTID),
-				       hashtbl_get(task_tbl, OPH_ARG_WORKFLOWID), flag))) {
-		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create a new entry in table 'job'\n");
-		return res;
-	}
-#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -881,11 +956,6 @@ int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb 
 
 int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *label, pthread_mutex_t * flag)
 {
-#ifndef OPH_DB_SUPPORT
-	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB.\n");
-	return OPH_ODB_MYSQL_ERROR;
-#endif
-
 	if (!oDB || !sessionid) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -909,7 +979,7 @@ int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
-
+#ifdef OPH_DB_SUPPORT
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
@@ -919,6 +989,13 @@ int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
+#else
+
+	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", insertQuery);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -933,31 +1010,10 @@ int oph_odb_update_session_label_unsafe(ophidiadb * oDB, const char *sessionid, 
 	return _oph_odb_update_session_label(oDB, sessionid, label, NULL);
 }
 
-int _oph_odb_get_last_id_callback(void *res, int argc, char **argv, char **azColName)
-{
-	if (!res)
-		return OPH_ODB_NULL_PARAM;
-
-	((oph_sqlite_idjob *) res)->number_of_cols = argc;
-
-	if (!argc)
-		return OPH_ODB_NO_ROW_FOUND;
-
-	if (argv && argv[0]) {
-		if (!((oph_sqlite_idjob *) res)->number_of_rows)
-			*((oph_sqlite_idjob *) res)->idjob = strtol(argv[0], NULL, 10);
-		((oph_sqlite_idjob *) res)->number_of_rows++;
-	}
-
-	return OPH_ODB_SUCCESS;
-}
-
 int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 {
 	if (!oDB || !idjob)
 		return OPH_ODB_NULL_PARAM;
-
-	UNUSED(flag);
 
 	*idjob = 0;
 
@@ -971,8 +1027,10 @@ int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 
 #ifdef OPH_DB_SUPPORT
 
-	if (mysql_query(oDB->conn, selectQuery))
+	if (mysql_query(oDB->conn, selectQuery)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
+	}
 
 	MYSQL_RES *res;
 	MYSQL_ROW row;
@@ -990,11 +1048,11 @@ int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 
 #else
 
-	oph_sqlite_idjob res;
-	res.idjob = idjob;
+	oph_sqlite_id res;
+	res.id = idjob;
 	res.number_of_rows = 0;
 	res.number_of_cols = 0;
-	if (sqlite3_exec(oDB->db, selectQuery, _oph_odb_get_last_id_callback, &res, NULL)) {
+	if (sqlite3_exec(oDB->db, selectQuery, _oph_odb_get_id_callback, &res, NULL)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", selectQuery);
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -1009,14 +1067,12 @@ int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 		n = snprintf(selectQuery, MYSQL_BUFLEN, MYSQL_QUERY_CLEAN_JOB_TABLE, *idjob);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
 #ifdef OPH_DB_SUPPORT
-
-		if (mysql_query(oDB->conn, selectQuery))
+		if (mysql_query(oDB->conn, selectQuery)) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 			return OPH_ODB_MYSQL_ERROR;
-
+		}
 #else
-
 		if (sqlite3_exec(oDB->db, selectQuery, NULL, NULL, NULL)) {
 			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", selectQuery);
 			return OPH_ODB_MYSQL_ERROR;
@@ -1045,8 +1101,6 @@ int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (oph_odb_check_connection_to_ophidiadb(oDB))
 		return OPH_ODB_MYSQL_ERROR;
 
-	UNUSED(flag);
-
 	int n;
 	char copyQuery[MYSQL_BUFLEN];
 	if (idjob) {
@@ -1062,8 +1116,17 @@ int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
-	if (mysql_query(oDB->conn, copyQuery))
+#ifdef OPH_DB_SUPPORT
+	if (mysql_query(oDB->conn, copyQuery)) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
+	}
+#else
+	if (sqlite3_exec(oDB->db, copyQuery, NULL, NULL, NULL)) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", copyQuery);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -1100,13 +1163,22 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
 	}
 
-	if (mysql_query(oDB->conn, deleteQuery))
+	if (mysql_query(oDB->conn, deleteQuery)) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
+	}
+#else
+	if (sqlite3_exec(oDB->db, deleteQuery, NULL, NULL, NULL)) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", deleteQuery);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+#endif
 
 	return OPH_ODB_SUCCESS;
 }

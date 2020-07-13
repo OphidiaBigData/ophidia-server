@@ -203,6 +203,9 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		return OPH_ODB_MYSQL_ERROR;
 	}
+	if (sqlite3_exec(oDB->db, SQLITE_SWITCH_ON_FOREIGN_KEYS, NULL, NULL, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+
 	return OPH_ODB_SUCCESS;
 #endif
 

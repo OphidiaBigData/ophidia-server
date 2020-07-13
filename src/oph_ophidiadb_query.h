@@ -48,26 +48,44 @@
 #define MYSQL_RETRIEVE_PROGRESS_RATIO_OF_WORKFLOW "SELECT job.idjob, job.creationdate, NULL, hostxdatacube*fragmentxdb AS fragment, COUNT(*) AS current FROM session INNER JOIN job ON session.idsession = job.idsession INNER JOIN task ON job.idjob = task.idjob INNER JOIN datacube ON idoutputcube = datacube.iddatacube INNER JOIN fragment ON datacube.iddatacube = fragment.iddatacube WHERE sessionid='%s' AND workflowid=%d GROUP BY fragment.iddatacube UNION SELECT ajob.idjob, ajob.creationdate, NULL, hostxdatacube*fragmentxdb AS fragment, COUNT(*) AS current FROM session INNER JOIN jobaccounting AS ajob ON session.idsession = ajob.idsession INNER JOIN task ON ajob.idjob = task.idjob INNER JOIN datacube ON idoutputcube = datacube.iddatacube INNER JOIN fragment ON datacube.iddatacube = fragment.iddatacube WHERE sessionid='%s' AND workflowid=%d GROUP BY fragment.iddatacube;"
 #define MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW "SELECT idjob, job.creationdate, status, workflowid FROM session INNER JOIN job ON session.idsession = job.idsession WHERE sessionid='%s' AND workflowid=%d AND idparent IS NULL UNION SELECT idjob, ajob.creationdate, status, workflowid FROM session INNER JOIN jobaccounting AS ajob ON session.idsession = ajob.idsession WHERE sessionid='%s' AND workflowid=%d AND idparent IS NULL;"
 
+#ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "LOCK TABLES session WRITE; UPDATE session SET label = '%s' WHERE idsession = %d; UNLOCK TABLES;"
+#else
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "BEGIN TRANSACTION; UPDATE session SET label = '%s' WHERE idsession = %d; COMMIT;"
+#endif
 
 // Job update
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_FOLDER "INSERT INTO `folder` (`idparent`, `foldername`) VALUES (1, '%s')"
+#ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION "INSERT INTO `session` (`iduser`, `sessionid`, `idfolder`) VALUES (%d, '%s', %d); UPDATE session SET label = creationdate WHERE idsession = LAST_INSERT_ID();"
+#else
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION "INSERT INTO `session` (`iduser`, `sessionid`, `idfolder`) VALUES (%d, '%s', %d); UPDATE session SET label = creationdate WHERE idsession = last_insert_rowid();"
+#endif
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB "INSERT INTO `job` (`idjob`, `iduser`, `idsession`, `markerid`, `status`, `submissionstring`) VALUES (%d, %d, %d, '%s', '%s', '%s')"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_PARENT "INSERT INTO `job` (`idjob`, `iduser`, `idsession`, `markerid`, `status`, `submissionstring`, `nchildrentotal`, `nchildrencompleted`, `workflowid`) VALUES (%d, %d, %d, '%s', '%s', '%s', %d, 0, '%s')"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILD "INSERT INTO `job` (`idjob`, `iduser`, `idsession`, `markerid`, `status`, `submissionstring`, `idparent`, `workflowid`) VALUES (%d, %d, %d, '%s', '%s', '%s', '%s', '%s')"
 
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_CHILDREN_NUMBER "UPDATE job SET nchildrentotal=%d WHERE idjob=%d"	// Used in case of UNLIMITED
 
+#ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1 "UPDATE job SET status='%s' WHERE idjob=%d"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=NOW() WHERE idjob=%d AND timestart IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3 "UPDATE job SET status='%s', timeend=NOW() WHERE idjob=%d AND timeend IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_4 "UPDATE job SET status=CONCAT(status,'_ERROR'), timeend=NOW() WHERE idjob=%d AND timeend IS NULL"
-
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d, timestart=NOW() WHERE idjob=%d AND timestart IS NULL; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d, timeend=NOW() WHERE idjob=%d AND timeend IS NULL; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_4 "LOCK TABLES job WRITE; UPDATE job SET status=CONCAT(status,'_ERROR'), nchildrencompleted=%d, timeend=NOW() WHERE idjob=%d AND timeend IS NULL; UNLOCK TABLES;"
+#else
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1 "UPDATE job SET status='%s' WHERE idjob=%d"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3 "UPDATE job SET status='%s', timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_4 "UPDATE job SET status=CONCAT(status,'_ERROR'), timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d; COMMIT;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d, timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL; COMMIT;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL; COMMIT;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_4 "BEGIN TRANSACTION; UPDATE job SET status=CONCAT(status,'_ERROR'), nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL; COMMIT;"
+#endif
 
 #define MYSQL_QUERY_DELETE_OPHIDIADB_JOB "DELETE FROM `job` WHERE idjob=%d"
 
@@ -96,8 +114,19 @@
 #define MYSQL_QUERY_COPY_JOB "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idjob = %d;"
 #define MYSQL_QUERY_COPY_JOB_PARENT "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idjob = %d OR idparent = %d;"
 #define MYSQL_QUERY_COPY_JOB_CHILD "INSERT INTO `jobaccounting` SELECT * FROM `job` WHERE idparent = %d;"
+
+#ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_DROP_JOB "LOCK TABLES job WRITE; DELETE FROM `job` WHERE idjob = %d; UNLOCK TABLES;"
 #define MYSQL_QUERY_DROP_JOB_PARENT "LOCK TABLES job WRITE; DELETE FROM `job` WHERE idjob = %d OR idparent = %d; UNLOCK TABLES;"
 #define MYSQL_QUERY_DROP_JOB_CHILD "LOCK TABLES job WRITE; DELETE FROM `job` WHERE idparent = %d; UNLOCK TABLES;"
+#else
+#define MYSQL_QUERY_DROP_JOB "BEGIN TRANSACTION; DELETE FROM `job` WHERE idjob = %d; COMMIT;"
+#define MYSQL_QUERY_DROP_JOB_PARENT "BEGIN TRANSACTION; DELETE FROM `job` WHERE idjob = %d OR idparent = %d; COMMIT;"
+#define MYSQL_QUERY_DROP_JOB_CHILD "BEGIN TRANSACTION; DELETE FROM `job` WHERE idparent = %d; COMMIT;"
+#endif
+
+#ifndef OPH_DB_SUPPORT
+#define SQLITE_SWITCH_ON_FOREIGN_KEYS "PRAGMA foreign_keys=ON;"
+#endif
 
 #endif				/* OPH_OPHIDIADB_QUERY_H */
