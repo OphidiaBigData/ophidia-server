@@ -3043,6 +3043,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (!final) {
 		if (light_task_index >= 0)	// Massive operation
 		{
+			if (wf->tasks[task_index].light_tasks[light_task_index].status < odb_status)	// It needs to be tested
+				update_light_task_data = 1;
 			wf->tasks[task_index].light_tasks[light_task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
@@ -3067,7 +3069,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (stat(filename, &s) && (errno == ENOENT)) {
 						char error_message[OPH_MAX_STRING_SIZE];
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing a child of task '%s'!", wf->tasks[task_index].name);
-
 						update_light_task_data = 1;
 						if (oph_save_basic_json(ttype, jobid, wf, task_index, light_task_index, "ERROR", error_message, NULL)) {
 							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name,
@@ -3836,7 +3837,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			output_json = NULL;	// Skip output JSON in case of massive operation --> refer to my_output_json instead
 		} else {
 			char set_update_task_data = 0;
-			if (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_PENDING)
+			if ((wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_PENDING) || (wf->tasks[task_index].status < odb_status))	// It needs to be tested
 				set_update_task_data = 1;
 			wf->tasks[task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been updated to %s in memory\n", ttype, jobid, wf->tasks[task_index].name,
