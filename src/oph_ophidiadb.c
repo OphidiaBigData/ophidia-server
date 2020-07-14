@@ -24,9 +24,65 @@
 extern char *oph_server_location;
 extern ophidiadb *ophDB;
 
+extern char *oph_sha(char *to, const char *passwd);
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
+
+typedef struct {
+	int *id;
+	int number_of_rows;
+	int number_of_cols;
+} oph_sqlite_id;
+
+int _oph_odb_get_id_callback(void *res, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	if (!res)
+		return OPH_ODB_NULL_PARAM;
+
+	((oph_sqlite_id *) res)->number_of_cols = argc;
+
+	if (!argc)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	if (argv && argv[0]) {
+		if (!((oph_sqlite_id *) res)->number_of_rows)
+			*((oph_sqlite_id *) res)->id = strtol(argv[0], NULL, 10);
+		((oph_sqlite_id *) res)->number_of_rows++;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
+
+typedef struct {
+	char **user;
+	int number_of_rows;
+	int number_of_cols;
+} oph_sqlite_user;
+
+int _oph_odb_get_user_callback(void *res, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	if (!res)
+		return OPH_ODB_NULL_PARAM;
+
+	((oph_sqlite_user *) res)->number_of_cols = argc;
+
+	if (!argc)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	if (argv && argv[0]) {
+		if (!((oph_sqlite_user *) res)->number_of_rows)
+			*((oph_sqlite_user *) res)->user = strdup(argv[0]);
+		((oph_sqlite_user *) res)->number_of_rows++;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
 
 int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 {
@@ -509,8 +565,15 @@ int oph_odb_insert_user(ophidiadb * oDB, const char *username)
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
+
 	if (mysql_query(oDB->conn, insertQuery))
 		return OPH_ODB_MYSQL_ERROR;
+#else
+
+	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -532,6 +595,7 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, insertQuery))
 			return OPH_ODB_MYSQL_ERROR;
 
@@ -547,18 +611,43 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 		while ((row = mysql_fetch_row(res)) != NULL)
 			idcountry = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
 		mysql_free_result(res);
+#else
+		oph_sqlite_id res;
+		res.id = &idcountry;
+		res.number_of_rows = 0;
+		res.number_of_cols = 0;
+		if (sqlite3_exec(oDB->db, insertQuery, _oph_odb_get_id_callback, &res, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+
+		if ((res.number_of_rows != 1) || (res.number_of_cols != 1))
+			return OPH_ODB_NO_ROW_FOUND;
+#endif
 
 		snprintf(tmp, MYSQL_BUFLEN, "%d", idcountry);
 	} else
 		snprintf(tmp, MYSQL_BUFLEN, OPH_NULL_VALUE);
+
+#ifdef INTERFACE_TYPE_IS_SSL
+	char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
+	if (password) {
+		oph_sha(sha_passwd, password);
+		password = sha_passwd;
+	}
+#endif
 
 	n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_INSERT_USER2, username, password, name ? "'" : "", name ? name : OPH_NULL_VALUE, name ? "'" : "", surname ? "'" : "",
 		     surname ? surname : OPH_NULL_VALUE, surname ? "'" : "", email ? "'" : "", email ? email : OPH_NULL_VALUE, email ? "'" : "", tmp, max_hosts > 0 ? max_hosts : 0);
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 	if (mysql_query(oDB->conn, insertQuery))
 		return OPH_ODB_MYSQL_ERROR;
+#else
+
+	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -576,8 +665,15 @@ int oph_odb_delete_user(ophidiadb * oDB, const char *username)
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
+
 	if (mysql_query(oDB->conn, insertQuery))
 		return OPH_ODB_MYSQL_ERROR;
+#else
+
+	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -594,36 +690,58 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 	int n;
 
 	if (password) {
+
+#ifdef INTERFACE_TYPE_IS_SSL
+		char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
+		oph_sha(sha_passwd, password);
+		password = sha_passwd;
+#endif
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER2, "password", password, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 	if (name) {
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "name", name, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 	if (surname) {
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "surname", surname, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 	if (email) {
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "mail", email, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 	if (country) {
 		int idcountry = 0;
@@ -632,6 +750,7 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
 
@@ -647,15 +766,30 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 		while ((row = mysql_fetch_row(res)) != NULL)
 			idcountry = (row[0] ? (int) strtol(row[0], NULL, 10) : 0);
 		mysql_free_result(res);
+#else
+		oph_sqlite_id res;
+		res.id = &idcountry;
+		res.number_of_rows = 0;
+		res.number_of_cols = 0;
+		if (sqlite3_exec(oDB->db, updateQuery, _oph_odb_get_id_callback, &res, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+
+		if ((res.number_of_rows != 1) || (res.number_of_cols != 1))
+			return OPH_ODB_NO_ROW_FOUND;
+#endif
 
 		char tmp[MYSQL_BUFLEN];
 		snprintf(tmp, MYSQL_BUFLEN, "%d", idcountry);
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "idcountry", tmp, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 	if (max_hosts >= 0) {
 		char tmp[MYSQL_BUFLEN];
@@ -664,9 +798,13 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 		n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_USER, "maxhosts", tmp, username);
 		if (n >= MYSQL_BUFLEN)
 			return OPH_ODB_STR_BUFF_OVERFLOW;
-
+#ifdef OPH_DB_SUPPORT
 		if (mysql_query(oDB->conn, updateQuery))
 			return OPH_ODB_MYSQL_ERROR;
+#else
+		if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL))
+			return OPH_ODB_MYSQL_ERROR;
+#endif
 	}
 
 	return OPH_ODB_SUCCESS;
@@ -983,7 +1121,7 @@ int oph_odb_retrieve_user_from_mail(ophidiadb * oDB, const char *mail, char **us
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
-
+#ifdef OPH_DB_SUPPORT
 	if (mysql_query(oDB->conn, query)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
@@ -1012,6 +1150,29 @@ int oph_odb_retrieve_user_from_mail(ophidiadb * oDB, const char *mail, char **us
 		*username = strdup(row[0]);
 
 	mysql_free_result(res);
+#else
+	oph_sqlite_user res;
+	res.user = username;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_user_callback, &res, NULL)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", query);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (res.number_of_rows < 1) {
+		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "No row found by query\n");
+		return OPH_ODB_NO_ROW_FOUND;
+	}
+
+	if (res.number_of_rows > 1)
+		pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "More than one row found by query\n");
+
+	if (res.number_of_cols != 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Not enough fields found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+#endif
 
 	return OPH_ODB_SUCCESS;
 }

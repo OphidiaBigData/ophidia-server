@@ -6004,6 +6004,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: CONNECTED to OphidiaDB\n", jobid);
 
+	if (oph_odb_retrieve_user_id(&oDB, wf->username, &wf->iduser)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve user id.\n", jobid);
+		oph_odb_disconnect_from_ophidiadb(&oDB);
+		oph_workflow_free(wf);
+		response->error = OPH_SERVER_IO_ERROR;
+		return SOAP_OK;
+	}
+
 	int odb_jobid = 0;
 
 	// Save the job in OphidiaDB

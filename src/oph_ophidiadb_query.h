@@ -21,11 +21,19 @@
 
 // User management
 #define MYSQL_QUERY_INSERT_USER "INSERT IGNORE INTO `user` (username) VALUES ('%s')"
+#ifdef INTERFACE_TYPE_IS_SSL
+#define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s','%s',%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
+#else
 #define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s',PASSWORD('%s'),%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
+#endif
 #define MYSQL_QUERY_SELECT_COUNTRY "SELECT idcountry FROM `country` WHERE country = '%s'"
 #define MYSQL_QUERY_DELETE_USER "DELETE FROM `user` WHERE username = '%s'"
 #define MYSQL_QUERY_UPDATE_USER "UPDATE `user` SET %s = '%s' WHERE username = '%s'"
+#ifdef INTERFACE_TYPE_IS_SSL
+#define MYSQL_QUERY_UPDATE_USER2 "UPDATE `user` SET %s = '%s' WHERE username = '%s'"
+#else
 #define MYSQL_QUERY_UPDATE_USER2 "UPDATE `user` SET %s = PASSWORD('%s') WHERE username = '%s'"
+#endif
 #define MYSQL_QUERY_SELECT_USER_FROM_MAIL "SELECT `username` FROM `user` WHERE mail = '%s'"
 
 // Session and job management

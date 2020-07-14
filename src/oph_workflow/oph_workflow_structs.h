@@ -259,6 +259,7 @@ typedef struct _oph_workflow_stack {
  * \param is_closed Flag used to broadcast termination of a synchronous workflow
  * \param username User executing the workflow
  * \param os_username Username used to submit requests to resource manager
+ * \param iduser Identifier of the user executing the workflow
  * \param userrole User role
  * \param ip_address IP address of the submitter
  * \param name Name of the workflow
@@ -305,6 +306,7 @@ typedef struct _oph_workflow {
 	char *username;
 	char *password;
 	char *os_username;
+	int iduser;
 	int userrole;
 	char *ip_address;
 	char *name;

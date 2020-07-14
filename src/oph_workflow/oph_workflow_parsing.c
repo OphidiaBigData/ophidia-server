@@ -995,6 +995,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->username = NULL;
 	(*workflow)->password = NULL;
 	(*workflow)->os_username = NULL;
+	(*workflow)->iduser = 0;
 	(*workflow)->ip_address = NULL;
 	(*workflow)->response = NULL;
 	(*workflow)->command = NULL;

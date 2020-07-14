@@ -55,11 +55,6 @@ int _oph_odb_get_id_callback(void *res, int argc, char **argv, char **azColName)
 
 int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pthread_mutex_t * flag)
 {
-#ifndef OPH_DB_SUPPORT
-	*id_user = 1;
-	return OPH_ODB_SUCCESS;
-#endif
-
 	if (!oDB || !username || !id_user) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -78,6 +73,7 @@ int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pth
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 	}
+#ifdef OPH_DB_SUPPORT
 
 	if (mysql_query(oDB->conn, query)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
@@ -89,7 +85,7 @@ int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pth
 	res = mysql_store_result(oDB->conn);
 
 	if (mysql_num_rows(res) < 1) {
-		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "No row found by query\n");
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "No row found by query\n");
 		mysql_free_result(res);
 		return OPH_ODB_NO_ROW_FOUND;
 	}
@@ -110,6 +106,33 @@ int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pth
 		*id_user = (int) strtol(row[0], NULL, 10);
 
 	mysql_free_result(res);
+
+#else
+
+	oph_sqlite_id res;
+	res.id = id_user;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_id_callback, &res, NULL)) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", query);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (res.number_of_rows < 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "No row found by query\n");
+		return OPH_ODB_NO_ROW_FOUND;
+	}
+
+	if (res.number_of_rows > 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "More than one row found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+
+	if (res.number_of_cols != 1) {
+		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Not enough fields found by query\n");
+		return OPH_ODB_TOO_MANY_ROWS;
+	}
+#endif
 
 	return OPH_ODB_SUCCESS;
 }

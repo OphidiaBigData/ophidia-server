@@ -332,7 +332,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 
 	if (asprintf
 	    (&long_submit_string, OPH_WORKFLOW_EXT_SUB_STRING, workflow->tasks[task_index].operator, workflow->sessionid, workflow->workflowid,
-	     subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->username, workflow->userrole, workflow->idjob, task_index,
+	     subtask ? workflow->tasks[task_index].light_tasks[light_task_index].markerid : workflow->tasks[task_index].markerid, workflow->iduser, workflow->userrole, workflow->idjob, task_index,
 	     light_task_index, workflow->exec_mode) <= 0) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 		if (long_submit_string)
