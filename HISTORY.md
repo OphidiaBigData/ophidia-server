@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in handling country name while using the tool oph_manage_user
 - Bug in parsing multivalue arguments
 - Code definition related to OpenID Connect
 - Bug related to requests where sessionid is set to NULL
