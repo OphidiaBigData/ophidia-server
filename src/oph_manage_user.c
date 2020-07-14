@@ -160,7 +160,6 @@ int set_global_values(const char *configuration_file)
 						hashtbl_insert(oph_server_params, key, value);
 					} else
 						hashtbl_insert(oph_server_params, key, "");
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Read %s=%s\n", key, value);
 				}
 			}
 		}
