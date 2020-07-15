@@ -2112,14 +2112,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	// Handle RESUME_OPERATOR
 	if (oph_known_operator == OPH_RESUME_OPERATOR) {
 
-#ifndef OPH_DB_SUPPORT
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unsupported operator '%s'\n", jobid, OPH_RESUME_OPERATOR);
-		response->error = OPH_SERVER_ERROR;
-		oph_workflow_free(wf);
-		oph_cleanup_args(&user_args);
-		return SOAP_OK;
-#endif
-
 		char *session = NULL, *user = NULL, *mask = NULL;
 		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0;
 

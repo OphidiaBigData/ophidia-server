@@ -84,6 +84,108 @@ int _oph_odb_get_user_callback(void *res, int argc, char **argv, char **azColNam
 	return OPH_ODB_SUCCESS;
 }
 
+typedef struct _oph_sqlite_item {
+	int id;
+	char *ctime;
+	char *name;
+	int wid;
+	int pid;
+	char *max_status;
+	struct _oph_sqlite_item *next;
+} oph_sqlite_item;
+
+int _oph_sqlite_alloc_list(oph_sqlite_item ** head)
+{
+	if (!head)
+		return OPH_ODB_NULL_PARAM;
+
+	*head = (oph_sqlite_item *) malloc(sizeof(oph_sqlite_item));
+	if (!*head)
+		return OPH_ODB_MEMORY_ERROR;
+
+	(*head)->id = 0;
+	(*head)->ctime = NULL;
+	(*head)->name = NULL;
+	(*head)->wid = 0;
+	(*head)->pid = 0;
+	(*head)->max_status = NULL;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int _oph_sqlite_free_list(oph_sqlite_item * head)
+{
+	if (!head)
+		return OPH_ODB_NULL_PARAM;
+
+	oph_sqlite_item *next = NULL;
+	for (; head; head = next) {
+		next = head->next;
+		if (head->ctime)
+			free(head->ctime);
+		if (head->name)
+			free(head->name);
+		if (head->max_status)
+			free(head->max_status);
+		free(head);
+	}
+
+	return OPH_ODB_SUCCESS;
+}
+
+typedef struct {
+	oph_sqlite_item *head;
+	oph_sqlite_item *tail;
+	int number_of_rows;
+	int number_of_cols;
+} oph_sqlite_list;
+
+int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	if (!res)
+		return OPH_ODB_NULL_PARAM;
+
+	((oph_sqlite_list *) res)->number_of_cols = argc;
+
+	if (!argc)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	oph_sqlite_item *item = NULL;
+
+	if (argv) {
+
+		oph_sqlite_item *tmp = NULL;
+		if (_oph_sqlite_alloc_list(&tmp))
+			return OPH_ODB_MEMORY_ERROR;
+
+		if (argv[0])
+			tmp->id = strtol(argv[0], NULL, 10);
+		if ((argc > 1) && argv[1])
+			tmp->ctime = strdup(argv[1]);
+		if ((argc > 2) && argv[2])
+			tmp->name = strdup(argv[2]);
+		if ((argc > 3) && argv[3])
+			tmp->wid = strtol(argv[3], NULL, 10);
+		if ((argc > 4) && argv[4])
+			tmp->pid = strtol(argv[4], NULL, 10);
+		if ((argc > 5) && argv[5])
+			tmp->max_status = strdup(argv[5]);
+		tmp->next = NULL;
+
+		if (((oph_sqlite_list *) res)->head)
+			((oph_sqlite_list *) res)->tail->next = tmp;
+		else
+			((oph_sqlite_list *) res)->head = tmp;
+		((oph_sqlite_list *) res)->tail = tmp;
+
+		((oph_sqlite_list *) res)->number_of_rows++;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
+
 int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 {
 	if (!ophDB) {
@@ -341,6 +443,8 @@ int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char **
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
+
 	if (mysql_select_db(oDB->conn, oDB->name))
 		return OPH_ODB_MYSQL_ERROR;
 
@@ -375,6 +479,38 @@ int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char **
 	}
 	mysql_free_result(res);
 
+#else
+
+	oph_sqlite_list res;
+	res.head = NULL;
+	res.tail = NULL;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, &res, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+
+	if (res.number_of_cols != 2)
+		return OPH_ODB_TOO_MANY_ROWS;
+
+	*nn = res.number_of_rows;
+	if (!(*nn))
+		return OPH_ODB_NO_ROW_FOUND;
+
+	*id = (int *) malloc((*nn) * sizeof(int));
+	if (ctime)
+		*ctime = (char **) malloc((*nn) * sizeof(char *));
+
+	int j;
+	oph_sqlite_item *tmp = res.head;
+	for (j = 0; j < *nn; j++, tmp = tmp->next) {
+		(*id)[j] = tmp->id;
+		if (ctime)
+			(*ctime)[j] = tmp->ctime ? strdup(tmp->ctime) : NULL;
+	}
+	_oph_sqlite_free_list(res.head);
+
+#endif
+
 	return OPH_ODB_SUCCESS;
 }
 
@@ -392,6 +528,8 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
+
 	if (mysql_select_db(oDB->conn, oDB->name))
 		return OPH_ODB_MYSQL_ERROR;
 
@@ -408,6 +546,10 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	}
 
 	list->size = mysql_num_rows(res);
+	if (!list->size) {
+		mysql_free_result(res);
+		return OPH_ODB_NO_ROW_FOUND;
+	}
 
 	list->name = (char **) malloc(list->size * sizeof(char *));
 	list->id = (int *) malloc(list->size * sizeof(int));
@@ -424,8 +566,8 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	int j = 0;
 	while ((row = mysql_fetch_row(res)) != NULL) {
 		list->id[j] = row[0] ? (int) strtol(row[0], NULL, 10) : 0;
-		list->ctime[j] = row[1] ? strndup(row[1], OPH_MAX_STRING_SIZE) : NULL;
-		list->name[j] = row[2] ? strndup(row[2], OPH_MAX_STRING_SIZE) : NULL;
+		list->ctime[j] = row[1] ? strdup(row[1]) : NULL;
+		list->name[j] = row[2] ? strdup(row[2]) : NULL;
 		if ((mysql_field_count(oDB->conn) > 3) && row[3])
 			list->wid[j] = (int) strtol(row[3], NULL, 10);
 		else
@@ -435,12 +577,62 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 		else
 			list->pid[j] = 0;
 		if ((mysql_field_count(oDB->conn) > 5) && row[5])
-			list->max_status[j] = strndup(row[5], OPH_MAX_STRING_SIZE);
+			list->max_status[j] = strdup(row[5]);
 		else
 			list->max_status[j] = NULL;
 		j++;
 	}
 	mysql_free_result(res);
+
+#else
+
+	oph_sqlite_list res;
+	res.head = NULL;
+	res.tail = NULL;
+	res.number_of_rows = 0;
+	res.number_of_cols = 0;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, &res, NULL))
+		return OPH_ODB_MYSQL_ERROR;
+
+	if ((res.number_of_cols < 3) || (res.number_of_cols > 6))
+		return OPH_ODB_TOO_MANY_ROWS;
+
+	list->size = res.number_of_rows;
+	if (!list->size)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	list->name = (char **) malloc(list->size * sizeof(char *));
+	list->id = (int *) malloc(list->size * sizeof(int));
+	list->pid = (int *) malloc(list->size * sizeof(int));
+	list->wid = (int *) malloc(list->size * sizeof(int));
+	list->ctime = (char **) malloc(list->size * sizeof(char *));
+	list->max_status = (char **) malloc(list->size * sizeof(char *));
+
+	if (!list->name || !list->id || !list->wid || !list->pid || !list->ctime || !list->max_status)
+		return OPH_ODB_MEMORY_ERROR;
+
+	int j;
+	oph_sqlite_item *tmp = res.head;
+	for (j = 0; j < list->size; j++, tmp = tmp->next) {
+		list->id[j] = tmp->id;
+		list->ctime[j] = tmp->ctime ? strdup(tmp->ctime) : NULL;
+		list->name[j] = tmp->name ? strdup(tmp->name) : NULL;
+		if ((res.number_of_cols > 3) && tmp->wid)
+			list->wid[j] = tmp->wid;
+		else
+			list->wid[j] = 0;
+		if ((res.number_of_cols > 4) && tmp->pid)
+			list->pid[j] = tmp->pid;
+		else
+			list->pid[j] = 0;
+		if ((res.number_of_cols > 5) && tmp->max_status)
+			list->max_status[j] = strdup(tmp->max_status);
+		else
+			list->max_status[j] = NULL;
+	}
+	_oph_sqlite_free_list(res.head);
+
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
