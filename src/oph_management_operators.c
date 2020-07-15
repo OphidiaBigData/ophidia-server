@@ -240,6 +240,13 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		oph_odb_start_job_fast(idjob, &oDB);
 
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERID, username)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERID);
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		int id_user = (int) strtol(username, NULL, 10);
+
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			oph_odb_disconnect_from_ophidiadb(&oDB);
@@ -1054,11 +1061,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (oph_generate_oph_jobid(state, 'R', 0, wf, &num_sessions, max_sessions, timeout_value, NULL, NULL, NULL, NULL, oph_jobid, 0))
 				success = 0;
 			else {
-				int id_user, id_session;
-				if ((result = oph_odb_retrieve_user_id_unsafe(&oDB, wf->username, &id_user))) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve user id.\n");
-					success = 0;
-				} else if ((result = oph_odb_retrieve_session_id_unsafe(&oDB, wf->sessionid, &id_session))) {
+				int id_session;
+				if ((result = oph_odb_retrieve_session_id_unsafe(&oDB, wf->sessionid, &id_session))) {
 					if (result != OPH_ODB_NO_ROW_FOUND) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve session id\n");
 						success = 0;
@@ -2711,12 +2715,21 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
 
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERID, username)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		int id_user = (int) strtol(username, NULL, 10);
+
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
+
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
 			if (task_tbl)
@@ -2866,13 +2879,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			success = 0;
 			while (!success) {
-
-				int id_user = 0;
-				if (oph_odb_retrieve_user_id(&oDB, username, &id_user)) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User id of '%s' cannot be retrieved\n", username);
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "User id of '%s' cannot be retrieved\n", username);
-					break;
-				}
 
 				if (!orm) {
 					orm = (oph_rmanager *) malloc(sizeof(oph_rmanager));

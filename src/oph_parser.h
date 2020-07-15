@@ -31,6 +31,7 @@
 #define OPH_ARG_OPERATOR "operator"
 #define OPH_ARG_USER "user"
 #define OPH_ARG_USERNAME "username"
+#define OPH_ARG_USERID "userid"
 #define OPH_ARG_USERROLE "userrole"
 #define OPH_ARG_CONTAINER "container"
 #define OPH_ARG_CONTAINER_PID "container_pid"
