@@ -746,7 +746,11 @@ int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_
 			break;
 		default:
 			if (nchildren < 0)
-				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_4, id_job);
+#ifdef OPH_DB_SUPPORT
+				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_4, id_job);	// In this case the framework has already set current status
+#else
+				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3, oph_odb_convert_status_to_str(status), id_job);
+#endif
 			else
 				n = snprintf(insertQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_4, nchildren, id_job);
 	}

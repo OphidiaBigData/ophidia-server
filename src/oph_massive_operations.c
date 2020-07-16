@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <libgen.h>
 
-#define OPH_MF_COMMAND "operator=oph_fs;command=ls;realpath=yes;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
+#define OPH_MF_COMMAND "operator=oph_fs;command=ls;realpath=yes;%s%s%s%scdd=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userid=%d;userrole=%d;parentid=%d;"
 #define OPH_MF_GRID_CLASS "grid"
 #define OPH_MF_GRID_NAME "fs"
 #define OPH_MF_GRID_TYPE "T"
@@ -209,7 +209,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			snprintf(depth, OPH_MAX_STRING_SIZE, "depth=%s;", (char *) hashtbl_get(task_tbl, OPH_MF_ARG_DEPTH));
 		char command[OPH_MAX_STRING_SIZE];
 		snprintf(command, OPH_MAX_STRING_SIZE, OPH_MF_COMMAND "" OPH_SERVER_REQUEST_FLAG, dpath, file, recursive, depth, cdd, sessionid, wf->workflowid, wf->tasks[task_index].markerid,
-			 task_index, wf->username, wf->userrole, wf->idjob);
+			 task_index, wf->username, wf->iduser, wf->userrole, wf->idjob);
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Command to scan file system: %s\n", command);
 
 		char markerid[OPH_SHORT_STRING_SIZE];
