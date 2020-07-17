@@ -2327,9 +2327,13 @@ int _check_oph_server(const char *function, int option)
 		}
 
 	} else if (!strcmp(function, "oph_check_for_massive_operation")) {
+
 		int test_on_data_num = 32, return_value = 1;
 
 		if (option < test_on_data_num) {
+
+#ifdef OPH_DB_SUPPORT
+
 			int filter_num = 23;
 			char *filter[] = {
 				"[*]",
@@ -2729,6 +2733,10 @@ int _check_oph_server(const char *function, int option)
 
 			if (return_value)
 				goto _EXIT_3;
+
+#else
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Test skipped with this configuration\n");
+#endif
 
 		} else {
 			option -= test_on_data_num;
