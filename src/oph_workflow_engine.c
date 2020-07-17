@@ -2750,7 +2750,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 
-	char *ctmp, *sessionid = NULL;
+	char *ctmp, *sessionid = NULL, *query = NULL;
 	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
 #ifdef OPH_OPENID_SUPPORT
 	char *access_token = NULL, *refresh_token = NULL, *userinfo = NULL;
@@ -2786,9 +2786,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, ctmp);
 			if (sessionid)
 				free(sessionid);
+			if (query)
+				free(query);
 			oph_cleanup_args(&args);
 			return SOAP_OK;
-		}
+		} else if (!strncmp(aitem->key, OPH_ARG_QUERY, OPH_MAX_STRING_SIZE))
+			query = strdup(ctmp);
 #ifdef OPH_OPENID_SUPPORT
 		else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
 			access_token = ctmp;
@@ -2809,6 +2812,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_auth_save_token(access_token, refresh_token, userinfo);
 		if (sessionid)
 			free(sessionid);
+		if (query)
+			free(query);
 		oph_cleanup_args(&args);
 		return SOAP_OK;
 	}
@@ -2819,6 +2824,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		if (sessionid)
 			free(sessionid);
+		if (query)
+			free(query);
 		oph_cleanup_args(&args);
 		return SOAP_OK;
 	}
@@ -2831,6 +2838,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			*response = OPH_SERVER_SYSTEM_ERROR;
 			if (sessionid)
 				free(sessionid);
+			if (query)
+				free(query);
 			oph_cleanup_args(&args);
 			return SOAP_OK;
 		}
@@ -2902,6 +2911,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			oph_output_data_free(outputs_values, outputs_num);
 			if (sessionid)
 				free(sessionid);
+			if (query)
+				free(query);
 			return SOAP_OK;
 	}
 
@@ -2938,6 +2949,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_output_data_free(outputs_values, outputs_num);
 		if (sessionid)
 			free(sessionid);
+		if (query)
+			free(query);
 		return SOAP_OK;
 	}
 	wf = item->wf;
@@ -2954,6 +2967,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			if (wf->tasks[task_index].response)
 				free(wf->tasks[task_index].response);
 			wf->tasks[task_index].response = strdup(output_json);
+			wf->tasks[task_index].query = strdup(query);
 		} else
 			wf->tasks[task_index].response = strdup("");
 		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
@@ -2961,6 +2975,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		pthread_mutex_unlock(&global_flag);
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);
+		if (query)
+			free(query);
 		return SOAP_OK;
 	}
 
@@ -3041,9 +3057,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	}
 
 	if (!final) {
+
+		char massive_completed = 0;
 		if (light_task_index >= 0)	// Massive operation
 		{
-			if (wf->tasks[task_index].light_tasks[light_task_index].status < odb_status)	// It needs to be tested
+			if (wf->tasks[task_index].light_tasks[light_task_index].status < odb_status)
 				update_light_task_data = 1;
 			wf->tasks[task_index].light_tasks[light_task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name,
@@ -3219,7 +3237,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					else
 						wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
 					status = wf->tasks[task_index].status;
-					light_task_index = -1;
+					massive_completed = 1;
 
 					// Save JSON related to parent job
 					int success = 0;
@@ -3891,7 +3909,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		}
 
 		int check_status;
-		if (light_task_index < 0) {
+		if (massive_completed || (light_task_index < 0)) {
 			check_status = (status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR);
 			if (check_status) {
 				if (wf->tasks[wf->tasks_num].name)
@@ -4498,6 +4516,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: update status of job %d to %s\n", ttype, jobid, wf->tasks[task_index].light_tasks[light_task_index].idjob,
 				      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
 		}
+		if (massive_completed)
+			light_task_index = -1;	// It needs to be tested
 
 		if (!error && update_task_data) {
 			if (oph_odb_set_job_status_and_nchildrencompleted

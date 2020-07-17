@@ -640,6 +640,7 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 	xmlChar *content, *attribute_allownot;
 
 	//Parse till args section
+	size_t len = strlen(task_string);
 	long number_arguments = 0;
 	char key1[OPH_TP_TASKLEN];
 	char *value1 = NULL;
@@ -660,7 +661,7 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 					//Look for param names (xml content)
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
 					if (content != NULL) {
-						value1 = strdup(task_string);
+						value1 = (char *) malloc(len + 10);
 						if (!value1) {
 							xmlFree(content);
 							xmlFreeDoc(document);

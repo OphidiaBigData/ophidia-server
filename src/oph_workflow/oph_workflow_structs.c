@@ -260,6 +260,10 @@ int oph_workflow_task_free(oph_workflow_task * task)
 		free(task->on_exit);
 		task->on_exit = NULL;
 	}
+	if (task->query) {
+		free(task->query);
+		task->query = NULL;
+	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 

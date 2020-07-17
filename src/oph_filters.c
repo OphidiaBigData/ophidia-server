@@ -583,6 +583,8 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	if (path_n && strlen(path_n))
 		strcpy(ext_path_n, ext_path);
 
+	pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "ext %s\n", ext_path);
+
 	if (path && strlen(path)) {
 		char *first_nospace = path;
 		while (first_nospace && *first_nospace && (*first_nospace == ' '))

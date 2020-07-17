@@ -128,6 +128,8 @@ typedef struct _oph_workflow_dep {
  * \param is_known Flag set only for known operators
  * \param forward Flag set only for selection interface
  * \param timestamp Reference to creation date of the struct
+ * \param is_marked_to_be_aborted Flag set in case a task needs to be aborted autimatically
+ * \param query Query used to search datacubes in case of massive operation
  */
 typedef struct _oph_workflow_task {
 	int idjob;
@@ -175,6 +177,7 @@ typedef struct _oph_workflow_task {
 	char forward;
 	double timestamp;
 	char is_marked_to_be_aborted;
+	char *query;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations
