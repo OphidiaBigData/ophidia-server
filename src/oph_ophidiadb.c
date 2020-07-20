@@ -357,7 +357,13 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 
 #ifndef OPH_DB_SUPPORT
 	oDB->db = NULL;
-	if (sqlite3_open(oDB->name, &oDB->db)) {
+
+	char sqlite_db[OPH_MAX_STRING_SIZE];
+	snprintf(sqlite_db, OPH_MAX_STRING_SIZE, OPH_DB_FILE, oph_server_location);
+
+	int result = 0;
+	if ((result = sqlite3_open(sqlite_db, &oDB->db))) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to open '%s': %d\n", sqlite_db, result);
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -833,6 +839,7 @@ int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *pass
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
 #ifdef OPH_DB_SUPPORT
+
 	if (mysql_query(oDB->conn, insertQuery))
 		return OPH_ODB_MYSQL_ERROR;
 #else

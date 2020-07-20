@@ -20,11 +20,20 @@
 #define OPH_OPHIDIADB_QUERY_H
 
 // User management
+#ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_INSERT_USER "INSERT IGNORE INTO `user` (username) VALUES ('%s')"
 #ifdef INTERFACE_TYPE_IS_SSL
 #define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s','%s',%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
 #else
 #define MYSQL_QUERY_INSERT_USER2 "INSERT IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s',PASSWORD('%s'),%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
+#endif
+#else
+#define MYSQL_QUERY_INSERT_USER "INSERT OR IGNORE INTO `user` (username) VALUES ('%s')"
+#ifdef INTERFACE_TYPE_IS_SSL
+#define MYSQL_QUERY_INSERT_USER2 "INSERT OR IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s','%s',%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
+#else
+#define MYSQL_QUERY_INSERT_USER2 "INSERT OR IGNORE INTO `user` (username,password,name,surname,mail,idcountry,accountcertified,maxhosts) VALUES ('%s',PASSWORD('%s'),%s%s%s,%s%s%s,%s%s%s,%s,1,%d)"
+#endif
 #endif
 #define MYSQL_QUERY_SELECT_COUNTRY "SELECT idcountry FROM `country` WHERE name = '%s'"
 #define MYSQL_QUERY_DELETE_USER "DELETE FROM `user` WHERE username = '%s'"
@@ -104,7 +113,11 @@
 #define OPHIDIADB_CREATE_PARTITION "INSERT INTO hostpartition (partitionname, hidden) VALUES ('%s', 1);"
 #define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, importcount) SELECT LAST_INSERT_ID(), idhost, importcount FROM host WHERE idhost IN ( SELECT idhost FROM hashost WHERE idhostpartition = %d );"
 #define OPHIDIADB_DESTROY_PARTITION "DELETE FROM hostpartition WHERE partitionname = '%s' AND hidden = 1;"
+#ifdef OPH_DB_SUPPORT
 #define OPHIDIADB_RESERVE_PARTITION "INSERT IGNORE INTO hostpartition (partitionname, iduser, idjob, reserved, hosts, partitiontype) VALUES ('%s', %d, %d, 1, %d, %d);"
+#else
+#define OPHIDIADB_RESERVE_PARTITION "INSERT OR IGNORE INTO hostpartition (partitionname, iduser, idjob, reserved, hosts, partitiontype) VALUES ('%s', %d, %d, 1, %d, %d);"
+#endif
 #define OPHIDIADB_RETRIEVE_RESERVED_PARTITION "SELECT idhostpartition, idjob, partitiontype FROM hostpartition WHERE partitionname = '%s' AND iduser = %d;"
 #define OPHIDIADB_RELEASE_HOSTS "UPDATE host SET status = 'down', importcount = 0 WHERE idhost IN (SELECT idhost FROM hashost WHERE idhostpartition = %d);"
 #define OPHIDIADB_RELEASE_PARTITION "DELETE FROM hostpartition WHERE idhostpartition = %d;"

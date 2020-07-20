@@ -644,6 +644,6 @@ int main(int argc, char *argv[])
 
 	cleanup();
 
-	pmesg(LOG_INFO, __FILE__, __LINE__, "Ok\n");
+	pmesg(LOG_INFO, __FILE__, __LINE__, "Success\n");
 	return 0;
 }
