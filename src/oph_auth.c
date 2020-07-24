@@ -34,10 +34,13 @@
 #ifdef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
+#include "oph_service_info.h"
 #include "oph_ophidiadb.h"
 #include <curl/curl.h>
 #include <jansson.h>
 #include <cjose/cjose.h>
+
+extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_t token_tid_openid;
@@ -107,8 +110,11 @@ extern pthread_t token_tid_aaa;
 #ifndef OPH_OPENID_SUPPORT
 
 #include "hashtbl.h"
+#include "oph_service_info.h"
 #include <curl/curl.h>
 #include <jansson.h>
+
+extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -965,6 +971,10 @@ void *_oph_refresh(oph_refresh_token * refresh)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 
 	if (!refresh || !refresh->access_token || !refresh->refresh_token || !refresh->userid) {
@@ -1100,6 +1110,10 @@ void *_oph_refresh(oph_refresh_token * refresh)
 	free(refresh);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 
@@ -1440,6 +1454,10 @@ void *_oph_check_openid(void *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 	UNUSED(data);
 
@@ -1490,6 +1508,10 @@ void *_oph_check_openid(void *data)
 	}
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 
@@ -1504,6 +1526,10 @@ void *_oph_check_aaa(void *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 	UNUSED(data);
 
@@ -1554,6 +1580,10 @@ void *_oph_check_aaa(void *data)
 	}
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 

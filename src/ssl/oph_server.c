@@ -729,6 +729,10 @@ void *process_request(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 
 #ifdef WITH_OPENSSL
@@ -745,6 +749,10 @@ void *process_request(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 
@@ -847,6 +855,10 @@ void *status_logger(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number++;
+	pthread_mutex_unlock(&global_flag);
 #endif
 
 	struct oph_plugin_data *state = NULL;
@@ -876,6 +888,7 @@ void *status_logger(struct soap *soap)
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
 	unsigned long cn;	// Number of active cores
+	unsigned long tn;	// Number of active threads
 	double wpr;		// Progress ratio of a workflow
 	// Number of workflow tasks
 	// Progress ratio of a massive task
@@ -931,6 +944,8 @@ void *status_logger(struct soap *soap)
 			last_st = service_info->submitted_tasks;
 			last_dw = service_info->closed_workflows;
 			last_dt = service_info->closed_tasks;
+
+			tn = service_info->thread_number;
 		}
 
 		load_average[current_load++] = iw;
@@ -1043,6 +1058,7 @@ void *status_logger(struct soap *soap)
 			for (tmp = massives; tmp; tmp = tmp->next)
 				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
 					(int) tv.tv_sec);
+			fprintf(statuslogfile, "thread,status=active value=%ld %d000000000\n", tn, (int) tv.tv_sec);
 			fclose(statuslogfile);
 			statuslogfile = NULL;
 		}
@@ -1063,6 +1079,10 @@ void *status_logger(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	if (service_info)
+		service_info->thread_number--;
+	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
 

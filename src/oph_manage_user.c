@@ -24,6 +24,7 @@
 #include "oph_ophidiadb.h"
 #include "oph_auth.h"
 #include "oph_utils.h"
+#include "oph_service_info.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -58,6 +59,7 @@ char *oph_web_server = 0;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 oph_argument *args = 0;
+oph_service_info *service_info = NULL;
 char *oph_add_user = 0;
 char *oph_update_user = 0;
 unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
