@@ -1,11 +1,13 @@
 
-## Next release
+## v1.6.0 - 2020-07-27
 
 ### Fixed:
 
 - Bug in handling country name while using the tool oph_manage_user
 - Bug in parsing multivalue arguments
+- Typo in OPH_CLUSTER operator XML file
 - Code definition related to OpenID Connect
+- Bug in processing configuration file
 - Bug related to requests where sessionid is set to NULL
 - Server core functions to support longer input strings for commands and workflows
 - OPH_MANAGE_SESSION when action 'new' is called
@@ -14,8 +16,13 @@
 
 ### Added:
 
+- Monitor of the number of active threads in server [#53](https://github.com/OphidiaBigData/ophidia-server/pull/53)
+- Options to generate random user passwords and execute post-scripts to set env variables [#52](https://github.com/OphidiaBigData/ophidia-server/pull/52)
+- Update of task status in OphidiaDB at the end of execution
 - New argument 'OPENID_ALLOW_OFFLINE_ACCESS' in main configuration file
 - New argument 'ENABLE_AUTHORIZATION' in main configuration file and option 'a' to disable authorization procedure
+- Support to retrieve username from email address
+- Check of email provider as organisation name for OpenId Connect
 - Systemd unit file for the server
 - Sync execution mode when oph_cluster is used for deploying
 - Creation date of host partitions to output of OPH_CLUSTER [#50](https://github.com/OphidiaBigData/ophidia-server/pull/50)
@@ -34,6 +41,7 @@
 
 ### Removed:
 
+- Useless variables from oph_plugin
 - Status OPH_ODB_STATUS_CLOSED from list of possible states
 
 ## v1.5.1 - 2019-04-16
