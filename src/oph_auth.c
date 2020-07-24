@@ -35,6 +35,7 @@
 
 #include "hashtbl.h"
 #include "oph_service_info.h"
+#include "oph_ophidiadb.h"
 #include <curl/curl.h>
 #include <jansson.h>
 #include <cjose/cjose.h>
@@ -92,6 +93,7 @@ extern char *oph_openid_client_secret;
 extern unsigned int oph_openid_token_timeout;
 extern unsigned int oph_openid_token_check_time;
 extern char *oph_openid_user_name;
+extern char oph_openid_allow_local_user;
 
 char *oph_openid_endpoint_public_key = NULL;
 
@@ -285,7 +287,7 @@ int oph_load_file2(const char *filename, oph_argument ** args)
 	return result;
 }
 
-int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+int _oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host, char verified)
 {
 	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
@@ -296,6 +298,7 @@ int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host
 	oph_auth_user_bl *bl_item = (oph_auth_user_bl *) malloc(sizeof(oph_auth_user_bl));
 	bl_item->userid = strdup(userid);
 	bl_item->host = strdup(host);
+	bl_item->verified = verified;
 	bl_item->value = NULL;
 	bl_item->count = 1;
 	bl_item->timestamp = bl_item->check_time = tv.tv_sec;
@@ -303,6 +306,11 @@ int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host
 	*head = bl_item;
 
 	return OPH_SERVER_OK;
+}
+
+int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+{
+	return (_oph_add_to_bl(head, userid, host, 0));
 }
 
 void oph_delete_item_in_bl(oph_auth_user_bl * bl_item)
@@ -389,7 +397,7 @@ char *oph_get_host_by_user_in_bl(oph_auth_user_bl ** head, const char *userid, c
 	return NULL;
 }
 
-int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **userid, char **new_token)
+int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **userid, char **new_token, char *verified)
 {
 	if (!head || !token)
 		return OPH_SERVER_NULL_POINTER;
@@ -422,6 +430,8 @@ int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **us
 			bl_item->count = 0;	// Hit
 			if (new_token && bl_item->value && strcmp(bl_item->value, token))
 				*new_token = strdup(bl_item->value);
+			if (verified)
+				*verified = bl_item->verified;
 			return OPH_SERVER_OK;
 		} else {
 			bl_prev = bl_item;
@@ -1075,8 +1085,8 @@ void *_oph_refresh(oph_refresh_token * refresh)
 
 		oph_auth_update_values_of_user(&tokens_openid, refresh->userid, refresh->access_token);
 
-		if (oph_get_user_by_token(&tokens_openid, refresh->access_token, NULL, NULL)) {
-			oph_add_to_bl(&tokens_openid, refresh->userid, refresh->access_token);
+		if (oph_get_user_by_token(&tokens_openid, refresh->access_token, NULL, NULL, NULL)) {
+			_oph_add_to_bl(&tokens_openid, refresh->userid, refresh->access_token, 1);
 			oph_auth_cache_userinfo(refresh->access_token, refresh->userinfo);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token added to active token list\n");
 		} else
@@ -1131,12 +1141,20 @@ int oph_auth_get_user_from_userinfo_openid(const char *userinfo, char **userid)
 		return OPH_SERVER_AUTH_ERROR;
 	}
 	if (!subject_identifier) {
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: GET does not contain the subject identifier\n");
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "OPENID: userinfo does not contain the claim '%s'\n", oph_openid_user_name ? oph_openid_user_name : OPH_SERVER_CONF_OPENID_USER_NAME_SUB);
 		json_decref(userinfo_json);
 		return OPH_SERVER_AUTH_ERROR;
 	}
+	// Check for stored emails
+	char *new_subject_identifier = NULL;
+	if (oph_openid_allow_local_user && !strcmp(oph_openid_user_name, OPH_SERVER_CONF_OPENID_USER_NAME_EMAIL) && !oph_odb_retrieve_user_from_mail2(subject_identifier, &new_subject_identifier, NULL)
+	    && new_subject_identifier) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: found known email '%s' associated with username '%s'\n", subject_identifier, new_subject_identifier);
+		*userid = new_subject_identifier;
+	} else
+		*userid = strdup(subject_identifier);
 
-	if (!(*userid = strdup(subject_identifier))) {
+	if (!*userid) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		json_decref(userinfo_json);
 		return OPH_SERVER_ERROR;
@@ -1280,7 +1298,7 @@ int oph_auth_get_user_from_token_openid(const char *token, char **userid, char c
 
 #else
 
-	if (!strlen(oph_openid_endpoint)) {
+	if (!oph_openid_endpoint || !strlen(oph_openid_endpoint)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: endpoint is not set\n");
 		return OPH_SERVER_AUTH_ERROR;
 	}
@@ -1353,7 +1371,7 @@ int oph_auth_get_user_from_token_aaa(const char *token, char **userid, char cach
 
 #else
 
-	if (!strlen(oph_aaa_endpoint)) {
+	if (!oph_aaa_endpoint || !strlen(oph_aaa_endpoint)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "AAA: endpoint is not set\n");
 		return OPH_SERVER_AUTH_ERROR;
 	}
@@ -1574,7 +1592,27 @@ void *_oph_check_aaa(void *data)
 
 #endif
 
-int oph_auth_read_token(const char *token, oph_argument ** args)
+int oph_auth_check_forged_tokens(const char *token)
+{
+	if (!token)
+		return OPH_SERVER_NULL_POINTER;
+
+#ifdef OPH_OPENID_SUPPORT
+
+	char verified = 0;
+	if (!oph_get_user_by_token(&tokens_openid, token, NULL, NULL, &verified) && verified)
+		return OPH_SERVER_OK;
+	else
+		return OPH_SERVER_AUTH_ERROR;
+
+#else
+
+	return OPH_SERVER_AUTH_ERROR;
+
+#endif
+}
+
+int oph_auth_read_token(const char *token, const char *userid, oph_argument ** args)
 {
 	if (!token || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -1589,14 +1627,26 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 	if (!userinfo)
 		return OPH_SERVER_AUTH_ERROR;
 
-	json_t *info = json_loads(userinfo, 0, NULL);
-	if (!info) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
-		return OPH_SERVER_ERROR;
-	}
-
+	json_t *info = NULL;
 	char *organisation_name = NULL;
-	json_unpack(info, "{s?s}", "organisation_name", &organisation_name);
+
+	if (oph_auth_check_forged_tokens(token)) {
+
+		info = json_loads(userinfo, 0, NULL);
+		if (!info) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: unable to parse JSON string\n");
+			return OPH_SERVER_ERROR;
+		}
+
+		json_unpack(info, "{s?s}", OPH_SERVER_CONF_OPENID_ORGANISATION_NAME, &organisation_name);
+
+	} else {
+
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "OPENID: token forged by the server\n");	// Considering email provider
+		organisation_name = strstr(userid, "@");
+		if (organisation_name)
+			organisation_name++;
+	}
 
 	if (!organisation_name) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: organisation name not found\n");
@@ -1607,11 +1657,12 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 	oph_argument *tmp, *tail = NULL;
 
 	tmp = (oph_argument *) malloc(sizeof(oph_argument));
-	tmp->key = strdup("organisation_name");
+	tmp->key = strdup(OPH_SERVER_CONF_OPENID_ORGANISATION_NAME);
 	if (!(tmp->value = strdup(organisation_name))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "OPENID: memory error\n");
 		oph_cleanup_args(&tmp);
-		json_decref(info);
+		if (info)
+			json_decref(info);
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 	tmp->next = NULL;
@@ -1621,7 +1672,8 @@ int oph_auth_read_token(const char *token, oph_argument ** args)
 		*args = tmp;
 	tail = tmp;
 
-	json_decref(info);
+	if (info)
+		json_decref(info);
 
 	return OPH_SERVER_OK;
 
@@ -1810,9 +1862,9 @@ int oph_auth_token(const char *token, const char *host, char **userid, char **ne
 
 	short _type = 0;
 	int result = OPH_SERVER_OK;
-	if (!oph_get_user_by_token(&tokens_openid, token, userid, new_token))
+	if (!oph_get_user_by_token(&tokens_openid, token, userid, new_token, NULL))
 		_type = 1;
-	else if (!oph_get_user_by_token(&tokens_aaa, token, userid, new_token))
+	else if (!oph_get_user_by_token(&tokens_aaa, token, userid, new_token, NULL))
 		_type = 2;
 	if (_type)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token found in active token list\n");
@@ -1880,8 +1932,8 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token will be discarded\n");
 			return OPH_SERVER_ERROR;
 		}
-	} else if (oph_get_user_by_token(&tokens_openid, access_token, NULL, NULL)) {
-		oph_add_to_bl(&tokens_openid, userid, access_token);
+	} else if (oph_get_user_by_token(&tokens_openid, access_token, NULL, NULL, NULL)) {
+		_oph_add_to_bl(&tokens_openid, userid, access_token, 1);
 		oph_auth_cache_userinfo(access_token, userinfo);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Token added to active token list\n");
 	} else
@@ -1918,7 +1970,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 
 int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_userid, char *userid_exist)
 {
-	if (!userid || !passwd)
+	if (!userid)
 		return OPH_SERVER_NULL_POINTER;
 	if (actual_userid)
 		*actual_userid = NULL;
@@ -1930,7 +1982,8 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 
 #ifdef INTERFACE_TYPE_IS_SSL
 	char sha_passwd[2 * SHA_DIGEST_LENGTH + 2];
-	oph_sha(sha_passwd, passwd);
+	if (passwd)
+		oph_sha(sha_passwd, passwd);
 #endif
 
 	int result = OPH_SERVER_ERROR;
@@ -1963,13 +2016,19 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 				if (!password) {
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "File '%s' is corrupted\n", oph_auth_file);
 					result = OPH_SERVER_IO_ERROR;
-				} else if (!strcmp(passwd, password)) {
+#ifndef INTERFACE_TYPE_IS_GSI
+				} else if (!passwd) {	// If passwd == NULL, password check is skipped (used only in case of tokens)
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
+					oph_drop_from_bl(&bl_head, userid, host);
+					result = OPH_SERVER_OK;
+#endif
+				} else if (passwd && !strcmp(passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
 					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;
 				}
 #ifdef INTERFACE_TYPE_IS_SSL
-				else if (!strcmp(sha_passwd, password)) {
+				else if (passwd && !strcmp(sha_passwd, password)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "User '%s' is authorized\n", userid);
 					oph_drop_from_bl(&bl_head, userid, host);
 					result = OPH_SERVER_OK;

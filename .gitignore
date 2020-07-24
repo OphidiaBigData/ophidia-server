@@ -32,6 +32,7 @@ stamp-h1
 *.tmp
 etc/oph_server
 etc/oph_server_logrotate
+etc/oph_server.service
 etc/server.conf
 etc/web/env.php
 src/oph_server
@@ -41,4 +42,5 @@ test/oph_server_test
 *-coverage
 test/*-coverage
 coverage.xml
+ophidiadb
 

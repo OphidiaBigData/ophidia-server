@@ -49,6 +49,7 @@
     }\n"
 
 extern int oph_service_status;
+extern char oph_auth_enabled;
 extern char *oph_auth_location;
 extern char *oph_log_file_name;
 extern char *oph_xml_operators;
@@ -279,66 +280,78 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	*_new_token = 0;
 	state->authorization = OPH_AUTH_WRITE;
 
-	pthread_mutex_lock(&global_flag);
+	if (oph_auth_enabled) {
 
-	if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
-		short token_type = 0;
-		if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token, &token_type))) {
-			// Token is valid: check local authorization
-			if (oph_auth_user_enabling(userid, &result, &actual_userid)) {	// New user
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
-				if (oph_auth_is_user_black_listed(userid)) {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
-					result = OPH_SERVER_AUTH_ERROR;
-				} else if ((result = oph_auth_user(userid, OPH_AUTH_TOKEN, _host, &actual_userid, &userid_exist))) {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
-					switch (token_type) {
-						case 1:
-							{
-								oph_argument *token_args = NULL;
-								if (!(result = oph_auth_read_token(soap->passwd, &token_args)))
-									result = oph_auth_vo(token_args, &actual_userid);	// Return the userid associated with VO in configuration file
-								oph_cleanup_args(&token_args);
-								break;
-							}
-						case 2:
-							{
-								result = oph_auth_check(soap->passwd, userid);
-								break;
-							}
-						default:
-							result = OPH_SERVER_SYSTEM_ERROR;
-					}
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized globally\n", jobid, userid, result ? "not " : "");
-				} else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
+		pthread_mutex_lock(&global_flag);
+
+		if (!userid || !strcmp(userid, OPH_AUTH_TOKEN)) {
+			short token_type = 0;
+			if (!(result = oph_auth_token(soap->passwd, _host, &userid, &new_token, &token_type))) {
+				// Token is valid: check local authorization
+				if (oph_auth_user_enabling(userid, &result, &actual_userid)) {	// New user
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: token submitted by user '%s' is valid\n", jobid, userid);
+					if (oph_auth_is_user_black_listed(userid)) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is black listed\n", jobid, userid);
+						result = OPH_SERVER_AUTH_ERROR;
+					} else if ((result = oph_auth_user(userid, NULL, _host, &actual_userid, &userid_exist))) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is not authorized locally\n", jobid, userid);
+						switch (token_type) {
+							case 1:
+								{
+									oph_argument *token_args = NULL;
+									if (!(result = oph_auth_read_token(soap->passwd, userid, &token_args)))
+										result = oph_auth_vo(token_args, &actual_userid);	// Return the userid associated with VO in configuration file
+									oph_cleanup_args(&token_args);
+									break;
+								}
+							case 2:
+								{
+									result = oph_auth_check(soap->passwd, userid);
+									break;
+								}
+							default:
+								result = OPH_SERVER_SYSTEM_ERROR;
+						}
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized globally\n", jobid, userid, result ? "not " : "");
+					} else
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is authorized locally\n", jobid, userid);
 #ifdef OPH_OPENID_SUPPORT
-				if (actual_userid && userid_exist && oph_openid_allow_local_user) {
-					free(actual_userid);
-					actual_userid = NULL;
-				}
+					if (actual_userid && userid_exist && oph_openid_allow_local_user) {
+						free(actual_userid);
+						actual_userid = NULL;
+					}
 #endif
-				if (actual_userid) {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: cache user '%s' as '%s'\n", jobid, userid, actual_userid);
-					if (userid_exist)
-						pmesg(strcmp(userid, actual_userid) ? LOG_WARNING : LOG_DEBUG, __FILE__, __LINE__, "R%d: found user '%s' in local authorization list\n", jobid, userid);
-				}
-				oph_auth_enable_user(userid, result, actual_userid);
-				if (actual_userid)
-					free_actual_userid = 1;
-			} else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized (cached authorization)\n", jobid, userid, result ? "not " : "");
-		}
-		if (new_token) {
-			snprintf(_new_token, OPH_MAX_STRING_SIZE, "%s", new_token);
-			free(new_token);
-			new_token = NULL;
-		}
-		free_userid = 1;
-	} else
-		result = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
+					if (actual_userid) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: cache user '%s' as '%s'\n", jobid, userid, actual_userid);
+						if (userid_exist)
+							pmesg(strcmp(userid, actual_userid) ? LOG_WARNING : LOG_DEBUG, __FILE__, __LINE__, "R%d: found user '%s' in local authorization list\n", jobid,
+							      userid);
+					}
+					oph_auth_enable_user(userid, result, actual_userid);
+					if (actual_userid)
+						free_actual_userid = 1;
+				} else
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: user '%s' is %sauthorized (cached authorization)\n", jobid, userid, result ? "not " : "");
+			}
+			if (new_token) {
+				snprintf(_new_token, OPH_MAX_STRING_SIZE, "%s", new_token);
+				free(new_token);
+				new_token = NULL;
+			}
+			free_userid = 1;
+		} else if (soap->passwd)
+			result = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
+		else
+			result = OPH_SERVER_AUTH_ERROR;
 
-	pthread_mutex_unlock(&global_flag);
+		pthread_mutex_unlock(&global_flag);
+
+	} else {
+
+		result = OPH_SERVER_OK;
+		free(userid);
+		userid = strdup(OPH_SUBM_USER);
+	}
 
 	if (!result && actual_userid) {
 		free(userid);
@@ -404,7 +417,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 #endif
 	}
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
 
 	// Remember the password
 	if (soap->passwd)

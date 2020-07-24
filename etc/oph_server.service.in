@@ -1,0 +1,11 @@
+[Unit]
+Description=Start Ophidia Server
+
+[Service]
+ExecStart=@OPH_SERVER_LOCATION@/bin/oph_server
+Type=simple
+Restart=always
+User=ophidia
+
+[Install]
+WantedBy=default.target

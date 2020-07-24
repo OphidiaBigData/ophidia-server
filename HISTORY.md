@@ -3,14 +3,20 @@
 
 ### Fixed:
 
+- Bug in handling country name while using the tool oph_manage_user
+- Bug in parsing multivalue arguments
 - Code definition related to OpenID Connect
 - Bug related to requests where sessionid is set to NULL
 - Server core functions to support longer input strings for commands and workflows
 - OPH_MANAGE_SESSION when action 'new' is called
 - Use unique job identifiers also for internal requests associated with massive operations [#47](https://github.com/OphidiaBigData/ophidia-server/pull/47)
+- Check for argument 'nthreads'
 
 ### Added:
 
+- New argument 'OPENID_ALLOW_OFFLINE_ACCESS' in main configuration file
+- New argument 'ENABLE_AUTHORIZATION' in main configuration file and option 'a' to disable authorization procedure
+- Systemd unit file for the server
 - Sync execution mode when oph_cluster is used for deploying
 - Creation date of host partitions to output of OPH_CLUSTER [#50](https://github.com/OphidiaBigData/ophidia-server/pull/50)
 - Feature to enable and disable users selectively [#49](https://github.com/OphidiaBigData/ophidia-server/pull/49)
@@ -19,9 +25,12 @@
 
 ### Changed:
 
+- Polling procedure for aborted or starved tasks
+- Support for OpenId Connect [#51](https://github.com/OphidiaBigData/ophidia-server/pull/51)
 - OPH_SET and OPH_INPUT to allow 0 as a value for the 'id' argument
 - Log system in order to provide additional information regarding tasks/workflows
 - Host partion option in worklow specification to support 'auto' keyword  
+- Check for arguments 'ncores' and 'nhost'
 
 ### Removed:
 

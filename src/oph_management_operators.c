@@ -38,7 +38,7 @@ extern char *oph_auth_location;
 extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
-extern char *oph_cluster_deployment;
+extern char oph_cluster_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
@@ -2728,7 +2728,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		while (!success) {
 
-			if (!oph_cluster_deployment || strcasecmp(oph_cluster_deployment, OPH_DEFAULT_YES)) {
+			if (!oph_cluster_deployment) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
 				break;
 			}

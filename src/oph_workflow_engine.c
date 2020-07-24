@@ -286,6 +286,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 			wf->tasks[i].residual_retry_num = wf->tasks[i].retry_num;
 			wf->tasks[i].residual_auto_retry_num = 0;
 			wf->tasks[i].is_marked_for_auto_retry = 0;
+			wf->tasks[i].is_marked_to_be_aborted = 0;
 			wf->tasks[i].forward = 0;
 			if (wf->tasks[i].arguments_keys) {
 				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
@@ -2730,7 +2731,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
 	*response = OPH_SERVER_OK;
 
 	if (!state) {
@@ -2905,7 +2906,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	}
 
 	if ((get_debug_level() == LOG_DEBUG) && (status == OPH_ODB_STATUS_ERROR)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json ? output_json : "No JSON Response");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: arrived an error notification:\n%s\n", ttype, jobid, output_json ? output_json : "No JSON Response");
 		char outfile[OPH_MAX_STRING_SIZE], code[OPH_MAX_STRING_SIZE], buffer[OPH_MAX_STRING_SIZE];
 		if (sessionid && !oph_get_session_code(sessionid, code)) {
 			snprintf(buffer, OPH_MAX_STRING_SIZE, "%d", marker_id);
@@ -2913,10 +2914,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			FILE *log = fopen(outfile, "r");
 			if (log) {
 				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
 				fclose(log);
 			} else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found\n", ttype, jobid, outfile);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found; do not care!\n", ttype, jobid, outfile);
 		}
 	}
 
@@ -3042,6 +3043,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (!final) {
 		if (light_task_index >= 0)	// Massive operation
 		{
+			if (wf->tasks[task_index].light_tasks[light_task_index].status < odb_status)	// It needs to be tested
+				update_light_task_data = 1;
 			wf->tasks[task_index].light_tasks[light_task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been updated to %s in memory\n", ttype, jobid, light_task_index, wf->tasks[task_index].name,
 			      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
@@ -3066,7 +3069,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (stat(filename, &s) && (errno == ENOENT)) {
 						char error_message[OPH_MAX_STRING_SIZE];
 						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in executing a child of task '%s'!", wf->tasks[task_index].name);
-
 						update_light_task_data = 1;
 						if (oph_save_basic_json(ttype, jobid, wf, task_index, light_task_index, "ERROR", error_message, NULL)) {
 							pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save JSON Response for task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name,
@@ -3805,7 +3807,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			output_json = NULL;	// Skip output JSON in case of massive operation --> refer to my_output_json instead
 		} else {
 			char set_update_task_data = 0;
-			if (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_PENDING)
+			if ((wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_PENDING) || (wf->tasks[task_index].status < odb_status))	// It needs to be tested
 				set_update_task_data = 1;
 			wf->tasks[task_index].status = odb_status;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been updated to %s in memory\n", ttype, jobid, wf->tasks[task_index].name,
@@ -5936,6 +5938,8 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 		for (k = 0; k < OPH_SERVER_POLL_ITEMS; ++k)
 			error_notification[k] = NULL;
 
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Start polling time for aborted or starved tasks (%d seconds)\n", data->poll_time);
+
 		while (oph_server_is_running) {
 			if (list) {
 				free(list);
@@ -5985,12 +5989,15 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 												break;
 											}
 										if (k >= n) {
-											snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, j,
-												 temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid,
-												 temp->wf->tasks[i].light_tasks[j].markerid);
-											error_notification[nn++] = strdup(submission_string_ext);
-											if (nn >= OPH_SERVER_POLL_ITEMS)
-												break;
+											if (temp->wf->tasks[i].light_tasks[j].is_marked_to_be_aborted) {
+												snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i,
+													 j, temp->wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid,
+													 temp->wf->tasks[i].light_tasks[j].markerid);
+												error_notification[nn++] = strdup(submission_string_ext);
+												if (nn >= OPH_SERVER_POLL_ITEMS)
+													break;
+											} else
+												temp->wf->tasks[i].light_tasks[j].is_marked_to_be_aborted = 1;
 										}
 									}
 								if (nn >= OPH_SERVER_POLL_ITEMS)
@@ -6002,11 +6009,14 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 										break;
 									}
 								if (k >= n) {
-									snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
-										 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid, temp->wf->tasks[i].markerid);
-									error_notification[nn++] = strdup(submission_string_ext);
-									if (nn >= OPH_SERVER_POLL_ITEMS)
-										break;
+									if (temp->wf->tasks[i].is_marked_to_be_aborted) {
+										snprintf(submission_string_ext, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, temp->wf->idjob, i, -1,
+											 temp->wf->tasks[i].idjob, OPH_ODB_STATUS_ABORTED, temp->wf->sessionid, temp->wf->tasks[i].markerid);
+										error_notification[nn++] = strdup(submission_string_ext);
+										if (nn >= OPH_SERVER_POLL_ITEMS)
+											break;
+									} else
+										temp->wf->tasks[i].is_marked_to_be_aborted = 1;
 								}
 							}
 						}
@@ -6075,6 +6085,8 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 					oph_workflow_notify(data->state, 'M', jobid, error_notification[k], NULL, &response);
 					if (response)
 						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "M%d: error %d in notify\n", jobid, response);
+					free(error_notification[k]);
+					error_notification[k] = NULL;
 				}
 			// Kill starved tasks
 			for (k = 0; k < n; ++k)
@@ -6114,6 +6126,7 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 
 	pthread_mutex_lock(&global_flag);
 	poll_time = oph_server_poll_time;
+	oph_server_poll_time = 0;
 	pthread_mutex_unlock(&global_flag);
 
 	if (!poll_time)
@@ -6138,10 +6151,6 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 	data->state->job_info = state->job_info;
 
 	data->poll_time = poll_time;
-
-	pthread_mutex_lock(&global_flag);
-	oph_server_poll_time = 0;
-	pthread_mutex_unlock(&global_flag);
 
 	pthread_t tid;
 	pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_workflow_check_job_queue, data);

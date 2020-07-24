@@ -68,7 +68,7 @@ char *oph_openid_client_secret = 0;
 unsigned int oph_openid_token_timeout = OPH_SERVER_TIMEOUT;
 unsigned int oph_openid_token_check_time = 0;
 char *oph_openid_user_name = 0;
-char *oph_openid_allow_local_user = 0;
+char oph_openid_allow_local_user = 0;
 #endif
 #ifdef OPH_AAA_SUPPORT
 char *oph_aaa_endpoint = 0;
@@ -162,7 +162,6 @@ int set_global_values(const char *configuration_file)
 						hashtbl_insert(oph_server_params, key, value);
 					} else
 						hashtbl_insert(oph_server_params, key, "");
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Read %s=%s\n", key, value);
 				}
 			}
 		}

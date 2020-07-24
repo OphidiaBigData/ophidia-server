@@ -26,6 +26,7 @@
 #include "gsi.h"
 #endif
 
+extern char oph_auth_enabled;
 extern char *oph_user_notifier;
 extern char *oph_json_location;
 extern oph_service_info *service_info;
@@ -60,32 +61,36 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 
 	*response = OPH_SERVER_OK;
 
+	if (oph_auth_enabled) {
+
 #ifdef INTERFACE_TYPE_IS_GSI
-	struct gsi_plugin_data *gsi_data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
-	if (!gsi_data) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "N0: error on lookup gsi plugin struct\n");
-		*response = OPH_SERVER_SYSTEM_ERROR;
-		return SOAP_OK;
-	}
-	userid = gsi_data->client_identity;
+		struct gsi_plugin_data *gsi_data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
+		if (!gsi_data) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "N0: error on lookup gsi plugin struct\n");
+			*response = OPH_SERVER_SYSTEM_ERROR;
+			return SOAP_OK;
+		}
+		userid = gsi_data->client_identity;
 #endif
 
-	if (!userid || strcasecmp(userid, oph_user_notifier)) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: the user '%s' cannot send any notification\n", userid ? userid : "");
-		*response = OPH_SERVER_AUTH_ERROR;
-		return SOAP_OK;
-	}
+		if (!userid || strcasecmp(userid, oph_user_notifier)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: the user '%s' cannot send any notification\n", userid ? userid : "");
+			*response = OPH_SERVER_AUTH_ERROR;
+			return SOAP_OK;
+		}
 #ifdef INTERFACE_TYPE_IS_SSL
-	int res;
-	pthread_mutex_lock(&global_flag);
-	res = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
-	pthread_mutex_unlock(&global_flag);
-	if (res) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: received wrong credentials: %s %s\n", userid, soap->passwd ? soap->passwd : "NONE");
-		*response = OPH_SERVER_AUTH_ERROR;
-		return SOAP_OK;
-	}
+		int res;
+		pthread_mutex_lock(&global_flag);
+		res = oph_auth_user(userid, soap->passwd, _host, NULL, NULL);
+		pthread_mutex_unlock(&global_flag);
+		if (res) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: received wrong credentials: %s %s\n", userid, soap->passwd ? soap->passwd : "NONE");
+			*response = OPH_SERVER_AUTH_ERROR;
+			return SOAP_OK;
+		}
 #endif
+
+	}
 
 	struct oph_plugin_data *state = NULL;
 	if (!(state = (struct oph_plugin_data *) soap_lookup_plugin((struct soap *) soap, OPH_PLUGIN_ID))) {
