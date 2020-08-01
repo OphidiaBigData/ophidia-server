@@ -53,8 +53,11 @@ void *_oph_wait(oph_notify_data * data)
 	if (data && data->detach) {
 		pthread_detach(pthread_self());
 		pthread_mutex_lock(&global_flag);
-		if (service_info)
-			service_info->thread_number++;
+		if (service_info) {
+			service_info->current_thread_number++;
+			if (service_info->peak_thread_number < service_info->current_thread_number)
+				service_info->peak_thread_number = service_info->current_thread_number;
+		}
 		pthread_mutex_unlock(&global_flag);
 	}
 #endif
@@ -281,7 +284,7 @@ void *_oph_wait(oph_notify_data * data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif

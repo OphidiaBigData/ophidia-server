@@ -231,7 +231,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		snprintf(_host, OPH_SHORT_STRING_SIZE, "%s", soap->host);
 
 	char *userid = (char *) soap->userid;
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R0: received a request from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R0: received a request from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
 
 	if (!request || !response) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R0: null pointer\n");
@@ -257,7 +257,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	oph_argument *args = NULL;
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
+	if (get_debug_level() != LOG_DEBUG)
+		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: received a request from %s:%d sent by user '%s'\n", jobid, _host, soap->port, userid ? userid : "NONE");
+	else
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
 
 	pthread_mutex_lock(&global_flag);
 	if (service_info)

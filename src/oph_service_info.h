@@ -45,7 +45,8 @@ typedef struct _oph_service_info {
 	unsigned long incoming_notifications;
 	unsigned long incoming_responses;
 	unsigned long outcoming_responses;
-	unsigned long thread_number;
+	unsigned long current_thread_number;
+	unsigned long peak_thread_number;
 	oph_service_info_wf *workflows;
 } oph_service_info;
 

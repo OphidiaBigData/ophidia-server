@@ -972,8 +972,11 @@ void *_oph_refresh(oph_refresh_token * refresh)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->thread_number++;
+	if (service_info) {
+		service_info->current_thread_number++;
+		if (service_info->peak_thread_number < service_info->current_thread_number)
+			service_info->peak_thread_number = service_info->current_thread_number;
+	}
 	pthread_mutex_unlock(&global_flag);
 #endif
 
@@ -1112,7 +1115,7 @@ void *_oph_refresh(oph_refresh_token * refresh)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
@@ -1455,8 +1458,11 @@ void *_oph_check_openid(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->thread_number++;
+	if (service_info) {
+		service_info->current_thread_number++;
+		if (service_info->peak_thread_number < service_info->current_thread_number)
+			service_info->peak_thread_number = service_info->current_thread_number;
+	}
 	pthread_mutex_unlock(&global_flag);
 #endif
 	UNUSED(data);
@@ -1510,7 +1516,7 @@ void *_oph_check_openid(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
@@ -1527,8 +1533,11 @@ void *_oph_check_aaa(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->thread_number++;
+	if (service_info) {
+		service_info->current_thread_number++;
+		if (service_info->peak_thread_number < service_info->current_thread_number)
+			service_info->peak_thread_number = service_info->current_thread_number;
+	}
 	pthread_mutex_unlock(&global_flag);
 #endif
 	UNUSED(data);
@@ -1582,7 +1591,7 @@ void *_oph_check_aaa(void *data)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif

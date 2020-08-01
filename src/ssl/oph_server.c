@@ -730,8 +730,11 @@ void *process_request(struct soap *soap)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->thread_number++;
+	if (service_info) {
+		service_info->current_thread_number++;
+		if (service_info->peak_thread_number < service_info->current_thread_number)
+			service_info->peak_thread_number = service_info->current_thread_number;
+	}
 	pthread_mutex_unlock(&global_flag);
 #endif
 
@@ -751,7 +754,7 @@ void *process_request(struct soap *soap)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
@@ -856,8 +859,11 @@ void *status_logger(struct soap *soap)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
 	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->thread_number++;
+	if (service_info) {
+		service_info->current_thread_number++;
+		if (service_info->peak_thread_number < service_info->current_thread_number)
+			service_info->peak_thread_number = service_info->current_thread_number;
+	}
 	pthread_mutex_unlock(&global_flag);
 #endif
 
@@ -888,7 +894,9 @@ void *status_logger(struct soap *soap)
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
 	unsigned long cn;	// Number of active cores
-	unsigned long tn;	// Number of active threads
+	unsigned long in;	// Number of notifications from last snapshoot
+	unsigned long ctn;	// Number of active threads (current)
+	unsigned long ptn;	// Number of active threads (peak)
 	double wpr;		// Progress ratio of a workflow
 	// Number of workflow tasks
 	// Progress ratio of a massive task
@@ -905,7 +913,7 @@ void *status_logger(struct soap *soap)
 	long tau = 0, eps = 0, _eps;
 	char name[OPH_MAX_STRING_SIZE], saved, *_tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 
-	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
+	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0, last_in = 0;	// Initialization
 	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
 	reset_load_average(load_average);
 
@@ -933,19 +941,27 @@ void *status_logger(struct soap *soap)
 		pthread_mutex_lock(&global_flag);
 
 		if (service_info) {
+
+			// Save current stats
 			iw = service_info->incoming_workflows - last_iw;
 			it = service_info->incoming_tasks - last_it;
 			st = service_info->submitted_tasks - last_st;
 			dw = service_info->closed_workflows - last_dw;
 			dt = service_info->closed_tasks - last_dt;
+			in = service_info->incoming_notifications - last_in;
 
+			ctn = service_info->current_thread_number;
+			ptn = service_info->peak_thread_number;
+
+			// Update internals for next snapshot
 			last_iw = service_info->incoming_workflows;
 			last_it = service_info->incoming_tasks;
 			last_st = service_info->submitted_tasks;
 			last_dw = service_info->closed_workflows;
 			last_dt = service_info->closed_tasks;
+			last_in = service_info->incoming_notifications;
 
-			tn = service_info->thread_number;
+			service_info->peak_thread_number = service_info->current_thread_number;
 		}
 
 		load_average[current_load++] = iw;
@@ -1058,7 +1074,9 @@ void *status_logger(struct soap *soap)
 			for (tmp = massives; tmp; tmp = tmp->next)
 				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
 					(int) tv.tv_sec);
-			fprintf(statuslogfile, "thread,status=active value=%ld %d000000000\n", tn, (int) tv.tv_sec);
+			fprintf(statuslogfile, "notification,status=received value=%ld %d000000000\n", in, (int) tv.tv_sec);
+			fprintf(statuslogfile, "thread,status=active value=%ld %d000000000\n", ctn, (int) tv.tv_sec);
+			fprintf(statuslogfile, "thread,status=peak value=%ld %d000000000\n", ptn, (int) tv.tv_sec);
 			fclose(statuslogfile);
 			statuslogfile = NULL;
 		}
@@ -1081,7 +1099,7 @@ void *status_logger(struct soap *soap)
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
 	if (service_info)
-		service_info->thread_number--;
+		service_info->current_thread_number--;
 	pthread_mutex_unlock(&global_flag);
 	mysql_thread_end();
 #endif
