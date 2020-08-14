@@ -729,13 +729,7 @@ void *process_request(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
-	pthread_mutex_lock(&global_flag);
-	if (service_info) {
-		service_info->current_thread_number++;
-		if (service_info->peak_thread_number < service_info->current_thread_number)
-			service_info->peak_thread_number = service_info->current_thread_number;
-	}
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_incr(service_info);
 #endif
 
 #ifdef WITH_OPENSSL
@@ -752,10 +746,7 @@ void *process_request(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->current_thread_number--;
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 
@@ -858,13 +849,7 @@ void *status_logger(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
-	pthread_mutex_lock(&global_flag);
-	if (service_info) {
-		service_info->current_thread_number++;
-		if (service_info->peak_thread_number < service_info->current_thread_number)
-			service_info->peak_thread_number = service_info->current_thread_number;
-	}
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_incr(service_info);
 #endif
 
 	struct oph_plugin_data *state = NULL;
@@ -961,7 +946,8 @@ void *status_logger(struct soap *soap)
 			last_dt = service_info->closed_tasks;
 			last_in = service_info->incoming_notifications;
 
-			service_info->peak_thread_number = service_info->current_thread_number;
+			if (service_info->peak_thread_number_timestamp + OPH_STATUS_LOG_HYSTERESIS_PERIOD < tv.tv_sec)
+				service_info->peak_thread_number = service_info->current_thread_number;
 		}
 
 		load_average[current_load++] = iw;
@@ -1097,10 +1083,7 @@ void *status_logger(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->current_thread_number--;
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 

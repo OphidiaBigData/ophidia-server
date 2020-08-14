@@ -50,20 +50,16 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (data && data->detach) {
-		pthread_detach(pthread_self());
-		pthread_mutex_lock(&global_flag);
-		if (service_info) {
-			service_info->current_thread_number++;
-			if (service_info->peak_thread_number < service_info->current_thread_number)
-				service_info->peak_thread_number = service_info->current_thread_number;
-		}
-		pthread_mutex_unlock(&global_flag);
-	}
+	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
 #endif
 
 	if (!data || !data->data) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading input data\n");
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		oph_service_info_thread_decr(service_info);
+		mysql_thread_end();
+#endif
 		return NULL;
 	}
 
@@ -282,10 +278,7 @@ void *_oph_wait(oph_notify_data * data)
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->current_thread_number--;
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 

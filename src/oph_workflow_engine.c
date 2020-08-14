@@ -5923,14 +5923,9 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
-	pthread_mutex_lock(&global_flag);
-	if (service_info) {
-		service_info->current_thread_number++;
-		if (service_info->peak_thread_number < service_info->current_thread_number)
-			service_info->peak_thread_number = service_info->current_thread_number;
-	}
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_incr(service_info);
 #endif
+
 	if (data) {
 		int i, j, jobid, *list = NULL, response;
 		unsigned int k, n, nn = 0;
@@ -6113,10 +6108,7 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 		free(data);
 	}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
-		service_info->current_thread_number--;
-	pthread_mutex_unlock(&global_flag);
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 	return (void *) NULL;
