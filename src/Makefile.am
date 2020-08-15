@@ -287,7 +287,7 @@ LIBRARY += liboph_workflow_engine.la
 liboph_workflow_engine_la_SOURCES = oph_workflow_engine.c
 liboph_workflow_engine_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
 liboph_workflow_engine_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_trash -loph_service_info
+liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_service_info -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_trash
 
 LIBRARY += liboph_execute_main.la
 liboph_execute_main_la_SOURCES = oph_execute_main.c
@@ -303,9 +303,9 @@ liboph_notify_la_LIBADD = $(ADDITIONAL_LIBS) ${CURL_LIBS} -L. -loph_workflow_eng
 
 LIBRARY += liboph_flow_control_operators.la
 liboph_flow_control_operators_la_SOURCES = oph_flow_control_operators.c
-liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -loph_service_info -Ioph_workflow
+liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
 liboph_flow_control_operators_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_service_info -loph_workflow_engine
 
 LIBRARY += liboph_management_operators.la
 liboph_management_operators_la_SOURCES = oph_management_operators.c

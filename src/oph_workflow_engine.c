@@ -56,6 +56,7 @@ extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
 extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
+extern pthread_mutex_t service_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -2922,7 +2923,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	}
 
 	char session_code[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
-	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 1, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0;
+	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 0, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0;
 	oph_job_info *item = NULL, *prev = NULL;
 	ophidiadb oDB;
 	oph_workflow *wf = NULL;
@@ -2967,9 +2968,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 
-	if (!wf->is_closed && (wf->status < (int) OPH_ODB_STATUS_ABORTED))
-		final = 0;
-	else {
+	if (wf->is_closed || (wf->status >= (int) OPH_ODB_STATUS_ABORTED)) {
+
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);
 
@@ -3038,9 +3038,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 			}
 		}
-	}
 
-	if (!final) {
+	} else {
+
 		if (light_task_index >= 0)	// Massive operation
 		{
 			if (wf->tasks[task_index].light_tasks[light_task_index].status < odb_status)	// It needs to be tested
@@ -3860,12 +3860,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
-		int check_status;
+		char check_status = 0;
 		if (light_task_index < 0) {
 			check_status = (status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR);
 			if (check_status) {
 				if (wf->tasks[wf->tasks_num].name)
 					update_wf_data = final = 1;
+
 				// Log into TASK_LOGFILE
 				if (task_logfile) {
 					time_t nowtime;
@@ -3884,7 +3885,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					pthread_mutex_unlock(&curl_flag);
 				}
 
-				if (service_info)
+				if (service_info)	// This increment is not covered by service_flag only for simplicity, otherwise a lock could result in a deadlock
 					service_info->closed_tasks++;
 			}
 			if (check_status && !final) {
@@ -5760,10 +5761,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				oph_workflow_free(wf);
 		}
 
-		pthread_mutex_lock(&global_flag);
-		if (service_info)
+		if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_lock(&service_flag);
+#endif
 			service_info->closed_workflows++;
-		pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_unlock(&service_flag);
+#endif
+		}
 	}
 
 	if (my_output_json)

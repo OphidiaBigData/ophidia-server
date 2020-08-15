@@ -33,14 +33,20 @@ extern oph_service_info *service_info;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
+extern pthread_mutex_t service_flag;
 #endif
 
 int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json, xsd__int * response)
 {
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->incoming_notifications++;
-	pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 
 	char _host[OPH_SHORT_STRING_SIZE];
 	if (!soap->host || !strlen(soap->host)) {
@@ -170,10 +176,15 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 		}
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
 
-		pthread_mutex_lock(&global_flag);
-		if (service_info)
+		if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_lock(&service_flag);
+#endif
 			service_info->incoming_responses++;
-		pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_unlock(&service_flag);
+#endif
+		}
 
 		break;
 	}

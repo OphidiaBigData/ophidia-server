@@ -38,6 +38,7 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
+pthread_mutex_t service_flag;
 #ifdef OPH_OPENID_SUPPORT
 pthread_t token_tid_openid;
 #endif

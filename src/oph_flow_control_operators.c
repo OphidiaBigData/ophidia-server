@@ -51,17 +51,18 @@ void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
-	oph_service_info_thread_incr(service_info);
 #endif
 
 	if (!data || !data->data) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading input data\n");
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-		oph_service_info_thread_decr(service_info);
 		mysql_thread_end();
 #endif
 		return NULL;
 	}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_incr(service_info);
+#endif
 
 	oph_workflow *wf = data->wf;
 	int task_index = data->task_index, idjob = 0, pidjob = 0, status, success = 1;

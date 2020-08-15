@@ -68,6 +68,7 @@ extern unsigned int oph_default_session_timeout;
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
 extern pthread_mutex_t curl_flag;
+extern pthread_mutex_t service_flag;
 #endif
 
 #ifdef OPH_OPENID_SUPPORT
@@ -216,10 +217,15 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->incoming_requests++;
-	pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 
 	char _host[OPH_SHORT_STRING_SIZE];
 	if (!soap->host || !strlen(soap->host)) {
@@ -262,11 +268,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	else
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
 
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->accepted_requests++;
-	pthread_mutex_unlock(&global_flag);
-
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 #ifdef INTERFACE_TYPE_IS_GSI
 	struct gsi_plugin_data *data = (struct gsi_plugin_data *) soap_lookup_plugin(soap, GSI_PLUGIN_ID);
 	if (!data) {
@@ -376,11 +386,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	}
 #endif
 
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->authorized_requests++;
-	pthread_mutex_unlock(&global_flag);
-
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 	// Convert dn to user
 	char _userid[OPH_MAX_STRING_SIZE];
 	snprintf(_userid, OPH_MAX_STRING_SIZE, "%s", userid);
@@ -5783,11 +5797,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->incoming_workflows++;
-	pthread_mutex_unlock(&global_flag);
-
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 	// Load previous session (if any)
 	if (load_previous_session && !wf->sessionid && !oph_get_arg(user_args, OPH_USER_LAST_SESSION_ID, tmp))
 		wf->sessionid = strdup(tmp);
@@ -5948,10 +5966,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (submission_string)
 		free(submission_string);
 
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->accepted_workflows++;
-	pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 
 	if (wf->parallel_mode) {
 		// Save the extended JSON request
@@ -6298,10 +6321,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else
 				oph_workflow_free(wf);
 
-			pthread_mutex_lock(&global_flag);
-			if (service_info)
+			if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+				pthread_mutex_lock(&service_flag);
+#endif
 				service_info->outcoming_responses++;
-			pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+				pthread_mutex_unlock(&service_flag);
+#endif
+			}
+
 		} else {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
 

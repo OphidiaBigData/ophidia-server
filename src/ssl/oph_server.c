@@ -65,6 +65,7 @@ struct soap *psoap;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
+pthread_mutex_t service_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
 #ifdef OPH_OPENID_SUPPORT
@@ -487,6 +488,7 @@ void cleanup()
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);
 	pthread_mutex_destroy(&curl_flag);
+	pthread_mutex_destroy(&service_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
 #endif
@@ -507,6 +509,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_mutex_init(&curl_flag, NULL);
+	pthread_mutex_init(&service_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
 #endif
@@ -923,9 +926,11 @@ void *status_logger(struct soap *soap)
 		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
 			_tag[i] = NULL;
 
-		pthread_mutex_lock(&global_flag);
-
 		if (service_info) {
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_lock(&service_flag);
+#endif
 
 			// Save current stats
 			iw = service_info->incoming_workflows - last_iw;
@@ -948,7 +953,14 @@ void *status_logger(struct soap *soap)
 
 			if (service_info->peak_thread_number_timestamp + OPH_STATUS_LOG_HYSTERESIS_PERIOD < tv.tv_sec)
 				service_info->peak_thread_number = service_info->current_thread_number;
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_unlock(&service_flag);
+#endif
 		}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&global_flag);
+#endif
 
 		load_average[current_load++] = iw;
 		current_load %= OPH_STATUS_LOG_AVG_PERIOD;
@@ -1029,7 +1041,9 @@ void *status_logger(struct soap *soap)
 
 		oph_delete_saved_jobs_from_job_list(job_info, OPH_STATUS_LOG_HYSTERESIS_PERIOD);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 		pthread_mutex_unlock(&global_flag);
+#endif
 
 		if (statuslogfile) {
 			fprintf(statuslogfile, "workflow,status=active value=%ld %d000000000\n", aw, (int) tv.tv_sec);

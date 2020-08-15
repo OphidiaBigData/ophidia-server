@@ -21,14 +21,14 @@
 #include <sys/time.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-extern pthread_mutex_t global_flag;
+extern pthread_mutex_t service_flag;
 #endif
 
 void oph_service_info_thread_incr(oph_service_info * service_info)
 {
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-		pthread_mutex_lock(&global_flag);
+		pthread_mutex_lock(&service_flag);
 #endif
 		service_info->current_thread_number++;
 		if (service_info->peak_thread_number < service_info->current_thread_number) {
@@ -38,7 +38,7 @@ void oph_service_info_thread_incr(oph_service_info * service_info)
 			service_info->peak_thread_number_timestamp = tv.tv_sec;
 		}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-		pthread_mutex_unlock(&global_flag);
+		pthread_mutex_unlock(&service_flag);
 #endif
 	}
 }
@@ -47,11 +47,11 @@ void oph_service_info_thread_decr(oph_service_info * service_info)
 {
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-		pthread_mutex_lock(&global_flag);
+		pthread_mutex_lock(&service_flag);
 #endif
 		service_info->current_thread_number--;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-		pthread_mutex_unlock(&global_flag);
+		pthread_mutex_unlock(&service_flag);
 #endif
 	}
 }
