@@ -214,6 +214,7 @@ void *_oph_wait(oph_notify_data * data)
 		pthread_mutex_unlock(&global_flag);
 	}
 	// Finalize
+	int jobid = 0;
 	ophidiadb oDB;
 	while (success && idjob && pidjob) {
 
@@ -237,7 +238,6 @@ void *_oph_wait(oph_notify_data * data)
 
 		if (state && state->jobid && !fast_exit) {
 
-			int jobid = 0;
 			pthread_mutex_lock(&global_flag);
 			jobid = ++*state->jobid;
 			pthread_mutex_unlock(&global_flag);
@@ -248,7 +248,7 @@ void *_oph_wait(oph_notify_data * data)
 				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, wf->sessionid, OPH_ARG_MARKERID, wf->tasks[task_index].markerid,
 				 data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
-			if (response)
+			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
 		}
 
@@ -276,7 +276,10 @@ void *_oph_wait(oph_notify_data * data)
 	if (fast_exit)
 		oph_workflow_free(wf);
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
+	if (jobid)
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "W%d: exit from waiting procedure\n", jobid);
+	else
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);

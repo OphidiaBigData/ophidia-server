@@ -6332,7 +6332,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 
 		} else {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
+
+			char is_aborted = wf->status == (int) OPH_ODB_STATUS_ABORTED;
+
+			if (is_aborted)
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: workflow '%s' has been aborted\n", jobid, wf->name);
+			else
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
 
 			if (oph_status_log_file_name) {
 				oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
@@ -6344,7 +6350,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_workflow_free(wf);
 
 			if (!response->error)
-				response->error = OPH_SERVER_SYSTEM_ERROR;
+				response->error = is_aborted ? OPH_SERVER_NO_RESPONSE : OPH_SERVER_SYSTEM_ERROR;
 			return SOAP_OK;
 		}
 	}

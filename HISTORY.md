@@ -16,6 +16,7 @@
 
 ### Added:
 
+- Argument 'exec_mode' to OPH_WAIT
 - Monitor of the number of active threads in server [#53](https://github.com/OphidiaBigData/ophidia-server/pull/53)
 - Options to generate random user passwords and execute post-scripts to set env variables [#52](https://github.com/OphidiaBigData/ophidia-server/pull/52)
 - Update of task status in OphidiaDB at the end of execution
