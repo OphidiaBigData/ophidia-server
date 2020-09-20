@@ -302,7 +302,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		}
 		//unpack name and operator
 		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *type = NULL;
-		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "type", &type);
+		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "type", &type);
 
 		//add name and operator
 		if (!name || !operator) {
@@ -759,6 +759,33 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	(*workflow)->vars = hashtbl_create((*workflow)->tasks_num, NULL);
 	for (i = 0; i < (*workflow)->tasks_num; i++)
 		(*workflow)->tasks[i].vars = hashtbl_create((*workflow)->tasks_num, NULL);
+
+	// Support for non-Ophidia operators
+	for (i = 0; i < (*workflow)->tasks_num; i++) {
+		if (!strcmp((*workflow)->tasks[i].type, "cdo")) {
+
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: cdo %s\n", (*workflow)->tasks[i].operator);
+			int kk = (*workflow)->tasks[i].arguments_num;
+			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, 1) || (kk != 1 + (*workflow)->tasks[i].arguments_num)) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			} else if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_values), &((*workflow)->tasks[i].arguments_num), 1) || (kk != (*workflow)->tasks[i].arguments_num)) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
+			kk--;
+			(*workflow)->tasks[i].arguments_keys[kk] = strdup("command");
+			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
+
+			free((*workflow)->tasks[i].operator);
+			(*workflow)->tasks[i].operator = strdup("oph_cdo");
+
+			free((*workflow)->tasks[i].type);
+			(*workflow)->tasks[i].type = strdup("ophidia");
+		}
+	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

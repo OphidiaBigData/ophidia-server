@@ -509,4 +509,24 @@ int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, i
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
+int oph_realloc_vector(char ***vector, int *length, int incr)
+{
+	if (!vector || !(*vector) || !length)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	char **tmp = *vector;
+	*vector = (char **) malloc((*length + incr) * sizeof(char *));
+
+	if (!(*vector)) {
+		*vector = tmp;
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	memcpy(*vector, tmp, (*length) * sizeof(char *));
+	free(tmp);
+
+	*length += incr;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
 // Other utililty functions
