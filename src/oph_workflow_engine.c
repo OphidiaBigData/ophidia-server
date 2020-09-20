@@ -128,26 +128,6 @@ int oph_request_data_vector_free(oph_request_data * item, int num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_realloc_vector(char ***vector, int *length, int incr)
-{
-	if (!vector || !(*vector) || !length)
-		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	char **tmp = *vector;
-	*vector = (char **) malloc((*length + incr) * sizeof(char *));
-
-	if (!(*vector)) {
-		*vector = tmp;
-		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	}
-
-	memcpy(*vector, tmp, (*length) * sizeof(char *));
-	free(tmp);
-
-	*length += incr;
-
-	return OPH_WORKFLOW_EXIT_SUCCESS;
-}
-
 char *oph_remake_notification(const char *error_notification, int task_index, int light_task_index, int odb_jobid, enum oph__oph_odb_job_status new_status, char *submit_string, char *sessionid)
 {
 	if (!error_notification)
