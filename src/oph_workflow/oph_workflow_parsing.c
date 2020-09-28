@@ -329,7 +329,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		if (type) {
-			if (strcmp(type, "ophidia") && strcmp(type, "cdo")) {
+			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic")) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -761,10 +761,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		(*workflow)->tasks[i].vars = hashtbl_create((*workflow)->tasks_num, NULL);
 
 	// Support for non-Ophidia operators
+	char *tmp = NULL;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
-		if (!strcmp((*workflow)->tasks[i].type, "cdo")) {
-
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: cdo %s\n", (*workflow)->tasks[i].operator);
+		if (!strcmp((*workflow)->tasks[i].type, "cdo") || !strcmp((*workflow)->tasks[i].type, "generic")) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
 			int kk = (*workflow)->tasks[i].arguments_num;
 			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, 1) || (kk != 1 + (*workflow)->tasks[i].arguments_num)) {
 				oph_workflow_free(*workflow);
@@ -779,8 +779,13 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			(*workflow)->tasks[i].arguments_keys[kk] = strdup("command");
 			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
 
+			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].type) <= 0) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate operator name\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
 			free((*workflow)->tasks[i].operator);
-			(*workflow)->tasks[i].operator = strdup("oph_cdo");
+			(*workflow)->tasks[i].operator = tmp;
 
 			free((*workflow)->tasks[i].type);
 			(*workflow)->tasks[i].type = strdup("ophidia");
