@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include "oph_json_library.h"
 #include "oph_workflow_engine.h"
 #include "oph_subset_library.h"
+#include "oph_service_info.h"
 
 #include <math.h>
 #include <time.h>
@@ -41,6 +42,7 @@ extern pthread_mutex_t curl_flag;
 #endif
 extern char *oph_base_src_path;
 extern char *oph_web_server_location;
+extern oph_service_info *service_info;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -48,14 +50,19 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (data && data->detach)
-		pthread_detach(pthread_self());
+	pthread_detach(pthread_self());
 #endif
 
 	if (!data || !data->data) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading input data\n");
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		mysql_thread_end();
+#endif
 		return NULL;
 	}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_incr(service_info);
+#endif
 
 	oph_workflow *wf = data->wf;
 	int task_index = data->task_index, idjob = 0, pidjob = 0, status, success = 1;
@@ -207,6 +214,7 @@ void *_oph_wait(oph_notify_data * data)
 		pthread_mutex_unlock(&global_flag);
 	}
 	// Finalize
+	int jobid = 0;
 	ophidiadb oDB;
 	while (success && idjob && pidjob) {
 
@@ -230,7 +238,6 @@ void *_oph_wait(oph_notify_data * data)
 
 		if (state && state->jobid && !fast_exit) {
 
-			int jobid = 0;
 			pthread_mutex_lock(&global_flag);
 			jobid = ++*state->jobid;
 			pthread_mutex_unlock(&global_flag);
@@ -241,7 +248,7 @@ void *_oph_wait(oph_notify_data * data)
 				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, wf->sessionid, OPH_ARG_MARKERID, wf->tasks[task_index].markerid,
 				 data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
-			if (response)
+			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
 		}
 
@@ -269,9 +276,13 @@ void *_oph_wait(oph_notify_data * data)
 	if (fast_exit)
 		oph_workflow_free(wf);
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
+	if (jobid)
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "W%d: exit from waiting procedure\n", jobid);
+	else
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Exit from waiting procedure\n");
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 

@@ -1,4 +1,3 @@
-#!/bin/bash
 #
 #    Ophidia Server
 #    Copyright (C) 2012-2020 CMCC Foundation
@@ -15,14 +14,18 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-# 
-# Script to perform autoconfiguration process
 #
 
-if command -v autoreconf >/dev/null 2>&1; then
-  autoreconf --force --install --verbose
-else
-  echo "*** Bootstrap failed, please install Autoreconf"
-  exit 1
-fi
+#!/bin/bash
+
+# Input parameters
+PASSWD=${1}
+SERVER=${2} 
+PORT=11732
+
+# Body
+echo -e "# >>> Variables for Ophidia environment >>>\nexport PATH=\"/usr/local/ophidia/oph-terminal/bin/:\$PATH\"\nexport OPH_USER=${USER}\nexport OPH_PASSWD=\"${PASSWD}\"\nexport OPH_SERVER_PORT=${PORT}\nexport OPH_SERVER_HOST=${SERVER}\n# <<< Variables for Ophidia environment <<<" >> ${HOME}/.oph_profile
+chmod 600 ${HOME}/.oph_profile
+
+exit 0
+

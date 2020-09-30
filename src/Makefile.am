@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2019 CMCC Foundation
+#    Copyright (C) 2012-2020 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -181,6 +181,12 @@ libutils_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libutils_la_LDFLAGS = -shared
 libutils_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lstdsoap2
 
+LIBRARY += liboph_service_info.la
+liboph_service_info_la_SOURCES = oph_service_info.c
+liboph_service_info_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+liboph_service_info_la_LDFLAGS = -shared
+liboph_service_info_la_LIBADD = $(ADDITIONAL_LIBS)
+
 LIBRARY += liboph_parser.la
 liboph_parser_la_SOURCES = oph_parser.c
 liboph_parser_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
@@ -197,7 +203,7 @@ LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = oph_auth.c
 liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(OPENID_CFLAGS) $(AAA_CFLAGS)
 liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_ophidiadb -loph_parser -lhashtbl
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_ophidiadb -loph_parser -loph_service_info -lhashtbl
 
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
@@ -207,7 +213,7 @@ liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS}
 
 LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager.c
-liboph_rmanager_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
+liboph_rmanager_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -loph_service_info -Ioph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
 liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_ssh_submit -lutils
 
@@ -281,7 +287,7 @@ LIBRARY += liboph_workflow_engine.la
 liboph_workflow_engine_la_SOURCES = oph_workflow_engine.c
 liboph_workflow_engine_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
 liboph_workflow_engine_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_trash
+liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_service_info -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_trash
 
 LIBRARY += liboph_execute_main.la
 liboph_execute_main_la_SOURCES = oph_execute_main.c
@@ -299,7 +305,7 @@ LIBRARY += liboph_flow_control_operators.la
 liboph_flow_control_operators_la_SOURCES = oph_flow_control_operators.c
 liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -Ioph_workflow
 liboph_flow_control_operators_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_service_info -loph_workflow_engine
 
 LIBRARY += liboph_management_operators.la
 liboph_management_operators_la_SOURCES = oph_management_operators.c
@@ -333,7 +339,7 @@ oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -lstdsoap2 -ldebug
 oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
+oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
 
 oph_manage_user_SOURCES= oph_manage_user.c
 oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)

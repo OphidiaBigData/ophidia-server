@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ struct soap *psoap;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
+pthread_mutex_t service_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
 #ifdef OPH_OPENID_SUPPORT
@@ -487,6 +488,7 @@ void cleanup()
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);
 	pthread_mutex_destroy(&curl_flag);
+	pthread_mutex_destroy(&service_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
 #endif
@@ -507,6 +509,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_mutex_init(&curl_flag, NULL);
+	pthread_mutex_init(&service_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
 #endif
@@ -729,6 +732,7 @@ void *process_request(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
 #endif
 
 #ifdef WITH_OPENSSL
@@ -745,6 +749,7 @@ void *process_request(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 
@@ -847,6 +852,7 @@ void *status_logger(struct soap *soap)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
 #endif
 
 	struct oph_plugin_data *state = NULL;
@@ -876,6 +882,9 @@ void *status_logger(struct soap *soap)
 	unsigned long ft;	// Number of failed tasks
 	unsigned long un;	// Number of users
 	unsigned long cn;	// Number of active cores
+	unsigned long in;	// Number of notifications from last snapshoot
+	unsigned long ctn;	// Number of active threads (current)
+	unsigned long ptn;	// Number of active threads (peak)
 	double wpr;		// Progress ratio of a workflow
 	// Number of workflow tasks
 	// Progress ratio of a massive task
@@ -892,7 +901,7 @@ void *status_logger(struct soap *soap)
 	long tau = 0, eps = 0, _eps;
 	char name[OPH_MAX_STRING_SIZE], saved, *_tag[OPH_SERVER_MAX_WF_LOG_PARAM];
 
-	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0;	// Initialization
+	unsigned long last_iw = 0, last_it = 0, last_st = 0, last_dw = 0, last_dt = 0, last_in = 0;	// Initialization
 	unsigned long load_average[OPH_STATUS_LOG_AVG_PERIOD], current_load = 0;
 	reset_load_average(load_average);
 
@@ -917,21 +926,41 @@ void *status_logger(struct soap *soap)
 		for (i = 0; i < OPH_SERVER_MAX_WF_LOG_PARAM; i++)
 			_tag[i] = NULL;
 
-		pthread_mutex_lock(&global_flag);
-
 		if (service_info) {
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_lock(&service_flag);
+#endif
+
+			// Save current stats
 			iw = service_info->incoming_workflows - last_iw;
 			it = service_info->incoming_tasks - last_it;
 			st = service_info->submitted_tasks - last_st;
 			dw = service_info->closed_workflows - last_dw;
 			dt = service_info->closed_tasks - last_dt;
+			in = service_info->incoming_notifications - last_in;
 
+			ctn = service_info->current_thread_number;
+			ptn = service_info->peak_thread_number;
+
+			// Update internals for next snapshot
 			last_iw = service_info->incoming_workflows;
 			last_it = service_info->incoming_tasks;
 			last_st = service_info->submitted_tasks;
 			last_dw = service_info->closed_workflows;
 			last_dt = service_info->closed_tasks;
+			last_in = service_info->incoming_notifications;
+
+			if (service_info->peak_thread_number_timestamp + OPH_STATUS_LOG_HYSTERESIS_PERIOD < tv.tv_sec)
+				service_info->peak_thread_number = service_info->current_thread_number;
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+			pthread_mutex_unlock(&service_flag);
+#endif
 		}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&global_flag);
+#endif
 
 		load_average[current_load++] = iw;
 		current_load %= OPH_STATUS_LOG_AVG_PERIOD;
@@ -1012,7 +1041,9 @@ void *status_logger(struct soap *soap)
 
 		oph_delete_saved_jobs_from_job_list(job_info, OPH_STATUS_LOG_HYSTERESIS_PERIOD);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 		pthread_mutex_unlock(&global_flag);
+#endif
 
 		if (statuslogfile) {
 			fprintf(statuslogfile, "workflow,status=active value=%ld %d000000000\n", aw, (int) tv.tv_sec);
@@ -1043,6 +1074,9 @@ void *status_logger(struct soap *soap)
 			for (tmp = massives; tmp; tmp = tmp->next)
 				fprintf(statuslogfile, "massive\\ status,name=%s progress\\ ratio=%ld,task=%ld,total\\ task=%ld %d000000000\n", tmp->key, tmp->value[0], tmp->value[1], tmp->value[2],
 					(int) tv.tv_sec);
+			fprintf(statuslogfile, "notification,status=received value=%ld %d000000000\n", in, (int) tv.tv_sec);
+			fprintf(statuslogfile, "thread,status=active value=%ld %d000000000\n", ctn, (int) tv.tv_sec);
+			fprintf(statuslogfile, "thread,status=peak value=%ld %d000000000\n", ptn, (int) tv.tv_sec);
 			fclose(statuslogfile);
 			statuslogfile = NULL;
 		}
@@ -1063,6 +1097,7 @@ void *status_logger(struct soap *soap)
 	soap_free(soap);
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 
