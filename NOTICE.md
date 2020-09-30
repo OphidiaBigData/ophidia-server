@@ -76,6 +76,10 @@ http://www.gnu.org/copyleft/gpl.html
 MIT License</br>
 https://github.com/cisco/cjose/blob/master/LICENSE
 
+- sqlite<br>
+Public domain licency</br>
+https://www.sqlite.org/index.html
+
 <b>Note</b>:</br>
 This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit.
 
