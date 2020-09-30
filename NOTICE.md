@@ -76,8 +76,8 @@ http://www.gnu.org/copyleft/gpl.html
 MIT License</br>
 https://github.com/cisco/cjose/blob/master/LICENSE
 
-- sqlite<br>
-Public domain licency</br>
+- SQLite<br>
+Public domain license</br>
 https://www.sqlite.org/index.html
 
 <b>Note</b>:</br>
