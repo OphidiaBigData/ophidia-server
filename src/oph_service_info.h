@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #ifndef OPH_SERVICE_INFO_H
 #define OPH_SERVICE_INFO_H
+
+#include <time.h>
 
 typedef struct _oph_service_info_task {
 	char *operator;
@@ -45,7 +47,13 @@ typedef struct _oph_service_info {
 	unsigned long incoming_notifications;
 	unsigned long incoming_responses;
 	unsigned long outcoming_responses;
+	unsigned long current_thread_number;
+	unsigned long peak_thread_number;
+	time_t peak_thread_number_timestamp;
 	oph_service_info_wf *workflows;
 } oph_service_info;
+
+void oph_service_info_thread_incr(oph_service_info * service_info);
+void oph_service_info_thread_decr(oph_service_info * service_info);
 
 #endif				/* OPH_SERVICE_INFO_H */

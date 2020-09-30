@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ pthread_t token_tid = 0;
 pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
+pthread_mutex_t service_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
 #endif
@@ -357,6 +358,7 @@ void cleanup()
 	pthread_mutex_destroy(&global_flag);
 	pthread_mutex_destroy(&libssh2_flag);
 	pthread_mutex_destroy(&curl_flag);
+	pthread_mutex_destroy(&service_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
 #endif
@@ -393,6 +395,7 @@ void *process_request(void *arg)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
 #endif
 
 	soap = (struct soap *) arg;
@@ -434,7 +437,10 @@ void *process_request(void *arg)
 	soap_end(soap);
 	soap_free(soap);
 
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
+#endif
 
 	return (void *) NULL;
 }
@@ -693,6 +699,7 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&global_flag, NULL);
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_mutex_init(&curl_flag, NULL);
+	pthread_mutex_init(&service_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
 #endif

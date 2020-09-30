@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include "oph_ophidiadb.h"
 #include "oph_auth.h"
 #include "oph_utils.h"
+#include "oph_service_info.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,6 +38,7 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;
 pthread_mutex_t curl_flag;
+pthread_mutex_t service_flag;
 #ifdef OPH_OPENID_SUPPORT
 pthread_t token_tid_openid;
 #endif
@@ -44,6 +46,9 @@ pthread_t token_tid_openid;
 pthread_t token_tid_aaa;
 #endif
 #endif
+
+#define OPH_PASSWD_SIZE		16
+#define OPH_COMMAND_SUDO	"sudo -u %s %s %s %s"
 
 char *oph_server_location = 0;
 HASHTBL *oph_server_params = 0;
@@ -55,6 +60,9 @@ char *oph_web_server = 0;
 oph_auth_user_bl *bl_head = 0;
 ophidiadb *ophDB = 0;
 oph_argument *args = 0;
+oph_service_info *service_info = NULL;
+char *oph_add_user = 0;
+char *oph_update_user = 0;
 unsigned int oph_default_max_sessions = OPH_DEFAULT_USER_MAX_SESSIONS;
 unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
@@ -166,6 +174,13 @@ int set_global_values(const char *configuration_file)
 		fclose(file);
 	}
 	// Pre-process
+	if (!oph_server_host && !(oph_server_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_HOST))) {
+		if (!gethostname(tmp, OPH_MAX_STRING_SIZE))
+			hashtbl_insert(oph_server_params, OPH_SERVER_CONF_HOST, tmp);
+		else
+			hashtbl_insert(oph_server_params, OPH_SERVER_CONF_HOST, OPH_DEFAULT_HOST);
+		oph_server_host = hashtbl_get(oph_server_params, OPH_SERVER_CONF_HOST);
+	}
 	if (!(oph_auth_location = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR))) {
 		snprintf(tmp, OPH_MAX_STRING_SIZE, OPH_SERVER_AUTHZ, oph_server_location);
 		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_AUTHZ_DIR, tmp);
@@ -185,6 +200,8 @@ int set_global_values(const char *configuration_file)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Length of parameter '%s' is too high\n", OPH_LONG_STRING_SIZE);
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
+	oph_add_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ADD_USER);
+	oph_update_user = hashtbl_get(oph_server_params, OPH_SERVER_CONF_UPDATE_USER);
 
 	return OPH_SERVER_OK;
 }
@@ -197,8 +214,9 @@ int main(int argc, char *argv[])
 #endif
 	int ch, msglevel = LOG_ERROR;
 	char *action = NULL, *username = NULL, *password = NULL, *name = NULL, *surname = NULL, *email = NULL, *country = NULL, *is_admin = "no", log = 0, *cdd = NULL, *os_username = NULL;
-	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, max_hosts = 1, black_listed = 0, update = 0;
-	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hi:lm:n:o:p:r:s:t:u:vw")) != -1) {
+	unsigned int max_sessions = 100, timeout_session = 1, max_cores = 8, max_hosts = 1, black_listed = 0, update = 0, random_password = 0;
+	char _random_password[1 + OPH_PASSWD_SIZE];
+	while ((ch = getopt(argc, argv, "a:bc:d:e:f:hi:lm:n:o:p:qr:s:t:u:vw")) != -1) {
 		switch (ch) {
 			case 'a':
 				action = optarg;
@@ -237,11 +255,14 @@ int main(int argc, char *argv[])
 				name = optarg;
 				break;
 			case 'o':
-				os_username = optarg;	// For GSI it means 'role': read, write...
+				os_username = optarg;
 				update += 64;
 				break;
 			case 'p':
 				password = optarg;	// For GSI it means 'role': read, write...
+				break;
+			case 'q':
+				random_password = 1;
 				break;
 			case 'r':
 				is_admin = optarg;
@@ -293,6 +314,7 @@ int main(int argc, char *argv[])
 				fprintf(stdout, "-p <role>\n");
 #else
 				fprintf(stdout, "-p <password>\n");
+				fprintf(stdout, "-q is used to generate a random password\n");
 #endif
 				fprintf(stdout, "-r <yes|no> to enable|disable administration privileges (default '%s')\n", is_admin);
 				fprintf(stdout, "-s <surname>\n");
@@ -354,6 +376,16 @@ int main(int argc, char *argv[])
 		for (iiii = 0; iiii < jjjj; ++iiii)
 			if ((user_string[iiii] == '/') || (user_string[iiii] == ' ') || (user_string[iiii] == '=') || (user_string[iiii] == ':'))
 				user_string[iiii] = '_';
+	}
+
+	if (random_password) {
+		const char allowedchars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#_+-*/.[]";
+		srand(time(NULL));	// randomize seed
+		for (iiii = 0; iiii < OPH_PASSWD_SIZE; iiii++)
+			_random_password[iiii] = allowedchars[rand() % 72];
+		_random_password[iiii] = '\0';
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Password: %s\n", _random_password);
+		password = _random_password;
 	}
 
 	if (!strcasecmp(action, "add") || !strcasecmp(action, "append") || !strcasecmp(action, "create")) {
@@ -462,6 +494,15 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 		}
+		// environmental variables
+		if (oph_add_user) {
+			char command[OPH_MAX_STRING_SIZE];
+			snprintf(command, OPH_MAX_STRING_SIZE, OPH_COMMAND_SUDO, username, oph_add_user, password, oph_server_host);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Command: %s\n", command);
+			if (system(command))
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Environmental variables cannot be set!\n");
+		}
+
 	} else if (!strcasecmp(action, "del") || !strcasecmp(action, "delete") || !strcasecmp(action, "rm") || !strcasecmp(action, "remove")) {
 		if (!username) {
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "Bad input parameters. Username is mandatory!\n");
@@ -636,6 +677,16 @@ int main(int argc, char *argv[])
 #else
 		UNUSED(black_listed);
 #endif
+
+		// environmental variables
+		if (oph_update_user) {
+			char command[OPH_MAX_STRING_SIZE];
+			snprintf(command, OPH_MAX_STRING_SIZE, OPH_COMMAND_SUDO, username, oph_update_user, password, oph_server_host);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Command: %s\n", command);
+			if (system(command))
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Environmental variables cannot be updated!\n");
+		}
+
 	} else if (!strcasecmp(action, "list"))
 		for (tmp = args; tmp; tmp = tmp->next)
 			printf("%s\n", tmp->key);

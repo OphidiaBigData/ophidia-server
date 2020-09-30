@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2019 CMCC Foundation
+#    Copyright (C) 2012-2020 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -153,6 +153,12 @@ libutils_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 libutils_la_LDFLAGS = -shared
 libutils_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lstdsoap2
 
+LIBRARY += liboph_service_info.la
+liboph_service_info_la_SOURCES = ../src/oph_service_info.c
+liboph_service_info_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+liboph_service_info_la_LDFLAGS = -shared
+liboph_service_info_la_LIBADD = $(ADDITIONAL_LIBS)
+
 LIBRARY += liboph_parser.la
 liboph_parser_la_SOURCES = ../src/oph_parser.c
 liboph_parser_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
@@ -163,7 +169,7 @@ LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = ../src/oph_auth.c
 liboph_auth_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_auth_la_LDFLAGS = -shared
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_parser -loph_service_info
 
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = ../src/oph_ssh_submit.c
@@ -175,7 +181,7 @@ LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager_stub.c
 liboph_rmanager_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
-liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS)
+liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -loph_service_info
 
 LIBRARY += liboph_subset_library.la
 liboph_subset_library_la_SOURCES = ../src/oph_subset_library.c
@@ -253,7 +259,7 @@ LIBRARY += liboph_workflow_engine.la
 liboph_workflow_engine_la_SOURCES = ../src/oph_workflow_engine.c
 liboph_workflow_engine_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) ${LIBCURL_INCLUDE} -I../src/oph_workflow
 liboph_workflow_engine_la_LDFLAGS = -shared ${LIBCURL_LIB}
-liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_rmanager -loph_trash
+liboph_workflow_engine_la_LIBADD = $(ADDITIONAL_LIBS) -L. -lutils -loph_service_info -loph_auth -loph_massive_operations -loph_json -loph_memory_job -loph_odb_job -loph_session_report -loph_rmanager -loph_trash
 
 LIBRARY += liboph_execute_main.la
 liboph_execute_main_la_SOURCES = ../src/oph_execute_main.c
@@ -271,7 +277,7 @@ LIBRARY += liboph_flow_control_operators.la
 liboph_flow_control_operators_la_SOURCES = ../src/oph_flow_control_operators.c
 liboph_flow_control_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow $(CODE_COVERAGE_CFLAGS)
 liboph_flow_control_operators_la_LDFLAGS = -shared $(CODE_COVERAGE_LDLAGS)
-liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
+liboph_flow_control_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_service_info -loph_workflow_engine
 
 LIBRARY += liboph_management_operators.la
 liboph_management_operators_la_SOURCES = ../src/oph_management_operators.c

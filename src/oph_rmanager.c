@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2019 CMCC Foundation
+    Copyright (C) 2012-2020 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
+extern pthread_mutex_t service_flag;
 #endif
 extern char *oph_rmanager_conf_file;
 extern char *oph_txt_location;
@@ -114,6 +115,7 @@ void *_oph_system(oph_command_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
 #endif
 	__oph_system(data);
 	if (data) {
@@ -122,6 +124,7 @@ void *_oph_system(oph_command_data * data)
 		free(data);
 	}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
 	return (void *) NULL;;
@@ -133,14 +136,16 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
+
+	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_lock(&global_flag);
+		pthread_mutex_lock(&service_flag);
 #endif
-	if (service_info)
 		service_info->submitted_tasks++;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_mutex_unlock(&global_flag);
+		pthread_mutex_unlock(&service_flag);
 #endif
+	}
 
 	oph_command_data *data = (oph_command_data *) malloc(sizeof(oph_command_data));
 	if (!data)
@@ -710,10 +715,15 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
-	pthread_mutex_lock(&global_flag);
-	if (service_info)
+	if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_lock(&service_flag);
+#endif
 		service_info->incoming_tasks++;
-	pthread_mutex_unlock(&global_flag);
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+		pthread_mutex_unlock(&service_flag);
+#endif
+	}
 
 	if (exit_code)
 		*exit_code = OPH_ODB_STATUS_COMPLETED;
