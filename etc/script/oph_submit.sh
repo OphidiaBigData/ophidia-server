@@ -41,7 +41,7 @@ chmod +x ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 MPI_TYPE=--mpi=pmi2
 if [ ${ncores} -eq 1 ]
 then
-	if [[ ${submissionstring} = *"operator=oph_script;"* ]]
+	if [[ ${submissionstring} = *"operator=oph_script;"* || ${submissionstring} = *"operator=oph_generic;"* || ${submissionstring} = *"operator=oph_cdo;"* ]]
 	then
 		MPI_TYPE=--mpi=none
 	fi
