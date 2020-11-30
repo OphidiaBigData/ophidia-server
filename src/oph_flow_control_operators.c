@@ -1427,7 +1427,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 
 			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
-			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && strlen(arg_value) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value)) {
 					free(arg_value);
 					break;
@@ -1460,7 +1460,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 				break;
 			oph_workflow_var_substitute(wf, i, -1, &arg_value, &error_msg, wf->tasks[i].arguments_keys[j]);
 
-			if (!ivalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+			if (!ivalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && strlen(arg_value) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				oph_subset *subset_struct = NULL;
 				if (oph_subset_init(&subset_struct)) {
 					oph_subset_free(subset_struct);

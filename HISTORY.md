@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in parsing the arguments 'values' and 'counter' of OPH_FOR
 - Bug in handling country name while using the tool oph_manage_user
 - Bug in parsing multivalue arguments
 - Typo in OPH_CLUSTER operator XML file

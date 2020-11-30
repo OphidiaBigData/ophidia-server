@@ -1136,7 +1136,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && !name)
 					name = wf->tasks[i].arguments_values[j];
-				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strlen(wf->tasks[i].arguments_values[j])
+					 && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					char *pch1;
 					pch = strchr(wf->tasks[i].arguments_values[j], OPH_SEPARATOR_SUBPARAM);
 					for (svalues_num++; pch; svalues_num++) {
@@ -1168,7 +1169,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				break;
 			}
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strlen(wf->tasks[i].arguments_values[j])
+				    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					oph_subset *subset_struct = NULL;
 					if (oph_subset_init(&subset_struct)) {
 						oph_subset_free(subset_struct);
