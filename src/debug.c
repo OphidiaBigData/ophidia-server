@@ -52,19 +52,24 @@ void pmesg(int level, const char *source, long int line_number, const char *form
 		case LOG_DEBUG:
 			sprintf(log_type, "DEBUG");
 			break;
+		case LOG_RAW:
+			*log_type = 0;
+			break;
 		default:
 			sprintf(log_type, "UNKNOWN");
 			break;
 	}
 
-	if (msglevel > 10) {
-		time_t t1 = time(NULL);
-		char *s = ctime(&t1);
-		s[strlen(s) - 1] = 0;	// remove \n
-		fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
-	} else {
-		fprintf(log_file ? log_file : stderr, "[%s][%s][%ld]\t", log_type, source, line_number);
+	if (level) {
+		if (msglevel > 10) {
+			time_t t1 = time(NULL);
+			char *s = ctime(&t1);
+			s[strlen(s) - 1] = 0;	// remove \n
+			fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
+		} else if (level)
+			fprintf(log_file ? log_file : stderr, "[%s][%s][%ld]\t", log_type, source, line_number);
 	}
+
 	va_start(args, format);
 	vfprintf(log_file ? log_file : stderr, format, args);
 	va_end(args);
@@ -97,6 +102,9 @@ void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int 
 		case LOG_DEBUG:
 			sprintf(log_type, "DEBUG");
 			break;
+		case LOG_RAW:
+			*log_type = 0;
+			break;
 		default:
 			sprintf(log_type, "UNKNOWN");
 			break;
@@ -105,14 +113,16 @@ void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int 
 	if (flag)
 		pthread_mutex_lock(flag);
 
-	if (msglevel > 10) {
-		time_t t1 = time(NULL);
-		char *s = ctime(&t1);
-		s[strlen(s) - 1] = 0;	// remove \n
-		fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
-	} else {
-		fprintf(log_file ? log_file : stderr, "[%s][%s][%ld]\t", log_type, source, line_number);
+	if (level) {
+		if (msglevel > 10) {
+			time_t t1 = time(NULL);
+			char *s = ctime(&t1);
+			s[strlen(s) - 1] = 0;	// remove \n
+			fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
+		} else
+			fprintf(log_file ? log_file : stderr, "[%s][%s][%ld]\t", log_type, source, line_number);
 	}
+
 	va_start(args, format);
 	vfprintf(log_file ? log_file : stderr, format, args);
 	va_end(args);

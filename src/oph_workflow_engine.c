@@ -2916,11 +2916,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, buffer);	// multi user approach is not supported
 			FILE *log = fopen(outfile, "r");
 			if (log) {
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: log file '%s':\n", ttype, jobid, outfile);
 				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
+					pmesg_safe(&global_flag, LOG_RAW, __FILE__, __LINE__, "%s", buffer);
 				fclose(log);
 			} else
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found; do not care!\n", ttype, jobid, outfile);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: log file '%s' not found; do not care!\n", ttype, jobid, outfile);
 		}
 	}
 
