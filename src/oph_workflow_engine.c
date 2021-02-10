@@ -50,6 +50,7 @@ extern FILE *wf_logfile;
 extern FILE *task_logfile;
 extern oph_service_info *service_info;
 extern char *oph_status_log_file_name;
+extern char oph_cancel_all_enabled;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -2500,6 +2501,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	char *sessionid = strdup(wf->sessionid);
 	char *username = strdup(wf->username);
 	char *os_username = strdup(wf->os_username);
+	int wid = wf->workflowid;
 	odb_jobid = wf->idjob;
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: %d task%s prepared for submission\n", ttype, jobid, nn, nn == 1 ? "" : "s");
@@ -2534,7 +2536,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username)) != OPH_SERVER_OK) {
+							   os_username, wid)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -3010,7 +3012,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		// Kill queued tasks
 		if (wf->cancel_type != 's') {
-			if (wf->cancel_type != 'a') {
+
+			if (oph_cancel_all_enabled || (wf->cancel_type != 'a')) {	// Using option "CANCEL_ALL" all tasks are always killed
 				for (i = 0; i < wf->tasks_num; ++i)
 					if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 						if (wf->tasks[i].light_tasks_num) {
@@ -3018,13 +3021,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
 								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
+									if (!oph_cancel_all_enabled)
+										oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
 								}
 						} else {
 							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
+							if (!oph_cancel_all_enabled)
+								oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
 						}
 					}
+				if (oph_cancel_all_enabled)
+					oph_cancel_all_request(wf->workflowid, wf->os_username);
 			} else {
 				for (i = 0; i < wf->tasks_num; ++i)
 					if (wf->tasks[i].light_tasks_num) {
