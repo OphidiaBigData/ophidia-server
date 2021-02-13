@@ -2732,6 +2732,107 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 	return total_size;
 }
 
+int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index)
+{
+	if (!wf || (task_index < 0) || (task_index > wf->tasks_num) || (light_task_index >= wf->tasks[task_index].light_tasks_num))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	char light_task = light_task_index >= 0;
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: aborting task (%d, %d) of workflow '%s'\n", ttype, jobid, task_index, light_task_index, wf->name);
+
+	if (light_task)
+		wf->tasks[task_index].light_tasks[light_task_index].status = OPH_ODB_STATUS_ABORTED;
+	else
+		wf->tasks[task_index].status = OPH_ODB_STATUS_ABORTED;
+
+	int success = 0;
+	oph_json *oper_json = NULL;
+
+	char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], *my_output_json = NULL;
+	snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", light_task ? wf->tasks[task_index].light_tasks[light_task_index].markerid : wf->tasks[task_index].markerid);
+	snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, str_workflowid, OPH_SESSION_MARKER_DELIMITER, str_markerid);
+
+	char error_message[OPH_MAX_STRING_SIZE];
+	snprintf(error_message, OPH_MAX_STRING_SIZE, "Task aborted!");
+
+	pthread_mutex_lock(&global_flag);
+
+	while (!success) {
+		if (oph_json_alloc_unsafe(&oper_json)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: JSON alloc error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_set_source_unsafe(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", wf->username)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: SET SOURCE error\n", ttype, jobid);
+			break;
+		}
+		if (oph_get_session_code(wf->sessionid, session_code)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Session Code", session_code)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Workflow", str_workflowid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Marker", str_markerid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "JobID", str_jobid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_consumer_unsafe(oper_json, wf->username)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+			break;
+		}
+		success = 1;
+	}
+	if (oper_json) {
+		int return_code = 0;
+		if (!success)
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
+		if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+			return_code = -1;
+		} else if (oph_write_and_get_json_unsafe(oper_json, &my_output_json))
+			return_code = -1;
+		if (!return_code)
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output written\n", ttype, jobid);
+	}
+
+	pthread_mutex_unlock(&global_flag);
+
+	oph_json_free_unsafe(oper_json);
+
+	if (my_output_json) {
+
+		if (!light_task) {
+			if (wf->tasks[task_index].response)
+				free(wf->tasks[task_index].response);
+			wf->tasks[task_index].response = my_output_json;
+		} else {
+#ifdef LEVEL3
+			if (wf->tasks[task_index].light_tasks[light_task_index].response)
+				free(wf->tasks[task_index].light_tasks[light_task_index].response);
+			wf->tasks[task_index].light_tasks[light_task_index].response = my_output_json;
+#else
+			free(my_output_json);
+#endif
+		}
+	}
+
+	oph_cancel_request(light_task ? wf->tasks[task_index].light_tasks[light_task_index].idjob : wf->tasks[task_index].idjob, wf->os_username);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
@@ -3016,29 +3117,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						if (wf->tasks[i].light_tasks_num) {
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
-								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
-									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
-								}
-						} else {
-							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
-						}
+								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
+									oph_workflow_abort_task(ttype, jobid, wf, i, j);
+						} else
+							oph_workflow_abort_task(ttype, jobid, wf, i, -1);
 					}
 			} else {
 				for (i = 0; i < wf->tasks_num; ++i)
 					if (wf->tasks[i].light_tasks_num) {
 						if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
-								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING) {
-									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
-								}
+								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING)
+									oph_workflow_abort_task(ttype, jobid, wf, i, j);
 						}
-					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING) {
-						wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-						oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
-					}
+					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
+						oph_workflow_abort_task(ttype, jobid, wf, i, -1);
 			}
 		}
 
