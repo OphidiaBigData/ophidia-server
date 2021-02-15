@@ -2732,7 +2732,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 	return total_size;
 }
 
-int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index)
+int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index, char massive_task)
 {
 	if (!wf || (task_index < 0) || (task_index > wf->tasks_num) || (light_task_index >= wf->tasks[task_index].light_tasks_num))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -2828,7 +2828,8 @@ int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_i
 		}
 	}
 
-	oph_cancel_request(light_task ? wf->tasks[task_index].light_tasks[light_task_index].idjob : wf->tasks[task_index].idjob, wf->os_username);
+	if (!massive_task)
+		oph_cancel_request(light_task ? wf->tasks[task_index].light_tasks[light_task_index].idjob : wf->tasks[task_index].idjob, wf->os_username);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -3118,20 +3119,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
 								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
-									oph_workflow_abort_task(ttype, jobid, wf, i, j);
-						} else
-							oph_workflow_abort_task(ttype, jobid, wf, i, -1);
+									oph_workflow_abort_task(ttype, jobid, wf, i, j, 0);
+						}
+						oph_workflow_abort_task(ttype, jobid, wf, i, -1, wf->tasks[i].light_tasks_num);
 					}
 			} else {
-				for (i = 0; i < wf->tasks_num; ++i)
+				for (i = 0; i < wf->tasks_num; ++i) {
 					if (wf->tasks[i].light_tasks_num) {
 						if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING)
-									oph_workflow_abort_task(ttype, jobid, wf, i, j);
+									oph_workflow_abort_task(ttype, jobid, wf, i, j, 0);
 						}
-					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
-						oph_workflow_abort_task(ttype, jobid, wf, i, -1);
+					}
+					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
+						oph_workflow_abort_task(ttype, jobid, wf, i, -1, wf->tasks[i].light_tasks_num);
+				}
 			}
 		}
 
