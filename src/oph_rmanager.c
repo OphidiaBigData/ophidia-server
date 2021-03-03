@@ -527,7 +527,8 @@ int oph_get_available_host_number(int *size, int jobid)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type, int wid)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project, int wid,
+			 char **cmd, char type)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -562,12 +563,6 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			return RMANAGER_ERROR;
 	}
 
-
-	if ((type == 2) && !orm->subm_cmd_mount) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_MOUNT);
-		return RMANAGER_ERROR;
-	}
-
 	int len = OPH_MAX_STRING_SIZE + strlen(request);
 	if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -593,8 +588,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		internal_request = 1;
 	}
 
-	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores,
-		outfile ? outfile : OPH_NULL_FILENAME, request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, wid, orm->subm_postfix);
+	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
+		ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, project ? project : "", wid, orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
@@ -729,7 +724,8 @@ int oph_get_result_from_file_unsafe(char *filename, char **response)
 }
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
-		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, int wid)
+		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project,
+		      int wid)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
@@ -757,7 +753,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	int result;
 	if ((result =
 	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
-				      username)) != OPH_SERVER_UNKNOWN)
+				      username, project)) != OPH_SERVER_UNKNOWN)
 		return result;
 
 	char *cmd = NULL;
@@ -821,7 +817,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if (oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, &cmd, 0, wid)) {
+	if (oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, project, wid, &cmd, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 		if (cmd) {
 			free(cmd);
