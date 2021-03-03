@@ -2500,6 +2500,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	char *sessionid = strdup(wf->sessionid);
 	char *username = strdup(wf->username);
 	char *os_username = strdup(wf->os_username);
+	char *project = wf->project ? strdup(wf->project) : NULL;
 	odb_jobid = wf->idjob;
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: %d task%s prepared for submission\n", ttype, jobid, nn, nn == 1 ? "" : "s");
@@ -2534,7 +2535,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username)) != OPH_SERVER_OK) {
+							   os_username, project)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -2715,6 +2716,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 		free(username);
 	if (os_username)
 		free(os_username);
+	if (project)
+		free(project);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

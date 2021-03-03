@@ -293,6 +293,7 @@ typedef struct _oph_workflow_stack {
  * \param timestamp Reference to creation date of the struct
  * \param client_address IP Address of client node
  * \param new_token Pointer to an up-to-dated token
+ * \param project Pointer to project name
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -340,6 +341,7 @@ typedef struct _oph_workflow {
 	double timestamp;
 	char *client_address;
 	char *new_token;
+	char *project;
 } oph_workflow;
 
 /* Functions for structs cleanup */
