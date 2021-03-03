@@ -1,5 +1,5 @@
 
-## v1.6.0 - 2020-07-27
+## v1.6.0 - 2021-03-03
 
 ### Fixed:
 
@@ -17,6 +17,8 @@
 
 ### Added:
 
+- New argument 'ENABLE_CANCEL_ALL' in main configuration file [#55](https://github.com/OphidiaBigData/ophidia-server/pull/55)
+- Field 'project' to header of JSON Request [#54](https://github.com/OphidiaBigData/ophidia-server/pull/54)
 - Basic JSON output for workflows and tasks aborted by OPH_CANCEL
 - Argument 'exec_mode' to OPH_WAIT
 - Monitor of the number of active threads in server [#53](https://github.com/OphidiaBigData/ophidia-server/pull/53)
