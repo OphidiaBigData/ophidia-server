@@ -588,8 +588,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		internal_request = 1;
 	}
 
-	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request,
-		ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, project ? project : "", wid, orm->subm_postfix);
+	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %s %d %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
+		request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, project ? project : "", wid, orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 

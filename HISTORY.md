@@ -1,4 +1,10 @@
 
+## v1.6.1 - 2021-03-08
+
+### Fixed:
+
+- Bug in formatting submission strings
+
 ## v1.6.0 - 2021-03-05
 
 ### Fixed:
