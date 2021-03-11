@@ -25,8 +25,8 @@ log=${3}
 submissionstring=${4}
 queue=${5}
 serverid=${6}
-project=${7}
-workflowid=${8}
+workflowid=${7}
+project=${8}
 
 # Const
 fixString=

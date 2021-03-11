@@ -1,9 +1,13 @@
 
-## v1.6.1 - 2021-03-08
+## v1.6.1 - 2021-03-12
 
 ### Fixed:
 
 - Bug in formatting submission strings
+
+### Changed:
+
+- Order of the arguments 'workflowid' and 'project' of oph_submit.sh
 
 ## v1.6.0 - 2021-03-05
 
