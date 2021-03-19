@@ -4295,7 +4295,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 													pch2 = NULL;
 											} else
 												pch2 = wf->tasks[task_index].arguments_values[i];
-											while ((pch2 = strstr(pch2, pch))) {
+											while (pch2 && ((pch2 = strstr(pch2, pch)))) {
 												pch2 += strlen(pch);
 												if (!(*pch2) || (*pch2 == OPH_SEPARATOR_SUBPARAM_STR[0]))
 													break;
