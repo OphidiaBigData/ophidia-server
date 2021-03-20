@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,15 +27,17 @@
 #include <pthread.h>
 #endif
 
-#define LOG_ERROR 	1
-#define LOG_INFO 	2
+#define LOG_RAW			0
+
+#define LOG_ERROR 		1
+#define LOG_INFO 		2
 #define LOG_WARNING 	3
-#define LOG_DEBUG	4
+#define LOG_DEBUG		4
 
 #define LOG_ERROR_T 	11
-#define LOG_INFO_T	12
+#define LOG_INFO_T		12
 #define LOG_WARNING_T 	13
-#define LOG_DEBUG_T	14
+#define LOG_DEBUG_T		14
 
 #if defined(NDEBUG) && defined(__GNUC__)
 /* gcc's cpp has extensions; it allows for macros with a variable number of

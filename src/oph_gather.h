@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 #define OPH_SERVER_LOCATION_STR "OPH_SERVER_LOCATION"
 
-#define OPH_VERSION	"Ophidia Server, version " PACKAGE_VERSION "\nCopyright (C) 2012-2020 CMCC Foundation - www.cmcc.it\n"
+#define OPH_VERSION	"Ophidia Server, version " PACKAGE_VERSION "\nCopyright (C) 2012-2021 CMCC Foundation - www.cmcc.it\n"
 #define OPH_DISCLAIMER	"This program comes with ABSOLUTELY NO WARRANTY; for details type `oph_server -x'.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions; type `oph_server -z' for details.\n"
 #define OPH_DISCLAIMER2	"This program comes with ABSOLUTELY NO WARRANTY; for details type `oph_client -x'.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions; type `oph_client -z' for details.\n"
 #define OPH_WARRANTY	"\nTHERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU. SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.\n"
@@ -73,6 +73,7 @@
 #define OPH_SERVER_CONF_DEFAULT_TIMEOUT_SESSION "DEFAULT_TIMEOUT_SESSION"
 #define OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT "ENABLE_CLUSTER_DEPLOYMENT"
 #define OPH_SERVER_CONF_ENABLE_AUTHORIZATION "ENABLE_AUTHORIZATION"
+#define OPH_SERVER_CONF_ENABLE_CANCEL_ALL "ENABLE_CANCEL_ALL"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_SERVER_CONF_OPENID_ENDPOINT "OPENID_ENDPOINT"
 #define OPH_SERVER_CONF_OPENID_CLIENT_ID "OPENID_CLIENT_ID"

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -125,7 +125,8 @@ void *_oph_sleep(char **response)
 }
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
-		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username)
+		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project,
+		      int wid)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
@@ -143,7 +144,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	int result;
 	if ((result =
 	     oph_serve_known_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code,
-				      exit_output, username)) != OPH_SERVER_UNKNOWN)
+				      exit_output, username, project)) != OPH_SERVER_UNKNOWN)
 		return result;
 
 	if (strstr(request, "oph_fs")) {
@@ -192,7 +193,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 	return OPH_SERVER_OK;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type)
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project, int wid,
+			 char **cmd, char type)
 {
 	return OPH_SERVER_OK;
 }
@@ -223,6 +225,11 @@ int oph_stop_request(int jobid, const char *username)
 }
 
 int oph_umount_request(int jobid, const char *username)
+{
+	return OPH_SERVER_OK;
+}
+
+int oph_cancel_all_request(int wid, const char *username)
 {
 	return OPH_SERVER_OK;
 }

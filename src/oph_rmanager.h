@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -48,6 +48,7 @@ struct _oph_rmanager {
 	char *subm_cmd_umount;
 	char *subm_cmd_check;
 	char *subm_cmd_count;
+	char *subm_cmd_cancel_all;
 	char subm_multiuser;
 	char *subm_group;
 	char *subm_queue_high;
@@ -60,16 +61,18 @@ struct _oph_rmanager {
 typedef struct _oph_rmanager oph_rmanager;
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
-		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username);
+		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project, int wid);
 int initialize_rmanager(oph_rmanager * orm);
 int oph_read_rmanager_conf(oph_rmanager * orm);
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, char **cmd, char type);
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project, int wid,
+			 char **cmd, char type);
 int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);
 int oph_cancel_request(int jobid, const char *username);
 int oph_stop_request(int jobid, const char *username);
 int oph_umount_request(int jobid, const char *username);
+int oph_cancel_all_request(int wid, const char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_get_available_host_number(int *size, int jobid);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);

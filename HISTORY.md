@@ -1,8 +1,25 @@
 
-## v1.6.0 - 2020-07-27
+## Next release
 
 ### Fixed:
 
+- Bug in handling cube pids for final operation
+
+## v1.6.1 - 2021-03-16
+
+### Fixed:
+
+- Bug in formatting submission strings
+
+### Changed:
+
+- Order of the arguments 'workflowid' and 'project' of oph_submit.sh
+
+## v1.6.0 - 2021-03-05
+
+### Fixed:
+
+- Bug in parsing the arguments 'values' and 'counter' of OPH_FOR
 - Bug in handling country name while using the tool oph_manage_user
 - Bug in parsing multivalue arguments
 - Typo in OPH_CLUSTER operator XML file
@@ -16,6 +33,9 @@
 
 ### Added:
 
+- New argument 'ENABLE_CANCEL_ALL' in main configuration file [#55](https://github.com/OphidiaBigData/ophidia-server/pull/55)
+- Field 'project' to header of JSON Request [#54](https://github.com/OphidiaBigData/ophidia-server/pull/54)
+- Basic JSON output for workflows and tasks aborted by OPH_CANCEL
 - Argument 'exec_mode' to OPH_WAIT
 - Monitor of the number of active threads in server [#53](https://github.com/OphidiaBigData/ophidia-server/pull/53)
 - Options to generate random user passwords and execute post-scripts to set env variables [#52](https://github.com/OphidiaBigData/ophidia-server/pull/52)
