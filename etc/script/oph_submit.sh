@@ -1,6 +1,6 @@
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2020 CMCC Foundation
+#    Copyright (C) 2012-2021 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@ log=${3}
 submissionstring=${4}
 queue=${5}
 serverid=${6}
+workflowid=${7}
+project=${8}
 
 # Const
 fixString=
@@ -41,7 +43,7 @@ chmod +x ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 MPI_TYPE=--mpi=pmi2
 if [ ${ncores} -eq 1 ]
 then
-	if [[ ${submissionstring} = *"operator=oph_script;"* ]]
+	if [[ ${submissionstring} = *"operator=oph_script;"* || ${submissionstring} = *"operator=oph_generic;"* || ${submissionstring} = *"operator=oph_cdo;"* ]]
 	then
 		MPI_TYPE=--mpi=none
 	fi

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ extern FILE *wf_logfile;
 extern FILE *task_logfile;
 extern oph_service_info *service_info;
 extern char *oph_status_log_file_name;
+extern char oph_cancel_all_enabled;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -1116,7 +1117,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && !name)
 					name = wf->tasks[i].arguments_values[j];
-				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strlen(wf->tasks[i].arguments_values[j])
+					 && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					char *pch1;
 					pch = strchr(wf->tasks[i].arguments_values[j], OPH_SEPARATOR_SUBPARAM);
 					for (svalues_num++; pch; svalues_num++) {
@@ -1148,7 +1150,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				break;
 			}
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
-				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strlen(wf->tasks[i].arguments_values[j])
+				    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 					oph_subset *subset_struct = NULL;
 					if (oph_subset_init(&subset_struct)) {
 						oph_subset_free(subset_struct);
@@ -2478,6 +2481,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 	char *sessionid = strdup(wf->sessionid);
 	char *username = strdup(wf->username);
 	char *os_username = strdup(wf->os_username);
+	char *project = wf->project ? strdup(wf->project) : NULL;
+	int wid = wf->workflowid;
 	odb_jobid = wf->idjob;
 
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: %d task%s prepared for submission\n", ttype, jobid, nn, nn == 1 ? "" : "s");
@@ -2512,7 +2517,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username)) != OPH_SERVER_OK) {
+							   os_username, project, wid)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -2693,6 +2698,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 		free(username);
 	if (os_username)
 		free(os_username);
+	if (project)
+		free(project);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -2708,6 +2715,108 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
     pmesg_safe(&global_flag, LOG_DEBUG, __FILE__,__LINE__, "N0: reply to the notification:\n%s\n", tmp);
 */
 	return total_size;
+}
+
+int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index, char massive_task)
+{
+	if (!wf || (task_index < 0) || (task_index > wf->tasks_num) || (light_task_index >= wf->tasks[task_index].light_tasks_num))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	char light_task = light_task_index >= 0;
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: aborting task (%d, %d) of workflow '%s'\n", ttype, jobid, task_index, light_task_index, wf->name);
+
+	if (light_task)
+		wf->tasks[task_index].light_tasks[light_task_index].status = OPH_ODB_STATUS_ABORTED;
+	else
+		wf->tasks[task_index].status = OPH_ODB_STATUS_ABORTED;
+
+	int success = 0;
+	oph_json *oper_json = NULL;
+
+	char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], *my_output_json = NULL;
+	snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", light_task ? wf->tasks[task_index].light_tasks[light_task_index].markerid : wf->tasks[task_index].markerid);
+	snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, str_workflowid, OPH_SESSION_MARKER_DELIMITER, str_markerid);
+
+	char error_message[OPH_MAX_STRING_SIZE];
+	snprintf(error_message, OPH_MAX_STRING_SIZE, "Task aborted!");
+
+	pthread_mutex_lock(&global_flag);
+
+	while (!success) {
+		if (oph_json_alloc_unsafe(&oper_json)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: JSON alloc error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_set_source_unsafe(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", wf->username)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: SET SOURCE error\n", ttype, jobid);
+			break;
+		}
+		if (oph_get_session_code(wf->sessionid, session_code)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Session Code", session_code)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Workflow", str_workflowid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "Marker", str_markerid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_source_detail_unsafe(oper_json, "JobID", str_jobid)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+			break;
+		}
+		if (oph_json_add_consumer_unsafe(oper_json, wf->username)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+			break;
+		}
+		success = 1;
+	}
+	if (oper_json) {
+		int return_code = 0;
+		if (!success)
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
+		if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+			return_code = -1;
+		} else if (oph_write_and_get_json_unsafe(oper_json, &my_output_json))
+			return_code = -1;
+		if (!return_code)
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output written\n", ttype, jobid);
+	}
+
+	pthread_mutex_unlock(&global_flag);
+
+	oph_json_free_unsafe(oper_json);
+
+	if (my_output_json) {
+
+		if (!light_task) {
+			if (wf->tasks[task_index].response)
+				free(wf->tasks[task_index].response);
+			wf->tasks[task_index].response = my_output_json;
+		} else {
+#ifdef LEVEL3
+			if (wf->tasks[task_index].light_tasks[light_task_index].response)
+				free(wf->tasks[task_index].light_tasks[light_task_index].response);
+			wf->tasks[task_index].light_tasks[light_task_index].response = my_output_json;
+#else
+			free(my_output_json);
+#endif
+		}
+	}
+
+	if (!massive_task && !oph_cancel_all_enabled)
+		oph_cancel_request(light_task ? wf->tasks[task_index].light_tasks[light_task_index].idjob : wf->tasks[task_index].idjob, wf->os_username);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
@@ -2905,11 +3014,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, buffer);	// multi user approach is not supported
 			FILE *log = fopen(outfile, "r");
 			if (log) {
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: log file '%s':\n", ttype, jobid, outfile);
 				while (fgets(buffer, OPH_MAX_STRING_SIZE, log))
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", buffer);
+					pmesg_safe(&global_flag, LOG_RAW, __FILE__, __LINE__, "%s", buffer);
 				fclose(log);
 			} else
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: file '%s' not found; do not care!\n", ttype, jobid, outfile);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: log file '%s' not found; do not care!\n", ttype, jobid, outfile);
 		}
 	}
 
@@ -3004,35 +3114,32 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		// Kill queued tasks
 		if (wf->cancel_type != 's') {
-			if (wf->cancel_type != 'a') {
+
+			if (oph_cancel_all_enabled || (wf->cancel_type != 'a')) {	// Using option "CANCEL_ALL" all tasks are always killed
 				for (i = 0; i < wf->tasks_num; ++i)
 					if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 						if (wf->tasks[i].light_tasks_num) {
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
 								if ((wf->tasks[i].light_tasks[j].status > (int) OPH_ODB_STATUS_UNKNOWN)
-								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED)) {
-									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
-								}
-						} else {
-							wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-							oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
+								    && (wf->tasks[i].light_tasks[j].status < (int) OPH_ODB_STATUS_COMPLETED))
+									oph_workflow_abort_task(ttype, jobid, wf, i, j, 0);
 						}
+						oph_workflow_abort_task(ttype, jobid, wf, i, -1, wf->tasks[i].light_tasks_num);
 					}
+				if (oph_cancel_all_enabled)
+					oph_cancel_all_request(wf->workflowid, wf->os_username);
 			} else {
-				for (i = 0; i < wf->tasks_num; ++i)
+				for (i = 0; i < wf->tasks_num; ++i) {
 					if (wf->tasks[i].light_tasks_num) {
 						if ((wf->tasks[i].status > (int) OPH_ODB_STATUS_UNKNOWN) && (wf->tasks[i].status < (int) OPH_ODB_STATUS_COMPLETED)) {
 							for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
-								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING) {
-									wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_ABORTED;
-									oph_cancel_request(wf->tasks[i].light_tasks[j].idjob, wf->os_username);
-								}
+								if (wf->tasks[i].light_tasks[j].status == (int) OPH_ODB_STATUS_PENDING)
+									oph_workflow_abort_task(ttype, jobid, wf, i, j, 0);
 						}
-					} else if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING) {
-						wf->tasks[i].status = OPH_ODB_STATUS_ABORTED;
-						oph_cancel_request(wf->tasks[i].idjob, wf->os_username);
 					}
+					if (wf->tasks[i].status == (int) OPH_ODB_STATUS_PENDING)
+						oph_workflow_abort_task(ttype, jobid, wf, i, -1, wf->tasks[i].light_tasks_num);
+				}
 			}
 		}
 	}
@@ -4248,7 +4355,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 													pch2 = NULL;
 											} else
 												pch2 = wf->tasks[task_index].arguments_values[i];
-											while ((pch2 = strstr(pch2, pch))) {
+											while (pch2 && ((pch2 = strstr(pch2, pch)))) {
 												pch2 += strlen(pch);
 												if (!(*pch2) || (*pch2 == OPH_SEPARATOR_SUBPARAM_STR[0]))
 													break;

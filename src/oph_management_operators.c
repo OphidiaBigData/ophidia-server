@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,7 +47,8 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 				       enum oph__oph_odb_job_status *exit_code);
 
 int oph_serve_management_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *operator_name)
+				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *project,
+				  const char *operator_name)
 {
 	UNUSED(ncores);
 	UNUSED(odb_wf_id);
@@ -1055,6 +1056,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_workflow *wf = (oph_workflow *) calloc(1, sizeof(oph_workflow));
 			wf->username = strdup(username);
 			wf->os_username = strdup(os_username);
+			wf->project = project ? strdup(project) : NULL;
 			wf->command = strdup("");
 
 			pthread_mutex_lock(&global_flag);
@@ -2695,6 +2697,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int max_hosts = item->wf->max_hosts;
+		char em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
+		int wid = item->wf->workflowid;
 
 		pthread_mutex_unlock(&global_flag);
 
@@ -2730,16 +2734,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
 		}
 
-		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
-			if (task_tbl)
-				hashtbl_destroy(task_tbl);
-			return OPH_SERVER_WRONG_PARAMETER_ERROR;
-		}
+		snprintf(workflowid, OPH_MAX_STRING_SIZE, "%d", wid);
 
 		int success = 0, success2 = 0, nhosts = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, host_type = 0, *user_filter = NULL, em = 0, btype = 0;	// Get information about user-defined partitions
+		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, host_type = 0, *user_filter = NULL, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
 		int objkeys_num = 0;
 		char random_name[OPH_SHORT_STRING_SIZE];
@@ -2750,8 +2749,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic cluster deployment is disabled!");
 				break;
 			}
-
-			em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
 
 			type = hashtbl_get(task_tbl, OPH_ARG_ACTION);
 			if (!type) {
@@ -4349,7 +4346,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							char *cmd = NULL;
-							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, &cmd, 1 + host_type)) {
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 1 + host_type)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 								if (cmd) {

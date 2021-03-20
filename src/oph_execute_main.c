@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -6344,9 +6344,81 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			char is_aborted = wf->status == (int) OPH_ODB_STATUS_ABORTED;
 
-			if (is_aborted)
+			if (is_aborted) {
+
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: workflow '%s' has been aborted\n", jobid, wf->name);
-			else
+
+				int success = 0;
+				oph_json *oper_json = NULL;
+
+				char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], *my_output_json =
+				    NULL;
+				snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
+				snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", wf->markerid);
+				snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, str_workflowid, OPH_SESSION_MARKER_DELIMITER, str_markerid);
+
+				char error_message[OPH_MAX_STRING_SIZE], ttype = 'R';
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow aborted!");
+
+				pthread_mutex_lock(&global_flag);
+
+				while (!success) {
+					if (oph_json_alloc_unsafe(&oper_json)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: JSON alloc error\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_set_source_unsafe(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", wf->username)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: SET SOURCE error\n", ttype, jobid);
+						break;
+					}
+					if (oph_get_session_code(wf->sessionid, session_code)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_add_source_detail_unsafe(oper_json, "Session Code", session_code)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_add_source_detail_unsafe(oper_json, "Workflow", str_workflowid)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_add_source_detail_unsafe(oper_json, "Marker", str_markerid)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_add_source_detail_unsafe(oper_json, "JobID", str_jobid)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD SOURCE DETAIL error\n", ttype, jobid);
+						break;
+					}
+					if (oph_json_add_consumer_unsafe(oper_json, wf->username)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
+						break;
+					}
+					success = 1;
+				}
+				if (oper_json) {
+					int return_code = 0;
+					if (!success)
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
+					if (oph_json_add_text_unsafe(oper_json, OPH_JSON_OBJKEY_STATUS, "ERROR", error_message)) {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: ADD TEXT error\n", ttype, jobid);
+						return_code = -1;
+					} else if (oph_write_and_get_json_unsafe(oper_json, &my_output_json))
+						return_code = -1;
+					if (!return_code)
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output written\n", ttype, jobid);
+				}
+
+				pthread_mutex_unlock(&global_flag);
+
+				oph_json_free_unsafe(oper_json);
+
+				if (!response->response)
+					response->response = soap_strdup(soap, my_output_json);
+				free(my_output_json);
+
+			} else
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: error in serving the request\n", jobid);
 
 			if (oph_status_log_file_name) {
@@ -6358,8 +6430,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else
 				oph_workflow_free(wf);
 
-			if (!response->error)
-				response->error = is_aborted ? OPH_SERVER_NO_RESPONSE : OPH_SERVER_SYSTEM_ERROR;
+			if (!response->error && !is_aborted)
+				response->error = OPH_SERVER_SYSTEM_ERROR;
+
 			return SOAP_OK;
 		}
 	}
