@@ -5632,14 +5632,19 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_json_free(oper_json);
 
 		// Move job data for job table to accounting table
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: Transfer workflow metadata to accounting table\n", ttype, jobid);
 		success = oph_odb_copy_job(&oDB, wf->idjob, 0);
-		for (ii = 0; !success && (ii <= wf->tasks_num); ii++) {
+		if (!success) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: Transfer task metadata to accounting table\n", ttype, jobid);
 			success = oph_odb_copy_job(&oDB, 0, wf->idjob);
-			if (!success && wf->tasks[ii].name && wf->tasks[ii].light_tasks_num)
-				success = oph_odb_copy_job(&oDB, 0, wf->tasks[ii].idjob);
 		}
+		for (ii = 0; !success && (ii <= wf->tasks_num); ii++)
+			if (wf->tasks[ii].name && wf->tasks[ii].light_tasks_num) {
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: Transfer light task metadata to accounting table\n", ttype, jobid);
+				success = oph_odb_copy_job(&oDB, 0, wf->tasks[ii].idjob);
+			}
 		if (success)
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: Transfer to accounting table cannot possible\n", ttype, jobid);
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: Transfer to accounting table cannot possible: skipping...\n", ttype, jobid);
 		oph_odb_drop_job(&oDB, wf->idjob, 0);
 
 		// Log into WF_LOGFILE

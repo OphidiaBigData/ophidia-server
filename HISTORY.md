@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in transfer metadata into accounting table
 - Bug in handling cube pids for final operation
 
 ## v1.6.1 - 2021-03-16
