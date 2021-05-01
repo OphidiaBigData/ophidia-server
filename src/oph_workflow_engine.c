@@ -3162,7 +3162,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		} else {
 			if (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype, jobid,
-				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status), oph_odb_convert_status_to_str(odb_status));
+				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].status), oph_odb_convert_status_to_str(odb_status));
 				process_notification = 0;
 			}
 		}
@@ -4742,7 +4742,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
-	}
+	} else
+		pthread_mutex_unlock(&global_flag);
 
 	if (final) {
 		char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE];
