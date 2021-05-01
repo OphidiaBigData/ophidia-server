@@ -3,7 +3,13 @@
 
 ### Fixed:
 
+- Bug in transfer metadata into accounting table
 - Bug in handling cube pids for final operation
+
+### Added:
+
+- New argument 'WORKING_DIR' in main configuration file
+
 
 ## v1.6.1 - 2021-03-16
 
@@ -14,6 +20,7 @@
 ### Changed:
 
 - Order of the arguments 'workflowid' and 'project' of oph_submit.sh
+
 
 ## v1.6.0 - 2021-03-05
 
@@ -64,6 +71,7 @@
 
 - Useless variables from oph_plugin
 - Status OPH_ODB_STATUS_CLOSED from list of possible states
+
 
 ## v1.5.1 - 2019-04-16
 

@@ -370,6 +370,9 @@ int set_global_values(const char *configuration_file)
 	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CANCEL_ALL);
 	if (value && !strcasecmp(value, OPH_DEFAULT_YES))
 		oph_cancel_all_enabled = 1;
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WORKING_DIR);
+	if (value && chdir(value))
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to change working directory to '%s'\n", value);
 #ifdef OPH_OPENID_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);
