@@ -3078,6 +3078,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
 
+	char process_notification = 1;
+
 	if (wf->is_closed || (wf->status >= (int) OPH_ODB_STATUS_ABORTED)) {
 
 		oph_output_data_free(outputs_keys, outputs_num);
@@ -3146,7 +3148,28 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
+		process_notification = 0;
+
 	} else {
+
+		if (light_task_index >= 0) {
+			if (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
+				      jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status),
+				      oph_odb_convert_status_to_str(odb_status));
+				process_notification = 0;
+			}
+		} else {
+			if (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype, jobid,
+				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status), oph_odb_convert_status_to_str(odb_status));
+				process_notification = 0;
+			}
+		}
+
+	}
+
+	if (process_notification) {
 
 		if (light_task_index >= 0)	// Massive operation
 		{
