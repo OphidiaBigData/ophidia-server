@@ -3150,8 +3150,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		process_notification = 0;
 
-	} else {
+	} else if (status == OPH_ODB_STATUS_ERROR) {
 
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check if the notification has to be neglected\n", ttype, jobid);
 		if (light_task_index >= 0) {
 			if (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
