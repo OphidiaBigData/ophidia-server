@@ -339,7 +339,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		if (type) {
-			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic")) {
+			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic") && strcmp(type, "control")) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -347,6 +347,18 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 			(*workflow)->tasks[i].type = (char *) strdup((const char *) type);
+			if (!strcmp(type, "control")) {
+				char tmp[5 + strlen((*workflow)->tasks[i].operator)];
+				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
+				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
+				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF)) {
+					oph_workflow_free(*workflow);
+					if (jansson)
+						json_decref(jansson);
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation not allowed\n");
+					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+				}
+			}
 		} else
 			(*workflow)->tasks[i].type = (char *) strdup("ophidia");
 		if (!((*workflow)->tasks[i].type)) {
@@ -796,6 +808,20 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
 
 			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].type) <= 0) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate operator name\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
+			free((*workflow)->tasks[i].operator);
+			(*workflow)->tasks[i].operator = tmp;
+
+			free((*workflow)->tasks[i].type);
+			(*workflow)->tasks[i].type = strdup("ophidia");
+
+		} else if (!strcmp((*workflow)->tasks[i].type, "control")) {
+
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
+			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].operator) <= 0) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate operator name\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;

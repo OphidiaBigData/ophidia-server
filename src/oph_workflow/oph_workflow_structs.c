@@ -528,6 +528,8 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 	}
 	if (s->operator && ! ((d->operator = strdup(s->operator))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->type && !((d->type = strdup(s->type))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->arguments_keys) {
 		d->arguments_keys = (char **) calloc(s->arguments_num, sizeof(char *));
 		if (!d->arguments_keys)

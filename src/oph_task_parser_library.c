@@ -591,8 +591,11 @@ int oph_tp_end_xml_parser()
 
 int oph_tp_task_params_parser(const char *operator, const char *task_string, HASHTBL ** hashtbl)
 {
-	if (!operator || ! task_string || !hashtbl)
+	if (!operator || ! hashtbl)
 		return OPH_TP_TASK_SYSTEM_ERROR;
+
+	if (!task_string || !strlen(task_string))
+		return OPH_TP_TASK_PARSER_SUCCESS;
 
 	//Check if string has correct format
 	if (oph_tp_validate_task_string(task_string))

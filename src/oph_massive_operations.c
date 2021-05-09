@@ -120,8 +120,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Add option '%s' to task string\n", tmp);
 		}
 	}
-	// Check XML
-	if (oph_tp_task_params_parser(OPH_MASSIVE_OPERATOR, filter ? task_string : "", &task_tbl)) {
+
+	if (oph_tp_task_params_parser(OPH_MASSIVE_OPERATOR, filter ? task_string : NULL, &task_tbl)) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to process input parameters\n");
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
