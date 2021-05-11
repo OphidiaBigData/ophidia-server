@@ -626,7 +626,7 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 		case OPH_ODB_STATUS_PENDING:
 			return OPH_ODB_STATUS_PENDING_STR;
 		case OPH_ODB_STATUS_WAIT:
-			return OPH_ODB_STATUS_WAIT_STR;
+			return OPH_ODB_STATUS_WAITING_STR;
 		case OPH_ODB_STATUS_RUNNING:
 			return OPH_ODB_STATUS_RUNNING_STR;
 		case OPH_ODB_STATUS_START:
