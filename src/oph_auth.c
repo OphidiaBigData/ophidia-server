@@ -1950,6 +1950,20 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	return OPH_SERVER_OK;
 }
 
+int oph_auth_check_location()
+{
+	if (!oph_auth_location)
+		return OPH_SERVER_AUTH_ERROR;
+
+	struct stat s;
+	if (stat(oph_auth_location, &s) && (errno == ENOENT)) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' not found\n", oph_auth_location);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
+	return OPH_SERVER_OK;
+}
+
 int oph_auth_user(const char *userid, const char *passwd, const char *host, char **actual_userid, char *userid_exist)
 {
 	if (!userid)
@@ -2037,11 +2051,28 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 	if (save_in_odb)
 		*save_in_odb = 0;
 
-	// Dynamic creation of the folders
-	char dirname[OPH_MAX_STRING_SIZE];
-	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_DIR, oph_auth_location, userid);
+	if (!oph_auth_location)
+		return OPH_SERVER_AUTH_ERROR;
 
+	// Dynamic creation of the folders
 	struct stat s;
+	char dirname[OPH_MAX_STRING_SIZE];
+
+	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_ROOT, oph_auth_location);
+	if (stat(dirname, &s) && (errno == ENOENT)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directories\n");
+		int i;
+		for (i = 0; dirname[i]; ++i) {
+			if (dirname[i] == '/') {
+				dirname[i] = 0;
+				mkdir(dirname, 0755);
+				dirname[i] = '/';
+			}
+		}
+		mkdir(dirname, 0755);
+	}
+
+	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_DIR, oph_auth_location, userid);
 	if (stat(dirname, &s) && (errno == ENOENT)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directories\n");
 		int i;

@@ -764,9 +764,6 @@ int main(int argc, char **argv)
 	set_debug_level(msglevel + 10);
 	pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
 
-	if (!oph_auth_enabled)
-		pmesg(LOG_WARNING, __FILE__, __LINE__, "Authorization procedure disabled\n");
-
 #ifdef OPH_SERVER_LOCATION
 	oph_server_location = strdup(OPH_SERVER_LOCATION);
 #else
@@ -785,6 +782,11 @@ int main(int argc, char **argv)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error in loading server configuration\n");
 		return 1;
 	}
+
+	if (oph_auth_check_location())
+		oph_auth_enabled = 0;
+	if (!oph_auth_enabled)
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Authorization procedure disabled\n");
 
 	if (oph_log_file_name) {
 		if (logfile)
