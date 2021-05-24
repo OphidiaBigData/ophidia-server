@@ -360,10 +360,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pthread_mutex_unlock(&global_flag);
 
 	} else {
-
 		result = OPH_SERVER_OK;
-		if (userid)
-			free(userid);
 		userid = strdup(OPH_SUBM_USER);
 	}
 
