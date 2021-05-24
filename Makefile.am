@@ -24,7 +24,7 @@ SUBDIRS = . src test
 
 include_HEADERS = src/oph_types.h src/oph_execute_main.h
 
-sysconf_DATA = etc/*.conf etc/oph_server_logrotate
+sysconf_DATA = etc/*.conf etc/oph_server_logrotate etc/ophidiadb.sql
 
 bindir=${prefix}/etc
 bin_SCRIPTS = etc/oph_server

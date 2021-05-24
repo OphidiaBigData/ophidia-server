@@ -356,10 +356,15 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 		return OPH_ODB_NULL_PARAM;
 
 #ifndef OPH_DB_SUPPORT
+	if (!oDB->name) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get system catalog name\n");
+		return OPH_ODB_ERROR;
+	}
+
 	oDB->db = NULL;
 
 	char sqlite_db[OPH_MAX_STRING_SIZE];
-	snprintf(sqlite_db, OPH_MAX_STRING_SIZE, OPH_DB_FILE, oph_server_location);
+	snprintf(sqlite_db, OPH_MAX_STRING_SIZE, OPH_DB_FILE, oph_server_location, oDB->name);
 
 	int result = 0;
 	if ((result = sqlite3_open(sqlite_db, &oDB->db))) {

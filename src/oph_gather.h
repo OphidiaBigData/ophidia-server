@@ -163,7 +163,7 @@
 #define OPH_TXT_FILENAME "%s/%s_%s.txt"
 #define OPH_TXT_LOCATION "%s/log"
 #ifndef OPH_DB_SUPPORT
-#define OPH_DB_FILE "%s/etc/ophidiadb.db"
+#define OPH_DB_FILE "%s/etc/%s.db"
 #endif
 
 // Other consts
