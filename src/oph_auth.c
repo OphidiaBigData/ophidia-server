@@ -1961,6 +1961,13 @@ int oph_auth_check_location()
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
+	char filename[OPH_MAX_STRING_SIZE];
+	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_AUTH_FLAG, oph_auth_location);
+	if (!stat(filename, &s) || (errno != ENOENT)) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' found, but it has been auto-generated\n", oph_auth_location);
+		return OPH_SERVER_AUTH_ERROR;
+	}
+
 	return OPH_SERVER_OK;
 }
 
@@ -2056,11 +2063,30 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 
 	// Dynamic creation of the folders
 	struct stat s;
-	char dirname[OPH_MAX_STRING_SIZE];
+	char dirname[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+
+	strcpy(dirname, oph_auth_location);
+	if (stat(dirname, &s) && (errno == ENOENT)) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directory: %s\n", dirname);
+		int i;
+		for (i = 0; dirname[i]; ++i) {
+			if (dirname[i] == '/') {
+				dirname[i] = 0;
+				mkdir(dirname, 0755);
+				dirname[i] = '/';
+			}
+		}
+		mkdir(dirname, 0755);
+		// Place flag
+		FILE *file;
+		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_AUTH_FLAG, oph_auth_location);
+		if ((file = fopen(filename, "w")))
+			fclose(file);
+	}
 
 	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_ROOT, oph_auth_location);
 	if (stat(dirname, &s) && (errno == ENOENT)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directories\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directory: %s\n", dirname);
 		int i;
 		for (i = 0; dirname[i]; ++i) {
 			if (dirname[i] == '/') {
@@ -2074,7 +2100,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 
 	snprintf(dirname, OPH_MAX_STRING_SIZE, OPH_SESSION_DIR, oph_auth_location, userid);
 	if (stat(dirname, &s) && (errno == ENOENT)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directories\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration directory: %s\n", dirname);
 		int i;
 		for (i = 0; dirname[i]; ++i) {
 			if (dirname[i] == '/') {
@@ -2086,10 +2112,9 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 		mkdir(dirname, 0755);
 	}
 
-	char filename[OPH_MAX_STRING_SIZE];
 	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_USER_FILE, oph_auth_location, userid);
 	if (stat(filename, &s) && (errno == ENOENT)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration files\n");
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Automatic creation of configuration file: %s\n", filename);
 		oph_argument *tmp, *tail = *args = NULL;
 
 		tmp = (oph_argument *) malloc(sizeof(oph_argument));
