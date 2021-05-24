@@ -22,6 +22,7 @@
 #include "oph_parser.h"
 
 // Files
+#define OPH_AUTH_FLAG "%s/.auto"
 #define OPH_AUTH_FILE "%s/users.dat"
 #define OPH_AUTH_DN_FILE "%s/dn.dat"
 #define OPH_USERS_DIR "%s/users"
