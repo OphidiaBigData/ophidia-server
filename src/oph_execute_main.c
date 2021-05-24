@@ -362,6 +362,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	} else {
 		result = OPH_SERVER_OK;
 		userid = strdup(OPH_SUBM_USER);
+		free_userid = 1;
 	}
 
 	if (!result && actual_userid) {
