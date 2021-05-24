@@ -362,12 +362,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	} else {
 
 		result = OPH_SERVER_OK;
-		free(userid);
+		if (userid)
+			free(userid);
 		userid = strdup(OPH_SUBM_USER);
 	}
 
 	if (!result && actual_userid) {
-		free(userid);
+		if (userid)
+			free(userid);
 		userid = strdup(actual_userid);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: the username will be '%s'\n", jobid, userid);
 	}
