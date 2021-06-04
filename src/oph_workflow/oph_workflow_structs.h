@@ -91,6 +91,7 @@ typedef struct _oph_workflow_dep {
  * \param name Name of the task
  * \param operator Name of the operator called by task
  * \param type Task type (ophidia or other)
+ * \param rtype Original task type (ophidia or other)
  * \param role Permission needed to execute the operator
  * \param ncores Number of ncores to be used in task execution
  * \param nhosts Number of nhosts to be used in task execution
@@ -138,6 +139,7 @@ typedef struct _oph_workflow_task {
 	char *name;
 	char *operator;
 	char *type;
+	char *rtype;
 	int role;
 	int ncores;
 	int nhosts;

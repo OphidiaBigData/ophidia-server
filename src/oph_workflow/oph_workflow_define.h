@@ -101,4 +101,10 @@
 #define OPH_OPERATOR_WAIT		"oph_wait"
 #define OPH_OPERATOR_INPUT		"oph_input"
 
+#define OPH_ARG_COMMAND			"command"
+#define OPH_TYPE_OPHIDIA		"ophidia"
+#define OPH_TYPE_CDO			"cdo"
+#define OPH_TYPE_GENERIC		"generic"
+#define OPH_TYPE_CONTROL		"control"
+
 #endif				//__OPH_WORKFLOW_DEFINE_H

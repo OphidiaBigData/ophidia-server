@@ -232,6 +232,10 @@ int oph_workflow_task_free(oph_workflow_task * task)
 		free(task->type);
 		task->type = NULL;
 	}
+	if (task->rtype) {
+		free(task->rtype);
+		task->rtype = NULL;
+	}
 	if (task->outputs_num) {
 		for (i = 0; i < task->outputs_num; i++) {
 			if (task->outputs_keys[i]) {
@@ -529,6 +533,8 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 	if (s->operator && ! ((d->operator = strdup(s->operator))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->type && !((d->type = strdup(s->type))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->rtype && !((d->rtype = strdup(s->rtype))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->arguments_keys) {
 		d->arguments_keys = (char **) calloc(s->arguments_num, sizeof(char *));
