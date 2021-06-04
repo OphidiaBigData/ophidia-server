@@ -339,7 +339,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		if (type) {
-			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic") && strcmp(type, "control")) {
+			if (strcmp(type, OPH_TYPE_OPHIDIA) && strcmp(type, OPH_TYPE_CDO) && strcmp(type, OPH_TYPE_GENERIC) && strcmp(type, OPH_TYPE_CONTROL)) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -347,7 +347,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 			(*workflow)->tasks[i].type = (char *) strdup((const char *) type);
-			if (!strcmp(type, "control")) {
+			if (!strcmp(type, OPH_TYPE_CONTROL)) {
 				char tmp[5 + strlen((*workflow)->tasks[i].operator)];
 				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
 				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
@@ -360,7 +360,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				}
 			}
 		} else
-			(*workflow)->tasks[i].type = (char *) strdup("ophidia");
+			(*workflow)->tasks[i].type = (char *) strdup(OPH_TYPE_OPHIDIA);
 		if (!((*workflow)->tasks[i].type)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
@@ -791,7 +791,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	// Support for non-Ophidia operators
 	char *tmp = NULL;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
-		if (!strcmp((*workflow)->tasks[i].type, "cdo") || !strcmp((*workflow)->tasks[i].type, "generic")) {
+		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_CDO) || !strcmp((*workflow)->tasks[i].type, OPH_TYPE_GENERIC)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
 			int kk = (*workflow)->tasks[i].arguments_num;
 			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, 1) || (kk != 1 + (*workflow)->tasks[i].arguments_num)) {
@@ -804,7 +804,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 			}
 			kk--;
-			(*workflow)->tasks[i].arguments_keys[kk] = strdup("command");
+			(*workflow)->tasks[i].arguments_keys[kk] = strdup(OPH_ARG_COMMAND);
 			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
 
 			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].type) <= 0) {
@@ -815,10 +815,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			free((*workflow)->tasks[i].operator);
 			(*workflow)->tasks[i].operator = tmp;
 
-			free((*workflow)->tasks[i].type);
-			(*workflow)->tasks[i].type = strdup("ophidia");
+			(*workflow)->tasks[i].rtype = (*workflow)->tasks[i].type;	// Save original task type to fill extended response
+			(*workflow)->tasks[i].type = strdup(OPH_TYPE_OPHIDIA);
 
-		} else if (!strcmp((*workflow)->tasks[i].type, "control")) {
+		} else if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_CONTROL)) {
 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
 			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].operator) <= 0) {
@@ -829,8 +829,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			free((*workflow)->tasks[i].operator);
 			(*workflow)->tasks[i].operator = tmp;
 
-			free((*workflow)->tasks[i].type);
-			(*workflow)->tasks[i].type = strdup("ophidia");
+			(*workflow)->tasks[i].rtype = (*workflow)->tasks[i].type;	// Save original task type to fill extended response
+			(*workflow)->tasks[i].type = strdup(OPH_TYPE_OPHIDIA);
 		}
 	}
 
@@ -848,7 +848,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 	*jstring = NULL;
 
 	int i, j;
-	char jsontmp[OPH_WORKFLOW_MAX_STRING];
+	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0;
 	json_t *request = json_object();
 	if (!request)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -904,9 +904,12 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		json_t *task = json_object();
 		if (!task)
 			break;
+		erase_command = workflow->tasks[i].rtype && strcmp(workflow->tasks[i].rtype, OPH_TYPE_CONTROL);
 		if (_oph_workflow_add_to_json(task, "name", workflow->tasks[i].name))
 			break;
-		if (_oph_workflow_add_to_json(task, "operator", workflow->tasks[i].operator))
+		if (_oph_workflow_add_to_json(task, "type", workflow->tasks[i].rtype ? workflow->tasks[i].rtype : workflow->tasks[i].type))
+			break;
+		if (!erase_command && _oph_workflow_add_to_json(task, "operator", workflow->tasks[i].operator +(workflow->tasks[i].rtype ? 4 : 0)))
 			break;
 		if (_oph_workflow_add_to_json(task, "on_error", workflow->tasks[i].on_error))
 			break;
@@ -921,10 +924,21 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 				json_decref(task);
 			break;
 		}
-		for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
-			snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%s=%s", workflow->tasks[i].arguments_keys[j], workflow->tasks[i].arguments_values[j]);
-			if (json_array_append_new(arguments, json_string(jsontmp)))
-				break;
+		if (!erase_command) {
+			for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
+				snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%s=%s", workflow->tasks[i].arguments_keys[j], workflow->tasks[i].arguments_values[j]);
+				if (json_array_append_new(arguments, json_string(jsontmp)))
+					break;
+			}
+		} else {
+			for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
+				if (strcmp(workflow->tasks[i].arguments_keys[j], OPH_ARG_COMMAND)) {
+					snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%s=%s", workflow->tasks[i].arguments_keys[j], workflow->tasks[i].arguments_values[j]);
+					if (json_array_append_new(arguments, json_string(jsontmp)))
+						break;
+				} else if (_oph_workflow_add_to_json(task, "operator", workflow->tasks[i].arguments_values[j]))
+					break;
+			}
 		}
 		if (j < workflow->tasks[i].arguments_num) {
 			if (arguments)
