@@ -490,7 +490,11 @@ int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string
 	j = 0;
 	for (i = 0; task_string[i]; i++) {
 		if (task_string[i] == '\'')
+#ifdef OPH_DB_SUPPORT
 			new_query[j++] = '\\';
+#else
+			new_query[j++] = '\'';
+#endif
 		new_query[j++] = task_string[i];
 		if (j >= OPERATION_QUERY_SIZE) {
 			strcpy(new_query + j, "...");
