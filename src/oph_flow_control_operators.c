@@ -56,7 +56,9 @@ void *_oph_wait(oph_notify_data * data)
 	if (!data || !data->data) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading input data\n");
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+#ifdef OPH_DB_SUPPORT
 		mysql_thread_end();
+#endif
 #endif
 		return NULL;
 	}
@@ -283,7 +285,9 @@ void *_oph_wait(oph_notify_data * data)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return NULL;

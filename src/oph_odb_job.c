@@ -343,8 +343,7 @@ int _oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_fol
 	*id_folder = 0;		// Needs to be updated to anew value by the framework
 	pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Unable to create a new folder in Ophidia DB\n");
 	return OPH_ODB_SUCCESS;
-#endif
-
+#else
 	if (!oDB || !folder_name || !id_folder) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
@@ -374,6 +373,7 @@ int _oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_fol
 	}
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_folder)
@@ -866,6 +866,7 @@ int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb * oDB)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
 	}
+#ifdef OPH_DB_SUPPORT
 	*parent_idjob = 0;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
@@ -918,7 +919,7 @@ int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb * oDB)
 	}
 
 	mysql_free_result(res);
-
+#endif
 	return OPH_ODB_SUCCESS;
 }
 
@@ -928,6 +929,7 @@ int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb 
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
 	}
+#ifdef OPH_DB_SUPPORT
 	*number = 0;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
@@ -981,7 +983,7 @@ int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb 
 	}
 
 	mysql_free_result(res);
-
+#endif
 	return OPH_ODB_SUCCESS;
 }
 

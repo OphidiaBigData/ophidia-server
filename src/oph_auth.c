@@ -25,7 +25,9 @@
 #include <dirent.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#ifdef OPH_DB_SUPPORT
 #include <mysql.h>
+#endif
 
 #ifdef INTERFACE_TYPE_IS_SSL
 #include <openssl/sha.h>
@@ -1108,7 +1110,9 @@ void *_oph_refresh(oph_refresh_token * refresh)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;
@@ -1500,7 +1504,9 @@ void *_oph_check_openid(void *data)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;
@@ -1566,7 +1572,9 @@ void *_oph_check_aaa(void *data)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;

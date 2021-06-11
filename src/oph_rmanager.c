@@ -23,7 +23,9 @@
 #include "oph_service_info.h"
 #include "oph_utils.h"
 
+#ifdef OPH_DB_SUPPORT
 #include <mysql.h>
+#endif
 #include <grp.h>
 
 #define SUBM_CMD_TO_SUBMIT		"SUBM_CMD_TO_SUBMIT"
@@ -126,7 +128,9 @@ void *_oph_system(oph_command_data * data)
 	}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 	return (void *) NULL;;
 }

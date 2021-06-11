@@ -6313,7 +6313,9 @@ void *_oph_workflow_check_job_queue(oph_monitor_data * data)
 	}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 	return (void *) NULL;
 }

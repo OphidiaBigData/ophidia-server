@@ -20,7 +20,9 @@
 #define OPH_OPHIDIADB_H
 
 /* MySQL headers */
+#ifdef OPH_DB_SUPPORT
 #include <mysql.h>
+#endif
 #ifndef OPH_DB_SUPPORT
 #include <sqlite3.h>
 #endif
@@ -64,8 +66,9 @@ typedef struct {
 	int server_port;
 	char *username;
 	char *pwd;
+#ifdef OPH_DB_SUPPORT
 	MYSQL *conn;
-#ifndef OPH_DB_SUPPORT
+#else
 	sqlite3 *db;
 #endif
 } ophidiadb;

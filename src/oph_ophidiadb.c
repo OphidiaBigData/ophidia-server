@@ -279,8 +279,9 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 
 		fclose(file);
 
+#ifdef OPH_DB_SUPPORT
 		ophDB->conn = NULL;
-#ifndef OPH_DB_SUPPORT
+#else
 		ophDB->db = NULL;
 #endif
 	}
@@ -305,8 +306,9 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	oDB->hostname = NULL;
 	oDB->username = NULL;
 	oDB->pwd = NULL;
+#ifdef OPH_DB_SUPPORT
 	oDB->conn = NULL;
-#ifndef OPH_DB_SUPPORT
+#else
 	oDB->db = NULL;
 #endif
 
@@ -334,11 +336,12 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 		free(oDB->pwd);
 		oDB->pwd = NULL;
 	}
+#ifdef OPH_DB_SUPPORT
 	if (oDB->conn) {
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->conn = NULL;
 	}
-#ifndef OPH_DB_SUPPORT
+#else
 	if (oDB->db) {
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->db = NULL;
@@ -374,10 +377,7 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 	}
 	if (sqlite3_exec(oDB->db, SQLITE_SWITCH_ON_FOREIGN_KEYS, NULL, NULL, NULL))
 		return OPH_ODB_MYSQL_ERROR;
-
-	return OPH_ODB_SUCCESS;
-#endif
-
+#else
 	oDB->conn = NULL;
 	if (!(oDB->conn = mysql_init(NULL))) {
 		oph_odb_disconnect_from_ophidiadb(oDB);
@@ -390,14 +390,13 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 		return OPH_ODB_MYSQL_ERROR;
 	}
 
+#endif
 	return OPH_ODB_SUCCESS;
 }
 
 int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
 {
-#ifndef OPH_DB_SUPPORT
-	return OPH_ODB_SUCCESS;
-#endif
+#ifdef OPH_DB_SUPPORT
 
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -413,6 +412,7 @@ int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
 			return OPH_ODB_MYSQL_ERROR;
 		}
 	}
+#endif
 	return OPH_ODB_SUCCESS;
 }
 
@@ -427,14 +427,14 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 		oDB->db = NULL;
 	}
 	return OPH_ODB_SUCCESS;
-#endif
-
+#else
 	if (oDB->conn) {
 		mysql_close(oDB->conn);
 		oDB->conn = NULL;
 	}
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char ***ctime, int *nn)
@@ -716,6 +716,7 @@ int oph_odb_free_ophidiadb_list(ophidiadb_list * list)
 
 int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube, int *counter)
 {
+#ifdef OPH_DB_SUPPORT
 	if (!oDB || !query || !datacube || !counter)
 		return OPH_ODB_NULL_PARAM;
 
@@ -752,6 +753,7 @@ int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube,
 		i++;
 	}
 	mysql_free_result(res);
+#endif
 	return OPH_ODB_SUCCESS;
 }
 
@@ -1019,8 +1021,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be created\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !name || !parent || !id_user)
 		return OPH_ODB_NULL_PARAM;
 
@@ -1075,6 +1076,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 		return OPH_ODB_MYSQL_ERROR;
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
@@ -1082,8 +1084,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Temporary/hidden host partitions cannot be destroyed\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !name)
 		return OPH_ODB_NULL_PARAM;
 
@@ -1100,6 +1101,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 		return OPH_ODB_MYSQL_ERROR;
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition)
@@ -1107,8 +1109,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be reserverd\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 	*id_hostpartition = 0;
@@ -1127,6 +1128,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 	*id_hostpartition = (int) mysql_insert_id(oDB->conn);
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
@@ -1134,8 +1136,7 @@ int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be released\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 
@@ -1158,6 +1159,7 @@ int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
 		return OPH_ODB_MYSQL_ERROR;
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_release_hp2(int id_hostpartition)
@@ -1165,8 +1167,7 @@ int oph_odb_release_hp2(int id_hostpartition)
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be released\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	int result = OPH_ODB_MYSQL_ERROR;
 	ophidiadb oDB;
 	oph_odb_initialize_ophidiadb(&oDB);
@@ -1174,6 +1175,7 @@ int oph_odb_release_hp2(int id_hostpartition)
 		result = oph_odb_release_hp(&oDB, id_hostpartition);
 	oph_odb_disconnect_from_ophidiadb(&oDB);
 	return result;
+#endif
 }
 
 int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
@@ -1181,8 +1183,7 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Host partitions cannot be accessed\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !name || !id_user || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
 	*id_hostpartition = 0;
@@ -1221,6 +1222,7 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 	mysql_free_result(res);
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
@@ -1228,8 +1230,7 @@ int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Hosts cannot be accessed\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !thosts)
 		return OPH_ODB_NULL_PARAM;
 	*thosts = 0;
@@ -1260,6 +1261,7 @@ int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
 	mysql_free_result(res);
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
@@ -1267,8 +1269,7 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 #ifndef OPH_DB_SUPPORT
 	pmesg(LOG_WARNING, __FILE__, __LINE__, "Hosts cannot be accessed\n");
 	return OPH_ODB_MYSQL_ERROR;
-#endif
-
+#else
 	if (!oDB || !rhosts)
 		return OPH_ODB_NULL_PARAM;
 	*rhosts = 0;
@@ -1303,6 +1304,7 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 	mysql_free_result(res);
 
 	return OPH_ODB_SUCCESS;
+#endif
 }
 
 int oph_odb_retrieve_user_from_mail(ophidiadb * oDB, const char *mail, char **username, pthread_mutex_t * flag)

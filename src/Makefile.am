@@ -260,11 +260,13 @@ liboph_memory_job_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_memory_job_la_LDFLAGS = -shared
 liboph_memory_job_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_job_list
 
+if DB_SUPPORT
 LIBRARY += liboph_ophidiadb_fs_library.la
 liboph_ophidiadb_fs_library_la_SOURCES = oph_ophidiadb_fs_library.c
 liboph_ophidiadb_fs_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_ophidiadb_fs_library_la_LDFLAGS = -shared
 liboph_ophidiadb_fs_library_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_ophidiadb
+endif
 
 LIBRARY += liboph_task_parser_library.la
 liboph_task_parser_library_la_SOURCES = oph_task_parser_library.c
@@ -272,17 +274,23 @@ liboph_task_parser_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONA
 liboph_task_parser_library_la_LDFLAGS = -shared
 liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${XML_LIBS}
 
+if DB_SUPPORT
 LIBRARY += liboph_filters.la
 liboph_filters_la_SOURCES = oph_filters.c
 liboph_filters_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS)
 liboph_filters_la_LDFLAGS = -shared
 liboph_filters_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_task_parser_library -loph_ophidiadb_fs_library -loph_subset_library
+endif
 
 LIBRARY += liboph_massive_operations.la
 liboph_massive_operations_la_SOURCES = oph_massive_operations.c
 liboph_massive_operations_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_massive_operations_la_LDFLAGS = -shared
-liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters -loph_rmanager
+if DB_SUPPORT
+liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_filters -loph_rmanager -loph_subset_library
+else
+liboph_massive_operations_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_rmanager -loph_subset_library
+endif
 
 LIBRARY += liboph_odb_job.la
 liboph_odb_job_la_SOURCES = oph_odb_job.c
