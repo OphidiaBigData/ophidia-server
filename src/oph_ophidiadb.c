@@ -389,7 +389,6 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		return OPH_ODB_MYSQL_ERROR;
 	}
-
 #endif
 	return OPH_ODB_SUCCESS;
 }

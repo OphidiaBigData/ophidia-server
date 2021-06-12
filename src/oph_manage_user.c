@@ -86,7 +86,9 @@ unsigned int oph_aaa_token_check_time = 0;
 void cleanup()
 {
 	oph_cleanup_args(&args);
+#ifdef OPH_DB_SUPPORT
 	mysql_library_end();
+#endif
 	if (oph_server_params)
 		hashtbl_destroy(oph_server_params);
 #ifdef OPH_SERVER_LOCATION
@@ -363,11 +365,12 @@ int main(int argc, char *argv[])
 		cleanup();
 		return 1;
 	}
-
+#ifdef OPH_DB_SUPPORT
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
 		exit(1);
 	}
+#endif
 
 	size_t iiii, jjjj = strlen(username ? username : "");
 	char user_string[1 + jjjj];

@@ -334,8 +334,9 @@ void cleanup()
 		fclose(task_logfile);
 		task_logfile = NULL;
 	}
-
+#ifdef OPH_DB_SUPPORT
 	mysql_library_end();
+#endif
 	soap_destroy(psoap);
 	soap_end(psoap);
 	soap_done(psoap);	/* MUST call before CRYPTO_thread_cleanup */
@@ -443,7 +444,9 @@ void *process_request(void *arg)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;
@@ -806,10 +809,13 @@ int main(int argc, char **argv)
 	if (task_logfile && !ftell(task_logfile))
 		fprintf(task_logfile, "timestamp\tidtask\tidworkflow\toperator\t#cores\tsuccess_flag\tduration\n");
 
+#ifdef OPH_DB_SUPPORT
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
 		exit(1);
 	}
+#endif
+
 	oph_tp_start_xml_parser();
 	soap_init(&soap);
 

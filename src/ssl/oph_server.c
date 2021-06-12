@@ -469,7 +469,6 @@ void cleanup()
 		fclose(task_logfile);
 		task_logfile = NULL;
 	}
-
 #ifdef OPH_DB_SUPPORT
 	mysql_library_end();
 #endif
@@ -655,7 +654,6 @@ int main(int argc, char *argv[])
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "A problem occurred while setting up signal dispositions\n");
 		exit(1);
 	}
-
 #ifdef OPH_DB_SUPPORT
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
