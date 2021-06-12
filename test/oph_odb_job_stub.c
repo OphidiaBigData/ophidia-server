@@ -237,7 +237,7 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 		case OPH_ODB_STATUS_PENDING:
 			return OPH_ODB_STATUS_PENDING_STR;
 		case OPH_ODB_STATUS_WAIT:
-			return OPH_ODB_STATUS_WAIT_STR;
+			return OPH_ODB_STATUS_WAITING_STR;
 		case OPH_ODB_STATUS_RUNNING:
 			return OPH_ODB_STATUS_RUNNING_STR;
 		case OPH_ODB_STATUS_START:
@@ -459,8 +459,10 @@ int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 	if (mysql_query(oDB->conn, copyQuery))
 		return OPH_ODB_MYSQL_ERROR;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -497,6 +499,7 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 	if (n >= MYSQL_BUFLEN)
 		return OPH_ODB_STR_BUFF_OVERFLOW;
 
+#ifdef OPH_DB_SUPPORT
 	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
 		return OPH_ODB_MYSQL_ERROR;
@@ -504,6 +507,7 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 
 	if (mysql_query(oDB->conn, deleteQuery))
 		return OPH_ODB_MYSQL_ERROR;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }

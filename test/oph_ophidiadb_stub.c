@@ -40,7 +40,9 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	oDB->hostname = NULL;
 	oDB->username = NULL;
 	oDB->pwd = NULL;
+#ifdef OPH_DB_SUPPORT
 	oDB->conn = NULL;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
@@ -66,10 +68,12 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 		free(oDB->pwd);
 		oDB->pwd = NULL;
 	}
+#ifdef OPH_DB_SUPPORT
 	if (oDB->conn) {
 		oph_odb_disconnect_from_ophidiadb(oDB);
 		oDB->conn = NULL;
 	}
+#endif
 
 	free(oDB);
 
@@ -97,8 +101,10 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
 
+#ifdef OPH_DB_SUPPORT
 	if (oDB->conn)
 		oDB->conn = NULL;
+#endif
 
 	return OPH_ODB_SUCCESS;
 }
