@@ -33,7 +33,6 @@
 #include <pthread.h>
 #endif
 #include <signal.h>
-#include <mysql.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 pthread_mutex_t global_flag;

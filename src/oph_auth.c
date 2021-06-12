@@ -1958,6 +1958,7 @@ int oph_auth_save_token(const char *access_token, const char *refresh_token, con
 	return OPH_SERVER_OK;
 }
 
+// Thread unsafe
 int oph_auth_check_location()
 {
 	if (!oph_auth_location)
@@ -1965,14 +1966,14 @@ int oph_auth_check_location()
 
 	struct stat s;
 	if (stat(oph_auth_location, &s) && (errno == ENOENT)) {
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' not found\n", oph_auth_location);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' not found\n", oph_auth_location);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
 	char filename[OPH_MAX_STRING_SIZE];
 	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_AUTH_FLAG, oph_auth_location);
 	if (!stat(filename, &s) || (errno != ENOENT)) {
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' found, but it has been auto-generated\n", oph_auth_location);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Authorization directory '%s' found, but it has been auto-generated\n", oph_auth_location);
 		return OPH_SERVER_AUTH_ERROR;
 	}
 
