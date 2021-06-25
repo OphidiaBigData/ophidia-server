@@ -564,7 +564,7 @@ char *oph_sha(char *to, const char *passwd)
 			return NULL;
 		*to++ = '*';
 		const char hash_byte[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		char *str = hash_stage, *str_end = hash_stage + SHA_DIGEST_LENGTH;
+		unsigned char *str = hash_stage, *str_end = hash_stage + SHA_DIGEST_LENGTH;
 		for (; str != str_end; ++str) {
 			*to++ = hash_byte[((unsigned char) *str) >> 4];
 			*to++ = hash_byte[((unsigned char) *str) & 0x0F];
