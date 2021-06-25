@@ -662,7 +662,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 	MYSQL_ROW row;
 	res = mysql_store_result(oDB->conn);
 
-	if ((mysql_field_count(oDB->conn) != 1) || (select_by_name && (mysql_num_rows(res) != 1) || !select_by_name && !mysql_num_rows(res))) {
+	if ((mysql_field_count(oDB->conn) != 1) || (select_by_name && (mysql_num_rows(res) != 1) || (!select_by_name && !mysql_num_rows(res)))) {
 		mysql_free_result(res);
 		return OPH_ODB_TOO_MANY_ROWS;
 	}
