@@ -42,6 +42,8 @@ int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size
 		if (*max < current)
 			*max = current;
 	}
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
 int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
