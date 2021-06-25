@@ -152,8 +152,6 @@ int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColNam
 	if (!argc)
 		return OPH_ODB_NO_ROW_FOUND;
 
-	oph_sqlite_item *item = NULL;
-
 	if (argv) {
 
 		oph_sqlite_item *tmp = NULL;
