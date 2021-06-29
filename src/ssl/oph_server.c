@@ -524,7 +524,8 @@ int main(int argc, char *argv[])
 	psoap = &soap;
 
 	int ch, msglevel = LOG_INFO;
-	static char *USAGE = "\nUSAGE:\noph_server [-d] [-l <log_file>] [-p <port>] [-v] [-w]\n";
+	static char *USAGE =
+	    "\nUSAGE:\noph_server [OPTIONS]\n\nOptions:\n-a: disable user autentication\n-c <wf_log_file>: set CSV log file for workflows\n-d: enable debug mode\n-h: show this help\n-l <log_file>: set main log file\n-m: enable SSH (deprecated)\n-p <port>: set server port number\n-s <log_file>: set status log file\n-t <task_log_file>: set CSV log file for tasks\n-v: show conditions\n-w: enable warning level messages\n-x: show warrenty\n-z: show license\n";
 
 	fprintf(stdout, "%s", OPH_VERSION);
 	fprintf(stdout, "%s", OPH_DISCLAIMER);
