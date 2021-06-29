@@ -716,7 +716,8 @@ int main(int argc, char **argv)
 	unsigned short int port;
 	int ch, rc, m, s, msglevel = LOG_INFO;
 
-	static char *USAGE = "\nUSAGE:\noph_server [-d] [-l <log_file>] [-p <port>] [-v] [-w]\n";
+	static char *USAGE =
+	    "\nUSAGE:\noph_server [OPTIONS]\n\nOptions:\n-a: disable user autentication\n-d: enable debug mode\n-h: show this help\n-l <log_file>: set main log file\n-m: enable SSH (deprecated)\n-p <port>: set server port number\n-v: show conditions\n-w: enable warning level messages\n-x: show warrenty\n-z: show license\n";
 	port = PLUGIN_DEFAULT_PORT;
 
 	fprintf(stdout, "%s", OPH_VERSION);
