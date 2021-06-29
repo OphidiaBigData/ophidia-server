@@ -18,7 +18,7 @@
 
 -- Use:
 --
--- > sqlite ophidiadb
+-- > sqlite ophidiadb.db
 -- sqlite> .read ophidiadb.sql
 
 CREATE TABLE `country` (
