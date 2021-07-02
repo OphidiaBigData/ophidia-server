@@ -28,7 +28,6 @@
 
 #include <math.h>
 #include <time.h>
-#include <sys/stat.h>
 #include <curl/curl.h>
 
 #ifdef MATHEVAL_SUPPORT
@@ -36,9 +35,17 @@
 #define OPH_FLOW_EVAL "EVAL("
 #endif
 
+#define OPH_FS_COMMAND "operator=oph_fs;command=ls;file=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
+#define OPH_FS_GRID_CLASS "grid"
+#define OPH_FS_GRID_NAME "fs"
+#define OPH_FS_GRID_TYPE "T"
+#define OPH_FS_GRID_OBJECT "OBJECT"
+#define OPH_FS_TYPE_FILE "f"
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t curl_flag;
+extern pthread_cond_t waiting_flag;
 #endif
 extern char *oph_base_src_path;
 extern char *oph_web_server_location;
@@ -46,6 +53,76 @@ extern oph_service_info *service_info;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
+
+int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *markerid, struct oph_plugin_data *state)
+{
+	int success = 1;
+
+	int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, saved_idjob = wf->tasks[task_index].idjob;
+	wf->tasks[task_index].idjob = 0;	// Set for internel operations
+
+	response = oph_serve_request(command, 1, wf->sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, wf->os_username, wf->project, wf->workflowid);
+
+	if (response) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system: error %d\n", response);
+		success = -1;
+		return success;
+	}
+
+	pthread_mutex_lock(&global_flag);
+	while (!wf->tasks[task_index].response) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for scanning report\n");
+		pthread_cond_wait(&waiting_flag, &global_flag);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "A file scanning report is arrived\n");
+	}
+	pthread_mutex_unlock(&global_flag);
+
+	wf->tasks[task_index].idjob = saved_idjob;
+
+	if (wf->tasks[task_index].response && !strlen(wf->tasks[task_index].response)) {
+		free(wf->tasks[task_index].response);
+		wf->tasks[task_index].response = NULL;
+	}
+
+	unsigned int i, j;
+	oph_json *oper_json = NULL;
+	oph_json_obj_grid *grid_json = NULL;
+	while (success && wf->tasks[task_index].response) {
+		if (oph_json_from_json_string(&oper_json, wf->tasks[task_index].response)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing JSON Response\n");
+			break;
+		}
+		for (i = 0; i < oper_json->responseKeyset_num; ++i)
+			if (!strcmp(oper_json->responseKeyset[i], OPH_FS_GRID_NAME))
+				break;
+		if ((i >= oper_json->responseKeyset_num) || (i >= oper_json->response_num) || strcmp(oper_json->response[i].objclass, OPH_FS_GRID_CLASS)
+		    || strcmp(oper_json->response[i].objkey, OPH_FS_GRID_NAME)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Grid '%s' not found in JSON Response\n", OPH_FS_GRID_NAME);
+			break;
+		}
+		grid_json = (oph_json_obj_grid *) oper_json->response[i].objcontent;
+		if ((grid_json->keys_num != 2) || (grid_json->values_num2 != 2) || strcmp(grid_json->keys[0], OPH_FS_GRID_TYPE) || strcmp(grid_json->keys[1], OPH_FS_GRID_OBJECT)) {
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Grid '%s' is not correct in JSON Response\n", OPH_FS_GRID_NAME);
+			break;
+		}
+		for (j = 0; j < grid_json->values_num1; ++j)
+			if (!strcmp(grid_json->values[j][0], OPH_FS_TYPE_FILE) && grid_json->values[j][1]) {
+				success = 0;	// The file already exists
+				break;
+			}
+		break;
+	}
+	if (oper_json)
+		oph_json_free(oper_json);
+
+	// Remove the intermediate response to set real response of OPH_WAIT
+	if (wf->tasks[task_index].response) {
+		free(wf->tasks[task_index].response);
+		wf->tasks[task_index].response = NULL;
+	}
+
+	return success;
+}
 
 void *_oph_wait(oph_notify_data * data)
 {
@@ -73,7 +150,7 @@ void *_oph_wait(oph_notify_data * data)
 	oph_wait_data *wd = (oph_wait_data *) data->data;
 	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], fast_exit = 0;
 	CURL *curl = NULL;
-	char *pointer = wd->filename;
+	char *pointer = wd->filename, *is_http = NULL;
 
 	// Init
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Initialize waiting procedure\n");
@@ -86,7 +163,7 @@ void *_oph_wait(oph_notify_data * data)
 				success = 0;
 				break;
 			}
-			if (strstr(pointer, "http")) {
+			if ((is_http = strstr(pointer, "http"))) {
 				curl = curl_easy_init();
 				if (!curl) {
 					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to check remote objects\n");
@@ -114,6 +191,13 @@ void *_oph_wait(oph_notify_data * data)
 			success = 0;
 	}
 
+	char command[OPH_MAX_STRING_SIZE];
+	char markerid[OPH_SHORT_STRING_SIZE];
+	if (success && !is_http && (wd->type == 'f')) {
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "" OPH_SERVER_REQUEST_FLAG, pointer, wf->sessionid, wf->workflowid, wf->tasks[task_index].markerid, task_index, wf->username,
+			 wf->userrole, wf->idjob);
+		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+	}
 	// Process
 	if (success) {
 
@@ -121,7 +205,6 @@ void *_oph_wait(oph_notify_data * data)
 
 		int counter;
 		CURLcode res;
-		struct stat s;
 
 		pthread_mutex_lock(&global_flag);
 		status = wf->tasks[task_index].status;
@@ -134,8 +217,15 @@ void *_oph_wait(oph_notify_data * data)
 					if (curl_easy_perform(curl) == CURLE_OK)
 						success = 0;
 					pthread_mutex_unlock(&curl_flag);
-				} else if (!stat(_filename, &s))
-					success = 0;
+				} else {
+					success = _oph_wait_stat(wf, task_index, command, markerid, state);
+					if (success < 0) {
+						pthread_mutex_lock(&global_flag);
+						status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
+						pthread_mutex_unlock(&global_flag);
+						break;
+					}
+				}
 				if (!success) {
 					success = 1;
 					pthread_mutex_lock(&global_flag);
@@ -188,8 +278,13 @@ void *_oph_wait(oph_notify_data * data)
 								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable: %s\n", _filename, curl_easy_strerror(res));
 								break;
 							}
-						} else if (stat(_filename, &s)) {
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", _filename);
+						} else if ((success = _oph_wait_stat(wf, task_index, command, markerid, state))) {
+							if (success < 0) {
+								pthread_mutex_lock(&global_flag);
+								status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
+								pthread_mutex_unlock(&global_flag);
+							} else
+								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' does not exist\n", _filename);
 							break;
 						}
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' exists\n", _filename);
@@ -209,7 +304,7 @@ void *_oph_wait(oph_notify_data * data)
 		idjob = wf->tasks[task_index].idjob;
 		pidjob = wf->idjob;
 		if (status < (int) OPH_ODB_STATUS_COMPLETED)
-			status = wf->tasks[task_index].status = OPH_ODB_STATUS_COMPLETED;
+			status = wf->tasks[task_index].status = success < 0 ? OPH_ODB_STATUS_ERROR : OPH_ODB_STATUS_COMPLETED;
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name, oph_odb_convert_status_to_str(status));
 

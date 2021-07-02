@@ -3052,7 +3052,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		free(sessionid);
 
 	if (!wf->tasks[task_index].idjob && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ERROR)) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: an internal operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,
 		      oph_odb_convert_status_to_str(status));
 		if (status == OPH_ODB_STATUS_COMPLETED) {
 			if (wf->tasks[task_index].response)

@@ -285,7 +285,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			}
 			break;
 		}
-		oph_json_free(oper_json);
+		if (oper_json)
+			oph_json_free(oper_json);
 
 	} else {
 
