@@ -352,7 +352,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				char tmp[5 + strlen((*workflow)->tasks[i].operator)];
 				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
 				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
-				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF)) {
+				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF) && strcmp(tmp, OPH_OPERATOR_WAIT)) {
 					oph_workflow_free(*workflow);
 					if (jansson)
 						json_decref(jansson);
