@@ -439,18 +439,22 @@ void cleanup()
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
 #ifdef OPH_OPENID_SUPPORT
-	oph_openid_token_check_time = 0;
+	if (oph_openid_token_check_time) {
+		oph_openid_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid_openid)
-		pthread_cancel(token_tid_openid);
+		if (token_tid_openid)
+			pthread_cancel(token_tid_openid);
 #endif
+	}
 #endif
 #ifdef OPH_AAA_SUPPORT
-	oph_aaa_token_check_time = 0;
+	if (oph_aaa_token_check_time) {
+		oph_aaa_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid_aaa)
-		pthread_cancel(token_tid_aaa);
+		if (token_tid_aaa)
+			pthread_cancel(token_tid_aaa);
 #endif
+	}
 #endif
 
 	sleep(OPH_STATUS_LOG_PERIOD);
