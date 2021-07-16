@@ -531,4 +531,24 @@ int oph_realloc_vector(char ***vector, int *length, int incr)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
+int oph_realloc_vector2(oph_workflow_ordered_list *** vector, int *length, int incr)
+{
+	if (!vector || !(*vector) || !length)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	oph_workflow_ordered_list **tmp = *vector;
+	*vector = (oph_workflow_ordered_list **) malloc((*length + incr) * sizeof(oph_workflow_ordered_list *));
+
+	if (!(*vector)) {
+		*vector = tmp;
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	memcpy(*vector, tmp, (*length) * sizeof(oph_workflow_ordered_list *));
+	free(tmp);
+
+	*length += incr;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
 // Other utililty functions

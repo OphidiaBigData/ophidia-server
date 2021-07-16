@@ -35,7 +35,6 @@ int oph_workflow_command_to_json(const char *command, char **json);
 int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query);
 int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
 			   int *workflowid, char *str_workflowid, char *oph_jobid, int prev_markerid);
-int oph_realloc_vector(char ***vector, int *length, int incr);
 
 int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level);
 
@@ -46,5 +45,8 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB);
 
 int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate);
 int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate);
+
+int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list ** list);
+int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string);
 
 #endif				/* OPH_WORKFLOW_ENGINE_H */
