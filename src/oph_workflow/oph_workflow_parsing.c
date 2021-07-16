@@ -465,6 +465,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating deps\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				unsigned int auto_order = 0;
+				char auto_order_s[OPH_WORKFLOW_MIN_STRING];
 				for (j = 0; j < (*workflow)->tasks[i].deps_num; j++) {
 					json_t *dependency = NULL;
 					dependency = json_array_get(dependencies, j);
@@ -506,7 +508,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 						if (order) {
 							(*workflow)->tasks[i].deps[j].order = (char *) strdup((const char *) order);
 						} else {
-							(*workflow)->tasks[i].deps[j].order = (char *) strdup((const char *) "0");
+							snprintf(auto_order_s, OPH_WORKFLOW_MIN_STRING, "%d", auto_order++);
+							(*workflow)->tasks[i].deps[j].order = (char *) strdup(auto_order_s);
 						}
 						if (!((*workflow)->tasks[i].deps[j].order)) {
 							oph_workflow_free(*workflow);
