@@ -6043,7 +6043,7 @@ int oph_workflow_command_to_json(const char *command, char **json)
 	oph_argument *args = NULL, *item;
 
 	if (oph_parse_query(&args, &counter, command)) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing the command\n");
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing the command '%s'\n", command);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
