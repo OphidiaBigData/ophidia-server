@@ -523,9 +523,10 @@ int oph_realloc_vector(char ***vector, int *length, int incr)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
-	memcpy(*vector, tmp, (*length) * sizeof(char *));
+	memcpy(*vector, tmp, *length * sizeof(char *));
 	free(tmp);
 
+	memset(*vector + *length, 0, incr * sizeof(char *));
 	*length += incr;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -543,9 +544,10 @@ int oph_realloc_vector2(oph_workflow_ordered_list *** vector, int *length, int i
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
-	memcpy(*vector, tmp, (*length) * sizeof(oph_workflow_ordered_list *));
+	memcpy(*vector, tmp, *length * sizeof(oph_workflow_ordered_list *));
 	free(tmp);
 
+	memset(*vector + *length, 0, incr * sizeof(oph_workflow_ordered_list *));
 	*length += incr;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
