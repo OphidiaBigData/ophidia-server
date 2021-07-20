@@ -196,11 +196,17 @@ int oph_workflow_task_free(oph_workflow_task * task)
 				free(task->arguments_values[i]);
 				task->arguments_values[i] = NULL;
 			}
+			if (task->arguments_lists[i]) {
+				oph_workflow_free_list(task->arguments_lists[i]);
+				task->arguments_lists[i] = NULL;
+			}
 		}
 		free(task->arguments_keys);
 		task->arguments_keys = NULL;
 		free(task->arguments_values);
 		task->arguments_values = NULL;
+		free(task->arguments_lists);
+		task->arguments_lists = NULL;
 	}
 	if (task->dependents_indexes_num) {
 		free(task->dependents_indexes);
@@ -396,13 +402,16 @@ int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **sv
 			if (workflow->tasks[i].arguments_num) {
 				tmp->tasks[i].arguments_keys = (char **) malloc(workflow->tasks[i].arguments_num * sizeof(char *));
 				tmp->tasks[i].arguments_values = (char **) malloc(workflow->tasks[i].arguments_num * sizeof(char *));
+				tmp->tasks[i].arguments_lists = (oph_workflow_ordered_list **) malloc(workflow->tasks[i].arguments_num * sizeof(oph_workflow_ordered_list *));
 				for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
 					tmp->tasks[i].arguments_keys[j] = strdup(workflow->tasks[i].arguments_keys[j]);
 					tmp->tasks[i].arguments_values[j] = strdup(workflow->tasks[i].arguments_values[j]);
+					tmp->tasks[i].arguments_lists[j] = oph_workflow_copy_list(workflow->tasks[i].arguments_lists[j]);
 				}
 			} else {
 				tmp->tasks[i].arguments_keys = NULL;
 				tmp->tasks[i].arguments_values = NULL;
+				tmp->tasks[i].arguments_lists = NULL;
 			}
 			tmp->tasks[i].deps_num = workflow->tasks[i].deps_num;
 			if (workflow->tasks[i].deps_num) {
@@ -456,11 +465,15 @@ int oph_workflow_pop(oph_workflow * workflow, oph_workflow_stack * prev)
 					free(tmp->tasks[i].arguments_keys[j]);
 				if (tmp->tasks[i].arguments_values[j])
 					free(tmp->tasks[i].arguments_values[j]);
+				if (tmp->tasks[i].arguments_lists[j])
+					oph_workflow_free_list(tmp->tasks[i].arguments_lists[j]);
 			}
 			if (tmp->tasks[i].arguments_keys)
 				free(tmp->tasks[i].arguments_keys);
 			if (tmp->tasks[i].arguments_values)
 				free(tmp->tasks[i].arguments_values);
+			if (tmp->tasks[i].arguments_lists)
+				free(tmp->tasks[i].arguments_lists);
 			if (tmp->tasks[i].deps_task_index)
 				free(tmp->tasks[i].deps_task_index);
 			if (tmp->tasks[i].dependents_indexes)
@@ -552,6 +565,14 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 			if (s->arguments_values[i] && !((d->arguments_values[i] = strdup(s->arguments_values[i]))))
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
+	if (s->arguments_lists) {
+		d->arguments_lists = (oph_workflow_ordered_list **) calloc(s->arguments_num, sizeof(oph_workflow_ordered_list *));
+		if (!d->arguments_lists)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		for (i = 0; i < s->arguments_num; ++i)
+			if (s->arguments_lists[i] && !((d->arguments_lists[i] = oph_workflow_copy_list(s->arguments_lists[i]))))
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
 	if (s->deps) {
 		d->deps = (oph_workflow_dep *) calloc(s->deps_num, sizeof(oph_workflow_dep));
 		if (!d->deps)
@@ -585,6 +606,43 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->on_exit && !((s->on_exit = strdup(s->on_exit))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list)
+{
+	oph_workflow_ordered_list *c, *p = NULL, *result = NULL;
+
+	while (list) {
+		c = (oph_workflow_ordered_list *) malloc(sizeof(oph_workflow_ordered_list));
+		c->key = list->key ? strdup(list->key) : NULL;
+		c->object = list->object ? strdup(list->object) : NULL;
+		c->next = NULL;
+		if (!result)
+			result = c;
+		if (p)
+			p->next = c;
+		p = c;
+		list = list->next;
+	}
+
+	return result;
+}
+
+int oph_workflow_free_list(oph_workflow_ordered_list * list)
+{
+	oph_workflow_ordered_list *c;
+
+	while (list) {
+		c = list;
+		list = list->next;
+		if (c->key)
+			free(c->key);
+		if (c->object)
+			free(c->object);
+		free(c);
+	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

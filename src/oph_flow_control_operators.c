@@ -1943,6 +1943,11 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TIMEOUT)) {
 				timeout = strdup(arg_value);
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILENAME)) {
+				if (!wd->filename)
+					wd->filename = strdup(arg_value);
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_OUTPUT)) {
+				if (wd->filename)
+					free(wd->filename);
 				wd->filename = strdup(arg_value);
 			} else if (message && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_MESSAGE)) {
 				*message = strdup(arg_value);
@@ -1975,6 +1980,10 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			}
 			ret = OPH_SERVER_ERROR;
 			break;
+		}
+		if (wd->filename) {
+			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_FILE, OPH_SEPARATOR_KV, wd->filename, OPH_SEPARATOR_PARAM);
+			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
 		}
 		if (timeout) {
 			if (ttype == 'd') {

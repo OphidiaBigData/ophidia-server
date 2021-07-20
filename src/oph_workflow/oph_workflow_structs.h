@@ -26,6 +26,12 @@
 
 #include "hashtbl.h"
 
+typedef struct _oph_workflow_ordered_list {
+	char *key;
+	char *object;
+	struct _oph_workflow_ordered_list *next;
+} oph_workflow_ordered_list;
+
 /* \brief Struct for a variable of an OPH_WORKFLOW
  * \param caller The index of task that has inserted the variable
  * \param svalue Value of the variable
@@ -146,6 +152,7 @@ typedef struct _oph_workflow_task {
 	int nthreads;
 	char **arguments_keys;
 	char **arguments_values;
+	oph_workflow_ordered_list **arguments_lists;
 	int arguments_num;
 	oph_workflow_dep *deps;
 	int deps_num;
@@ -225,6 +232,7 @@ typedef struct _oph_workflow_task_out {
 typedef struct _oph_workflow_stack_task {
 	char **arguments_keys;
 	char **arguments_values;
+	oph_workflow_ordered_list **arguments_lists;
 	int arguments_num;
 	int *deps_task_index;
 	int deps_num;
@@ -363,6 +371,8 @@ int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **sv
 int oph_workflow_pop(oph_workflow * workflow, oph_workflow_stack * prev);
 int oph_workflow_expand(oph_workflow * workflow, int tasks_num);
 int oph_workflow_copy_task(oph_workflow_task * stask, oph_workflow_task * dtask, int suffix);
+oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list);
+int oph_workflow_free_list(oph_workflow_ordered_list * list);
 
 // Others
 int oph_output_data_free(char **output, int num);

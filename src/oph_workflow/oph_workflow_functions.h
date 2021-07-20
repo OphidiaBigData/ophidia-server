@@ -120,9 +120,10 @@ int oph_gparent_of(oph_workflow * wf, int k);
 /* \brief Function to realloc a static vector
  * \param vector Input array
  * \param length Initial array length
- * \param incr Additional size
+ * \param incr Additional item number
  * \return 1 in case of errors
  */
 int oph_realloc_vector(char ***vector, int *length, int incr);
+int oph_realloc_vector2(oph_workflow_ordered_list *** vector, int *length, int incr);
 
 #endif				//__OPH_WORKFLOW_FUNCTIONS_H

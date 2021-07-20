@@ -237,6 +237,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_keys[0] = strdup("condition");
 		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
 		wf->tasks[0].arguments_values[0] = strdup(condition);
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 2;
@@ -256,6 +257,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_num = 0;
 		wf->tasks[1].arguments_keys = NULL;
 		wf->tasks[1].arguments_values = NULL;
+		wf->tasks[1].arguments_lists = NULL;
 		wf->tasks[1].deps_num = 1;
 		wf->tasks[1].deps = (oph_workflow_dep *) calloc(wf->tasks[1].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[1].deps[0].task_name = strdup("IF");
@@ -277,6 +279,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_num = 0;
 		wf->tasks[2].arguments_keys = NULL;
 		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].arguments_lists = NULL;
 		wf->tasks[2].deps_num = 1;
 		wf->tasks[2].deps = (oph_workflow_dep *) calloc(wf->tasks[2].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[2].deps[0].task_name = strdup("IF");
@@ -298,6 +301,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[3].arguments_num = 0;
 		wf->tasks[3].arguments_keys = NULL;
 		wf->tasks[3].arguments_values = NULL;
+		wf->tasks[3].arguments_lists = NULL;
 		wf->tasks[3].deps_num = 1;
 		wf->tasks[3].deps = (oph_workflow_dep *) calloc(wf->tasks[3].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[3].deps[0].task_name = strdup("ELSE");
@@ -319,6 +323,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[4].arguments_num = 0;
 		wf->tasks[4].arguments_keys = NULL;
 		wf->tasks[4].arguments_values = NULL;
+		wf->tasks[4].arguments_lists = NULL;
 		wf->tasks[4].deps_num = 2;
 		wf->tasks[4].deps = (oph_workflow_dep *) calloc(wf->tasks[4].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[4].deps[0].task_name = strdup("Operator for true");
@@ -350,9 +355,11 @@ int _check_oph_server(const char *function, int option)
 					free(wf->tasks[0].arguments_keys);
 					free(wf->tasks[0].arguments_values[0]);
 					free(wf->tasks[0].arguments_values);
+					free(wf->tasks[0].arguments_lists);
 					wf->tasks[0].arguments_num = 0;
 					wf->tasks[0].arguments_keys = NULL;
 					wf->tasks[0].arguments_values = NULL;
+					wf->tasks[0].arguments_lists = NULL;
 				}
 				break;
 
@@ -566,6 +573,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_keys[0] = strdup("condition");
 		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
 		wf->tasks[0].arguments_values[0] = strdup("0");
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 2;
@@ -585,6 +593,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_num = 0;
 		wf->tasks[1].arguments_keys = NULL;
 		wf->tasks[1].arguments_values = NULL;
+		wf->tasks[1].arguments_lists = NULL;
 		wf->tasks[1].deps_num = 1;
 		wf->tasks[1].deps = (oph_workflow_dep *) calloc(wf->tasks[1].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[1].deps[0].task_name = strdup("IF");
@@ -606,6 +615,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_num = 0;
 		wf->tasks[2].arguments_keys = NULL;
 		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].arguments_lists = NULL;
 		wf->tasks[2].deps_num = 1;
 		wf->tasks[2].deps = (oph_workflow_dep *) calloc(wf->tasks[2].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[2].deps[0].task_name = strdup("IF");
@@ -627,6 +637,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[3].arguments_num = 0;
 		wf->tasks[3].arguments_keys = NULL;
 		wf->tasks[3].arguments_values = NULL;
+		wf->tasks[3].arguments_lists = NULL;
 		wf->tasks[3].deps_num = 1;
 		wf->tasks[3].deps = (oph_workflow_dep *) calloc(wf->tasks[3].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[3].deps[0].task_name = strdup("ELSE");
@@ -648,6 +659,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[4].arguments_num = 0;
 		wf->tasks[4].arguments_keys = NULL;
 		wf->tasks[4].arguments_values = NULL;
+		wf->tasks[4].arguments_lists = NULL;
 		wf->tasks[4].deps_num = 2;
 		wf->tasks[4].deps = (oph_workflow_dep *) calloc(wf->tasks[4].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[4].deps[0].task_name = strdup("Operator for true");
@@ -745,6 +757,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_num = 0;
 		wf->tasks[0].arguments_keys = NULL;
 		wf->tasks[0].arguments_values = NULL;
+		wf->tasks[0].arguments_lists = NULL;
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 1;
@@ -908,6 +921,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_values[1] = strdup("first|second|third");
 		wf->tasks[1].arguments_values[2] = strdup("1:3");
 		wf->tasks[1].arguments_values[3] = strdup("no");
+		wf->tasks[1].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[1].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[1].deps_num = 1;
 		wf->tasks[1].deps = (oph_workflow_dep *) calloc(wf->tasks[1].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[1].deps[0].task_name = strdup("Operator1");
@@ -930,6 +944,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_num = 0;
 		wf->tasks[2].arguments_keys = NULL;
 		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].arguments_lists = NULL;
 		wf->tasks[2].deps_num = 1;
 		wf->tasks[2].deps = (oph_workflow_dep *) calloc(wf->tasks[2].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[2].deps[0].task_name = strdup("FOR");
@@ -951,6 +966,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[3].arguments_num = 0;
 		wf->tasks[3].arguments_keys = NULL;
 		wf->tasks[3].arguments_values = NULL;
+		wf->tasks[3].arguments_lists = NULL;
 		wf->tasks[3].deps_num = 1;
 		wf->tasks[3].deps = (oph_workflow_dep *) calloc(wf->tasks[3].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[3].deps[0].task_name = strdup("Operator2");
@@ -1417,6 +1433,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_values[1] = strdup("first|second|third");
 		wf->tasks[0].arguments_values[2] = strdup("1:3");
 		wf->tasks[0].arguments_values[3] = strdup("no");
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 1;
@@ -1440,6 +1457,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_num = 0;
 		wf->tasks[1].arguments_keys = NULL;
 		wf->tasks[1].arguments_values = NULL;
+		wf->tasks[1].arguments_lists = NULL;
 		wf->tasks[1].deps_num = 1;
 		wf->tasks[1].deps = (oph_workflow_dep *) calloc(wf->tasks[1].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[1].deps[0].task_name = strdup("FOR");
@@ -1461,6 +1479,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_num = 0;
 		wf->tasks[2].arguments_keys = NULL;
 		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].arguments_lists = NULL;
 		wf->tasks[2].deps_num = 1;
 		wf->tasks[2].deps = (oph_workflow_dep *) calloc(wf->tasks[2].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[2].deps[0].task_name = strdup("Operator");
@@ -1801,6 +1820,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_values[1] = strdup("first|second|third");
 		wf->tasks[0].arguments_values[2] = strdup("1:3");
 		wf->tasks[0].arguments_values[3] = strdup("no");
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 1;
@@ -1826,6 +1846,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_keys[0] = strdup("condition");
 		wf->tasks[1].arguments_values = (char **) calloc(wf->tasks[1].arguments_num, sizeof(char *));
 		wf->tasks[1].arguments_values[0] = strdup("1");
+		wf->tasks[1].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[1].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[1].deps_num = 1;
 		wf->tasks[1].deps = (oph_workflow_dep *) calloc(wf->tasks[1].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[1].deps[0].task_name = strdup("FOR");
@@ -1848,6 +1869,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_num = 0;
 		wf->tasks[2].arguments_keys = NULL;
 		wf->tasks[2].arguments_values = NULL;
+		wf->tasks[2].arguments_lists = NULL;
 		wf->tasks[2].deps_num = 1;
 		wf->tasks[2].deps = (oph_workflow_dep *) calloc(wf->tasks[2].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[2].deps[0].task_name = strdup("IF");
@@ -1869,6 +1891,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[3].arguments_num = 0;
 		wf->tasks[3].arguments_keys = NULL;
 		wf->tasks[3].arguments_values = NULL;
+		wf->tasks[3].arguments_lists = NULL;
 		wf->tasks[3].deps_num = 1;
 		wf->tasks[3].deps = (oph_workflow_dep *) calloc(wf->tasks[3].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[3].deps[0].task_name = strdup("IF");
@@ -1890,6 +1913,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[4].arguments_num = 0;
 		wf->tasks[4].arguments_keys = NULL;
 		wf->tasks[4].arguments_values = NULL;
+		wf->tasks[4].arguments_lists = NULL;
 		wf->tasks[4].deps_num = 1;
 		wf->tasks[4].deps = (oph_workflow_dep *) calloc(wf->tasks[4].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[4].deps[0].task_name = strdup("ELSE");
@@ -1911,6 +1935,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[5].arguments_num = 0;
 		wf->tasks[5].arguments_keys = NULL;
 		wf->tasks[5].arguments_values = NULL;
+		wf->tasks[5].arguments_lists = NULL;
 		wf->tasks[5].deps_num = 2;
 		wf->tasks[5].deps = (oph_workflow_dep *) calloc(wf->tasks[5].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[5].deps[0].task_name = strdup("Operator for true");
@@ -1936,6 +1961,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[6].arguments_num = 0;
 		wf->tasks[6].arguments_keys = NULL;
 		wf->tasks[6].arguments_values = NULL;
+		wf->tasks[6].arguments_lists = NULL;
 		wf->tasks[6].deps_num = 1;
 		wf->tasks[6].deps = (oph_workflow_dep *) calloc(wf->tasks[6].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[6].deps[0].task_name = strdup("ENDIF");
@@ -1958,6 +1984,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[7].arguments_keys[0] = strdup("timeout");
 		wf->tasks[7].arguments_values = (char **) calloc(wf->tasks[7].arguments_num, sizeof(char *));
 		wf->tasks[7].arguments_values[0] = strdup("2");
+		wf->tasks[7].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[7].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[7].deps_num = 1;
 		wf->tasks[7].deps = (oph_workflow_dep *) calloc(wf->tasks[7].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[7].deps[0].task_name = strdup("ENDFOR");
@@ -1980,6 +2007,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[8].arguments_keys[0] = strdup("timeout");
 		wf->tasks[8].arguments_values = (char **) calloc(wf->tasks[8].arguments_num, sizeof(char *));
 		wf->tasks[8].arguments_values[0] = strdup("2");
+		wf->tasks[8].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[8].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[8].deps_num = 1;
 		wf->tasks[8].deps = (oph_workflow_dep *) calloc(wf->tasks[8].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[8].deps[0].task_name = strdup("ENDFOR");
@@ -2002,6 +2030,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[9].arguments_keys[0] = strdup("timeout");
 		wf->tasks[9].arguments_values = (char **) calloc(wf->tasks[9].arguments_num, sizeof(char *));
 		wf->tasks[9].arguments_values[0] = strdup("2");
+		wf->tasks[9].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[9].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[9].deps_num = 1;
 		wf->tasks[9].deps = (oph_workflow_dep *) calloc(wf->tasks[9].deps_num, sizeof(oph_workflow_dep));
 		wf->tasks[9].deps[0].task_name = strdup("ENDFOR");
@@ -2410,6 +2439,7 @@ int _check_oph_server(const char *function, int option)
 			wf->tasks[0].arguments_values[0] = strdup(filter[option < filter_num ? option : 0]);
 			wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
 			wf->tasks[0].arguments_values[2] = strdup("measure");
+			wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 			wf->tasks[0].run = 1;
 
 			ophidiadb oDB;
@@ -2796,6 +2826,7 @@ int _check_oph_server(const char *function, int option)
 			wf->tasks[0].arguments_values[1] = strdup(wf->cwd);
 			wf->tasks[0].arguments_values[2] = strdup("x");
 			wf->tasks[0].arguments_values[3] = strdup("/");
+			wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 			wf->tasks[0].run = 1;
 
 			switch (option) {
@@ -3049,6 +3080,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_keys[1] = strdup("value");
 		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
 		wf->tasks[0].arguments_values[0] = strdup("variable");
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 0;
@@ -3135,6 +3167,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
 		wf->tasks[0].arguments_values[0] = strdup("variable");
 		wf->tasks[0].arguments_values[2] = strdup("WAIT");
+		wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[0].deps_num = 0;
 		wf->tasks[0].deps = NULL;
 		wf->tasks[0].dependents_indexes_num = 0;
@@ -3154,6 +3187,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[1].arguments_keys[0] = strdup("timeout");
 		wf->tasks[1].arguments_values = (char **) calloc(wf->tasks[1].arguments_num, sizeof(char *));
 		wf->tasks[1].arguments_values[0] = strdup("10");
+		wf->tasks[1].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[1].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[1].deps_num = 0;
 		wf->tasks[1].deps = NULL;
 		wf->tasks[1].dependents_indexes_num = 0;
@@ -3173,6 +3207,7 @@ int _check_oph_server(const char *function, int option)
 		wf->tasks[2].arguments_keys[0] = strdup("timeout");
 		wf->tasks[2].arguments_values = (char **) calloc(wf->tasks[2].arguments_num, sizeof(char *));
 		wf->tasks[2].arguments_values[0] = strdup("20");
+		wf->tasks[2].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[2].arguments_num, sizeof(oph_workflow_ordered_list *));
 		wf->tasks[2].deps_num = 0;
 		wf->tasks[2].deps = NULL;
 		wf->tasks[2].dependents_indexes_num = 0;
@@ -3416,6 +3451,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("deadline");
 					wf->tasks[0].arguments_values[3] = strdup("http://localhost/1");
 					wf->tasks[0].arguments_values[4] = strdup(wf->cwd);
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3430,6 +3466,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[0] = strdup("2010-01-01 00:00:00");
 					wf->tasks[0].arguments_values[1] = strdup("no");
 					wf->tasks[0].arguments_values[2] = strdup("deadline");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3444,6 +3481,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[0] = strdup("10");
 					wf->tasks[0].arguments_values[1] = strdup("no");
 					wf->tasks[0].arguments_values[2] = strdup("wrong");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3456,6 +3494,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values = (char **) calloc(wf->tasks[0].arguments_num, sizeof(char *));
 					wf->tasks[0].arguments_values[0] = strdup("10");
 					wf->tasks[0].arguments_values[1] = strdup("wrong");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3472,6 +3511,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[1] = strdup("no");
 					wf->tasks[0].arguments_values[2] = strdup("file");
 					wf->tasks[0].arguments_values[3] = strdup("filename");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3486,6 +3526,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[0] = strdup("10");
 					wf->tasks[0].arguments_values[1] = strdup("no");
 					wf->tasks[0].arguments_values[2] = strdup("message");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3504,6 +3545,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("variable");
 					wf->tasks[0].arguments_values[4] = strdup("value");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3518,6 +3560,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[0] = strdup("10");
 					wf->tasks[0].arguments_values[1] = strdup("no");
 					wf->tasks[0].arguments_values[2] = strdup("wrong");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3552,6 +3595,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("variable");
 					wf->tasks[0].arguments_values[4] = strdup("@goodvariable");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3570,6 +3614,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("variable");
 					wf->tasks[0].arguments_values[4] = strdup("@badvariable");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3588,6 +3633,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("1ndex");
 					wf->tasks[0].arguments_values[4] = strdup("value");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3606,6 +3652,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("special:");
 					wf->tasks[0].arguments_values[4] = strdup("value");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3624,6 +3671,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("variable");
 					wf->tasks[0].arguments_values[4] = strdup("value|value2");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -3642,6 +3690,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_values[2] = strdup("input");
 					wf->tasks[0].arguments_values[3] = strdup("variable|variable2");
 					wf->tasks[0].arguments_values[4] = strdup("value");
+					wf->tasks[0].arguments_lists = (oph_workflow_ordered_list **) calloc(wf->tasks[0].arguments_num, sizeof(oph_workflow_ordered_list *));
 				}
 				break;
 
@@ -4213,6 +4262,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_num = 0;
 					wf->tasks[0].arguments_keys = NULL;
 					wf->tasks[0].arguments_values = NULL;
+					wf->tasks[0].arguments_lists = NULL;
 					wf->tasks[0].deps_num = 0;
 					wf->tasks[0].deps = NULL;
 					wf->tasks[0].dependents_indexes_num = 0;
@@ -4239,6 +4289,7 @@ int _check_oph_server(const char *function, int option)
 					wf->tasks[0].arguments_num = 0;
 					wf->tasks[0].arguments_keys = NULL;
 					wf->tasks[0].arguments_values = NULL;
+					wf->tasks[0].arguments_lists = NULL;
 					wf->tasks[0].deps_num = 0;
 					wf->tasks[0].deps = NULL;
 					wf->tasks[0].dependents_indexes_num = 1;	// Wrong

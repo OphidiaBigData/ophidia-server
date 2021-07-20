@@ -129,6 +129,7 @@
 #define OPH_OPERATOR_PARAMETER_USER_FILTER "user_filter"
 #define OPH_OPERATOR_PARAMETER_ENABLE "enable"
 #define OPH_OPERATOR_PARAMETER_DISABLE "disable"
+#define OPH_OPERATOR_PARAMETER_OUTPUT "output"
 
 // Known values
 #define OPH_COMMON_NULL "-"

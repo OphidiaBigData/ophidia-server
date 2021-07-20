@@ -353,10 +353,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
 				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
 				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF) && strcmp(tmp, OPH_OPERATOR_WAIT)) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation '%s' not allowed\n", (*workflow)->tasks[i].operator);
 					oph_workflow_free(*workflow);
 					if (jansson)
 						json_decref(jansson);
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation not allowed\n");
 					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 				}
 			}
@@ -395,7 +395,21 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating task arg values\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				(*workflow)->tasks[i].arguments_lists = (oph_workflow_ordered_list **) calloc((*workflow)->tasks[i].arguments_num, sizeof(oph_workflow_ordered_list *));
+				if (!((*workflow)->tasks[i].arguments_lists)) {
+					(*workflow)->tasks[i].arguments_num = 0;
+					free((*workflow)->tasks[i].arguments_keys);
+					(*workflow)->tasks[i].arguments_keys = NULL;
+					free((*workflow)->tasks[i].arguments_values);
+					(*workflow)->tasks[i].arguments_values = NULL;
+					oph_workflow_free(*workflow);
+					if (jansson)
+						json_decref(jansson);
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating task arg values\n");
+					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+				}
 				for (j = 0; j < (*workflow)->tasks[i].arguments_num; j++) {
+					(*workflow)->tasks[i].arguments_lists[j] = NULL;
 					char *argument = NULL;
 					json_unpack(json_array_get(arguments, j), "s", &argument);
 					if (argument) {
@@ -451,6 +465,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating deps\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				unsigned int auto_order = 0;
+				char auto_order_s[OPH_WORKFLOW_MIN_STRING];
 				for (j = 0; j < (*workflow)->tasks[i].deps_num; j++) {
 					json_t *dependency = NULL;
 					dependency = json_array_get(dependencies, j);
@@ -492,7 +508,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 						if (order) {
 							(*workflow)->tasks[i].deps[j].order = (char *) strdup((const char *) order);
 						} else {
-							(*workflow)->tasks[i].deps[j].order = (char *) strdup((const char *) "0");
+							snprintf(auto_order_s, OPH_WORKFLOW_MIN_STRING, "%d", auto_order++);
+							(*workflow)->tasks[i].deps[j].order = (char *) strdup(auto_order_s);
 						}
 						if (!((*workflow)->tasks[i].deps[j].order)) {
 							oph_workflow_free(*workflow);
@@ -794,12 +811,16 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
 		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_CDO) || !strcmp((*workflow)->tasks[i].type, OPH_TYPE_GENERIC)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
-			int kk = (*workflow)->tasks[i].arguments_num;
+			int kk = (*workflow)->tasks[i].arguments_num, kkk = kk;
 			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, 1) || (kk != 1 + (*workflow)->tasks[i].arguments_num)) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			} else if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_values), &((*workflow)->tasks[i].arguments_num), 1) || (kk != (*workflow)->tasks[i].arguments_num)) {
+			} else if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_values), &kkk, 1) || (kk != kkk)) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			} else if (oph_realloc_vector2(&((*workflow)->tasks[i].arguments_lists), &((*workflow)->tasks[i].arguments_num), 1) || (kk != (*workflow)->tasks[i].arguments_num)) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -807,6 +828,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			kk--;
 			(*workflow)->tasks[i].arguments_keys[kk] = strdup(OPH_ARG_COMMAND);
 			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
+			(*workflow)->tasks[i].arguments_lists[kk] = NULL;
 
 			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].type) <= 0) {
 				oph_workflow_free(*workflow);
@@ -1140,17 +1162,39 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments values\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				tasks[i].arguments_lists = (oph_workflow_ordered_list **) calloc(1, sizeof(oph_workflow_ordered_list *));
+				if (!(tasks[i].arguments_lists)) {
+					free(tasks[i].arguments_keys);
+					free(tasks[i].arguments_values);
+					tasks[i].arguments_keys = NULL;
+					tasks[i].arguments_values = NULL;
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments lists\n");
+					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+				}
 				tasks[i].arguments_num++;
 				tasks[i].arguments_keys[0] = (char *) strdup((const char *) key);
 				if (!(tasks[i].arguments_keys[0])) {
+					free(tasks[i].arguments_keys);
+					free(tasks[i].arguments_values);
+					free(tasks[i].arguments_lists);
+					tasks[i].arguments_keys = NULL;
+					tasks[i].arguments_values = NULL;
+					tasks[i].arguments_lists = NULL;
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments key\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
 				tasks[i].arguments_values[0] = (char *) strdup((const char *) value);
 				if (!(tasks[i].arguments_values[0])) {
+					free(tasks[i].arguments_keys);
+					free(tasks[i].arguments_values);
+					free(tasks[i].arguments_lists);
+					tasks[i].arguments_keys = NULL;
+					tasks[i].arguments_values = NULL;
+					tasks[i].arguments_lists = NULL;
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments value\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				tasks[i].arguments_lists[0] = NULL;
 			}
 		} else {
 			int found = 0;
@@ -1168,6 +1212,8 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 						tasks[i].arguments_keys[j] = NULL;
 						free(tasks[i].arguments_values[j]);
 						tasks[i].arguments_values[j] = NULL;
+						oph_workflow_free_list(tasks[i].arguments_lists[j]);
+						tasks[i].arguments_lists[j] = NULL;
 						char **tmpkeys = (char **) calloc(tasks[i].arguments_num - 1, sizeof(char *));
 						if (!tmpkeys) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating tmpkeys\n");
@@ -1179,18 +1225,28 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating tmpvalues\n");
 							return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 						}
+						oph_workflow_ordered_list **tmplists = (oph_workflow_ordered_list **) calloc(tasks[i].arguments_num - 1, sizeof(oph_workflow_ordered_list *));
+						if (!tmpvalues) {
+							free(tmpkeys);
+							free(tmpvalues);
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating tmplists\n");
+							return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+						}
 						int k, q = 0;
 						for (k = 0; k < tasks[i].arguments_num; k++) {
 							if (tasks[i].arguments_keys[k]) {
 								tmpkeys[q] = tasks[i].arguments_keys[k];
 								tmpvalues[q] = tasks[i].arguments_values[k];
+								tmplists[q] = tasks[i].arguments_lists[k];
 								q++;
 							}
 						}
 						free(tasks[i].arguments_keys);
 						free(tasks[i].arguments_values);
+						free(tasks[i].arguments_lists);
 						tasks[i].arguments_keys = tmpkeys;
 						tasks[i].arguments_values = tmpvalues;
+						tasks[i].arguments_lists = tmplists;
 						tasks[i].arguments_num--;
 					}
 					break;
@@ -1206,6 +1262,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 				} else {
 					char **tmpkeys = tasks[i].arguments_keys;
 					char **tmpvalues = tasks[i].arguments_values;
+					oph_workflow_ordered_list **tmplists = tasks[i].arguments_lists;
 					tasks[i].arguments_keys = (char **) realloc(tasks[i].arguments_keys, sizeof(char *) * (tasks[i].arguments_num + 1));
 					if (!(tasks[i].arguments_keys)) {
 						tasks[i].arguments_keys = tmpkeys;
@@ -1220,6 +1277,13 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 					}
 					tasks[i].arguments_values[tasks[i].arguments_num] = NULL;
+					tasks[i].arguments_lists = (oph_workflow_ordered_list **) realloc(tasks[i].arguments_lists, sizeof(oph_workflow_ordered_list *) * (tasks[i].arguments_num + 1));
+					if (!(tasks[i].arguments_lists)) {
+						tasks[i].arguments_lists = tmplists;
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Error reallocating arguments lists\n");
+						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+					}
+					tasks[i].arguments_lists[tasks[i].arguments_num] = NULL;
 					tasks[i].arguments_num++;
 					tasks[i].arguments_keys[tasks[i].arguments_num - 1] = (char *) strdup((const char *) key);
 					if (!(tasks[i].arguments_keys[tasks[i].arguments_num - 1])) {
@@ -1231,6 +1295,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tas
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating new argument value\n");
 						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 					}
+					tasks[i].arguments_lists[tasks[i].arguments_num - 1] = NULL;
 				}
 			}
 		}
@@ -1270,6 +1335,14 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments values\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				tasks[i].arguments_lists = (oph_workflow_ordered_list **) calloc(1, sizeof(oph_workflow_ordered_list *));
+				if (!(tasks[i].arguments_lists)) {
+					free(tasks[i].arguments_keys);
+					tasks[i].arguments_keys = NULL;
+					tasks[i].arguments_values = NULL;
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments values\n");
+					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+				}
 				tasks[i].arguments_num++;
 				tasks[i].arguments_keys[0] = (char *) strdup((const char *) "cube");
 				if (!(tasks[i].arguments_keys[0])) {
@@ -1281,6 +1354,7 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating arguments value\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				tasks[i].arguments_lists[0] = NULL;
 			}
 		} else {
 			int found = 0;
@@ -1302,6 +1376,7 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 				if (ok) {
 					char **tmpkeys = tasks[i].arguments_keys;
 					char **tmpvalues = tasks[i].arguments_values;
+					oph_workflow_ordered_list **tmplists = tasks[i].arguments_lists;
 					tasks[i].arguments_keys = (char **) realloc(tasks[i].arguments_keys, sizeof(char *) * (tasks[i].arguments_num + 1));
 					if (!(tasks[i].arguments_keys)) {
 						tasks[i].arguments_keys = tmpkeys;
@@ -1316,6 +1391,13 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 					}
 					tasks[i].arguments_values[tasks[i].arguments_num] = NULL;
+					tasks[i].arguments_lists = (oph_workflow_ordered_list **) realloc(tasks[i].arguments_lists, sizeof(oph_workflow_ordered_list *) * (tasks[i].arguments_num + 1));
+					if (!(tasks[i].arguments_lists)) {
+						tasks[i].arguments_lists = tmplists;
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Error reallocating arguments lists\n");
+						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+					}
+					tasks[i].arguments_lists[tasks[i].arguments_num] = NULL;
 					tasks[i].arguments_num++;
 					tasks[i].arguments_keys[tasks[i].arguments_num - 1] = (char *) strdup((const char *) "cube");
 					if (!(tasks[i].arguments_keys[tasks[i].arguments_num - 1])) {
@@ -1327,6 +1409,7 @@ int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int task
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Error allocating new argument value\n");
 						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 					}
+					tasks[i].arguments_lists[tasks[i].arguments_num - 1] = NULL;
 				}
 			}
 		}

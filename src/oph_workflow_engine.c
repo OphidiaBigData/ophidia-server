@@ -288,6 +288,15 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 				free(wf->tasks[i].arguments_values);
 				wf->tasks[i].arguments_values = NULL;
 			}
+			if (wf->tasks[i].arguments_lists) {
+				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+					if (wf->tasks[i].arguments_lists[j]) {
+						free(wf->tasks[i].arguments_lists[j]);
+						wf->tasks[i].arguments_lists[j] = NULL;
+					}
+				free(wf->tasks[i].arguments_lists);
+				wf->tasks[i].arguments_lists = NULL;
+			}
 			wf->tasks[i].arguments_num = stack->tasks[i].arguments_num;
 			if (wf->tasks[i].arguments_num) {
 				wf->tasks[i].arguments_keys = (char **) malloc(wf->tasks[i].arguments_num * sizeof(char *));
@@ -300,9 +309,15 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
 					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 				}
+				wf->tasks[i].arguments_lists = (oph_workflow_ordered_list **) malloc(wf->tasks[i].arguments_num * sizeof(oph_workflow_ordered_list *));
+				if (!wf->tasks[i].arguments_lists) {
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "Memory error\n");
+					return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+				}
 				for (j = 0; j < stack->tasks[i].arguments_num; ++j) {
 					wf->tasks[i].arguments_keys[j] = strdup(stack->tasks[i].arguments_keys[j]);
 					wf->tasks[i].arguments_values[j] = strdup(stack->tasks[i].arguments_values[j]);
+					wf->tasks[i].arguments_lists[j] = oph_workflow_copy_list(stack->tasks[i].arguments_lists[j]);
 				}
 			}
 			for (j = 0; j < wf->tasks[i].deps_num; ++j)
@@ -1529,6 +1544,15 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			if (wf->tasks[i].residual_deps_num || wf->tasks[i].status)
 				continue;
+
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+				if (wf->tasks[i].arguments_lists[j]) {
+					oph_workflow_print_list(wf->tasks[i].arguments_lists[j], wf->tasks[i].arguments_values + j);
+					oph_workflow_free_list(wf->tasks[i].arguments_lists[j]);
+					wf->tasks[i].arguments_lists[j] = NULL;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: use '%s=%s' for task '%s'\n", ttype, jobid, wf->tasks[i].arguments_keys[j], wf->tasks[i].arguments_values[j],
+					      wf->tasks[i].name);
+				}
 
 			if (!wf->tasks[i].idjob)	// Normal task
 			{
@@ -4291,6 +4315,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												if (!strcmp(wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].deps[j].argument))
 													break;
 											if (kk < wf->tasks[dep_task_index].arguments_num) {
+/*
 												snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->tasks[dep_task_index].arguments_values[kk],
 													 OPH_SEPARATOR_SUBPARAM_STR, wf->tasks[task_index].outputs_values[k]);
 												free(wf->tasks[dep_task_index].arguments_values[kk]);
@@ -4298,8 +4323,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair '%s=%s' of task '%s'\n", ttype, jobid,
 												      wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].arguments_values[kk],
 												      wf->tasks[dep_task_index].name);
+*/
 											} else {
 												kk = wf->tasks[dep_task_index].arguments_num;
+												int kkk = kk;
 												if (oph_realloc_vector(&(wf->tasks[dep_task_index].arguments_keys), &kk, 1)
 												    || (kk != 1 + wf->tasks[dep_task_index].arguments_num)) {
 													pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
@@ -4307,8 +4334,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 													*response = OPH_SERVER_SYSTEM_ERROR;
 													return SOAP_OK;
 												}
-												if (oph_realloc_vector
-												    (&(wf->tasks[dep_task_index].arguments_values), &(wf->tasks[dep_task_index].arguments_num), 1)
+												if (oph_realloc_vector(&(wf->tasks[dep_task_index].arguments_values), &kkk, 1) || (kk != kkk)) {
+													pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
+													pthread_mutex_unlock(&global_flag);
+													*response = OPH_SERVER_SYSTEM_ERROR;
+													return SOAP_OK;
+												}
+												if (oph_realloc_vector2
+												    (&(wf->tasks[dep_task_index].arguments_lists), &(wf->tasks[dep_task_index].arguments_num), 1)
 												    || (kk != wf->tasks[dep_task_index].arguments_num)) {
 													pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 													pthread_mutex_unlock(&global_flag);
@@ -4317,11 +4350,26 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												}
 												kk--;
 												wf->tasks[dep_task_index].arguments_keys[kk] = strdup(wf->tasks[dep_task_index].deps[j].argument);
+/*
 												wf->tasks[dep_task_index].arguments_values[kk] = strdup(wf->tasks[task_index].outputs_values[k]);
 												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add KV pair '%s=%s' to task '%s'\n", ttype, jobid,
 												      wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].arguments_values[kk],
 												      wf->tasks[dep_task_index].name);
+*/
 											}
+
+											if (oph_workflow_add_to_list
+											    (wf->tasks[dep_task_index].deps[j].order, wf->tasks[task_index].outputs_values[k],
+											     wf->tasks[dep_task_index].arguments_lists + kk)) {
+												pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in setting ordered list\n", ttype, jobid);
+												pthread_mutex_unlock(&global_flag);
+												*response = OPH_SERVER_SYSTEM_ERROR;
+												return SOAP_OK;
+											}
+											pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add KV pair '%s=%s' to list of task '%s'\n", ttype, jobid,
+											      wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[task_index].outputs_values[k],
+											      wf->tasks[dep_task_index].name);
+
 											break;
 										}
 									if (check_for_constraint)
@@ -4662,12 +4710,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETE);
 				wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
-				int kk = wf->tasks[wf->tasks_num].arguments_num;
+				int kk = wf->tasks[wf->tasks_num].arguments_num, kkk = kk;;
 				if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, 1) || (kk != 1 + wf->tasks[wf->tasks_num].arguments_num)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 					*response = OPH_SERVER_SYSTEM_ERROR;
 					error = 1;
-				} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num), 1)
+				} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &kkk, 1) || (kk != kkk)) {
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
+					*response = OPH_SERVER_SYSTEM_ERROR;
+					error = 1;
+				} else if (oph_realloc_vector2(&(wf->tasks[wf->tasks_num].arguments_lists), &(wf->tasks[wf->tasks_num].arguments_num), 1)
 					   || (kk != wf->tasks[wf->tasks_num].arguments_num)) {
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 					*response = OPH_SERVER_SYSTEM_ERROR;
@@ -4713,6 +4765,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 					wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CUBE);
 					wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(tmp);
+					wf->tasks[wf->tasks_num].arguments_lists[kk] = NULL;
 
 					final_task = 1;
 					final = 0;
@@ -4734,12 +4787,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					wf->tasks[wf->tasks_num].operator = strdup(OPH_WORKFLOW_DELETECONTAINER);
 					wf->tasks[wf->tasks_num].ncores = 1;	// Only 1-core is used for each job of final task
 
-					int kk = wf->tasks[wf->tasks_num].arguments_num, incr = 3;	// Specific arguments for this final operation (see below)
+					int kk = wf->tasks[wf->tasks_num].arguments_num, kkk = kk, incr = 3;	// Specific arguments for this final operation (see below)
 					if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_keys), &kk, incr) || (kk != incr + wf->tasks[wf->tasks_num].arguments_num)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 						*response = OPH_SERVER_SYSTEM_ERROR;
 						error = 1;
-					} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &(wf->tasks[wf->tasks_num].arguments_num), incr)
+					} else if (oph_realloc_vector(&(wf->tasks[wf->tasks_num].arguments_values), &kkk, incr) || (kk != kkk)) {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
+						*response = OPH_SERVER_SYSTEM_ERROR;
+						error = 1;
+					} else if (oph_realloc_vector2(&(wf->tasks[wf->tasks_num].arguments_lists), &(wf->tasks[wf->tasks_num].arguments_num), incr)
 						   || (kk != wf->tasks[wf->tasks_num].arguments_num)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in reallocating vector\n", ttype, jobid);
 						*response = OPH_SERVER_SYSTEM_ERROR;
@@ -4751,11 +4808,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						if (containerid) {
 							snprintf(tmp, OPH_MAX_STRING_SIZE, "%s/%d", oph_web_server, containerid);
 							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER_PID);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(tmp);
+							wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(tmp);
+							wf->tasks[wf->tasks_num].arguments_lists[kk++] = NULL;
 							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_ARG_CONTAINER);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_NULL);
+							wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(OPH_COMMON_NULL);
+							wf->tasks[wf->tasks_num].arguments_lists[kk++] = NULL;
 							wf->tasks[wf->tasks_num].arguments_keys[kk] = strdup(OPH_WORKFLOW_DELETECONTAINER_FORCE);
-							wf->tasks[wf->tasks_num].arguments_values[kk++] = strdup(OPH_COMMON_YES);
+							wf->tasks[wf->tasks_num].arguments_values[kk] = strdup(OPH_COMMON_YES);
+							wf->tasks[wf->tasks_num].arguments_lists[kk++] = NULL;
 							final_task = 1;
 							final = 0;
 						} else {
@@ -6063,7 +6123,7 @@ int oph_workflow_command_to_json(const char *command, char **json)
 	oph_argument *args = NULL, *item;
 
 	if (oph_parse_query(&args, &counter, command)) {
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing the command\n");
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing the command '%s'\n", command);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
@@ -6581,6 +6641,57 @@ int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate
 
 	oph_odb_free_ophidiadb_list(&list);
 	oph_odb_disconnect_from_ophidiadb(&oDB);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list ** list)
+{
+	if (!key || !object || !list)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	oph_workflow_ordered_list *t, *c = *list, *p = NULL;
+
+	t = (oph_workflow_ordered_list *) malloc(sizeof(oph_workflow_ordered_list));
+	t->key = strdup(key);
+	t->object = strdup(object);
+
+	while (c) {
+		if (!c->key || (strcmp(c->key, key) > 0))
+			break;
+		p = c;
+		c = c->next;
+	}
+
+	t->next = c;
+	if (p)
+		p->next = t;
+	else
+		*list = t;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
+{
+	if (!list || !string)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	int n = 0;
+	char tmp[OPH_MAX_STRING_SIZE], flag = 0;
+
+	if (*string) {
+		n += snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", *string);
+		flag = 1;
+	}
+
+	while (list) {
+		n += snprintf(tmp + n, OPH_MAX_STRING_SIZE - n, "%s%s", flag ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object);
+		flag = 1;
+		list = list->next;
+	}
+
+	*string = strdup(tmp);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
