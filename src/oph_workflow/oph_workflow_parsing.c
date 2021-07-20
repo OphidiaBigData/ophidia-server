@@ -353,10 +353,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
 				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
 				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF) && strcmp(tmp, OPH_OPERATOR_WAIT)) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation '%s' not allowed\n", (*workflow)->tasks[i].operator);
 					oph_workflow_free(*workflow);
 					if (jansson)
 						json_decref(jansson);
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation not allowed\n");
 					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 				}
 			}
