@@ -4296,17 +4296,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											for (kk = 0; kk < wf->tasks[dep_task_index].arguments_num; ++kk)
 												if (!strcmp(wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].deps[j].argument))
 													break;
-											if (kk < wf->tasks[dep_task_index].arguments_num) {
-/*
-												snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->tasks[dep_task_index].arguments_values[kk],
-													 OPH_SEPARATOR_SUBPARAM_STR, wf->tasks[task_index].outputs_values[k]);
-												free(wf->tasks[dep_task_index].arguments_values[kk]);
-												wf->tasks[dep_task_index].arguments_values[kk] = strdup(tmp);
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair '%s=%s' of task '%s'\n", ttype, jobid,
-												      wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].arguments_values[kk],
-												      wf->tasks[dep_task_index].name);
-*/
-											} else {
+											if (kk >= wf->tasks[dep_task_index].arguments_num) {
 												kk = wf->tasks[dep_task_index].arguments_num;
 												int kkk = kk;
 												if (oph_realloc_vector(&(wf->tasks[dep_task_index].arguments_keys), &kk, 1)
@@ -4332,12 +4322,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												}
 												kk--;
 												wf->tasks[dep_task_index].arguments_keys[kk] = strdup(wf->tasks[dep_task_index].deps[j].argument);
-/*
-												wf->tasks[dep_task_index].arguments_values[kk] = strdup(wf->tasks[task_index].outputs_values[k]);
-												pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add KV pair '%s=%s' to task '%s'\n", ttype, jobid,
-												      wf->tasks[dep_task_index].arguments_keys[kk], wf->tasks[dep_task_index].arguments_values[kk],
-												      wf->tasks[dep_task_index].name);
-*/
 											}
 
 											if (oph_workflow_add_to_list
