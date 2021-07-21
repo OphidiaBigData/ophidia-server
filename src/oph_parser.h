@@ -70,6 +70,7 @@
 #endif
 
 #define OPH_SERVER_REQUEST_FLAG "jobid=0;"
+#define OPH_SERVER_SAVE_FLAG "save=no;"
 
 #define OPH_ARG_MODE_SYNC "sync"
 #define OPH_ARG_MODE_ASYNC "async"
