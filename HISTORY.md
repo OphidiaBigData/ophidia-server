@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in handling the arguments 'enable' and 'disable' of OPH_SERVICE
 - Bug in transfer metadata into accounting table
 - Bug in handling cube pids for final operation
 
