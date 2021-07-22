@@ -69,8 +69,6 @@
 #define OPH_ARG_USERINFO "userinfo"
 #endif
 
-#define OPH_SERVER_REQUEST_FLAG "jobid=0;"
-
 #define OPH_ARG_MODE_SYNC "sync"
 #define OPH_ARG_MODE_ASYNC "async"
 #define OPH_ARG_MODE_DEFAULT OPH_ARG_MODE_ASYNC
@@ -95,6 +93,8 @@
 #define OPH_SEPARATOR_FOLDER "/"
 #define OPH_COMMENT_MARK '#'
 #define OPH_SUBSTITUTION_MARK '$'
+
+#define OPH_SERVER_REQUEST_FLAG OPH_ARG_JOBID "" OPH_SEPARATOR_KV "0" OPH_SEPARATOR_PARAM
 
 // Known operators
 #define OPH_OPERATOR_LOG_INFO "oph_log_info"
