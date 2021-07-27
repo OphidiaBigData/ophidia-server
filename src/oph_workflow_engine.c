@@ -134,7 +134,7 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 {
 	if (!error_notification)
 		return NULL;
-	char tmp0[OPH_MAX_STRING_SIZE], tmp1[OPH_MAX_STRING_SIZE], tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *pointer, close;
+	char tmp0[OPH_MAX_STRING_SIZE], tmp1[OPH_MAX_STRING_SIZE], tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *output = NULL, *pointer, close;
 	size_t len;
 	*tmp1 = 0;
 	snprintf(tmp0, OPH_MAX_STRING_SIZE, "%s", error_notification);
@@ -158,6 +158,8 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 				cwd = pch;
 			else if (!strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE)))
 				cube = pch;
+			else if (!strncasecmp(pch, OPH_OPERATOR_PARAMETER_OUTPUT, strlen(OPH_OPERATOR_PARAMETER_OUTPUT)))
+				output = pch;
 		}
 		strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
 		pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);
@@ -187,6 +189,10 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 					strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
 			} else if (!cube && !strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE))) {
 				strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			} else if (!output && !strncasecmp(pch, OPH_OPERATOR_PARAMETER_INPUT, strlen(OPH_OPERATOR_PARAMETER_INPUT))) {
+				strncat(tmp1, OPH_ARG_FILE, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strncat(tmp1, pch + strlen(OPH_OPERATOR_PARAMETER_INPUT), OPH_MAX_STRING_SIZE - strlen(tmp1));
 				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
 			}
 			pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);

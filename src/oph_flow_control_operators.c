@@ -1870,7 +1870,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 	char *name = NULL, **names = NULL, **svalues = NULL;
 	int j, kk = 0, names_num = 0, svalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char *arg_value, *error_msg = NULL, *timeout = NULL, ttype = 'i';
+	char *arg_value, *error_msg = NULL, *timeout = NULL, ttype = 'i', *input = NULL;
 	char add_to_notify[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
 	*add_to_notify = 0;
 
@@ -1943,6 +1943,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILENAME)) {
 				if (!wd->filename)
 					wd->filename = strdup(arg_value);
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_INPUT)) {
+				input = strdup(arg_value);
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_OUTPUT)) {
 				if (wd->filename)
 					free(wd->filename);
@@ -1976,13 +1978,20 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				free(error_msg);
 				error_msg = NULL;
 			}
+			if (input)
+				free(input);
 			ret = OPH_SERVER_ERROR;
 			break;
 		}
 		if (wd->filename) {
 			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_FILE, OPH_SEPARATOR_KV, wd->filename, OPH_SEPARATOR_PARAM);
 			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
+		} else if (input) {
+			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_OPERATOR_PARAMETER_OUTPUT, OPH_SEPARATOR_KV, input, OPH_SEPARATOR_PARAM);
+			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
 		}
+		if (input)
+			free(input);
 		if (timeout) {
 			if (ttype == 'd') {
 				struct tm tm;
