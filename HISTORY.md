@@ -11,6 +11,10 @@
 
 - New argument 'WORKING_DIR' in main configuration file
 
+### Changed:
+
+- Activate service without authorization procedure in case authorization directory is not found
+
 
 ## v1.6.1 - 2021-03-16
 
