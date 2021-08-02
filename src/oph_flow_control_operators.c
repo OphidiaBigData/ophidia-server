@@ -150,7 +150,6 @@ void *_oph_wait(oph_notify_data * data)
 	CURL *curl = NULL;
 	char *pointer = wd->filename, *is_http = NULL;
 	char *sessionid = strdup(wf->sessionid);
-	int markerid = wf->tasks[task_index].markerid;
 	char save_flag = wf->tasks[task_index].save;
 
 	// Init
