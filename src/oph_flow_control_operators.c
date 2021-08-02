@@ -149,6 +149,9 @@ void *_oph_wait(oph_notify_data * data)
 	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], fast_exit = 0;
 	CURL *curl = NULL;
 	char *pointer = wd->filename, *is_http = NULL;
+	char *sessionid = strdup(wf->sessionid);
+	int markerid = wf->tasks[task_index].markerid;
+	char save_flag = wf->tasks[task_index].save;
 
 	// Init
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Initialize waiting procedure\n");
@@ -340,8 +343,8 @@ void *_oph_wait(oph_notify_data * data)
 			int response = 0;
 			char success_notification[OPH_MAX_STRING_SIZE];
 			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%d;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob,
-				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, wf->sessionid, OPH_ARG_MARKERID, wf->tasks[task_index].markerid,
-				 data->add_to_notify ? data->add_to_notify : "");
+				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, markerid, OPH_ARG_SAVE,
+				 save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
@@ -370,6 +373,8 @@ void *_oph_wait(oph_notify_data * data)
 	free(data);
 	if (fast_exit)
 		oph_workflow_free(wf);
+	if (sessionid)
+		free(sessionid);
 
 	if (jobid)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "W%d: exit from waiting procedure\n", jobid);
