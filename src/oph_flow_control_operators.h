@@ -37,6 +37,7 @@ typedef struct _oph_wait_data {
 	char type;
 	int timeout;
 	char *filename;
+	char *measure;
 } oph_wait_data;
 
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,

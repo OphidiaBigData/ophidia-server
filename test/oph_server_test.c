@@ -4212,6 +4212,7 @@ int _check_oph_server(const char *function, int option)
 					wd->type = 'w';	// Wrong type
 					wd->timeout = -1;
 					wd->filename = NULL;
+					wd->measure = NULL;
 					data->data = (void *) wd;
 
 					// Tasks
@@ -4243,6 +4244,7 @@ int _check_oph_server(const char *function, int option)
 					wd->type = 'f';
 					wd->timeout = -1;
 					wd->filename = strdup("testdata/a_12.test");
+					wd->measure = NULL;
 					data->data = (void *) wd;
 
 					// Tasks
