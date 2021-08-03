@@ -110,85 +110,94 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
-	int save_flag = !data || !strstr(data, OPH_SERVER_REQUEST_FLAG);	// Skip internal oph_server request
-	if (!save_flag && output_json && strlen(output_json))
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived the response to an internal request:\n%s\n", jobid, output_json);
+	if (output_json && strlen(output_json)) {
 
-	oph_json *oper_json = NULL;
-	while (save_flag && output_json && strlen(output_json)) {
-
-		size_t value_size;
-		char session_code[OPH_MAX_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], *start_pointer, *stop_pointer, error;
-		*session_code = *str_markerid = 0;
-
-		if (oph_json_from_json_string(&oper_json, output_json)) {
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);
-			break;
+		int save_flag = !data || (!strstr(data, OPH_SERVER_REQUEST_FLAG) && !strstr(data, OPH_SERVER_SAVE_FLAG));	// Skip JSON Response in case a flag is set
+		if (!save_flag) {
+			if (!strstr(data, OPH_SERVER_REQUEST_FLAG))
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived the response to an internal request:\n%s\n", jobid, output_json);
+			if (!strstr(data, OPH_SERVER_SAVE_FLAG))
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived a response to be skipped\n", jobid);
 		}
 
-		error = 1;
-		if (oper_json->source && oper_json->source->values && oper_json->source->values[0]) {
-			strcpy(session_code, oper_json->source->values[0]);
-			error = 0;
-		} else if (data) {
-			if ((start_pointer = strstr(data, OPH_ARG_SESSIONID))) {
-				start_pointer += 1 + strlen(OPH_ARG_SESSIONID);
-				stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
-				value_size = stop_pointer - start_pointer;
-				if (value_size < OPH_MAX_STRING_SIZE) {
-					char sessionid[OPH_MAX_STRING_SIZE];
-					snprintf(sessionid, 1 + value_size, "%s", start_pointer);
-					if (!oph_get_session_code(sessionid, session_code))
+		oph_json *oper_json = NULL;
+		while (save_flag) {
+
+			size_t value_size;
+			char session_code[OPH_MAX_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE], *start_pointer, *stop_pointer, error;
+			*session_code = *str_markerid = 0;
+
+			if (oph_json_from_json_string(&oper_json, output_json)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in parsing JSON Response\n", jobid);
+				break;
+			}
+
+			error = 1;
+			if (oper_json->source && oper_json->source->values && oper_json->source->values[0]) {
+				strcpy(session_code, oper_json->source->values[0]);
+				error = 0;
+			} else if (data) {
+				if ((start_pointer = strstr(data, OPH_ARG_SESSIONID))) {
+					start_pointer += 1 + strlen(OPH_ARG_SESSIONID);
+					stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
+					value_size = stop_pointer - start_pointer;
+					if (value_size < OPH_MAX_STRING_SIZE) {
+						char sessionid[OPH_MAX_STRING_SIZE];
+						snprintf(sessionid, 1 + value_size, "%s", start_pointer);
+						if (!oph_get_session_code(sessionid, session_code))
+							error = 0;
+					}
+				}
+			}
+			if (error) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: session code cannot be extracted\n", jobid);
+				break;
+			}
+
+			error = 1;
+			if (oper_json->source && oper_json->source->values && oper_json->source->values[2]) {
+				strcpy(str_markerid, oper_json->source->values[2]);
+				error = 0;
+			} else if (data) {
+				if ((start_pointer = strstr(data, OPH_ARG_MARKERID))) {
+					start_pointer += 1 + strlen(OPH_ARG_MARKERID);
+					stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
+					value_size = stop_pointer - start_pointer;
+					if (value_size < OPH_SHORT_STRING_SIZE) {
+						snprintf(str_markerid, 1 + value_size, "%s", start_pointer);
 						error = 0;
+					}
 				}
 			}
-		}
-		if (error) {
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: session code cannot be extracted\n", jobid);
-			break;
-		}
-
-		error = 1;
-		if (oper_json->source && oper_json->source->values && oper_json->source->values[2]) {
-			strcpy(str_markerid, oper_json->source->values[2]);
-			error = 0;
-		} else if (data) {
-			if ((start_pointer = strstr(data, OPH_ARG_MARKERID))) {
-				start_pointer += 1 + strlen(OPH_ARG_MARKERID);
-				stop_pointer = strchr(start_pointer, OPH_SEPARATOR_PARAM[0]);
-				value_size = stop_pointer - start_pointer;
-				if (value_size < OPH_SHORT_STRING_SIZE) {
-					snprintf(str_markerid, 1 + value_size, "%s", start_pointer);
-					error = 0;
-				}
+			if (error) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: marker id cannot be extracted\n", jobid);
+				break;
 			}
-		}
-		if (error) {
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: marker id cannot be extracted\n", jobid);
+
+			char filename[OPH_MAX_STRING_SIZE];
+			snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
+			if (oph_json_to_json_file(oper_json, filename)) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in saving JSON Response\n", jobid);
+				break;
+			}
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
+
+			if (service_info) {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+				pthread_mutex_lock(&service_flag);
+#endif
+				service_info->incoming_responses++;
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+				pthread_mutex_unlock(&service_flag);
+#endif
+			}
+
 			break;
 		}
 
-		char filename[OPH_MAX_STRING_SIZE];
-		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_RESPONSE_FILENAME, oph_json_location, session_code, str_markerid);
-		if (oph_json_to_json_file(oper_json, filename)) {
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error in saving JSON Response\n", jobid);
-			break;
-		}
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: JSON Response saved\n", jobid);
-
-		if (service_info) {
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-			pthread_mutex_lock(&service_flag);
-#endif
-			service_info->incoming_responses++;
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-			pthread_mutex_unlock(&service_flag);
-#endif
-		}
-
-		break;
+		if (oper_json)
+			oph_json_free(oper_json);
 	}
-	oph_json_free(oper_json);
 
 	return oph_workflow_notify(state, 'N', jobid, data, output_json, (int *) response);
 }

@@ -4214,6 +4214,10 @@ int _check_oph_server(const char *function, int option)
 					wd->filename = NULL;
 					data->data = (void *) wd;
 
+					// Tasks
+					wf->tasks_num = wf->residual_tasks_num = 1;
+					wf->tasks = (oph_workflow_task *) calloc(1 + wf->tasks_num, sizeof(oph_workflow_task));
+
 					_oph_wait(data);
 
 					res = 0;
