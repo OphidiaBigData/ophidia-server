@@ -41,6 +41,7 @@
 #define OPH_FS_GRID_TYPE "T"
 #define OPH_FS_GRID_OBJECT "OBJECT"
 #define OPH_FS_TYPE_FILE "f"
+#define OPH_FS_MEASURE "measure=%s;"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -151,6 +152,9 @@ void *_oph_wait(oph_notify_data * data)
 	char _filename[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], fast_exit = 0;
 	CURL *curl = NULL;
 	char *pointer = wd->filename, *is_http = NULL;
+	char *sessionid = strdup(wf->sessionid);
+	char save_flag = wf->tasks[task_index].save;
+	int markerid = wf->tasks[task_index].markerid;
 
 	// Init
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Initialize waiting procedure\n");
@@ -192,11 +196,14 @@ void *_oph_wait(oph_notify_data * data)
 	}
 
 	char command[OPH_MAX_STRING_SIZE];
-	char markerid[OPH_SHORT_STRING_SIZE];
+	char str_markerid[OPH_SHORT_STRING_SIZE];
 	if (success && !is_http && (wd->type == 'f')) {
-		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "" OPH_SERVER_REQUEST_FLAG, pointer, wf->sessionid, wf->workflowid, wf->tasks[task_index].markerid, task_index, wf->username,
-			 wf->userrole, wf->idjob);
-		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+		char measure[OPH_MAX_STRING_SIZE];
+		if (wd->measure)
+			snprintf(measure, OPH_MAX_STRING_SIZE, OPH_FS_MEASURE, wd->measure);
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, markerid, task_index, wf->username, wf->userrole, wf->idjob,
+			 wd->measure ? measure : "");
+		snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", markerid);
 	}
 	// Process
 	if (success) {
@@ -218,7 +225,7 @@ void *_oph_wait(oph_notify_data * data)
 						success = 0;
 					pthread_mutex_unlock(&curl_flag);
 				} else {
-					success = _oph_wait_stat(wf, task_index, command, markerid, state);
+					success = _oph_wait_stat(wf, task_index, command, str_markerid, state);
 					if (success < 0) {
 						pthread_mutex_lock(&global_flag);
 						status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -278,7 +285,7 @@ void *_oph_wait(oph_notify_data * data)
 								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable: %s\n", _filename, curl_easy_strerror(res));
 								break;
 							}
-						} else if ((success = _oph_wait_stat(wf, task_index, command, markerid, state))) {
+						} else if ((success = _oph_wait_stat(wf, task_index, command, str_markerid, state))) {
 							if (success < 0) {
 								pthread_mutex_lock(&global_flag);
 								status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -342,8 +349,8 @@ void *_oph_wait(oph_notify_data * data)
 			int response = 0;
 			char success_notification[OPH_MAX_STRING_SIZE];
 			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%d;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob,
-				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, wf->sessionid, OPH_ARG_MARKERID, wf->tasks[task_index].markerid,
-				 data->add_to_notify ? data->add_to_notify : "");
+				 OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, markerid, OPH_ARG_SAVE,
+				 save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
@@ -367,11 +374,15 @@ void *_oph_wait(oph_notify_data * data)
 	if (wd) {
 		if (wd->filename)
 			free(wd->filename);
+		if (wd->measure)
+			free(wd->measure);
 		free(wd);
 	}
 	free(data);
 	if (fast_exit)
 		oph_workflow_free(wf);
+	if (sessionid)
+		free(sessionid);
 
 	if (jobid)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "W%d: exit from waiting procedure\n", jobid);
@@ -1872,7 +1883,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 	char *name = NULL, **names = NULL, **svalues = NULL;
 	int j, kk = 0, names_num = 0, svalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char *arg_value, *error_msg = NULL, *timeout = NULL, ttype = 'i';
+	char *arg_value, *error_msg = NULL, *timeout = NULL, ttype = 'i', *input = NULL;
 	char add_to_notify[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
 	*add_to_notify = 0;
 
@@ -1880,6 +1891,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 	wd->type = 'c';
 	wd->timeout = -1;
 	wd->filename = NULL;
+	wd->measure = NULL;
 	data->data = (void *) wd;
 	if (message)
 		*message = NULL;
@@ -1913,7 +1925,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				break;
 			}
 
-			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
+			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && strcasecmp(arg_value, OPH_COMMON_NULL))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value)) {
@@ -1942,14 +1954,19 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_TIMEOUT)) {
 				timeout = strdup(arg_value);
-			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILENAME)) {
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILENAME) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (!wd->filename)
 					wd->filename = strdup(arg_value);
-			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_OUTPUT)) {
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_INPUT) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+				input = strdup(arg_value);
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_OUTPUT) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (wd->filename)
 					free(wd->filename);
 				wd->filename = strdup(arg_value);
-			} else if (message && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_MESSAGE)) {
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_MEASURE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+				if (!wd->measure)
+					wd->measure = strdup(arg_value);
+			} else if (message && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_MESSAGE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				*message = strdup(arg_value);
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_RUN)) {
 				if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NO))
@@ -1978,13 +1995,20 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				free(error_msg);
 				error_msg = NULL;
 			}
+			if (input)
+				free(input);
 			ret = OPH_SERVER_ERROR;
 			break;
 		}
 		if (wd->filename) {
 			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_FILE, OPH_SEPARATOR_KV, wd->filename, OPH_SEPARATOR_PARAM);
 			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
+		} else if (input) {
+			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_OPERATOR_PARAMETER_OUTPUT, OPH_SEPARATOR_KV, input, OPH_SEPARATOR_PARAM);
+			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
 		}
+		if (input)
+			free(input);
 		if (timeout) {
 			if (ttype == 'd') {
 				struct tm tm;
@@ -2822,6 +2846,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 					if (wd) {
 						if (wd->filename)
 							free(wd->filename);
+						if (wd->measure)
+							free(wd->measure);
 						free(wd);
 					}
 					free(data);
@@ -2855,6 +2881,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 				if (wd) {
 					if (wd->filename)
 						free(wd->filename);
+					if (wd->measure)
+						free(wd->measure);
 					free(wd);
 				}
 				free(data);
@@ -2876,6 +2904,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 				if (wd) {
 					if (wd->filename)
 						free(wd->filename);
+					if (wd->measure)
+						free(wd->measure);
 					free(wd);
 				}
 				free(data);
@@ -2924,6 +2954,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 				if (wd) {
 					if (wd->filename)
 						free(wd->filename);
+					if (wd->measure)
+						free(wd->measure);
 					free(wd);
 				}
 				free(data);

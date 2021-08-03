@@ -53,7 +53,7 @@
 #define OPH_WORKFLOW_KEY_HOST_PARTITION	"host_partition"
 #define OPH_WORKFLOW_KEY_NHOSTS			"nhost"
 
-#define OPH_WORKFLOW_BASE_NOTIFICATION	"parentid=%d;taskindex=%d;lighttaskindex=%d;jobid=%d;status=%d;sessionid=%s;markerid=%d;"
+#define OPH_WORKFLOW_BASE_NOTIFICATION	"parentid=%d;taskindex=%d;lighttaskindex=%d;jobid=%d;status=%d;sessionid=%s;markerid=%d;save=%s;"
 
 #define OPH_WORKFLOW_ROOT_FOLDER	"/"
 #define OPH_WORKFLOW_PATH_SET		{"cwd","path"}

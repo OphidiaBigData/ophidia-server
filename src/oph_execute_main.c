@@ -784,7 +784,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			while (nnee)
 				if (user_to_be_enabled[--nnee]) {
-					if (strcmp(user_to_be_enabled[nnee], OPH_OPERATOR_SERVICE_PARAMETER_ALL)) {
+					if (strcmp(user_to_be_enabled[nnee], OPH_OPERATOR_SERVICE_PARAMETER_ALL) && strcmp(user_to_be_enabled[nnee], OPH_OPERATOR_SERVICE_PARAMETER_NONE)) {
 						user_args = NULL;
 						oph_init_args(&user_args);
 						pthread_mutex_lock(&global_flag);
@@ -813,7 +813,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							continue;
 						}
 						oph_cleanup_args(&user_args);
-					}
+					} else
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: discard value '%s' in clause %s\n", jobid, user_to_be_enabled[nnee], OPH_OPERATOR_PARAMETER_ENABLE);
 					free(user_to_be_enabled[nnee]);
 				}
 			free(user_to_be_enabled);
@@ -831,7 +832,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 			while (nndd)
 				if (user_to_be_disabled[--nndd]) {
-					if (strcmp(user_to_be_disabled[nndd], OPH_OPERATOR_SERVICE_PARAMETER_ALL)) {
+					if (strcmp(user_to_be_disabled[nndd], OPH_OPERATOR_SERVICE_PARAMETER_ALL) && strcmp(user_to_be_disabled[nnee], OPH_OPERATOR_SERVICE_PARAMETER_NONE)) {
 						user_args = NULL;
 						oph_init_args(&user_args);
 						pthread_mutex_lock(&global_flag);
@@ -860,7 +861,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							continue;
 						}
 						oph_cleanup_args(&user_args);
-					}
+					} else
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: discard value '%s' in clause %s\n", jobid, user_to_be_disabled[nnee], OPH_OPERATOR_PARAMETER_DISABLE);
 					free(user_to_be_disabled[nndd]);
 				}
 			free(user_to_be_disabled);

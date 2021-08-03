@@ -1,14 +1,21 @@
 
-## Next release
+## v1.6.2 - 2021-08-03
 
 ### Fixed:
 
+- Bug in handling the arguments 'enable' and 'disable' of OPH_SERVICE
 - Bug in transfer metadata into accounting table
 - Bug in handling cube pids for final operation
 
 ### Added:
 
+- Option to enable and disable JSON response saving [#56](https://github.com/OphidiaBigData/ophidia-server/pull/56)
 - New argument 'WORKING_DIR' in main configuration file
+
+### Changed:
+
+- File check of OPH_WAIT from 'stat' to OPH_FS [#57](https://github.com/OphidiaBigData/ophidia-server/pull/57)
+- Activate service without authorization procedure in case authorization directory is not found
 
 
 ## v1.6.1 - 2021-03-16

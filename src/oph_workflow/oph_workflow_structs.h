@@ -122,6 +122,7 @@ typedef struct _oph_workflow_dep {
  * \param response Output of the execution
  * \param exit_action Code of the operation to be executed on the end of workflow
  * \param run Flag used to enable/disable execution
+ * \param save Flag used to enable/disable JSON Response saving
  * \param parent Id of the parent of a flow control operator
  * \param child Id of the child of a flow control operator
  * \param nesting_level Nesting level
@@ -172,6 +173,7 @@ typedef struct _oph_workflow_task {
 	char *response;
 	int exit_action;
 	int run;
+	char save;
 	int parent;
 	int child;
 	int nesting_level;
@@ -297,6 +299,7 @@ typedef struct _oph_workflow_stack {
  * \param exit_cubes List of the cubes to be processed in the final operation
  * \param exit_containers List of the containers to be processed in the final operation
  * \param run Flag used to enable/disable execution
+ * \param save Flag used to enable/disable JSON Response saving
  * \param parallel_mode Flag used by parallel flow control operator
  * \param vars Global variables
  * \param stack Stack of the workflow
@@ -345,6 +348,7 @@ typedef struct _oph_workflow {
 	oph_trash *exit_cubes;
 	oph_trash *exit_containers;
 	int run;
+	char save;
 	oph_workflow_task_out *output;
 	int parallel_mode;
 	HASHTBL *vars;
