@@ -53,6 +53,7 @@ pthread_t token_tid_aaa;
 char *oph_server_location = 0;
 HASHTBL *oph_server_params = 0;
 char *oph_server_host = 0;
+char *oph_server_port = 0;
 int oph_server_timeout = OPH_SERVER_TIMEOUT;
 char *oph_auth_location = 0;
 char *oph_txt_location = 0;

@@ -48,6 +48,14 @@
 #define OPH_CONF_OPHDB_PORT	"OPHDB_PORT"
 #define OPH_CONF_OPHDB_LOGIN	"OPHDB_LOGIN"
 #define OPH_CONF_OPHDB_PWD	"OPHDB_PWD"
+#define OPH_CONF_OPHDB_GRH	"OPHDB_RESERVED_HOSTS"
+#define OPH_CONF_OPHDB_GTH	"OPHDB_TOTAL_HOSTS"
+#define OPH_CONF_OPHDB_CHP	"OPHDB_CREATE_HP"
+#define OPH_CONF_OPHDB_DHP	"OPHDB_DESTROY_HP"
+#define OPH_CONF_OPHDB_RLHP	"OPHDB_RELEASE_HP"
+#define OPH_CONF_OPHDB_RSHP	"OPHDB_RESERVE_HP"
+#define OPH_CONF_OPHDB_RTHP	"OPHDB_RETRIEVE_HP"
+#define OPH_CONF_OPHDB_RLIST	"OPHDB_RETRIEVE_LIST"
 
 #define OPH_NULL_VALUE "NULL"
 
@@ -70,6 +78,14 @@ typedef struct {
 	MYSQL *conn;
 #else
 	sqlite3 *db;
+	char *grh;
+	char *gth;
+	char *chp;
+	char *dhp;
+	char *rlhp;
+	char *rshp;
+	char *rthp;
+	char *rlist;
 #endif
 } ophidiadb;
 
@@ -124,6 +140,7 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB);
 
 int oph_odb_retrieve_ids(ophidiadb * oDB, const char *query, int **id, char ***ctime, int *n);
 int oph_odb_retrieve_list(ophidiadb * oDB, const char *query, ophidiadb_list * list);
+int oph_odb_retrieve_list2(ophidiadb * oDB, const char *query, ophidiadb_list * list);
 int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube, int *counter);
 
 int oph_odb_insert_user(ophidiadb * oDB, const char *username);

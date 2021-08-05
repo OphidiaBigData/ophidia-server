@@ -27,6 +27,8 @@
 
 #define OPH_SERVER_LOCATION_STR "OPH_SERVER_LOCATION"
 
+#define OPH_SERVER_PREFIX "oph"
+
 #define OPH_VERSION	"Ophidia Server, version " PACKAGE_VERSION "\nCopyright (C) 2012-2021 CMCC Foundation - www.cmcc.it\n"
 #define OPH_DISCLAIMER	"This program comes with ABSOLUTELY NO WARRANTY; for details type `oph_server -x'.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions; type `oph_server -z' for details.\n"
 #define OPH_DISCLAIMER2	"This program comes with ABSOLUTELY NO WARRANTY; for details type `oph_client -x'.\nThis is free software, and you are welcome to redistribute it\nunder certain conditions; type `oph_client -z' for details.\n"

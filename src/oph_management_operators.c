@@ -2683,11 +2683,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
-#ifndef OPH_DB_SUPPORT
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Operator cannot be excuted as Ophidia DB is disabled\n");
-		return OPH_SERVER_SYSTEM_ERROR;
-#endif
-
 		pthread_mutex_lock(&global_flag);
 
 		oph_job_info *item = NULL, *prev = NULL;
@@ -2920,7 +2915,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							if (max_hosts && (available_hosts > max_hosts - reserved_hosts))
 								available_hosts = max_hosts - reserved_hosts;
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user, host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+							if (oph_odb_retrieve_list2(&oDB, tmp, &list)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
@@ -3482,7 +3477,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, user_filter ? user_filter : "%",
 								 host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+							if (oph_odb_retrieve_list2(&oDB, tmp, &list)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;

@@ -115,11 +115,7 @@
 #define OPHIDIADB_CREATE_PARTITION "INSERT INTO hostpartition (partitionname, hidden) VALUES ('%s', 1);"
 #define OPHIDIADB_FILL_PARTITION "INSERT INTO hashost (idhostpartition, idhost, importcount) SELECT LAST_INSERT_ID(), idhost, importcount FROM host WHERE idhost IN ( SELECT idhost FROM hashost WHERE idhostpartition = %d );"
 #define OPHIDIADB_DESTROY_PARTITION "DELETE FROM hostpartition WHERE partitionname = '%s' AND hidden = 1;"
-#ifdef OPH_DB_SUPPORT
 #define OPHIDIADB_RESERVE_PARTITION "INSERT IGNORE INTO hostpartition (partitionname, iduser, idjob, reserved, hosts, partitiontype) VALUES ('%s', %d, %d, 1, %d, %d);"
-#else
-#define OPHIDIADB_RESERVE_PARTITION "INSERT OR IGNORE INTO hostpartition (partitionname, iduser, idjob, reserved, hosts, partitiontype) VALUES ('%s', %d, %d, 1, %d, %d);"
-#endif
 #define OPHIDIADB_RETRIEVE_RESERVED_PARTITION "SELECT idhostpartition, idjob, partitiontype FROM hostpartition WHERE partitionname = '%s' AND iduser = %d;"
 #define OPHIDIADB_RELEASE_HOSTS "UPDATE host SET status = 'down', importcount = 0 WHERE idhost IN (SELECT idhost FROM hashost WHERE idhostpartition = %d);"
 #define OPHIDIADB_RELEASE_PARTITION "DELETE FROM hostpartition WHERE idhostpartition = %d;"

@@ -18,15 +18,13 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/oph_odb.sh
+
 # Input parameters
 hpid=${1}
 
 # Const
-OPHDB_NAME=ophidiadb
-OPHDB_HOST=127.0.0.1
-OPHDB_PORT=3306
-OPHDB_LOGIN=root
-OPHDB_PWD=abcd
 IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server/bin/oph_io_server
 IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-cluster/oph-io-server/etc/oph_ioserver.conf.template
 
