@@ -279,6 +279,7 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 				ophDB->username = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_PWD, strlen(OPH_CONF_OPHDB_PWD))) {
 				ophDB->pwd = argument_value;
+#ifndef OPH_DB_SUPPORT
 			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_GRH, strlen(OPH_CONF_OPHDB_GRH))) {
 				ophDB->grh = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_GTH, strlen(OPH_CONF_OPHDB_GTH))) {
@@ -295,6 +296,7 @@ int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
 				ophDB->rthp = argument_value;
 			} else if (!strncasecmp(argument, OPH_CONF_OPHDB_RLIST, strlen(OPH_CONF_OPHDB_RLIST))) {
 				ophDB->rlist = argument_value;
+#endif
 			} else {
 				free(argument_value);
 			}
