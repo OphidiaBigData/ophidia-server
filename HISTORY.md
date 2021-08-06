@@ -1,4 +1,11 @@
 
+## Next release
+
+### Fixed:
+
+- Bug in evaluation of user quota in OPH_CLUSTER
+
+
 ## v1.6.2 - 2021-08-03
 
 ### Fixed:
