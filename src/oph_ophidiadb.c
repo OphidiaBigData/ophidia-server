@@ -763,6 +763,7 @@ int oph_odb_retrieve_list2(ophidiadb * oDB, const char *command, ophidiadb_list 
 		list->size++;
 
 	if (list->size <= 0) {
+		list->size = 0;
 		fclose(file);
 		unlink(outfile);
 		return OPH_ODB_NO_ROW_FOUND;

@@ -2926,7 +2926,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							if (available_hosts < 0)
 								available_hosts = 0;
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user, host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list2(&oDB, tmp, &list)) {
+							success = oph_odb_retrieve_list2(&oDB, tmp, &list);
+							if (success && (success != OPH_ODB_NO_ROW_FOUND)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
@@ -2935,10 +2936,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							num_fields = 4;
 
 							// Header
-							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
-								success = 0;
-							else
-								success = 1;	// No output
+							success = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY) ? 0 : 1;
 							while (!success) {
 								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 								if (!jsonkeys) {
@@ -3465,6 +3463,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 1:{
 
+#ifdef OPH_DB_SUPPORT
 							if (oph_odb_get_total_hosts(&oDB, &total_hosts)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of total hosts cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of total hosts!");
@@ -3488,7 +3487,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, user_filter ? user_filter : "%",
 								 host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list2(&oDB, tmp, &list)) {
+							success = oph_odb_retrieve_list2(&oDB, tmp, &list);
+							if (success && (success != OPH_ODB_NO_ROW_FOUND)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
@@ -3497,10 +3497,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							num_fields = 4;
 
 							// Header
-							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
-								success = 0;
-							else
-								success = 1;	// No output
+							success = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY) ? 0 : 1;
 							while (!success) {
 								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 								if (!jsonkeys) {
@@ -4272,6 +4269,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								} else
 									success = 1;
 							}
+#else
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "This option is disabled in this implementation!");
+#endif
 
 							break;
 						}
