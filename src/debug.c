@@ -20,6 +20,8 @@
 #include <string.h>
 #include <time.h>
 
+#define CTIME_BUF 32
+
 //extern int msglevel; /* the higher, the more messages... */
 int msglevel = LOG_INFO;	/* the higher, the more messages... */
 FILE *log_file = 0;
@@ -63,7 +65,8 @@ void pmesg(int level, const char *source, long int line_number, const char *form
 	if (level) {
 		if (msglevel > 10) {
 			time_t t1 = time(NULL);
-			char *s = ctime(&t1);
+			char s[CTIME_BUF];
+			ctime_r(&t1, s);
 			s[strlen(s) - 1] = 0;	// remove \n
 			fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
 		} else if (level)
@@ -91,22 +94,22 @@ void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int 
 
 	switch (level) {
 		case LOG_ERROR:
-			sprintf(log_type, "ERROR");
+			sprintf(log_type, LOG_ERROR_MESSAGE);
 			break;
 		case LOG_INFO:
-			sprintf(log_type, "INFO");
+			sprintf(log_type, LOG_INFO_MESSAGE);
 			break;
 		case LOG_WARNING:
-			sprintf(log_type, "WARNING");
+			sprintf(log_type, LOG_WARNING_MESSAGE);
 			break;
 		case LOG_DEBUG:
-			sprintf(log_type, "DEBUG");
+			sprintf(log_type, LOG_DEBUG_MESSAGE);
 			break;
 		case LOG_RAW:
 			*log_type = 0;
 			break;
 		default:
-			sprintf(log_type, "UNKNOWN");
+			sprintf(log_type, LOG_UNKNOWN_MESSAGE);
 			break;
 	}
 
@@ -116,7 +119,8 @@ void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int 
 	if (level) {
 		if (msglevel > 10) {
 			time_t t1 = time(NULL);
-			char *s = ctime(&t1);
+			char s[CTIME_BUF];
+			ctime_r(&t1, s);
 			s[strlen(s) - 1] = 0;	// remove \n
 			fprintf(log_file ? log_file : stderr, "[%s][%s][%s][%ld]\t", s, log_type, source, line_number);
 		} else
