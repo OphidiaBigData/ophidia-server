@@ -199,8 +199,8 @@ void *_oph_wait(oph_notify_data * data)
 		char measure[OPH_MAX_STRING_SIZE];
 		if (wd->measure)
 			snprintf(measure, OPH_MAX_STRING_SIZE, OPH_FS_MEASURE, wd->measure);
-		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, markerid, task_index, wf->username, wf->userrole, wf->idjob,
-			 wd->measure ? measure : "");
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, markerid, task_index, wf->username, wf->userrole, wf->idjob,
+			 wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
 		snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", markerid);
 	}
 	// Process
@@ -374,6 +374,8 @@ void *_oph_wait(oph_notify_data * data)
 			free(wd->filename);
 		if (wd->measure)
 			free(wd->measure);
+		if (wd->subset_params)
+			free(wd->subset_params);
 		free(wd);
 	}
 	free(data);
@@ -1880,14 +1882,15 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 	int j, kk = 0, names_num = 0, svalues_num = 0;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	char *arg_value, *error_msg = NULL, *timeout = NULL, ttype = 'i', *input = NULL;
-	char add_to_notify[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE];
-	*add_to_notify = 0;
+	char add_to_notify[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], subset_params[OPH_MAX_STRING_SIZE];
+	*add_to_notify = *subset_params = 0;
 
 	oph_wait_data *wd = (oph_wait_data *) malloc(sizeof(oph_wait_data));
 	wd->type = 'c';
 	wd->timeout = -1;
 	wd->filename = NULL;
 	wd->measure = NULL;
+	wd->subset_params = NULL;
 	data->data = (void *) wd;
 	if (message)
 		*message = NULL;
@@ -1979,6 +1982,21 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_CWD)) {
 				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_CWD, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
 				strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_OFFSET)) {
+				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_OFFSET, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
+				strncat(subset_params, tmp, OPH_MAX_STRING_SIZE - strlen(subset_params));
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_TIME_FILTER)) {
+				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_TIME_FILTER, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
+				strncat(subset_params, tmp, OPH_MAX_STRING_SIZE - strlen(subset_params));
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SUBSET_DIMS)) {
+				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_SUBSET_DIMS, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
+				strncat(subset_params, tmp, OPH_MAX_STRING_SIZE - strlen(subset_params));
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SUBSET_TYPE)) {
+				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_SUBSET_TYPE, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
+				strncat(subset_params, tmp, OPH_MAX_STRING_SIZE - strlen(subset_params));
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SUBSET_FILTER)) {
+				snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_ARG_SUBSET_FILTER, OPH_SEPARATOR_KV, arg_value, OPH_SEPARATOR_PARAM);
+				strncat(subset_params, tmp, OPH_MAX_STRING_SIZE - strlen(subset_params));
 			}
 			free(arg_value);
 		}
@@ -2005,6 +2023,8 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		}
 		if (input)
 			free(input);
+		if (strlen(subset_params))
+			wd->subset_params = strdup(subset_params);
 		if (timeout) {
 			if (ttype == 'd') {
 				struct tm tm;
@@ -2844,6 +2864,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 							free(wd->filename);
 						if (wd->measure)
 							free(wd->measure);
+						if (wd->subset_params)
+							free(wd->subset_params);
 						free(wd);
 					}
 					free(data);
@@ -2879,6 +2901,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 						free(wd->filename);
 					if (wd->measure)
 						free(wd->measure);
+					if (wd->subset_params)
+						free(wd->subset_params);
 					free(wd);
 				}
 				free(data);
@@ -2902,6 +2926,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 						free(wd->filename);
 					if (wd->measure)
 						free(wd->measure);
+					if (wd->subset_params)
+						free(wd->subset_params);
 					free(wd);
 				}
 				free(data);
@@ -2952,6 +2978,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 						free(wd->filename);
 					if (wd->measure)
 						free(wd->measure);
+					if (wd->subset_params)
+						free(wd->subset_params);
 					free(wd);
 				}
 				free(data);
