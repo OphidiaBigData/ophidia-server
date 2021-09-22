@@ -104,21 +104,25 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating name\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-	(*workflow)->author = (char *) strdup((const char *) author);
-	if (!((*workflow)->author)) {
-		oph_workflow_free(*workflow);
-		if (jansson)
-			json_decref(jansson);
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating author\n");
-		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (author && strlen(author)) {
+		(*workflow)->author = (char *) strdup((const char *) author);
+		if (!((*workflow)->author)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating author\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
 	}
-	(*workflow)->abstract = (char *) strdup((const char *) abstract);
-	if (!((*workflow)->abstract)) {
-		oph_workflow_free(*workflow);
-		if (jansson)
-			json_decref(jansson);
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating abstract\n");
-		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (abstract && strlen(abstract)) {
+		(*workflow)->abstract = (char *) strdup((const char *) abstract);
+		if (!((*workflow)->abstract)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating abstract\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
 	}
 	if (url && strlen(url)) {
 		(*workflow)->url = (char *) strdup((const char *) url);
