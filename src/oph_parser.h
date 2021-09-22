@@ -66,6 +66,9 @@
 #define OPH_ARG_OBJKEY_FILTER OPH_ARG_OBJKEY
 #define OPH_ARG_INFO "info"
 #define OPH_ARG_QUERY "query"
+#define OPH_ARG_SUBSET_DIMS "subset_dims"
+#define OPH_ARG_SUBSET_TYPE "subset_type"
+#define OPH_ARG_TIME_FILTER "type_filter"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
