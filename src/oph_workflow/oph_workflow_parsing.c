@@ -89,7 +89,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save);
 
 	//add global vars
-	if (!name || !author || !abstract) {
+	if (!name) {
 		oph_workflow_free(*workflow);
 		if (jansson)
 			json_decref(jansson);
