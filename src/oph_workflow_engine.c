@@ -3098,7 +3098,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			if (wf->tasks[task_index].response)
 				free(wf->tasks[task_index].response);
 			wf->tasks[task_index].response = strdup(output_json);
-			wf->tasks[task_index].query = strdup(query);
+			if (query)
+				wf->tasks[task_index].query = strdup(query);
 		} else
 			wf->tasks[task_index].response = strdup("");
 		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
