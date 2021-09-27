@@ -555,5 +555,5 @@ AM_CONDITIONAL(VOMS, test $voms_enable = 1)
 
 AC_CONFIG_FILES([etc/oph_server], [chmod 0755 etc/oph_server])
 
-AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate])
+AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate etc/rms/slurm.conf])
 
