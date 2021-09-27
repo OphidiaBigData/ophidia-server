@@ -1,0 +1,14 @@
+OPHDB_NAME=ophidiadb
+OPHDB_HOST=127.0.0.1
+OPHDB_PORT=3306
+OPHDB_LOGIN=root
+OPHDB_PWD=abcd
+OPHDB_RESERVED_HOSTS=@OPH_SERVER_LOCATION@/etc/script/oph_get_reserved_hosts.sh
+OPHDB_TOTAL_HOSTS=@OPH_SERVER_LOCATION@/etc/script/oph_get_total_hosts.sh
+OPHDB_CREATE_HP=@OPH_SERVER_LOCATION@/etc/script/oph_create_hp.sh
+OPHDB_DESTROY_HP=@OPH_SERVER_LOCATION@/etc/script/oph_destroy_hp.sh
+OPHDB_RELEASE_HP=@OPH_SERVER_LOCATION@/etc/script/oph_release_hp.sh
+OPHDB_RESERVE_HP=@OPH_SERVER_LOCATION@/etc/script/oph_reserve_hp.sh
+OPHDB_RETRIEVE_HP=@OPH_SERVER_LOCATION@/etc/script/oph_retrieve_hp.sh
+OPHDB_RETRIEVE_LIST=@OPH_SERVER_LOCATION@/etc/script/oph_retrieve_list.sh
+

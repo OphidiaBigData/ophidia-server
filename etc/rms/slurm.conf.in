@@ -1,0 +1,14 @@
+SUBM_CMD_TO_SUBMIT=@OPH_SERVER_LOCATION@/etc/script/oph_submit.sh
+SUBM_CMD_TO_START=@OPH_SERVER_LOCATION@/etc/script/oph_start.sh
+SUBM_CMD_TO_MOUNT=
+SUBM_CMD_TO_CANCEL=@OPH_SERVER_LOCATION@/etc/script/oph_cancel.sh
+SUBM_CMD_TO_STOP=@OPH_SERVER_LOCATION@/etc/script/oph_cancel.sh
+SUBM_CMD_TO_UMOUNT=@OPH_SERVER_LOCATION@/etc/script/oph_cancel.sh
+SUBM_CMD_TO_CHECK=@OPH_SERVER_LOCATION@/etc/script/oph_check.sh
+SUBM_CMD_TO_COUNT=@OPH_SERVER_LOCATION@/etc/script/oph_count.sh
+SUBM_MULTIUSER=no
+SUBM_GROUP=ophidia
+SUBM_QUEUE_HIGH=ophidia
+SUBM_QUEUE_LOW=ophidia
+SUBM_PREFIX=
+SUBM_POSTFIX=>/dev/null 2>&1 </dev/null

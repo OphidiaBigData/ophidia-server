@@ -30,6 +30,8 @@ stamp-h1
 *.gcno
 *.info
 *.tmp
+etc/ophidiadb.conf
+etc/rms/slurm.conf
 etc/oph_server
 etc/oph_server_logrotate
 etc/oph_server.service
