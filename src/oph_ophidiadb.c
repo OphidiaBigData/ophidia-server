@@ -1220,7 +1220,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 		return OPH_ODB_NULL_PARAM;
 
 	char command[MYSQL_BUFLEN];
-	snprintf(command, MYSQL_BUFLEN, "%s %d %s", oDB->chp, name, id_user, parent);
+	snprintf(command, MYSQL_BUFLEN, "%s %s %d %s", oDB->chp, name, id_user, parent);
 
 	if (system(command))
 		return OPH_ODB_MYSQL_ERROR;
