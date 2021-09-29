@@ -636,11 +636,17 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				while (*on_error_task == ' ')
 					on_error_task++;
 				char *space = strstr(on_error_task, " ");
-				if (space)	// Back off time
+				if (space) {	// Backoff time
+					while (*space == ' ')
+						space++;
 					(*workflow)->tasks[i].backoff_time = (int) strtol(space, NULL, 10);
-				space = strstr(space, " ");
-				if (space)	// Back off type
-					(*workflow)->tasks[i].backoff_type = *(space + 1);
+					space = strstr(space, " ");
+					if (space) {	// Back off type
+						while (*space == ' ')
+							space++;
+						(*workflow)->tasks[i].backoff_type = *space;
+					}
+				}
 			} else {
 				oph_workflow_free(*workflow);
 				if (jansson)

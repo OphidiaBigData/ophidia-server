@@ -2496,7 +2496,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 								request_data[k]->delay = backoff;
 								break;
 						}
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: backoff size %d; chosen %d seconds\n", ttype, jobid, backoff, request_data[k]->delay);
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: backoff size %d; chosen %d second%s\n", ttype, jobid, backoff, request_data[k]->delay,
+						      request_data[k]->delay == 1 ? "" : "s");
 					}
 				}
 
