@@ -186,6 +186,8 @@ typedef struct _oph_workflow_task {
 	char forward;
 	double timestamp;
 	char is_marked_to_be_aborted;
+	int backoff_time;
+	char backoff_type;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

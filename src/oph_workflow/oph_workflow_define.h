@@ -66,6 +66,7 @@
 #define OPH_WORKFLOW_CONTINUE	"continue"
 #define OPH_WORKFLOW_BREAK		"break"
 #define OPH_WORKFLOW_REPEAT		"repeat"
+#define OPH_WORKFLOW_ABORT		"abort"
 
 #define OPH_WORKFLOW_DELETE				"oph_delete"
 #define OPH_WORKFLOW_DELETECONTAINER	"oph_deletecontainer"
