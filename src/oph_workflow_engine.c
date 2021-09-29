@@ -43,7 +43,6 @@ extern char *oph_json_location;
 extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
-extern unsigned int oph_base_backoff;
 extern char *oph_subm_user;
 extern char *oph_txt_location;
 extern FILE *wf_logfile;
@@ -2475,7 +2474,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->run = wf->tasks[i].run;
 				request_data[k]->delay = 0;
 
-				if (oph_base_backoff) {
+				if (wf->tasks[i].backoff_time > 0) {
 					int retry_num = 0;
 					if (wf->tasks[i].retry_num)
 						retry_num = wf->tasks[i].retry_num - wf->tasks[i].residual_retry_num;
@@ -2485,11 +2484,20 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 							retry_num = retry_num2;
 					}
 					if (retry_num > 0) {
-						int backoff = oph_base_backoff;
-						while (--retry_num)
-							backoff <<= 1;
-						request_data[k]->delay = rand() % backoff;
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: backoff size %d; chosen %d seconds\n", ttype, jobid, backoff, request_data[k]->delay);
+						int backoff = wf->tasks[i].backoff_time;
+						switch (wf->tasks[i].backoff_type) {
+							case 'e':
+								while (--retry_num)
+									backoff <<= 1;
+							case 'r':
+								request_data[k]->delay = rand() % backoff;
+								break;
+							default:
+								request_data[k]->delay = backoff;
+								break;
+						}
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: backoff size %d; chosen %d second%s\n", ttype, jobid, backoff, request_data[k]->delay,
+						      request_data[k]->delay == 1 ? "" : "s");
 					}
 				}
 

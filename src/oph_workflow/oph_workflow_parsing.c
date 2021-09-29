@@ -30,6 +30,8 @@
 #include "oph_workflow_define.h"
 #include "debug.h"
 
+extern unsigned int oph_base_backoff;
+
 /* Alloc oph_workflow struct */
 int _oph_workflow_alloc(oph_workflow ** workflow);
 /* Add key and value to list of arguments for each task not yet comprising that key */
@@ -601,6 +603,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		}
 		// Set the retry number
 		(*workflow)->tasks[i].retry_num = 1;	// Default value
+		(*workflow)->tasks[i].backoff_time = (int) oph_base_backoff;
 		if (!on_error_task)
 			on_error_task = on_error;
 		else if (strlen(on_error_task)) {
@@ -618,7 +621,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				(*workflow)->tasks[i].retry_num = -1;
 			else if (!strcmp(on_error_task, OPH_WORKFLOW_CONTINUE))
 				(*workflow)->tasks[i].retry_num = 0;
-			else if (!strcmp(on_error_task, OPH_WORKFLOW_BREAK))
+			else if (!strcmp(on_error_task, OPH_WORKFLOW_BREAK) || !strcmp(on_error_task, OPH_WORKFLOW_ABORT))
 				(*workflow)->tasks[i].retry_num = 1;
 			else if (!strncmp(on_error_task, OPH_WORKFLOW_REPEAT, strlen(OPH_WORKFLOW_REPEAT))) {
 				on_error_task += strlen(OPH_WORKFLOW_REPEAT);
@@ -629,6 +632,20 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 						json_decref(jansson);
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "error in setting the number of execution retries\n");
 					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+				}
+				while (*on_error_task == ' ')
+					on_error_task++;
+				char *space = strstr(on_error_task, " ");
+				if (space) {	// Backoff time
+					while (*space == ' ')
+						space++;
+					(*workflow)->tasks[i].backoff_time = (int) strtol(space, NULL, 10);
+					space = strstr(space, " ");
+					if (space) {	// Back off type
+						while (*space == ' ')
+							space++;
+						(*workflow)->tasks[i].backoff_type = *space;
+					}
 				}
 			} else {
 				oph_workflow_free(*workflow);

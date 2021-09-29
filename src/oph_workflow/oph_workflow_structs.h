@@ -188,6 +188,8 @@ typedef struct _oph_workflow_task {
 	char forward;
 	double timestamp;
 	char is_marked_to_be_aborted;
+	int backoff_time;
+	char backoff_type;
 	char *query;
 } oph_workflow_task;
 
