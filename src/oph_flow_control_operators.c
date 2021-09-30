@@ -161,14 +161,14 @@ void *_oph_wait(oph_notify_data * data)
 			while (pointer && (*pointer == ' '))
 				pointer++;
 			if (!pointer) {
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Empty parameter %s\n", OPH_OPERATOR_PARAMETER_FILENAME);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Empty parameter '%s'\n", OPH_OPERATOR_PARAMETER_FILENAME);
 				success = 0;
 				break;
 			}
 			if ((is_http = strstr(pointer, "http"))) {
 				curl = curl_easy_init();
 				if (!curl) {
-					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to check remote objects\n");
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to check remote objects\n");
 					success = 0;
 					break;
 				}
@@ -182,14 +182,14 @@ void *_oph_wait(oph_notify_data * data)
 			else if (!oph_get_session_code(wf->sessionid, tmp))
 				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "%s%s", oph_web_server_location, tmp, *pointer == '/' ? "" : "/", pointer);
 			else {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
 				success = 0;
 			}
 		case 'c':
 		case 'i':
 			break;
 		default:
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in parsing input data\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error in parsing input data\n");
 			success = 0;
 	}
 
@@ -2053,6 +2053,12 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				break;
 			}
 			snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Warning: setting infinite waiting time");
+		}
+		if ((wd->type == 'f') && (!wd->filename)) {
+			snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Empty parameter '%s'\n", OPH_OPERATOR_PARAMETER_FILENAME);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+			ret = OPH_SERVER_ERROR;
+			break;
 		}
 		if (name) {
 			arg_value = strdup(name);
