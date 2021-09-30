@@ -196,8 +196,8 @@ void *_oph_wait(oph_notify_data * data)
 	}
 
 	char command[OPH_MAX_STRING_SIZE];
-	char markerid[OPH_SHORT_STRING_SIZE];
-	snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+	char str_markerid[OPH_SHORT_STRING_SIZE];
+	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 	if (success && !is_http && (wd->type == 'f'))
 		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "" OPH_SERVER_REQUEST_FLAG, pointer, wf->sessionid, wf->workflowid, wf->tasks[task_index].markerid, task_index, wf->username,
 			 wf->userrole, wf->idjob);
@@ -224,7 +224,7 @@ void *_oph_wait(oph_notify_data * data)
 						success = 0;
 					pthread_mutex_unlock(&curl_flag);
 				} else {
-					success = _oph_wait_stat(wf, task_index, command, markerid, state);
+					success = _oph_wait_stat(wf, task_index, command, str_markerid, state);
 					if (success < 0) {
 						pthread_mutex_lock(&global_flag);
 						status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -284,7 +284,7 @@ void *_oph_wait(oph_notify_data * data)
 								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Object '%s' is not reachable: %s\n", _filename, curl_easy_strerror(res));
 								break;
 							}
-						} else if ((success = _oph_wait_stat(wf, task_index, command, markerid, state))) {
+						} else if ((success = _oph_wait_stat(wf, task_index, command, str_markerid, state))) {
 							if (success < 0) {
 								pthread_mutex_lock(&global_flag);
 								status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -391,7 +391,7 @@ void *_oph_wait(oph_notify_data * data)
 			int response = 0;
 			char success_notification[OPH_MAX_STRING_SIZE];
 			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%s;%s=%s;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID,
-				 pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, markerid, OPH_ARG_SAVE,
+				 pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, str_markerid, OPH_ARG_SAVE,
 				 save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
