@@ -204,7 +204,8 @@ void *_oph_wait(oph_notify_data * data)
 		char measure[OPH_MAX_STRING_SIZE];
 		if (wd->measure)
 			snprintf(measure, OPH_MAX_STRING_SIZE, OPH_FS_MEASURE, wd->measure);
-		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, str_markerid, task_index, wf->username, wf->userrole, wf->idjob, wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, str_markerid, task_index, wf->username, wf->userrole,
+			 wf->idjob, wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
 	} else
 		*command = 0;
 
@@ -394,7 +395,9 @@ void *_oph_wait(oph_notify_data * data)
 
 			int response = 0;
 			char success_notification[OPH_MAX_STRING_SIZE];
-			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%s;%s=%s;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID, pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, str_markerid, OPH_ARG_SAVE, save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
+			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%s;%s=%s;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID,
+				 pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, str_markerid, OPH_ARG_SAVE,
+				 save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "W%d: error %d in notify\n", jobid, response);
