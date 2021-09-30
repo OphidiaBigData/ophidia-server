@@ -3108,10 +3108,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			wf->tasks[task_index].response = strdup(output_json);
 			if (query)
 				wf->tasks[task_index].query = strdup(query);
-		} else
-			wf->tasks[task_index].response = strdup("");
-		if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))
 			pthread_cond_broadcast(&waiting_flag);
+		} else {
+			wf->tasks[task_index].response = strdup("");
+			if (status == OPH_ODB_STATUS_ERROR) {
+				wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
+				pthread_cond_broadcast(&waiting_flag);
+			}
+		}
 		pthread_mutex_unlock(&global_flag);
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);

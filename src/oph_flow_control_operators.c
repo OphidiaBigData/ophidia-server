@@ -65,9 +65,8 @@ int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *marke
 	response = oph_serve_request(command, 1, wf->sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, wf->os_username, wf->project, wf->workflowid);
 
 	if (response) {
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system: error %d\n", response);
-		success = -1;
-		return success;
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system: error %s. Aborting...\n", response);
+		return -1;
 	}
 
 	pthread_mutex_lock(&global_flag);
@@ -83,6 +82,11 @@ int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *marke
 	if (wf->tasks[task_index].response && !strlen(wf->tasks[task_index].response)) {
 		free(wf->tasks[task_index].response);
 		wf->tasks[task_index].response = NULL;
+	}
+
+	if (wf->tasks[task_index].status > OPH_ODB_STATUS_COMPLETED) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Scanning result is %s. Aborting...\n", oph_odb_convert_status_to_str(wf->tasks[task_index].status));
+		return -2;
 	}
 
 	unsigned int i, j;
@@ -163,14 +167,14 @@ void *_oph_wait(oph_notify_data * data)
 			while (pointer && (*pointer == ' '))
 				pointer++;
 			if (!pointer) {
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Empty parameter %s\n", OPH_OPERATOR_PARAMETER_FILENAME);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Empty parameter '%s'\n", OPH_OPERATOR_PARAMETER_FILENAME);
 				success = 0;
 				break;
 			}
 			if ((is_http = strstr(pointer, "http"))) {
 				curl = curl_easy_init();
 				if (!curl) {
-					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to check remote objects\n");
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to check remote objects\n");
 					success = 0;
 					break;
 				}
@@ -184,27 +188,29 @@ void *_oph_wait(oph_notify_data * data)
 			else if (!oph_get_session_code(wf->sessionid, tmp))
 				snprintf(_filename, OPH_MAX_STRING_SIZE, OPH_SESSION_MISCELLANEA_FOLDER_TEMPLATE "%s%s", oph_web_server_location, tmp, *pointer == '/' ? "" : "/", pointer);
 			else {
-				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error in extracting session code from '%s'\n", wf->sessionid);
 				success = 0;
 			}
 		case 'c':
 		case 'i':
 			break;
 		default:
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in parsing input data\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error in parsing input data\n");
 			success = 0;
 	}
 
 	char command[OPH_MAX_STRING_SIZE];
 	char str_markerid[OPH_SHORT_STRING_SIZE];
+	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 	if (success && !is_http && (wd->type == 'f')) {
 		char measure[OPH_MAX_STRING_SIZE];
 		if (wd->measure)
 			snprintf(measure, OPH_MAX_STRING_SIZE, OPH_FS_MEASURE, wd->measure);
 		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, markerid, task_index, wf->username, wf->iduser, wf->userrole,
 			 wf->idjob, wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
-		snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", markerid);
-	}
+	} else
+		*command = 0;
+
 	// Process
 	if (success) {
 
@@ -333,7 +339,8 @@ void *_oph_wait(oph_notify_data * data)
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			break;
 		}
-		if (status == OPH_ODB_STATUS_COMPLETED)
+		success = status == OPH_ODB_STATUS_COMPLETED;
+		if (success)
 			oph_odb_stop_job_fast(idjob, &oDB);
 		else
 			oph_odb_abort_job_fast(idjob, &oDB);
@@ -346,10 +353,52 @@ void *_oph_wait(oph_notify_data * data)
 			jobid = ++*state->jobid;
 			pthread_mutex_unlock(&global_flag);
 
+			wf->tasks[task_index].status = OPH_ODB_STATUS_RUNNING;	// Force notification process
+
+			if (!success) {
+				oph_json *oper_json = NULL;
+				while (json_output) {
+					if (oph_json_from_json_string(&oper_json, json_output)) {
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in parsing JSON Response\n");
+						break;
+					}
+					int i, j;
+					for (i = 0; i < oper_json->responseKeyset_num; ++i)
+						if (!strcmp(oper_json->responseKeyset[i], OPH_JSON_OBJKEY_STATUS))
+							break;
+					if ((i >= oper_json->responseKeyset_num) || (i >= oper_json->response_num) || strcmp(oper_json->response[i].objclass, OPH_JSON_TEXT)
+					    || strcmp(oper_json->response[i].objkey, OPH_JSON_OBJKEY_STATUS)) {
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Text not found in JSON Response\n");
+						break;
+					}
+					oph_json_obj_text *obj = NULL;
+					for (j = 0; j < oper_json->response[i].objcontent_num; ++j)
+						if (oper_json->response[i].objcontent) {
+							obj = (oph_json_obj_text *) (oper_json->response[i].objcontent) + j;
+							if (obj) {
+								if (obj->title)
+									free(obj->title);
+								obj->title = strdup("ERROR");
+								if (obj->message)
+									free(obj->message);
+								obj->message = strdup("Operation cannot be executed: check input arguments");
+								break;
+							}
+						}
+					free(json_output);
+					json_output = NULL;
+					if (oph_write_and_get_json(oper_json, &json_output))
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Error in writing JSON Response\n");
+					break;
+				}
+				if (oper_json)
+					oph_json_free(oper_json);
+			}
+
 			int response = 0;
 			char success_notification[OPH_MAX_STRING_SIZE];
-			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%d;%s=%s;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID,
-				 pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, markerid, OPH_ARG_SAVE,
+			snprintf(success_notification, OPH_MAX_STRING_SIZE, "%s=%d;%s=%d;%s=%d;%s=%d;%s=%d;%s=%s;%s=%s;%s=%s;%s", OPH_ARG_STATUS, status, OPH_ARG_JOBID, idjob, OPH_ARG_PARENTID,
+				 pidjob, OPH_ARG_TASKINDEX, task_index, OPH_ARG_LIGHTTASKINDEX, -1, OPH_ARG_SESSIONID, sessionid, OPH_ARG_MARKERID, str_markerid, OPH_ARG_SAVE,
 				 save_flag ? OPH_COMMON_YES : OPH_COMMON_NO, data->add_to_notify ? data->add_to_notify : "");
 			oph_workflow_notify(state, 'W', jobid, success_notification, json_output, &response);
 			if (response && (response != OPH_SERVER_WRONG_PARAMETER_ERROR))
@@ -2057,6 +2106,12 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 				break;
 			}
 			snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Warning: setting infinite waiting time");
+		}
+		if ((wd->type == 'f') && (!wd->filename)) {
+			snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Empty parameter '%s'\n", OPH_OPERATOR_PARAMETER_FILENAME);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+			ret = OPH_SERVER_ERROR;
+			break;
 		}
 		if (name) {
 			arg_value = strdup(name);
