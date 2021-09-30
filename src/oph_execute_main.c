@@ -3084,6 +3084,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			if (!document_type && !id_type && ((level == 1) || (level == 3)))	// JSON Response for workflow: extract specific outputs
 			{
 				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow, session, workflow);
+
+
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "\n\n%s\n\n", query);
+
+
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker id\n", jobid);
 					if (markers) {
@@ -3838,6 +3843,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							oph_json_free(oper_json);
 						} else if (item)	// Found a workflow in memory
 						{
+#ifdef LEVEL1
+							if ((level == 1) && (item->wf->tasks_num > 1))	// Found a multi-task workflow --> show the task list
+							{
+								marker = markers[0];	// In case of more than one rows then the first is related to the parent and the others are related to children
+								iterate = 0;
+							}
+#endif
 							snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
 								 session_code, marker);
 							if (oph_get_result_from_file_unsafe(filename, &jstring) || !jstring) {
