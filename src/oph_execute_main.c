@@ -5993,12 +5993,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (wf->parallel_mode) {
 		// Save the extended JSON request
 		char *jstring = NULL;
-		if (oph_workflow_store(wf, &jstring)) {
+		pthread_mutex_lock(&global_flag);
+		if (oph_workflow_store(wf, &jstring, 0)) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create the extended JSON Request\n");
+			pthread_mutex_unlock(&global_flag);
 			if (jstring)
 				free(jstring);
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to create the extended JSON Request\n");
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
+		pthread_mutex_unlock(&global_flag);
+
 		char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
 		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server_location, session_code, wf->workflowid);
 		FILE *fil = fopen(filename, "w");

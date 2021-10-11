@@ -28,7 +28,7 @@
 
 #include "oph_workflow_functions.h"
 #include "oph_workflow_define.h"
-#include "debug.h"
+#include "oph_gather.h"
 
 extern unsigned int oph_base_backoff;
 
@@ -85,10 +85,12 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save = NULL;
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save =
+	    NULL, *start_from = NULL;
 	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid,
 		    "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit,
-		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save);
+		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save,
+		    "start_from", &start_from);
 
 	//add global vars
 	if (!name) {
@@ -330,9 +332,9 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		//unpack name and operator
-		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *save_task = NULL, *type = NULL;
-		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "save", &save_task,
-			    "type", &type);
+		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *save_task = NULL, *type = NULL, *checkpoint = NULL;
+		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "save", &save_task,
+			    "type", &type, "checkpoint", &checkpoint);
 
 		//add name and operator
 		if (!name || !operator) {
@@ -719,6 +721,9 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 		(*workflow)->tasks[i].parent = (*workflow)->tasks[i].child = -1;
 		(*workflow)->tasks[i].nesting_level = (*workflow)->tasks[i].parallel_mode = 0;
+
+		if (checkpoint)
+			(*workflow)->tasks[i].checkpoint = strdup(checkpoint);
 	}
 
 	// Final task
@@ -910,7 +915,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 }
 
 // Thread_unsafe
-int oph_workflow_store(oph_workflow * workflow, char **jstring)
+int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_completed)
 {
 	if (!workflow || !jstring) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -919,7 +924,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 
 	*jstring = NULL;
 
-	int i, j;
+	int i, j, k;
 	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0;
 	json_t *request = json_object();
 	if (!request)
@@ -973,6 +978,10 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	for (i = 0; i < workflow->tasks_num; ++i) {
+
+		if (remove_completed && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
+			continue;
+
 		json_t *task = json_object();
 		if (!task)
 			break;
@@ -1035,6 +1044,11 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 				break;
 			}
 			for (j = 0; j < workflow->tasks[i].deps_num; ++j) {
+
+				k = workflow->tasks[i].deps[j].task_index;
+				if (remove_completed && (k >= 0) && (workflow->tasks[k].status >= OPH_ODB_STATUS_COMPLETED))
+					continue;
+
 				json_t *dependency = json_object();
 				if (!dependency)
 					break;
@@ -1105,7 +1119,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 	if (request)
 		json_decref(request);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Released the following request:\n%s\n", *jstring);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Saving the following request:\n%s\n", *jstring);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

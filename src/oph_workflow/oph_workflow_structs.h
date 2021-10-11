@@ -188,6 +188,7 @@ typedef struct _oph_workflow_task {
 	char is_marked_to_be_aborted;
 	int backoff_time;
 	char backoff_type;
+	char *checkpoint;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations
@@ -360,6 +361,7 @@ typedef struct _oph_workflow {
 	char *client_address;
 	char *new_token;
 	char *project;
+	char *start_from;
 } oph_workflow;
 
 /* Functions for structs cleanup */

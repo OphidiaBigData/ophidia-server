@@ -21,6 +21,7 @@
 
 #define OPH_SESSION_OUTPUT_MAIN "%d.json"
 #define OPH_SESSION_OUTPUT_EXT "%dext.json"
+#define OPH_SESSION_OUTPUT_CHECKPOINT "%d_%s.json"
 #define OPH_SESSION_OUTPUT_TASK "%d.json"
 #define OPH_SESSION_OUTPUT_CUBE "%d.cube"
 #define OPH_SESSION_OUTPUT_LINK "%d.html"
