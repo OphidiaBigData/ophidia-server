@@ -215,6 +215,28 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 	return OPH_SERVER_OK;
 }
 
+typedef struct __ophExecuteMain_data {
+	struct soap *soap;
+	xsd__string request;
+} _ophExecuteMain_data;
+
+void *_ophExecuteMain(_ophExecuteMain_data * data)
+{
+	struct oph__ophResponse new_response;
+
+	oph__ophExecuteMain(data->soap, data->request, &new_response);
+
+	if (new_response.jobid)
+		free(new_response.jobid);
+	if (new_response.response)
+		free(new_response.response);
+
+	free(data->request);
+	free(data);
+
+	return (void *) NULL;;
+}
+
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	if (service_info) {
@@ -2130,7 +2152,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Handle RESUME_OPERATOR
 	if (oph_known_operator == OPH_RESUME_OPERATOR) {
-		char *session = NULL, *user = NULL, *mask = NULL;
+		char *session = NULL, *user = NULL, *mask = NULL, *execute = NULL;
 		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0;
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_SESSION, OPH_ARG_MARKER);
@@ -2212,6 +2234,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_STATUS_FILTER, OPH_MAX_STRING_SIZE)) {
 				if (!mask)
 					mask = wf->tasks[0].arguments_values[i];
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_EXECUTE, OPH_MAX_STRING_SIZE)) {
+				if (!execute)
+					execute = wf->tasks[0].arguments_values[i];
 			}
 		}
 
@@ -2283,6 +2308,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			oph_cleanup_args(&user_args);
 			return SOAP_OK;
 		}
+
+		if (execute && !strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_NO))
+			execute = NULL;
+		else if (!document_type)
+			execute = NULL;
 
 		oph_init_args(&args);
 
@@ -5503,13 +5533,18 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							if (document_type) {
 								struct stat s;
-								int orig_request = document_type > 1;
-								if (!orig_request)
-									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
-										 oph_web_server_location, session_code, workflow);
-								if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
-									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
-										 oph_web_server_location, session_code, workflow);
+								if (execute && strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_ALL))	// Execute from a checkpoint
+									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT,
+										 oph_web_server_location, session_code, workflow, execute);
+								else {
+									int orig_request = document_type > 1;
+									if (!orig_request)
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
+											 oph_web_server_location, session_code, workflow);
+									if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
+											 oph_web_server_location, session_code, workflow);
+								}
 							} else
 								snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
 									 session_code, marker);
@@ -5530,6 +5565,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								if (jstring)
 									free(jstring);
 								return SOAP_OK;
+							}
+							if (execute) {	// Run the workflow as a new request
+								_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
+								data->soap = soap;
+								data->request = strdup(jstring);
+								pthread_t tid;
+								pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
 							}
 						}
 					}
@@ -5995,7 +6037,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		char *jstring = NULL;
 		pthread_mutex_lock(&global_flag);
 		if (oph_workflow_store(wf, &jstring, 0)) {
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create the extended JSON Request\n");
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to create the extended JSON Request\n", jobid);
 			pthread_mutex_unlock(&global_flag);
 			if (jstring)
 				free(jstring);
@@ -6010,9 +6052,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			fprintf(fil, "%s", jstring);
 			fclose(fil);
 		} else
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the extended JSON Request\n");
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save the extended JSON Request\n", jobid);
 
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Extended JSON Request saved\n");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: extended JSON Request saved\n", jobid);
 		if (jstring)
 			free(jstring);
 

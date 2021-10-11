@@ -128,7 +128,7 @@ void *_oph_system(oph_command_data * data)
 	oph_service_info_thread_decr(service_info);
 	mysql_thread_end();
 #endif
-	return (void *) NULL;;
+	return (void *) NULL;
 }
 
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id)

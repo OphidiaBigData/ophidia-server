@@ -57,6 +57,7 @@ extern pthread_cond_t termination_flag;
 extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
+extern pthread_mutex_t savefile_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -237,6 +238,8 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 	pthread_mutex_unlock(&global_flag);
 
 	char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+
+	pthread_mutex_lock(&savefile_flag);	// This lock is required as more checkpoint with the same name could be saved with the same name, the last is the best
 	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid, checkpoint);
 	FILE *fil = fopen(filename, "w");
 	if (fil) {
@@ -244,6 +247,15 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 		fclose(fil);
 	} else
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", checkpoint);
+	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid,
+		 OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	fil = fopen(filename, "w");
+	if (fil) {
+		fprintf(fil, "%s", jstring);
+		fclose(fil);
+	} else
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	pthread_mutex_unlock(&savefile_flag);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "JSON Request with checkpoint '%s' saved\n", checkpoint);
 	if (jstring)

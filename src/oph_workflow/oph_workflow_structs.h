@@ -361,7 +361,7 @@ typedef struct _oph_workflow {
 	char *client_address;
 	char *new_token;
 	char *project;
-	char *start_from;
+	char *checkpoint;
 } oph_workflow;
 
 /* Functions for structs cleanup */
