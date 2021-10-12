@@ -247,14 +247,10 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 		fclose(fil);
 	} else
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", checkpoint);
-	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid,
+	snprintf(linkname, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid,
 		 OPH_OPERATOR_RESUME_PARAMETER_LAST);
-	fil = fopen(filename, "w");
-	if (fil) {
-		fprintf(fil, "%s", jstring);
-		fclose(fil);
-	} else
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	if (symlink(filename, linkname))
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to link the JSON Request with checkpoint '%s'\n", OPH_OPERATOR_RESUME_PARAMETER_LAST);
 	pthread_mutex_unlock(&savefile_flag);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "JSON Request with checkpoint '%s' saved\n", checkpoint);
@@ -4905,7 +4901,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 		// Checkpoint
-		if (wf->tasks[task_index].checkpoint)
+		if (wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
 			oph_workflow_save(wf, session_code, wf->tasks[task_index].checkpoint);
 	}
 

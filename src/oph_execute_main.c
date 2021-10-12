@@ -222,6 +222,11 @@ typedef struct __ophExecuteMain_data {
 
 void *_ophExecuteMain(_ophExecuteMain_data * data)
 {
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
+#endif
+
 	struct oph__ophResponse new_response;
 
 	oph__ophExecuteMain(data->soap, data->request, &new_response);
@@ -231,8 +236,17 @@ void *_ophExecuteMain(_ophExecuteMain_data * data)
 	if (new_response.response)
 		free(new_response.response);
 
+	soap_destroy(data->soap);	/* for C++ */
+	soap_end(data->soap);
+	soap_free(data->soap);
+
 	free(data->request);
 	free(data);
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
+	mysql_thread_end();
+#endif
 
 	return (void *) NULL;;
 }
@@ -2788,7 +2802,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					oph_workflow *old_wf = NULL;
 					char *buffer, *submission_string = NULL;
 					struct stat s;
-					int orig_request;
+					char orig_request;
 
 					for (i = 0; i < list.size; ++i) {
 						if (document_type) {
@@ -2799,10 +2813,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								submission_string = strdup(list.name[i] ? list.name[i] : "-");
 							else {
 								orig_request = document_type > 1;
-								if (!orig_request)
+								if (!orig_request) {
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
 										 oph_web_server_location, session_code, list.wid[i]);
-								if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
+									pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+									orig_request = stat(filename, &s) && (errno == ENOENT);
+									pthread_mutex_unlock(&global_flag);
+								}
+								if (orig_request)
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
 										 oph_web_server_location, session_code, list.wid[i]);
 								if (oph_get_result_from_file(filename, &buffer) || !buffer) {
@@ -5533,15 +5551,41 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							if (document_type) {
 								struct stat s;
-								if (execute && strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_ALL))	// Execute from a checkpoint
+								if (execute && strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_ALL)) {	// Execute from a checkpoint
+									char checkpoint_not_found = 0;
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT,
 										 oph_web_server_location, session_code, workflow, execute);
-								else {
-									int orig_request = document_type > 1;
-									if (!orig_request)
+									pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+									checkpoint_not_found = stat(filename, &s) && (errno == ENOENT);
+									pthread_mutex_unlock(&global_flag);
+									if (checkpoint_not_found) {
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: checkpoint '%s' not found: skip execution...\n", jobid,
+											   execute);
+										if (markers) {
+											free(markers);
+											markers = NULL;
+										}
+										if (ctime) {
+											free_string_vector(ctime, n);
+											ctime = NULL;
+										}
+										response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+										oph_workflow_free(wf);
+										oph_cleanup_args(&user_args);
+										if (jstring)
+											free(jstring);
+										return SOAP_OK;
+									}
+								} else {
+									char orig_request = document_type > 1;
+									if (!orig_request) {
 										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
 											 oph_web_server_location, session_code, workflow);
-									if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
+										pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+										orig_request = stat(filename, &s) && (errno == ENOENT);
+										pthread_mutex_unlock(&global_flag);
+									}
+									if (orig_request)
 										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
 											 oph_web_server_location, session_code, workflow);
 								}
@@ -5566,13 +5610,18 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									free(jstring);
 								return SOAP_OK;
 							}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 							if (execute) {	// Run the workflow as a new request
-								_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
-								data->soap = soap;
-								data->request = strdup(jstring);
-								pthread_t tid;
-								pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
+								struct soap *tsoap = soap_copy(soap);
+								if (tsoap) {
+									_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
+									data->soap = tsoap;
+									data->request = strdup(jstring);
+									pthread_t tid;
+									pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
+								}
 							}
+#endif
 						}
 					}
 
