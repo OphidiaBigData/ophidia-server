@@ -3245,7 +3245,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				process_notification = 0;
 			}
 		}
-
+		if (!process_notification) {
+			oph_output_data_free(outputs_keys, outputs_num);
+			oph_output_data_free(outputs_values, outputs_num);
+		}
 	}
 
 	if (process_notification) {
