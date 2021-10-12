@@ -231,11 +231,6 @@ void *_ophExecuteMain(_ophExecuteMain_data * data)
 
 	oph__ophExecuteMain(data->soap, data->request, &new_response);
 
-	if (new_response.jobid)
-		free(new_response.jobid);
-	if (new_response.response)
-		free(new_response.response);
-
 	if (data->soap->userid)
 		free((char *) data->soap->userid);
 	if (data->soap->passwd)
