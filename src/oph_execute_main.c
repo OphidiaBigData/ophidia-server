@@ -236,6 +236,11 @@ void *_ophExecuteMain(_ophExecuteMain_data * data)
 	if (new_response.response)
 		free(new_response.response);
 
+	if (data->soap->userid)
+		free((char *) data->soap->userid);
+	if (data->soap->passwd)
+		free((char *) data->soap->passwd);
+
 	soap_destroy(data->soap);	/* for C++ */
 	soap_end(data->soap);
 	soap_free(data->soap);
@@ -5614,6 +5619,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							if (execute) {	// Run the workflow as a new request
 								struct soap *tsoap = soap_copy(soap);
 								if (tsoap) {
+									if (!tsoap->userid && soap->userid)
+										tsoap->userid = strdup(soap->userid);
+									if (!tsoap->passwd && soap->passwd)
+										tsoap->passwd = strdup(soap->passwd);
 									_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
 									data->soap = tsoap;
 									data->request = strdup(jstring);

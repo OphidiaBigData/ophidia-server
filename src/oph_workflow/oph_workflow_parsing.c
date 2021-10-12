@@ -950,7 +950,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 
 	*jstring = NULL;
 
-	int i, j, k;
+	int i, j;
 	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0;
 	json_t *request = json_object();
 	if (!request)
@@ -1075,8 +1075,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 			}
 			for (j = 0; j < workflow->tasks[i].deps_num; ++j) {
 
-				k = workflow->tasks[i].deps[j].task_index;
-				if (remove_completed && (k >= 0) && (workflow->tasks[k].status >= OPH_ODB_STATUS_COMPLETED))
+				if (remove_completed && (workflow->tasks[i].deps[j].task_index < 0))
 					continue;
 
 				json_t *dependency = json_object();
