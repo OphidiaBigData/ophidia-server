@@ -134,6 +134,7 @@
 #define OPH_OPERATOR_PARAMETER_INPUT "input"
 #define OPH_OPERATOR_PARAMETER_OUTPUT "output"
 #define OPH_OPERATOR_PARAMETER_EXECUTE "execute"
+#define OPH_OPERATOR_PARAMETER_CHECKPOINT "checkpoint"
 
 // Known values
 #define OPH_COMMON_NULL "-"

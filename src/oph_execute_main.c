@@ -2166,8 +2166,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Handle RESUME_OPERATOR
 	if (oph_known_operator == OPH_RESUME_OPERATOR) {
-		char *session = NULL, *user = NULL, *mask = NULL, *execute = NULL;
-		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0;
+		char *session = NULL, *user = NULL, *mask = NULL, *checkpoint = NULL;
+		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0, execute = -1;
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_SESSION, OPH_ARG_MARKER);
 		for (i = 0; i < wf->tasks[0].arguments_num; ++i) {
@@ -2249,8 +2249,22 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				if (!mask)
 					mask = wf->tasks[0].arguments_values[i];
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_EXECUTE, OPH_MAX_STRING_SIZE)) {
-				if (!execute)
-					execute = wf->tasks[0].arguments_values[i];
+				if (execute < 0) {
+					if (!strncasecmp(wf->tasks[0].arguments_values[i], OPH_COMMON_YES, OPH_MAX_STRING_SIZE))
+						execute = 1;
+					else if (!strncasecmp(wf->tasks[0].arguments_values[i], OPH_COMMON_NO, OPH_MAX_STRING_SIZE))
+						execute = 0;
+					else {
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong parameter '%s'\n", jobid, OPH_OPERATOR_PARAMETER_EXECUTE);
+						response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						oph_workflow_free(wf);
+						oph_cleanup_args(&user_args);
+						return SOAP_OK;
+					}
+				}
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_CHECKPOINT, OPH_MAX_STRING_SIZE)) {
+				if (!checkpoint)
+					checkpoint = wf->tasks[0].arguments_values[i];
 			}
 		}
 
@@ -2274,6 +2288,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			level = 1;
 		if (save < 0)
 			save = 0;
+		if (execute < 0)
+			execute = 0;
 
 		if (!level && document_type)	// Options level == 0 and level == 1 are equivalent in case of JSON Requests
 			level = 1;
@@ -2323,10 +2339,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			return SOAP_OK;
 		}
 
-		if (execute && !strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_NO))
-			execute = NULL;
-		else if (!document_type)
-			execute = NULL;
+		if (!document_type)
+			checkpoint = NULL;
 
 		oph_init_args(&args);
 
@@ -5551,16 +5565,28 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							if (document_type) {
 								struct stat s;
-								if (execute && strcmp(execute, OPH_OPERATOR_RESUME_PARAMETER_ALL)) {	// Execute from a checkpoint
+								// select the original workflow (or its extension in case of parallel for)
+								if (!checkpoint || !strlen(checkpoint) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_ALL)) {
+									char orig_request = document_type > 1;
+									if (!orig_request) {
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
+											 oph_web_server_location, session_code, workflow);
+										pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+										orig_request = stat(filename, &s) && (errno == ENOENT);
+										pthread_mutex_unlock(&global_flag);
+									}
+									if (orig_request)
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
+											 oph_web_server_location, session_code, workflow);
+								} else {	// otherwise select a sub-workflow from a checkpoint
 									char checkpoint_not_found = 0;
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT,
-										 oph_web_server_location, session_code, workflow, execute);
+										 oph_web_server_location, session_code, workflow, checkpoint);
 									pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
 									checkpoint_not_found = stat(filename, &s) && (errno == ENOENT);
 									pthread_mutex_unlock(&global_flag);
 									if (checkpoint_not_found) {
-										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: checkpoint '%s' not found: skip execution...\n", jobid,
-											   execute);
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: checkpoint '%s' not found\n", jobid, checkpoint);
 										if (markers) {
 											free(markers);
 											markers = NULL;
@@ -5574,20 +5600,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 										oph_cleanup_args(&user_args);
 										if (jstring)
 											free(jstring);
+										oph_json_free(oper_json);
 										return SOAP_OK;
 									}
-								} else {
-									char orig_request = document_type > 1;
-									if (!orig_request) {
-										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
-											 oph_web_server_location, session_code, workflow);
-										pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
-										orig_request = stat(filename, &s) && (errno == ENOENT);
-										pthread_mutex_unlock(&global_flag);
-									}
-									if (orig_request)
-										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
-											 oph_web_server_location, session_code, workflow);
 								}
 							} else
 								snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
@@ -5608,10 +5623,12 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								oph_cleanup_args(&user_args);
 								if (jstring)
 									free(jstring);
+								oph_json_free(oper_json);
 								return SOAP_OK;
 							}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-							if (execute) {	// Run the workflow as a new request
+							// Run the workflow as a new request
+							if (execute) {
 								struct soap *tsoap = soap_copy(soap);
 								if (tsoap) {
 									if (!tsoap->userid && soap->userid)
