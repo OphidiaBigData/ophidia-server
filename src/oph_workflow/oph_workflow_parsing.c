@@ -996,7 +996,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "command", workflow->command))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	if (_oph_workflow_add_to_json(request, "host_partition", workflow->host_partition))
+	if (_oph_workflow_add_to_json(request, "host_partition", workflow->host_partition_orig ? workflow->host_partition_orig : workflow->host_partition))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
 	json_t *tasks = json_array();
@@ -1212,6 +1212,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->run = 1;
 	(*workflow)->parallel_mode = 0;
 	(*workflow)->host_partition = NULL;
+	(*workflow)->host_partition_orig = NULL;
 	(*workflow)->client_address = NULL;
 	(*workflow)->new_token = NULL;
 	(*workflow)->project = NULL;

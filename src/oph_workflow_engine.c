@@ -6501,7 +6501,9 @@ int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
 	if (oph_odb_create_hp(oDB, pname, wf->host_partition, id_user))
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 
-	free(wf->host_partition);
+	if (wf->host_partition_orig)
+		free(wf->host_partition_orig);
+	wf->host_partition_orig = wf->host_partition;
 	wf->host_partition = strdup(pname);
 	if (!wf->host_partition)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;

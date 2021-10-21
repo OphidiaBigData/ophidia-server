@@ -361,6 +361,7 @@ typedef struct _oph_workflow {
 	int output_format;
 	char cancel_type;
 	char *host_partition;
+	char *host_partition_orig;
 	int waiting_tasks_num;
 	double timestamp;
 	char *client_address;
