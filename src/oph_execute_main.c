@@ -215,6 +215,42 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 	return OPH_SERVER_OK;
 }
 
+typedef struct __ophExecuteMain_data {
+	struct soap *soap;
+	xsd__string request;
+} _ophExecuteMain_data;
+
+void *_ophExecuteMain(_ophExecuteMain_data * data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
+#endif
+
+	struct oph__ophResponse new_response;
+
+	oph__ophExecuteMain(data->soap, data->request, &new_response);
+
+	if (data->soap->userid)
+		free((char *) data->soap->userid);
+	if (data->soap->passwd)
+		free((char *) data->soap->passwd);
+
+	soap_destroy(data->soap);	/* for C++ */
+	soap_end(data->soap);
+	soap_free(data->soap);
+
+	free(data->request);
+	free(data);
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
+	mysql_thread_end();
+#endif
+
+	return (void *) NULL;;
+}
+
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	if (service_info) {
@@ -2130,9 +2166,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 	// Handle RESUME_OPERATOR
 	if (oph_known_operator == OPH_RESUME_OPERATOR) {
-
-		char *session = NULL, *user = NULL, *mask = NULL;
-		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0;
+		char *session = NULL, *user = NULL, *mask = NULL, *checkpoint = NULL;
+		int id = -1, id_type = -1, document_type = -1, level = -1, save = -1, wid = 0, execute = -1;
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_SESSION, OPH_ARG_MARKER);
 		for (i = 0; i < wf->tasks[0].arguments_num; ++i) {
@@ -2213,6 +2248,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_STATUS_FILTER, OPH_MAX_STRING_SIZE)) {
 				if (!mask)
 					mask = wf->tasks[0].arguments_values[i];
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_EXECUTE, OPH_MAX_STRING_SIZE)) {
+				if (execute < 0) {
+					if (!strncasecmp(wf->tasks[0].arguments_values[i], OPH_COMMON_YES, OPH_MAX_STRING_SIZE))
+						execute = 1;
+					else if (!strncasecmp(wf->tasks[0].arguments_values[i], OPH_COMMON_NO, OPH_MAX_STRING_SIZE))
+						execute = 0;
+					else {
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong parameter '%s'\n", jobid, OPH_OPERATOR_PARAMETER_EXECUTE);
+						response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						oph_workflow_free(wf);
+						oph_cleanup_args(&user_args);
+						return SOAP_OK;
+					}
+				}
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_CHECKPOINT, OPH_MAX_STRING_SIZE)) {
+				if (!checkpoint)
+					checkpoint = wf->tasks[0].arguments_values[i];
 			}
 		}
 
@@ -2236,6 +2288,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			level = 1;
 		if (save < 0)
 			save = 0;
+		if (execute < 0)
+			execute = 0;
 
 		if (!level && document_type)	// Options level == 0 and level == 1 are equivalent in case of JSON Requests
 			level = 1;
@@ -2284,6 +2338,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			oph_cleanup_args(&user_args);
 			return SOAP_OK;
 		}
+
+		if (!document_type)
+			checkpoint = NULL;
 
 		oph_init_args(&args);
 
@@ -2759,7 +2816,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					oph_workflow *old_wf = NULL;
 					char *buffer, *submission_string = NULL;
 					struct stat s;
-					int orig_request;
+					char orig_request;
 
 					for (i = 0; i < list.size; ++i) {
 						if (document_type) {
@@ -2770,10 +2827,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								submission_string = strdup(list.name[i] ? list.name[i] : "-");
 							else {
 								orig_request = document_type > 1;
-								if (!orig_request)
+								if (!orig_request) {
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
 										 oph_web_server_location, session_code, list.wid[i]);
-								if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
+									pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+									orig_request = stat(filename, &s) && (errno == ENOENT);
+									pthread_mutex_unlock(&global_flag);
+								}
+								if (orig_request)
 									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
 										 oph_web_server_location, session_code, list.wid[i]);
 								if (oph_get_result_from_file(filename, &buffer) || !buffer) {
@@ -5504,13 +5565,45 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						{
 							if (document_type) {
 								struct stat s;
-								int orig_request = document_type > 1;
-								if (!orig_request)
-									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
-										 oph_web_server_location, session_code, workflow);
-								if (orig_request || (stat(filename, &s) && (errno == ENOENT)))
-									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
-										 oph_web_server_location, session_code, workflow);
+								// select the original workflow (or its extension in case of parallel for)
+								if (!checkpoint || !strlen(checkpoint) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_ALL)) {
+									char orig_request = document_type > 1;
+									if (!orig_request) {
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT,
+											 oph_web_server_location, session_code, workflow);
+										pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+										orig_request = stat(filename, &s) && (errno == ENOENT);
+										pthread_mutex_unlock(&global_flag);
+									}
+									if (orig_request)
+										snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN,
+											 oph_web_server_location, session_code, workflow);
+								} else {	// otherwise select a sub-workflow from a checkpoint
+									char checkpoint_not_found = 0;
+									snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT,
+										 oph_web_server_location, session_code, workflow, checkpoint);
+									pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+									checkpoint_not_found = stat(filename, &s) && (errno == ENOENT);
+									pthread_mutex_unlock(&global_flag);
+									if (checkpoint_not_found) {
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: checkpoint '%s' not found\n", jobid, checkpoint);
+										if (markers) {
+											free(markers);
+											markers = NULL;
+										}
+										if (ctime) {
+											free_string_vector(ctime, n);
+											ctime = NULL;
+										}
+										response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+										oph_workflow_free(wf);
+										oph_cleanup_args(&user_args);
+										if (jstring)
+											free(jstring);
+										oph_json_free(oper_json);
+										return SOAP_OK;
+									}
+								}
 							} else
 								snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_RESPONSE_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location,
 									 session_code, marker);
@@ -5530,8 +5623,26 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								oph_cleanup_args(&user_args);
 								if (jstring)
 									free(jstring);
+								oph_json_free(oper_json);
 								return SOAP_OK;
 							}
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+							// Run the workflow as a new request
+							if (execute) {
+								struct soap *tsoap = soap_copy(soap);
+								if (tsoap) {
+									if (!tsoap->userid && soap->userid)
+										tsoap->userid = strdup(soap->userid);
+									if (!tsoap->passwd && soap->passwd)
+										tsoap->passwd = strdup(soap->passwd);
+									_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
+									data->soap = tsoap;
+									data->request = strdup(jstring);
+									pthread_t tid;
+									pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
+								}
+							}
+#endif
 						}
 					}
 
@@ -5994,12 +6105,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (wf->parallel_mode) {
 		// Save the extended JSON request
 		char *jstring = NULL;
-		if (oph_workflow_store(wf, &jstring)) {
+		pthread_mutex_lock(&global_flag);
+		if (oph_workflow_store(wf, &jstring, 0)) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to create the extended JSON Request\n", jobid);
+			pthread_mutex_unlock(&global_flag);
 			if (jstring)
 				free(jstring);
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to create the extended JSON Request\n");
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
+		pthread_mutex_unlock(&global_flag);
+
 		char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
 		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server_location, session_code, wf->workflowid);
 		FILE *fil = fopen(filename, "w");
@@ -6007,9 +6122,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			fprintf(fil, "%s", jstring);
 			fclose(fil);
 		} else
-			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the extended JSON Request\n");
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save the extended JSON Request\n", jobid);
 
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Extended JSON Request saved\n");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: extended JSON Request saved\n", jobid);
 		if (jstring)
 			free(jstring);
 

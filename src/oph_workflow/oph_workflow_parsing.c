@@ -28,7 +28,7 @@
 
 #include "oph_workflow_functions.h"
 #include "oph_workflow_define.h"
-#include "debug.h"
+#include "oph_parser.h"
 
 extern unsigned int oph_base_backoff;
 
@@ -70,7 +70,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	char *clean_json_string = NULL;
 	if (_oph_workflow_skip_comments(json_string, &clean_json_string) || !clean_json_string) {
 		oph_workflow_free(*workflow);
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "comments are not corrected set\n");
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "comments are not set correctly\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	//load json_t from json_string
@@ -85,10 +85,12 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save = NULL;
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save =
+	    NULL, *checkpoint = NULL;
 	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid,
 		    "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit,
-		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save);
+		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save,
+		    "checkpoint", &checkpoint);
 
 	//add global vars
 	if (!name) {
@@ -242,6 +244,23 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 	}
+	if (checkpoint && strlen(checkpoint)) {
+		if (!strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_NO) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_ALL) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_LAST)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'checkpoint': value '%s' is not allowed\n", checkpoint);
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+		(*workflow)->checkpoint = (char *) strdup((const char *) checkpoint);
+		if (!((*workflow)->checkpoint)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating checkpoint\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+	}
 	(*workflow)->run = 1;	// Default value (yes)
 	if (run && strlen(run)) {
 		if (!strcmp(run, OPH_WORKFLOW_NO))
@@ -330,9 +349,9 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 		//unpack name and operator
-		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *save_task = NULL, *type = NULL;
-		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "save", &save_task,
-			    "type", &type);
+		char *name = NULL, *operator= NULL, *on_error_task = NULL, *on_exit_task = NULL, *run_task = NULL, *save_task = NULL, *type = NULL, *checkpoint = NULL;
+		json_unpack(task, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "operator", &operator, "on_error", &on_error_task, "on_exit", &on_exit_task, "run", &run_task, "save", &save_task,
+			    "type", &type, "checkpoint", &checkpoint);
 
 		//add name and operator
 		if (!name || !operator) {
@@ -719,6 +738,18 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 		(*workflow)->tasks[i].parent = (*workflow)->tasks[i].child = -1;
 		(*workflow)->tasks[i].nesting_level = (*workflow)->tasks[i].parallel_mode = 0;
+
+		if (checkpoint && strlen(checkpoint)) {
+			if (!strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_NO) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_ALL) || !strcmp(checkpoint, OPH_OPERATOR_RESUME_PARAMETER_LAST)) {
+				oph_workflow_free(*workflow);
+				if (jansson)
+					json_decref(jansson);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'checkpoint': value '%s' is not allowed\n", checkpoint);
+				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+			}
+			(*workflow)->tasks[i].checkpoint = strdup(checkpoint);
+		} else if ((*workflow)->checkpoint)
+			(*workflow)->tasks[i].checkpoint = strdup(checkpoint);
 	}
 
 	// Final task
@@ -910,7 +941,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 }
 
 // Thread_unsafe
-int oph_workflow_store(oph_workflow * workflow, char **jstring)
+int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_completed)
 {
 	if (!workflow || !jstring) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -953,6 +984,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (!workflow->run && _oph_workflow_add_to_json(request, "run", "no"))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (workflow->checkpoint && _oph_workflow_add_to_json(request, "checkpoint", workflow->checkpoint))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "cwd", workflow->cwd))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "cdd", workflow->cdd))
@@ -973,6 +1006,10 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	for (i = 0; i < workflow->tasks_num; ++i) {
+
+		if (remove_completed && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
+			continue;
+
 		json_t *task = json_object();
 		if (!task)
 			break;
@@ -988,6 +1025,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		if (_oph_workflow_add_to_json(task, "on_exit", workflow->tasks[i].on_exit))
 			break;
 		if (!workflow->tasks[i].run && _oph_workflow_add_to_json(task, "run", "no"))
+			break;
+		if (workflow->tasks[i].checkpoint && _oph_workflow_add_to_json(task, "checkpoint", workflow->tasks[i].checkpoint))
 			break;
 
 		json_t *arguments = json_array();
@@ -1035,6 +1074,10 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 				break;
 			}
 			for (j = 0; j < workflow->tasks[i].deps_num; ++j) {
+
+				if (remove_completed && (workflow->tasks[i].deps[j].task_index < 0))
+					continue;
+
 				json_t *dependency = json_object();
 				if (!dependency)
 					break;
@@ -1105,7 +1148,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 	if (request)
 		json_decref(request);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Released the following request:\n%s\n", *jstring);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Saving the following request:\n%s\n", *jstring);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -1172,6 +1215,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->client_address = NULL;
 	(*workflow)->new_token = NULL;
 	(*workflow)->project = NULL;
+	(*workflow)->checkpoint = NULL;
 
 	struct timeval tv;
 	gettimeofday(&tv, 0);

@@ -51,6 +51,7 @@ pthread_mutex_t global_flag;
 pthread_mutex_t libssh2_flag;
 pthread_mutex_t curl_flag;
 pthread_mutex_t service_flag;
+pthread_mutex_t savefile_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
 #endif
@@ -364,6 +365,7 @@ void cleanup()
 	pthread_mutex_destroy(&libssh2_flag);
 	pthread_mutex_destroy(&curl_flag);
 	pthread_mutex_destroy(&service_flag);
+	pthread_mutex_destroy(&savefile_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
 #endif
@@ -707,6 +709,7 @@ int main(int argc, char **argv)
 	pthread_mutex_init(&libssh2_flag, NULL);
 	pthread_mutex_init(&curl_flag, NULL);
 	pthread_mutex_init(&service_flag, NULL);
+	pthread_mutex_init(&savefile_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
 #endif

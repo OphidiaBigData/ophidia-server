@@ -57,6 +57,7 @@ extern pthread_cond_t termination_flag;
 extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
+extern pthread_mutex_t savefile_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -216,6 +217,49 @@ int oph_build_hash(char *str, unsigned int len)
 	}
 
 	sprintf(result, "%u%u", hash1, hash2);
+
+	return OPH_SERVER_OK;
+}
+
+int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *checkpoint)
+{
+	if (!wf || !checkpoint)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+	char *jstring = NULL;
+	pthread_mutex_lock(&global_flag);
+	if (oph_workflow_store(wf, &jstring, 1)) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create the JSON Request with checkpoint '%s'\n", checkpoint);
+		pthread_mutex_unlock(&global_flag);
+		if (jstring)
+			free(jstring);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
+	pthread_mutex_unlock(&global_flag);
+
+	char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+
+	pthread_mutex_lock(&savefile_flag);	// This lock is required as more checkpoint with the same name could be saved with the same name, the last is the best
+	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid, checkpoint);
+	FILE *fil = fopen(filename, "w");
+	if (fil) {
+		fprintf(fil, "%s", jstring);
+		fclose(fil);
+	} else
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", checkpoint);
+	snprintf(linkname, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid,
+		 OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	if (symlink(filename, linkname))
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to link the JSON Request with checkpoint '%s'\n", OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	pthread_mutex_unlock(&savefile_flag);
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "JSON Request with checkpoint '%s' saved\n", checkpoint);
+	if (jstring)
+		free(jstring);
+
+	snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_CHECKPOINT, wf->workflowid, checkpoint);
+	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server, session_code, wf->workflowid, checkpoint);
+	oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, filename, 'R');
 
 	return OPH_SERVER_OK;
 }
@@ -3218,7 +3262,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				process_notification = 0;
 			}
 		}
-
+		if (!process_notification) {
+			oph_output_data_free(outputs_keys, outputs_num);
+			oph_output_data_free(outputs_values, outputs_num);
+		}
 	}
 
 	if (process_notification) {
@@ -4853,14 +4900,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		if (!error) {
 			if (final_task) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: execute '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: execute '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
 				if (oph_workflow_execute(state, 'N', jobid, wf, &wf->tasks_num, 1, &oDB, NULL)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to start '%s'\n", ttype, jobid, OPH_WORKFLOW_FINAL_TASK);
 					*response = OPH_SERVER_SYSTEM_ERROR;
 					error = 1;
 				}
 			} else if (retry_task_execution) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: re-execute task '%s'\n", ttype, jobid, wf->tasks[task_index].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: re-execute task '%s'\n", ttype, jobid, wf->tasks[task_index].name);
 				if (oph_workflow_execute(state, 'N', jobid, wf, &task_index, 1, &oDB, NULL))	// Data can be out of lock as they should change
 				{
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to restart task '%s'\n", ttype, jobid, wf->tasks[task_index].name);
@@ -4868,7 +4915,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					error = 1;
 				}
 			} else if (update_wf_data && task_completed && !final) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: execute the tasks depending on '%s'\n", ttype, jobid, wf->tasks[task_index].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: execute the tasks depending on '%s'\n", ttype, jobid, wf->tasks[task_index].name);
 				if (oph_workflow_execute(state, 'N', jobid, wf, wf->tasks[task_index].dependents_indexes, wf->tasks[task_index].dependents_indexes_num, &oDB, NULL))	// Data can be out of lock as they should change
 				{
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to start new jobs\n", ttype, jobid);
@@ -4877,7 +4924,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 			}
 		}
-
+		// Checkpoint
+		if (wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
+			oph_workflow_save(wf, session_code, wf->tasks[task_index].checkpoint);
 	}
 
 	if (final) {

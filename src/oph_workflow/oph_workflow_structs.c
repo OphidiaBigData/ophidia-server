@@ -140,6 +140,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->on_exit);
 		workflow->on_exit = NULL;
 	}
+	if (workflow->checkpoint) {
+		free(workflow->checkpoint);
+		workflow->checkpoint = NULL;
+	}
 	if (workflow->exit_cubes) {
 		oph_trash_destroy(workflow->exit_cubes);
 		workflow->exit_cubes = NULL;
@@ -273,6 +277,10 @@ int oph_workflow_task_free(oph_workflow_task * task)
 	if (task->on_exit) {
 		free(task->on_exit);
 		task->on_exit = NULL;
+	}
+	if (task->checkpoint) {
+		free(task->checkpoint);
+		task->checkpoint = NULL;
 	}
 	if (task->query) {
 		free(task->query);

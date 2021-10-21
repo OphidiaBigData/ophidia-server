@@ -33,9 +33,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 /* \brief Function for JSON parsing and global variables substitution (ncores,cwd and cube)
  * \param workflow Input OPH_WORKFLOW
  * \param json_string Output JSON string
+ * \param remove_completed Flag set in case completed tasks cannot be saved
  * \return 0 if successful
  */
-int oph_workflow_store(oph_workflow * workflow, char **json_string);
+int oph_workflow_store(oph_workflow * workflow, char **json_string, char remove_completed);
 
 /* \brief Function to index task names in deps and init dependents_indexes
  * \param tasks Array of tasks
