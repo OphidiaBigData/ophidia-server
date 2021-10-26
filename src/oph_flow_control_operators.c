@@ -35,7 +35,7 @@
 #define OPH_FLOW_EVAL "EVAL("
 #endif
 
-#define OPH_FS_COMMAND "operator=oph_fs;command=ls;file=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userid=%d;userrole=%d;parentid=%d;"
+#define OPH_FS_COMMAND "operator=oph_fs;command=ls;file=%s;sessionid=%s;workflowid=%d;markerid=%s;taskindex=%d;lighttaskindex=-1;username=%s;userid=%d;userrole=%d;parentid=%d;"
 #define OPH_FS_GRID_CLASS "grid"
 #define OPH_FS_GRID_NAME "fs"
 #define OPH_FS_GRID_TYPE "T"
@@ -201,13 +201,13 @@ void *_oph_wait(oph_notify_data * data)
 
 	char command[OPH_MAX_STRING_SIZE];
 	char str_markerid[OPH_SHORT_STRING_SIZE];
-	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
+	snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d", markerid);
 	if (success && !is_http && (wd->type == 'f')) {
 		char measure[OPH_MAX_STRING_SIZE];
 		if (wd->measure)
 			snprintf(measure, OPH_MAX_STRING_SIZE, OPH_FS_MEASURE, wd->measure);
-		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, markerid, task_index, wf->username, wf->iduser, wf->userrole,
-			 wf->idjob, wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
+		snprintf(command, OPH_MAX_STRING_SIZE, OPH_FS_COMMAND "%s%s" OPH_SERVER_REQUEST_FLAG, pointer, sessionid, wf->workflowid, str_markerid, task_index, wf->username, wf->iduser,
+			 wf->userrole, wf->idjob, wd->measure ? measure : "", wd->subset_params ? wd->subset_params : "");
 	} else
 		*command = 0;
 
