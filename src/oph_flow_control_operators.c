@@ -35,7 +35,7 @@
 #define OPH_FLOW_EVAL "EVAL("
 #endif
 
-#define OPH_FS_COMMAND "operator=oph_fs;command=ls;file=%s;sessionid=%s;workflowid=%d;markerid=%d;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
+#define OPH_FS_COMMAND "operator=oph_fs;command=ls;file=%s;sessionid=%s;workflowid=%d;markerid=%s;taskindex=%d;lighttaskindex=-1;username=%s;userrole=%d;parentid=%d;"
 #define OPH_FS_GRID_CLASS "grid"
 #define OPH_FS_GRID_NAME "fs"
 #define OPH_FS_GRID_TYPE "T"
