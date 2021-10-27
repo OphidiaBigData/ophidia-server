@@ -614,6 +614,8 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->on_exit && !((d->on_exit = strdup(s->on_exit))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->checkpoint && !((d->checkpoint = strdup(s->checkpoint))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
