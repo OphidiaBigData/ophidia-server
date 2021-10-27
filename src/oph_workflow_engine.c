@@ -4924,8 +4924,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 			}
 		}
-		// Checkpoint
-		if (wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
+		// Checkpoint: reference to wf could not be consistent
+		char save = final;
+		if (!save) {
+			pthread_mutex_lock(&global_flag);
+			if ((item = oph_find_job_in_job_list(state->job_info, odb_parentid, &prev)))
+				save = 1;
+			pthread_mutex_unlock(&global_flag);
+		}
+		if (save && wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
 			oph_workflow_save(wf, session_code, wf->tasks[task_index].checkpoint);
 	}
 
