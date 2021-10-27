@@ -2297,8 +2297,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2402,8 +2402,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2507,8 +2507,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2608,8 +2608,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2710,8 +2710,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -2807,8 +2807,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -3057,8 +3057,8 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_lock(&global_flag);
 
-		oph_job_info *item = NULL, *prev = NULL;
-		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+		oph_job_info *item = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, NULL))) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;

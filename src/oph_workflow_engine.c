@@ -4907,8 +4907,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		char save = final;
 		if (!save) {
 			pthread_mutex_lock(&global_flag);
-			if ((item = oph_find_job_in_job_list(state->job_info, odb_parentid, &prev)))
+			if (oph_find_job_in_job_list(state->job_info, odb_parentid, NULL))
 				save = 1;
+			else
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to save checkpoint since the workflow has been deleted\n", ttype, jobid);
 			pthread_mutex_unlock(&global_flag);
 		}
 		if (save && wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
