@@ -2933,7 +2933,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	}
 
 	char *ctmp, *sessionid = NULL, *query = NULL;
-	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, marker_id = -1, outputs_num = 0;
+	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, light_task_index_orig = -1, marker_id = -1, outputs_num = 0;
 #ifdef OPH_OPENID_SUPPORT
 	char *access_token = NULL, *refresh_token = NULL, *userinfo = NULL;
 #endif
@@ -2959,7 +2959,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		else if (!strncmp(aitem->key, OPH_ARG_TASKINDEX, OPH_MAX_STRING_SIZE))
 			task_index = strtol(ctmp, NULL, 10);
 		else if (!strncmp(aitem->key, OPH_ARG_LIGHTTASKINDEX, OPH_MAX_STRING_SIZE))
-			light_task_index = strtol(ctmp, NULL, 10);
+			light_task_index = light_task_index_orig = strtol(ctmp, NULL, 10);
 		else if (!strncmp(aitem->key, OPH_ARG_SESSIONID, OPH_MAX_STRING_SIZE))
 			sessionid = strdup(ctmp);
 		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
@@ -4173,7 +4173,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE];
 					snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
 					snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d",
-						 light_task_index >= 0 ? wf->tasks[task_index].light_tasks[light_task_index].markerid : wf->tasks[task_index].markerid);
+						 light_task_index_orig >= 0 ? wf->tasks[task_index].light_tasks[light_task_index_orig].markerid : wf->tasks[task_index].markerid);
 					snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, str_workflowid, OPH_SESSION_MARKER_DELIMITER,
 						 str_markerid);
 
@@ -4730,13 +4730,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		}
 
 		if (!error && update_light_task_data) {
-			if (oph_odb_set_job_status(wf->tasks[task_index].light_tasks[light_task_index].idjob, wf->tasks[task_index].light_tasks[light_task_index].status, &oDB)) {
+			if (oph_odb_set_job_status(wf->tasks[task_index].light_tasks[light_task_index_orig].idjob, wf->tasks[task_index].light_tasks[light_task_index_orig].status, &oDB)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
 				*response = OPH_SERVER_IO_ERROR;
 				error = 1;
 			} else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: update status of job %d to %s\n", ttype, jobid, wf->tasks[task_index].light_tasks[light_task_index].idjob,
-				      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status));
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: update status of job %d to %s\n", ttype, jobid, wf->tasks[task_index].light_tasks[light_task_index_orig].idjob,
+				      oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index_orig].status));
 		}
 		if (massive_completed)
 			light_task_index = -1;	// It needs to be tested
@@ -4928,8 +4928,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		char save = final;
 		if (!save) {
 			pthread_mutex_lock(&global_flag);
-			if ((item = oph_find_job_in_job_list(state->job_info, odb_parentid, &prev)))
+			if (oph_find_job_in_job_list(state->job_info, odb_parentid, NULL))
 				save = 1;
+			else
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to save checkpoint since the workflow has been deleted\n", ttype, jobid);
 			pthread_mutex_unlock(&global_flag);
 		}
 		if (save && wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
@@ -5919,7 +5921,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 #endif
 					{
 						snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d",
-							 light_task_index >= 0 ? wf->tasks[task_index].light_tasks[light_task_index].markerid : wf->tasks[task_index].markerid);
+							 light_task_index_orig >= 0 ? wf->tasks[task_index].light_tasks[light_task_index_orig].markerid : wf->tasks[task_index].markerid);
 						snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%d%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, wf->workflowid, OPH_SESSION_MARKER_DELIMITER,
 							 str_markerid);
 					}
@@ -5965,7 +5967,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				oper_json = NULL;
 				snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", wf->workflowid);
 				snprintf(str_markerid, OPH_SHORT_STRING_SIZE, "%d",
-					 light_task_index >= 0 ? wf->tasks[task_index].light_tasks[light_task_index].markerid : wf->tasks[task_index].markerid);
+					 light_task_index_orig >= 0 ? wf->tasks[task_index].light_tasks[light_task_index_orig].markerid : wf->tasks[task_index].markerid);
 				snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", wf->sessionid, OPH_SESSION_WORKFLOW_DELIMITER, str_workflowid, OPH_SESSION_MARKER_DELIMITER, str_markerid);
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Internal server error: no response has been received from analytics framework!");
 
