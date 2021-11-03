@@ -228,7 +228,7 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 
 	char *jstring = NULL;
 	pthread_mutex_lock(&global_flag);
-	if (oph_workflow_store(wf, &jstring, 1)) {
+	if (oph_workflow_store(wf, &jstring, checkpoint)) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create the JSON Request with checkpoint '%s'\n", checkpoint);
 		pthread_mutex_unlock(&global_flag);
 		if (jstring)
