@@ -301,6 +301,7 @@ void *_oph_wait(oph_notify_data * data)
 							break;
 						}
 						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "File '%s' exists\n", _filename);
+						success = 1;
 					case 'c':
 					case 'i':
 					default:

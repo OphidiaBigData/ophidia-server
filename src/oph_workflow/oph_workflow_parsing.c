@@ -941,7 +941,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 }
 
 // Thread_unsafe
-int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_completed)
+int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *checkpoint)
 {
 	if (!workflow || !jstring) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -955,7 +955,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 	json_t *request = json_object();
 	if (!request)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	if (_oph_workflow_add_to_json(request, "name", workflow->name))
+	snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%s%s%s", workflow->name, checkpoint ? " - from checkpoint: " : "", checkpoint ? checkpoint : "");
+	if (_oph_workflow_add_to_json(request, "name", jsontmp))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "author", workflow->author))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -1007,7 +1008,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 	}
 	for (i = 0; i < workflow->tasks_num; ++i) {
 
-		if (remove_completed && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
+		if (checkpoint && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
 			continue;
 
 		json_t *task = json_object();
@@ -1075,7 +1076,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, char remove_comp
 			}
 			for (j = 0; j < workflow->tasks[i].deps_num; ++j) {
 
-				if (remove_completed && (workflow->tasks[i].deps[j].task_index < 0))
+				if (checkpoint && (workflow->tasks[i].deps[j].task_index < 0))
 					continue;
 
 				json_t *dependency = json_object();

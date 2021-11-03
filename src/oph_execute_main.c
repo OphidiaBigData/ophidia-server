@@ -6106,7 +6106,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		// Save the extended JSON request
 		char *jstring = NULL;
 		pthread_mutex_lock(&global_flag);
-		if (oph_workflow_store(wf, &jstring, 0)) {
+		if (oph_workflow_store(wf, &jstring, NULL)) {
 			pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: unable to create the extended JSON Request\n", jobid);
 			pthread_mutex_unlock(&global_flag);
 			if (jstring)
