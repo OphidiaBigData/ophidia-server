@@ -951,7 +951,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 	*jstring = NULL;
 
 	int i, j;
-	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0;
+	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0, empty = 1;
 	json_t *request = json_object();
 	if (!request)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -1124,6 +1124,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 				json_decref(task);
 			break;
 		}
+
+		empty = 0;
 	}
 	if (i < workflow->tasks_num) {
 		if (request)
@@ -1138,6 +1140,13 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 		if (tasks)
 			json_decref(tasks);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
+	if (empty) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Request has no valid tasks\n");
+		if (request)
+			json_decref(request);
+		OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
 
 	*jstring = json_dumps((const json_t *) request, JSON_INDENT(4));
