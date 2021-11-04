@@ -950,8 +950,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 
 	*jstring = NULL;
 
-	int i, j;
-	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0, empty = 1;
+	int i, j, k;
+	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0, empty = 1, skip_dependence = 0;
 	json_t *request = json_object();
 	if (!request)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -1008,8 +1008,12 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 	}
 	for (i = 0; i < workflow->tasks_num; ++i) {
 
-		if (checkpoint && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
-			continue;
+		if (checkpoint) {
+			if (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED)
+				continue;
+			if ((workflow->tasks[i].parent >= 0) && (workflow->tasks[workflow->tasks[i].parent].status >= OPH_ODB_STATUS_COMPLETED))
+				continue;
+		}
 
 		json_t *task = json_object();
 		if (!task)
@@ -1079,6 +1083,15 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 				if (checkpoint && (workflow->tasks[i].deps[j].task_index < 0))
 					continue;
 
+				// Check if the parent task exists
+				for (k = 0; k < workflow->tasks_num; ++k) {
+					skip_dependence = (k == i) || (checkpoint && (workflow->tasks[k].status >= OPH_ODB_STATUS_COMPLETED));
+					if (!strcmp(workflow->tasks[k].name, workflow->tasks[i].deps[j].task_name))
+						break;
+				}
+				if (skip_dependence || (k >= workflow->tasks_num))
+					continue;
+
 				json_t *dependency = json_object();
 				if (!dependency)
 					break;
@@ -1146,7 +1159,7 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Request has no valid tasks\n");
 		if (request)
 			json_decref(request);
-		OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
 
 	*jstring = json_dumps((const json_t *) request, JSON_INDENT(4));
