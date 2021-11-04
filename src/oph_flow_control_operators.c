@@ -1163,10 +1163,10 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				break;
 			}
 
-			if (!first && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY)) {
+			if (!first && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && strcmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 				first = 1;
-			} else if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEYS))
+			} else if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEYS) && strcmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value)) {
@@ -1235,7 +1235,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			ret = OPH_SERVER_ERROR;
 			break;
 		}
-		if (name && strcmp(name, OPH_COMMON_NULL)) {
+		if (name) {
 			arg_value = strdup(name);
 			if (!arg_value)
 				break;
