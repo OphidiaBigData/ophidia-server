@@ -41,6 +41,7 @@
 #define OPH_ARG_SRC_PATH "src_path"
 #define OPH_ARG_MEASURE "measure"
 #define OPH_ARG_KEY "key"
+#define OPH_ARG_KEYS "keys"
 #define OPH_ARG_VALUE "value"
 #define OPH_ARG_VALUES "values"
 #define OPH_ARG_SUBSET_FILTER "subset_filter"
