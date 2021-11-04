@@ -1225,7 +1225,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			ret = OPH_SERVER_ERROR;
 			break;
 		}
-		if (name) {
+		if (name && strcmp(name, OPH_COMMON_NULL)) {
 			arg_value = strdup(name);
 			if (!arg_value)
 				break;
