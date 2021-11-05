@@ -30,6 +30,8 @@
 #include "oph_workflow_define.h"
 #include "oph_parser.h"
 
+#define OPH_GLOBAL_VARS "Global variables"
+
 extern unsigned int oph_base_backoff;
 
 /* Alloc oph_workflow struct */
@@ -337,6 +339,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating tasks\n");
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
+	// Create hash-table for run-time environment
+	(*workflow)->vars = hashtbl_create((*workflow)->tasks_num, NULL);
 	json_t *task = NULL;
 	int i, j;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
@@ -620,6 +624,64 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				}
 			}
 		}
+		// Create hash-table for task-specific run-time environment
+		(*workflow)->tasks[i].vars = hashtbl_create((*workflow)->tasks_num, NULL);
+		//unpack variables
+		json_t *variables = NULL;
+		json_unpack(task, "{s?o}", "variables", &variables);
+		if (variables) {
+			oph_workflow_var var;
+			void *var_buffer;
+			size_t var_size = sizeof(oph_workflow_var), svalue_size;
+			for (j = 0; j < (int) json_array_size(variables); j++) {
+				json_t *variable = NULL;
+				variable = json_array_get(variables, j);
+				if (variable) {
+					char *key = NULL, *svalue = NULL, *ivalue = NULL;
+					json_unpack(variable, "{s?s,s?s,s?s}", "key", &key, "svalue", &svalue, "ivalue", &ivalue);
+					if (key) {
+						var.caller = i;
+						if (ivalue)
+							var.ivalue = (int) strtol(ivalue, NULL, 10);
+						else
+							var.ivalue = 1;	// Non C-like indexing
+						if (svalue)
+							var.svalue = strdup(svalue);
+						else {
+							var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+							if (var.svalue)
+								snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+						}
+						if (!var.svalue) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							break;
+						}
+						svalue_size = strlen(var.svalue) + 1;
+						var_buffer = malloc(var_size + svalue_size);
+						if (!var_buffer) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							free(var.svalue);
+							break;
+						}
+						memcpy(var_buffer, (void *) &var, var_size);
+						memcpy(var_buffer + var_size, var.svalue, svalue_size);
+						if (hashtbl_insert_with_size((*workflow)->tasks[i].vars, key, var_buffer, var_size + svalue_size)) {
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", key,
+							      (*workflow)->tasks[i].name);
+							free(var.svalue);
+							free(var_buffer);
+							break;
+						}
+						if (svalue)
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", key, var.svalue, (*workflow)->tasks[i].name);
+						else
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of task '%s'.\n", key, var.ivalue, (*workflow)->tasks[i].name);
+						free(var.svalue);
+						free(var_buffer);
+					}
+				}
+			}
+		}
 		// Set the retry number
 		(*workflow)->tasks[i].retry_num = 1;	// Default value
 		(*workflow)->tasks[i].backoff_time = (int) oph_base_backoff;
@@ -881,11 +943,6 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 	}
-	// Create hash-tables for run-time environment
-	(*workflow)->vars = hashtbl_create((*workflow)->tasks_num, NULL);
-	for (i = 0; i < (*workflow)->tasks_num; i++)
-		(*workflow)->tasks[i].vars = hashtbl_create((*workflow)->tasks_num, NULL);
-
 	// Support for non-Ophidia operators
 	char *tmp = NULL;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
@@ -950,8 +1007,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 
 	*jstring = NULL;
 
-	int i, j;
-	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0;
+	int i, j, k;
+	char jsontmp[OPH_WORKFLOW_MAX_STRING], erase_command = 0, empty = 1, skip_dependence = 0, add_global_vars = 0;
 	json_t *request = json_object();
 	if (!request)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -1006,10 +1063,100 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 			json_decref(request);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
+
+	while (checkpoint && workflow->vars) {
+
+		oph_workflow_var *value = NULL;
+		char jsontmp2[OPH_WORKFLOW_MAX_STRING], first = 1, *key = NULL;
+		snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%s=", OPH_ARG_KEYS);
+		snprintf(jsontmp2, OPH_WORKFLOW_MAX_STRING, "%s=", OPH_ARG_VALUE);
+		char *common_key[OPH_WORKFLOW_MIN_STRING] = OPH_WORKFLOW_BVAR_KEYS;
+
+		while (!hashtbl_next(workflow->vars, &key, (void **) &value)) {
+			for (i = 0; i < OPH_WORKFLOW_BVAR_KEYS_SIZE; ++i)
+				if (!strcmp(key, common_key[i]))
+					break;
+			if (i < OPH_WORKFLOW_BVAR_KEYS_SIZE)	// Discard common keys
+				continue;
+			if (!first)
+				strncat(jsontmp, OPH_SEPARATOR_SUBPARAM_STR, OPH_WORKFLOW_MAX_STRING - strlen(jsontmp));
+			strncat(jsontmp, key, OPH_WORKFLOW_MAX_STRING - strlen(jsontmp));
+			if (!first)
+				strncat(jsontmp2, OPH_SEPARATOR_SUBPARAM_STR, OPH_WORKFLOW_MAX_STRING - strlen(jsontmp2));
+			strncat(jsontmp2, value->svalue, OPH_WORKFLOW_MAX_STRING - strlen(jsontmp2));
+			first = 0;
+		}
+
+		if (first)	// No variable found
+			break;
+
+		json_t *task = json_object();
+		if (!task)
+			break;
+		if (_oph_workflow_add_to_json(task, "name", OPH_GLOBAL_VARS)) {
+			if (task)
+				json_decref(task);
+			break;
+		}
+		if (_oph_workflow_add_to_json(task, "type", OPH_TYPE_OPHIDIA)) {
+			if (task)
+				json_decref(task);
+			break;
+		}
+		if (_oph_workflow_add_to_json(task, "operator", OPH_OPERATOR_SET)) {
+			if (task)
+				json_decref(task);
+			break;
+		}
+
+		json_t *arguments = json_array();
+		if (!arguments) {
+			if (task)
+				json_decref(task);
+			break;
+		}
+
+		if (json_array_append_new(arguments, json_string(jsontmp))) {
+			if (arguments)
+				json_decref(arguments);
+			if (task)
+				json_decref(task);
+			break;
+		}
+		if (json_array_append_new(arguments, json_string(jsontmp2))) {
+			if (arguments)
+				json_decref(arguments);
+			if (task)
+				json_decref(task);
+			break;
+		}
+
+		if (json_object_set_new(task, "arguments", arguments)) {
+			if (arguments)
+				json_decref(arguments);
+			if (task)
+				json_decref(task);
+			break;
+		}
+
+		if (json_array_append_new(tasks, task)) {
+			if (task)
+				json_decref(task);
+			break;
+		}
+
+		add_global_vars = 1;
+		break;
+	}
+
 	for (i = 0; i < workflow->tasks_num; ++i) {
 
-		if (checkpoint && (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED))
-			continue;
+		if (checkpoint) {
+			if (workflow->tasks[i].status >= OPH_ODB_STATUS_COMPLETED)
+				continue;
+			if ((workflow->tasks[i].parent >= 0) && (workflow->tasks[workflow->tasks[i].parent].status >= OPH_ODB_STATUS_COMPLETED))
+				continue;
+		}
 
 		json_t *task = json_object();
 		if (!task)
@@ -1074,9 +1221,33 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 					json_decref(task);
 				break;
 			}
+
+			while (add_global_vars) {
+				json_t *dependency = json_object();
+				if (!dependency)
+					break;
+				if (_oph_workflow_add_to_json(dependency, "task", OPH_GLOBAL_VARS))
+					break;
+				if (json_array_append_new(dependencies, dependency)) {
+					if (dependency)
+						json_decref(dependency);
+					break;
+				}
+				break;
+			}
+
 			for (j = 0; j < workflow->tasks[i].deps_num; ++j) {
 
 				if (checkpoint && (workflow->tasks[i].deps[j].task_index < 0))
+					continue;
+
+				// Check if the parent task exists
+				for (k = 0; k < workflow->tasks_num; ++k) {
+					skip_dependence = (k == i) || (checkpoint && (workflow->tasks[k].status >= OPH_ODB_STATUS_COMPLETED));
+					if (!strcmp(workflow->tasks[k].name, workflow->tasks[i].deps[j].task_name))
+						break;
+				}
+				if (skip_dependence || (k >= workflow->tasks_num))
 					continue;
 
 				json_t *dependency = json_object();
@@ -1124,6 +1295,48 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 				json_decref(task);
 			break;
 		}
+		// Add task-specific variables
+		if (checkpoint && workflow->tasks[i].vars) {
+
+			json_t *variables = json_array();
+			if (!variables) {
+				if (task)
+					json_decref(task);
+				break;
+			}
+
+			oph_workflow_var *value = NULL;
+			char first = 1, *key = NULL;
+
+			while (!hashtbl_next(workflow->tasks[i].vars, &key, (void **) &value)) {
+
+				json_t *variable = json_object();
+				if (!variable)
+					break;
+				if (_oph_workflow_add_to_json(variable, "key", key))
+					break;
+				if (value->svalue && _oph_workflow_add_to_json(variable, "svalue", value->svalue))
+					break;
+				snprintf(jsontmp, OPH_WORKFLOW_MAX_STRING, "%d", value->ivalue);
+				if (_oph_workflow_add_to_json(variable, "ivalue", jsontmp))
+					break;
+
+				if (json_array_append_new(variables, variable)) {
+					if (variable)
+						json_decref(variable);
+					break;
+				}
+				first = 0;
+			}
+
+			if (first || json_object_set_new(task, "variables", variables)) {
+				if (variables)
+					json_decref(variables);
+				break;
+			}
+		}
+
+		empty = 0;
 	}
 	if (i < workflow->tasks_num) {
 		if (request)
@@ -1138,6 +1351,13 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *chec
 		if (tasks)
 			json_decref(tasks);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
+	if (empty) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Request has no valid tasks\n");
+		if (request)
+			json_decref(request);
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
 
 	*jstring = json_dumps((const json_t *) request, JSON_INDENT(4));

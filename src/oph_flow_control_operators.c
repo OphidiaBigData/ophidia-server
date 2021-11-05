@@ -1133,7 +1133,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 	char *name = NULL, **names = NULL, **svalues = NULL;
 	int j, kk = 0, names_num = 0, svalues_num = 0, num, wid = 0, tt = -1, ttt;
 	unsigned int kkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
-	char *arg_value, *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0, compress_value = 0;
+	char *arg_value, *error_msg = NULL, *taskname = NULL, first = 1, repeat = 0, compress_value = 0, got_array = 0;
 	oph_workflow *twf = wf;
 	enum oph__oph_odb_job_status caction = OPH_ODB_STATUS_RUNNING;
 	double offset = 1;
@@ -1167,7 +1167,10 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				break;
 			}
 
-			if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY))
+			if (!got_array && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && strcmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
+				got_array = 1;
+			} else if (!name && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEYS) && strcmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL))
 				name = wf->tasks[i].arguments_values[j];	// it should not be 'arg_value'!
 			else if (!svalues && !strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUE) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (oph_check_input_response(wf, i, &svalues, &svalues_num, arg_value)) {
@@ -1370,7 +1373,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 			var.caller = wid != wf->workflowid ? -1 : i;
 			var.ivalue = 1 + j;	// Non C-like indexing
 			if (svalues) {
-				if (repeat || j)
+				if (!got_array || repeat || j)
 					var.svalue = strdup(svalues[j]);
 				else {	// Consider the whole array
 					int jj, tttt;

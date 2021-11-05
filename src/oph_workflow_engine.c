@@ -249,6 +249,7 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the JSON Request with checkpoint '%s'\n", checkpoint);
 	snprintf(linkname, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_CHECKPOINT, oph_web_server_location, session_code, wf->workflowid,
 		 OPH_OPERATOR_RESUME_PARAMETER_LAST);
+	unlink(linkname);
 	if (symlink(filename, linkname))
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to link the JSON Request with checkpoint '%s'\n", OPH_OPERATOR_RESUME_PARAMETER_LAST);
 	pthread_mutex_unlock(&savefile_flag);
@@ -4931,10 +4932,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			if (oph_find_job_in_job_list(state->job_info, odb_parentid, NULL))
 				save = 1;
 			else
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to save checkpoint since the workflow has been deleted\n", ttype, jobid);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to save checkpoint since the workflow has been deleted\n", ttype, jobid);
 			pthread_mutex_unlock(&global_flag);
 		}
-		if (save && wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING))
+		if (save && wf->tasks[task_index].checkpoint && (status > OPH_ODB_STATUS_RUNNING) && (wf->tasks[task_index].status == OPH_ODB_STATUS_COMPLETED))
 			oph_workflow_save(wf, session_code, wf->tasks[task_index].checkpoint);
 	}
 
