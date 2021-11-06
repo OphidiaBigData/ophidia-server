@@ -3136,13 +3136,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		      oph_odb_convert_status_to_str(status));
 		if (wf->tasks[task_index].response)
 			free(wf->tasks[task_index].response);
+		wf->tasks[task_index].response = NULL;
 		if (status == OPH_ODB_STATUS_COMPLETED) {
 			wf->tasks[task_index].response = strdup(output_json);
 			pthread_cond_broadcast(&waiting_flag);
 		} else {
-			wf->tasks[task_index].response = strdup("");
 			if (status == OPH_ODB_STATUS_ERROR) {
-				wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
+				wf->tasks[task_index].response = strdup("");
 				pthread_cond_broadcast(&waiting_flag);
 			}
 		}
