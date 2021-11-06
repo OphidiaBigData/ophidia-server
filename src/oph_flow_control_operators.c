@@ -79,13 +79,10 @@ int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *marke
 
 	wf->tasks[task_index].idjob = saved_idjob;
 
-	if (wf->tasks[task_index].response && !strlen(wf->tasks[task_index].response)) {
+	if (!strlen(wf->tasks[task_index].response)) {
 		free(wf->tasks[task_index].response);
 		wf->tasks[task_index].response = NULL;
-	}
-
-	if (wf->tasks[task_index].status > OPH_ODB_STATUS_COMPLETED) {
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Scanning result is %s. Aborting...\n", oph_odb_convert_status_to_str(wf->tasks[task_index].status));
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Scanning result is wrong. Aborting...\n");
 		return -2;
 	}
 
