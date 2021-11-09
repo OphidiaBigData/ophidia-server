@@ -233,18 +233,20 @@ oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid,
 				temp_prev->next = next;
 			list->counter--;
 
-			if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
-				temp->wf->status = OPH_ODB_STATUS_EXPIRED;
-				pthread_cond_broadcast(&termination_flag);
-			} else
-				oph_workflow_free(temp->wf);
+			if (temp->wf) {
+				if (temp->wf->exec_mode && !strncasecmp(temp->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Workflow '%s' is expired\n", temp->wf->name);
+					temp->wf->status = OPH_ODB_STATUS_EXPIRED;
+					pthread_cond_broadcast(&termination_flag);
+				} else
+					oph_workflow_free(temp->wf);
+			}
 
 			free(temp);
 		} else if (temp->wf->tasks) {
 			int i;
 			for (i = 0; i < temp->wf->tasks_num; ++i) {
-				if (temp->wf->tasks[i].idjob == jobid) {
+				if (temp->wf && (temp->wf->tasks[i].idjob == jobid)) {
 					if (prev)
 						*prev = temp_prev;
 					return temp;
