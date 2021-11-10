@@ -493,6 +493,16 @@ OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
 
+#Disable direct output in case of single tasks
+direct_output=yes
+AC_ARG_ENABLE(direct_output,
+            [  --disable-direct-output	Disable direct output of workflows with single task],
+                     [direct_output=no],
+                     [direct_output=yes])
+AM_CONDITIONAL([DIRECT_OUTPUT], [test "x$direct_output" = "xyes"])
+OPH_DIRECT_OUTPUT=$direct_output
+AC_SUBST(OPH_DIRECT_OUTPUT)
+
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS
