@@ -144,7 +144,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 			if (strlen(error_notification)) {
 				int response = 0;
-				oph_workflow_notify(state, 'N', jobid, error_notification, NULL, &response);
+				oph_workflow_notify(state, 'K', jobid, error_notification, NULL, &response);
 				if (response)
 					pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N%d: error %d in notify\n", jobid, response);
 			}

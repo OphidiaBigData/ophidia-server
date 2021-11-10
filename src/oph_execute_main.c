@@ -6547,6 +6547,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				item->wf = wf;
 				pthread_mutex_lock(&global_flag);
 				oph_save_job_in_job_list(state->job_info, item);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: append the workflow '%s' in job list\n", jobid, wf->name);
 				pthread_mutex_unlock(&global_flag);
 			} else
 				oph_workflow_free(wf);
