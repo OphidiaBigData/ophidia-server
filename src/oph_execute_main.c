@@ -3145,11 +3145,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			if (!document_type && !id_type && ((level == 1) || (level == 3)))	// JSON Response for workflow: extract specific outputs
 			{
 				snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_MARKERS_OF_WORKFLOW_TASKS, session, workflow, session, workflow);
-
-
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "\n\n%s\n\n", query);
-
-
 				if (oph_odb_retrieve_ids(&oDB, query, &markers, &ctime, &n)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to retrieve marker id\n", jobid);
 					if (markers) {
@@ -3589,7 +3584,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							continue;	// In case of more than one rows then the first is related to the parent and the others are related to children
 					}
 #ifdef LEVEL1
+#ifdef OPH_DIRECT_OUTPUT
 					if (!document_type && !id_type && (level == 1) && (n > 2))	// Found a multi-task workflow --> show the task list
+#else
+					if (!document_type && !id_type && (level == 1))	// Show the task list
+#endif
 					{
 						marker = markers[0];	// In case of more than one rows then the first is related to the parent and the others are related to children
 						iterate = 0;
@@ -6389,6 +6388,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_cleanup_args(&session_args);
 				nextra++;
 			}
+#ifdef OPH_DIRECT_OUTPUT
 #if defined(LEVEL1)
 			if (wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
 
@@ -6445,6 +6445,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				free_string_vector(keys, nextra);
 				free_string_vector(values, nextra);
 			}
+#endif
 #endif
 
 			if (!response->response)
@@ -6555,6 +6556,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				item->wf = wf;
 				pthread_mutex_lock(&global_flag);
 				oph_save_job_in_job_list(state->job_info, item);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: append the workflow '%s' in job list\n", jobid, wf->name);
 				pthread_mutex_unlock(&global_flag);
 			} else
 				oph_workflow_free(wf);

@@ -407,6 +407,8 @@ void *_oph_wait(oph_notify_data * data)
 	}
 
 	// Free
+	if (fast_exit)
+		oph_workflow_free(wf);
 	if (curl)
 		curl_easy_cleanup(curl);
 	if (json_output)
@@ -428,8 +430,6 @@ void *_oph_wait(oph_notify_data * data)
 		free(wd);
 	}
 	free(data);
-	if (fast_exit)
-		oph_workflow_free(wf);
 	if (sessionid)
 		free(sessionid);
 

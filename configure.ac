@@ -491,6 +491,16 @@ AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
 OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
+#Disable direct output in case of single tasks
+direct_output=yes
+AC_ARG_ENABLE(direct_output,
+            [  --disable-direct-output	Disable direct output of workflows with single task],
+                     [direct_output=no],
+                     [direct_output=yes])
+AM_CONDITIONAL([DIRECT_OUTPUT], [test "x$direct_output" = "xyes"])
+OPH_DIRECT_OUTPUT=$direct_output
+AC_SUBST(OPH_DIRECT_OUTPUT)
+
 OPH_DB_SUPPORT=
 AC_ARG_ENABLE(db, [ --disable-db	Disable Ophidia DB support. (Enabled by default)], [ db="no" ], [ db="yes" ])
 if test "x$db" = "xyes"; then

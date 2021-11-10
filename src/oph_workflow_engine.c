@@ -3124,7 +3124,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	pthread_mutex_lock(&global_flag);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: search the workflow\n", ttype, jobid);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: search the workflow identified by id %d\n", ttype, jobid, odb_parentid);
 	if (!(item = oph_find_job_in_job_list(state->job_info, odb_parentid, &prev))) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: workflow %d not found. Skipping the notification\n", ttype, jobid, odb_parentid);
 		pthread_mutex_unlock(&global_flag);
@@ -3180,7 +3180,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		oph_output_data_free(outputs_values, outputs_num);
 
 		if (odb_jobid != odb_parentid) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: wrong jobid\n", ttype, jobid);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: wrong jobid: %d instead of %d\n", ttype, jobid, odb_jobid, odb_parentid);
 			pthread_mutex_unlock(&global_flag);
 			*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
 			return SOAP_OK;
@@ -6047,6 +6047,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 #endif
 			}
+#ifdef OPH_DIRECT_OUTPUT
 #if defined(LEVEL1)
 			if (wf->response && (wf->tasks_num == 1)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
@@ -6075,6 +6076,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				else if (output_json)
 					wf->response = strdup(output_json);
 			}
+#endif
 #endif
 #endif
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: sending termination signal for workflow '%s'\n", ttype, jobid, wf->name);
