@@ -114,9 +114,9 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 
 		int save_flag = !data || (!strstr(data, OPH_SERVER_REQUEST_FLAG) && !strstr(data, OPH_SERVER_SAVE_FLAG));	// Skip JSON Response in case a flag is set
 		if (!save_flag) {
-			if (!strstr(data, OPH_SERVER_REQUEST_FLAG))
+			if (strstr(data, OPH_SERVER_REQUEST_FLAG))
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived the response to an internal request:\n%s\n", jobid, output_json);
-			if (!strstr(data, OPH_SERVER_SAVE_FLAG))
+			if (strstr(data, OPH_SERVER_SAVE_FLAG))
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N%d: arrived a response to be skipped\n", jobid);
 		}
 
