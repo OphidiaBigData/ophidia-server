@@ -67,6 +67,7 @@ extern unsigned int oph_default_session_timeout;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
 #endif
@@ -6539,6 +6540,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					if (!return_code)
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON output written\n", ttype, jobid);
 				}
+				// In case of waiting tasks are still active
+				oph_job_info *item = NULL, *prev = NULL;
+				if ((item = oph_find_job_in_job_list(state->job_info, wf->idjob, &prev))) {
+					oph_drop_from_job_list(state->job_info, item, prev);
+					free(item);
+				}
+				pthread_cond_broadcast(&waiting_flag);
 
 				pthread_mutex_unlock(&global_flag);
 

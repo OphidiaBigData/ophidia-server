@@ -43,6 +43,8 @@
 #define OPH_FS_TYPE_FILE "f"
 #define OPH_FS_MEASURE "measure=%s;"
 
+#define OPH_CRITICAL_EXIT_CODE -10
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t curl_flag;
@@ -69,13 +71,23 @@ int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *marke
 		return -1;
 	}
 
+	int odb_wf_id = wf->idjob;
+	oph_job_info *item = NULL;
 	pthread_mutex_lock(&global_flag);
 	while (!wf->tasks[task_index].response) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for scanning report\n");
 		pthread_cond_wait(&waiting_flag, &global_flag);
+		if (!oph_find_job_in_job_list(state->job_info, odb_wf_id, NULL)) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "The workflow has been deleted: exiting...\n");
+			odb_wf_id = 0;
+			break;
+		}
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "A file scanning report is arrived\n");
 	}
 	pthread_mutex_unlock(&global_flag);
+
+	if (!odb_wf_id)
+		return OPH_CRITICAL_EXIT_CODE;
 
 	wf->tasks[task_index].idjob = saved_idjob;
 
@@ -229,6 +241,8 @@ void *_oph_wait(oph_notify_data * data)
 					pthread_mutex_unlock(&curl_flag);
 				} else {
 					success = _oph_wait_stat(wf, task_index, command, str_markerid, state);
+					if (success == OPH_CRITICAL_EXIT_CODE)
+						break;
 					if (success < 0) {
 						pthread_mutex_lock(&global_flag);
 						status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -247,9 +261,9 @@ void *_oph_wait(oph_notify_data * data)
 			}
 
 			counter = 0;
+			pthread_mutex_lock(&global_flag);
 			while ((status == (int) OPH_ODB_STATUS_WAIT) && ((wd->timeout < 0) || (counter < wd->timeout))) {
 
-				pthread_mutex_lock(&global_flag);
 				if (wf->waiting_tasks_num >= 0)
 					wf->waiting_tasks_num++;
 				else
@@ -273,8 +287,8 @@ void *_oph_wait(oph_notify_data * data)
 						fast_exit = 1;
 					}
 				}
-				pthread_mutex_unlock(&global_flag);
 			}
+			pthread_mutex_unlock(&global_flag);
 
 			if (status == (int) OPH_ODB_STATUS_WAIT) {
 				switch (wd->type) {
@@ -289,6 +303,8 @@ void *_oph_wait(oph_notify_data * data)
 								break;
 							}
 						} else if ((success = _oph_wait_stat(wf, task_index, command, str_markerid, state))) {
+							if (success == OPH_CRITICAL_EXIT_CODE)
+								break;
 							if (success < 0) {
 								pthread_mutex_lock(&global_flag);
 								status = wf->tasks[task_index].status = OPH_ODB_STATUS_ERROR;
@@ -308,18 +324,27 @@ void *_oph_wait(oph_notify_data * data)
 				}
 			}
 
+			if (success == OPH_CRITICAL_EXIT_CODE)
+				break;
+
 		} while (status == (int) OPH_ODB_STATUS_WAIT);
 
-		pthread_mutex_lock(&global_flag);
+		if (success != OPH_CRITICAL_EXIT_CODE) {
 
-		idjob = wf->tasks[task_index].idjob;
-		pidjob = wf->idjob;
-		if (status < (int) OPH_ODB_STATUS_COMPLETED)
-			status = wf->tasks[task_index].status = success < 0 ? OPH_ODB_STATUS_ERROR : OPH_ODB_STATUS_COMPLETED;
+			pthread_mutex_lock(&global_flag);
 
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name, oph_odb_convert_status_to_str(status));
+			idjob = wf->tasks[task_index].idjob;
+			pidjob = wf->idjob;
+			if (status < (int) OPH_ODB_STATUS_COMPLETED)
+				status = wf->tasks[task_index].status = success < 0 ? OPH_ODB_STATUS_ERROR : OPH_ODB_STATUS_COMPLETED;
 
-		pthread_mutex_unlock(&global_flag);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' of workflow '%s' stops to wait (current status is %s).\n", wf->tasks[task_index].name, wf->name,
+			      oph_odb_convert_status_to_str(status));
+
+			pthread_mutex_unlock(&global_flag);
+
+		} else
+			success = 0;
 	}
 	// Finalize
 	int jobid = 0;
