@@ -2946,6 +2946,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!aitem) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: error in parsing '%s'\n", ttype, jobid, data);
 			*response = OPH_SERVER_SYSTEM_ERROR;
+			if (query)
+				free(query);
 			oph_cleanup_args(&args);
 			return SOAP_OK;
 		}
@@ -3032,6 +3034,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			*response = OPH_SERVER_SYSTEM_ERROR;
 			if (sessionid)
 				free(sessionid);
+			if (query)
+				free(query);
 			oph_cleanup_args(&args);
 			if (outputs_keys)
 				free(outputs_keys);
@@ -3168,6 +3172,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			free(query);
 		return SOAP_OK;
 	}
+
+	if (query)
+		free(query);
 
 	if ((res = oph_get_session_code(wf->sessionid, session_code)))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: unable to get session code\n", ttype, jobid);
