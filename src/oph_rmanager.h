@@ -49,6 +49,7 @@ struct _oph_rmanager {
 	char *subm_cmd_check;
 	char *subm_cmd_count;
 	char *subm_cmd_cancel_all;
+	char *subm_cmd_progress;
 	char subm_multiuser;
 	char *subm_group;
 	char *subm_queue_high;
@@ -75,6 +76,7 @@ int oph_umount_request(int jobid, const char *username);
 int oph_cancel_all_request(int wid, const char *username);
 int oph_read_job_queue(int **list, char ***username, unsigned int *n);
 int oph_get_available_host_number(int *size, int jobid);
+int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jobid);
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id);
 
 int oph_detach_task(int id);

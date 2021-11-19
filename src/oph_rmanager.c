@@ -37,6 +37,7 @@
 #define SUBM_CMD_TO_CHECK		"SUBM_CMD_TO_CHECK"
 #define SUBM_CMD_TO_COUNT		"SUBM_CMD_TO_COUNT"
 #define SUBM_CMD_TO_CANCEL_ALL	"SUBM_CMD_TO_CANCEL_ALL"
+#define SUBM_CMD_TO_PROGRESS	"SUBM_CMD_TO_PROGRESS"
 #define SUBM_MULTIUSER			"SUBM_MULTIUSER"
 #define SUBM_GROUP				"SUBM_GROUP"
 #define SUBM_QUEUE_HIGH			"SUBM_QUEUE_HIGH"
@@ -47,6 +48,7 @@
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
 #define OPH_RMANAGER_HOST_FILE		"%s/oph_count_%d.log"
+#define OPH_RMANAGER_PROGRESS_FILE		"%s/oph_progress_%d.log"
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -268,6 +270,8 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_cmd_count = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_CANCEL_ALL))
 				orm->subm_cmd_cancel_all = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_PROGRESS))
+				orm->subm_cmd_progress = target;
 			else if (!strcmp(buffer, SUBM_MULTIUSER)) {
 				orm->subm_multiuser = !strcmp(target, "yes");
 				free(target);
@@ -337,6 +341,7 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_cmd_check = NULL;
 	orm->subm_cmd_count = NULL;
 	orm->subm_cmd_cancel_all = NULL;
+	orm->subm_cmd_progress = NULL;
 	orm->subm_multiuser = 0;	// No
 	orm->subm_group = NULL;
 	orm->subm_queue_high = NULL;
@@ -511,7 +516,7 @@ int oph_get_available_host_number(int *size, int jobid)
 		snprintf(workfile, OPH_MAX_STRING_SIZE, OPH_RMANAGER_HOST_FILE, oph_txt_location, jobid);
 		snprintf(command, OPH_MAX_STRING_SIZE, "%s %s", orm->subm_cmd_count, workfile);
 		if (system(command)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error %d during remote submission\n", *size);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
 		}
 		FILE *file = fopen(workfile, "r");
@@ -641,6 +646,10 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_cmd_cancel_all) {
 		free(orm->subm_cmd_cancel_all);
 		orm->subm_cmd_cancel_all = NULL;
+	}
+	if (orm->subm_cmd_progress) {
+		free(orm->subm_cmd_progress);
+		orm->subm_cmd_progress = NULL;
 	}
 	if (orm->subm_group) {
 		free(orm->subm_group);
@@ -907,6 +916,72 @@ int oph_remove_detached_task(int id)
 				orm->subm_detached_tasks = tmp->next;
 			free(tmp);
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d removed from list of detached tasks\n", id);
+		}
+	}
+
+	return RMANAGER_SUCCESS;
+}
+
+// Unsafe
+int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jobid)
+{
+	if (!jobs || !tot || !current)
+		return RMANAGER_NULL_PARAM;
+
+	char *id_list = NULL;
+	if (size && orm->subm_cmd_progress) {
+		int k, n;
+		char *prev;
+		for (k = 0; k < size; ++k) {
+			tot[k] = current[k] = 0;
+			if (!jobs[k])
+				continue;
+			if (id_list) {
+				prev = id_list;
+				n = asprintf(&id_list, "%s,%d", prev, jobs[k]);
+			} else
+				n = asprintf(&id_list, "%d", jobs[k]);
+		}
+		if (id_list) {
+			char workfile[OPH_MAX_STRING_SIZE], command[OPH_MAX_STRING_SIZE];
+			snprintf(workfile, OPH_MAX_STRING_SIZE, OPH_RMANAGER_PROGRESS_FILE, oph_txt_location, jobid);
+			snprintf(command, OPH_MAX_STRING_SIZE, "%s %s %s", orm->subm_cmd_progress, id_list, workfile);
+			free(id_list);
+			if (system(command)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
+				return RMANAGER_ERROR;
+			}
+			FILE *file = fopen(workfile, "r");
+			if (!file) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to open output file %s\n", workfile);
+				return RMANAGER_ERROR;
+			}
+			int wid, pid;
+			char buffer[OPH_SHORT_STRING_SIZE], *pch, *save_pointer = NULL;
+			while (fgets(buffer, OPH_SHORT_STRING_SIZE, file)) {
+				pch = strtok_r(buffer, " ", &save_pointer);
+				if (!pch)
+					continue;
+				jobid = (int) strtol(pch, NULL, 10);
+				pch = strtok_r(NULL, " ", &save_pointer);
+				if (!pch)
+					continue;
+				wid = (int) strtol(pch, NULL, 10);
+				pch = strtok_r(NULL, " ", &save_pointer);
+				if (!pch)
+					continue;
+				pid = (int) strtol(pch, NULL, 10);
+				for (n = 0; n < size; ++n) {
+					if (++k >= size)
+						k = 0;
+					if (!jobs[k] || (jobs[k] != jobid))
+						continue;
+					tot[k] = wid;
+					current[k] = pid;
+					break;
+				}
+			}
+			fclose(file);
 		}
 	}
 

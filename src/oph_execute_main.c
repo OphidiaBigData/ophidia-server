@@ -3613,7 +3613,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 							char *sessionid = session, *username = wf->username, *name = NULL, *cstatus = NULL, *cdate = NULL;
 							int workflowid = workflow, markerid = marker, status = -1;
-							char ttype = 'R';
+							char ttype = 'R', success = 1;
 
 							if (item) {
 								sessionid = item->wf->sessionid;
@@ -3627,12 +3627,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								if (oph_get_info_of(sessionid, workflowid, &cstatus, &cdate)) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to get workflow info\n", ttype, jobid);
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining workflow info!");
-									break;
+									success = 0;
 								}
 							}
 
 							char str_jobid[OPH_MAX_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], str_markerid[OPH_SHORT_STRING_SIZE];
-
 							snprintf(str_jobid, OPH_MAX_STRING_SIZE, "%s%s%d%s%d", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER,
 								 markerid);
 							snprintf(str_workflowid, OPH_SHORT_STRING_SIZE, "%d", workflowid);
@@ -3640,11 +3639,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 
 							// Save JSON related to parent job
 							oph_json *oper_json = NULL;
-							int success = 0;
-
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: JSON initialization\n", ttype, jobid);
 
-							while (!success) {
+							char _success = 0;
+							while (!_success) {
 								if (oph_json_alloc_unsafe(&oper_json)) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: JSON alloc error\n", ttype, jobid);
 									break;
@@ -3677,11 +3675,12 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD CONSUMER error\n", ttype, jobid);
 									break;
 								}
-								success = 1;
+								_success = 1;
 							}
-
-							if (!success)
+							if (!_success) {
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
+								success = 0;
+							}
 
 							if (success) {
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: starting to format JSON file\n", ttype, jobid);
