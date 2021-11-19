@@ -6592,7 +6592,7 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 						for (k = 0; k < list.size; ++k)
 							if (list.id[k] && (list.id[k] == wf->tasks[i].light_tasks[j].idjob)) {
 								if (list.wid[k])
-									*wpr += (double) list.pid[k] / (double) (list.wid[k] * wf->tasks[i].light_tasks_num);	// Lessere weight for light tasks
+									*wpr += (double) list.pid[k] / (double) (list.wid[k] * wf->tasks[i].light_tasks_num);	// Lesser weight for light tasks
 								list.id[k] = nfound = 0;
 								try_in_list--;
 								break;
@@ -6618,9 +6618,7 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 			}
 		}
 	*wpr /= n;
-
 	oph_odb_free_ophidiadb_list(&list);
-
 	if (cdate) {
 
 		snprintf(query, OPH_MAX_STRING_SIZE, MYSQL_RETRIEVE_CREATION_DATE_OF_WORKFLOW, wf->sessionid, wf->workflowid, wf->sessionid, wf->workflowid);
@@ -6653,7 +6651,6 @@ int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
 	}
 
 	oph_odb_disconnect_from_ophidiadb(&oDB);
-
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
@@ -6715,7 +6712,6 @@ int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate
 
 	oph_odb_free_ophidiadb_list(&list);
 	oph_odb_disconnect_from_ophidiadb(&oDB);
-
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
