@@ -1741,7 +1741,10 @@ int _oph_workflow_skip_comments(const char *json_string, char **clean_json_strin
 
 	size_t i, j, size = strlen(json_string);
 	char invalue = 0, flag = 0, print, drop;
-	char result[1 + size];
+	char *result = (char *) malloc(1 + size);
+	if (!result)
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+
 	for (i = j = 0; i < size; ++i) {
 		print = 1;
 		drop = 0;
@@ -1796,10 +1799,12 @@ int _oph_workflow_skip_comments(const char *json_string, char **clean_json_strin
 	}
 	result[j] = 0;
 
-	if (flag)
+	if (flag) {
+		free(result);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
 
-	*clean_json_string = strdup(result);
+	*clean_json_string = result;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

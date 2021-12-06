@@ -2855,16 +2855,22 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 										if (level == 1) {
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
+#ifdef OPH_DIRECT_OUTPUT
 											else if (old_wf->tasks_num == 1) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
-											} else
+											}
+#endif
+											else
 												submission_string = strdup(old_wf->name);
 										} else {
+#ifdef OPH_DIRECT_OUTPUT
 											if (old_wf->tasks_num == 1) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
-											} else if (old_wf->command)
+											} else
+#endif
+											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
 											else
 												submission_string = strdup(old_wf->name);
@@ -5656,17 +5662,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								if (level == 1) {
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
+#ifdef OPH_DIRECT_OUTPUT
 									else if (old_wf->tasks_num == 1) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
-									} else
+									}
+#endif
+									else
 										submission_string = strdup(old_wf->name);
 								} else	// if (level==2)
 								{
+#ifdef OPH_DIRECT_OUTPUT
 									if (old_wf->tasks_num == 1) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
-									} else if (old_wf->command)
+									} else
+#endif
+									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
 									else
 										submission_string = strdup(old_wf->name);
@@ -6081,10 +6093,13 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	char *submission_string = NULL;
 	if (wf->command)
 		submission_string = strdup(wf->command);
+#ifdef OPH_DIRECT_OUTPUT
 	else if (wf->tasks_num == 1) {
 		if (oph_workflow_get_submitted_string(wf, 0, -1, 0, &submission_string))
 			submission_string = NULL;
-	} else
+	}
+#endif
+	else
 		submission_string = strdup(wf->name);
 	if (!oph_session_report_append_command(session_code, wf->workflowid, wf->markerid, wf->username, submission_string ? submission_string : request))
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: command added to session report\n", jobid);
