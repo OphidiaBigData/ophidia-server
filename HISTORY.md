@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Allocation of JSON Requests to heap memory for comment deletion
 - Bug in evaluation of user quota in OPH_CLUSTER
 
 
