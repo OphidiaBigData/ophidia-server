@@ -517,7 +517,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_header_path,
 		   [  --with-sqlite-header-path=PATH 		Location of sqlite include directory],
 		   [
-			sqlite_header_path="$withval"
+			sqlite_header_path="-I$withval"
 		   ],
 		   [
 			sqlite_header_path="$SQLITE_CFLAGS"
@@ -525,7 +525,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_lib_path,
 		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
 		   [
-			sqlite_lib_path="$withval"
+			sqlite_lib_path="-L$withval"
 		   ],
 	 	   [
 			sqlite_lib_path="$SQLITE_LIBS"
