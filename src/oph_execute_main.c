@@ -3911,7 +3911,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						} else if (item)	// Found a workflow in memory
 						{
 #ifdef LEVEL1
-							if ((level == 1) && (item->wf->tasks_num > 1))	// Found a multi-task workflow --> show the task list
+							if (!id_type && (level == 1) && (item->wf->tasks_num > 1))	// Found a multi-task workflow --> show the task list
 							{
 								marker = markers[0];	// In case of more than one rows then the first is related to the parent and the others are related to children
 								iterate = 0;
