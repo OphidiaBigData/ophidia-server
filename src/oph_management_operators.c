@@ -43,6 +43,1348 @@ extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
 
+// Logging BK - begin
+#define OPH_LOGGINGBK_DEFAULT_NLINES 100
+#define SQLITE_BUFLEN 4096
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL "SELECT * FROM ("
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_PARENT_ID "AND (jobaccounting.idparent LIKE '%s')"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL1 "1"	// "(session.label LIKE '%%' OR session.label IS NULL)" // TODO: check current validity
+#define SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL2 "session.label LIKE '%s'"
+#define SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL3 "session.label IS NULL"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS " AND session.sessionid LIKE '%s' AND %s AND session.creationdate >= '%s' AND session.creationdate <= '%s' AND jobaccounting.workflowid LIKE '%s' AND jobaccounting.markerid LIKE '%s' AND jobaccounting.creationdate >= '%s' AND jobaccounting.creationdate <= '%s' AND jobaccounting.status LIKE '%s' AND jobaccounting.submissionstring LIKE '%s' AND ((jobaccounting.timestart >= '%s' AND jobaccounting.timestart <= '%s') OR (jobaccounting.timestart IS NULL)) AND ((jobaccounting.timeend >= '%s' AND jobaccounting.timeend <= '%s') OR (jobaccounting.timeend IS NULL)) %s"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS   " AND session.sessionid LIKE '%s' AND %s AND session.creationdate >= '%s' AND session.creationdate <= '%s'"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_00000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT DISTINCT session.sessionid AS Session_ID,session.label AS Session_Label FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS" ORDER BY session.sessionid DESC LIMIT %d)tmp ORDER BY tmp.Session_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_01111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_02111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_10000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT DISTINCT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS" ORDER BY session.creationdate DESC LIMIT %d)tmp ORDER BY tmp.Session_Creation_Date ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_11111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define SQLITE_QUERY_OPH_LOGGINGBK_12111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
+
+#define OPH_LOGGINGBK_MASK_LEN 3
+#define OPH_LOGGINGBK_DATE_LEN 19
+#define OPH_LOGGINGBK_DATE_DELIMITER ","
+#define OPH_LOGGINGBK_DATE_START_DEF "1900-01-01 00:00:00"
+#define OPH_LOGGINGBK_DATE_END_DEF "2100-01-01 00:00:00"
+
+#define OPH_LOGGINGBK_SUBMISSION_STRING "Job_Submission_String"
+#define OPH_LOGGINGBK_PARENT_JOB_ID     "Parent_Job_ID"
+#define OPH_LOGGINGBK_JOB_ID            "Job_ID"
+#define OPH_LOGGINGBK_MARKER_ID         "Marker_ID"
+#define OPH_LOGGINGBK_WORKFLOW_ID       "Workflow_ID"
+#define OPH_LOGGINGBK_SUBMISSION_STRLEN 21
+#define OPH_LOGGINGBK_PARENT_JOB_STRLEN 13
+#define OPH_LOGGINGBK_JOB_STRLEN        6
+#define OPH_LOGGINGBK_MIN_WIDTH         100
+
+#define OPH_COMMON_ALL_FILTER "all"
+#define OPH_IN_PARAM_OBJKEY_FILTER "objkey_filter"
+#define OPH_IN_PARAM_SESSION "session"
+#define OPH_IN_PARAM_MARKER "marker"
+#define OPH_IN_PARAM_MASK "mask"
+#define OPH_IN_PARAM_SESSION_FILTER "session_filter"
+#define OPH_IN_PARAM_SESSION_LABEL_FILTER "session_label_filter"
+#define OPH_IN_PARAM_SESSION_CREATION_DATE "session_creation_filter"
+#define OPH_IN_PARAM_WORKFLOW_ID_FILTER "workflowid_filter"
+#define OPH_IN_PARAM_MARKER_ID_FILTER "markerid_filter"
+#define OPH_IN_PARAM_PARENT_ID_FILTER "parent_job_filter"
+#define OPH_IN_PARAM_JOB_SUBMISSION_DATE "job_creation_filter"
+#define OPH_IN_PARAM_JOB_STATUS "job_status_filter"
+#define OPH_IN_PARAM_SUBMISSION_STRING_FILTER "submission_string_filter"
+#define OPH_IN_PARAM_JOB_START_DATE "job_start_filter"
+#define OPH_IN_PARAM_JOB_END_DATE "job_end_filter"
+#define OPH_IN_PARAM_LOG_LINES_NUMBER "nlines"
+
+typedef struct _OPH_LOGGINGBK_operator_handle {
+	ophidiadb oDB;
+	int session;
+	int marker;
+	char mask[OPH_LOGGINGBK_MASK_LEN + 1];
+	char *session_filter;
+	char *session_label_filter;
+	char session_creation_date1[OPH_LOGGINGBK_DATE_LEN + 1];
+	char session_creation_date2[OPH_LOGGINGBK_DATE_LEN + 1];
+	char *workflow_id_filter;
+	char *marker_id_filter;
+	char *parent_job_id_filter;
+	char job_submission_date1[OPH_LOGGINGBK_DATE_LEN + 1];
+	char job_submission_date2[OPH_LOGGINGBK_DATE_LEN + 1];
+	char *job_status;
+	char *submission_string_filter;
+	char job_start_date1[OPH_LOGGINGBK_DATE_LEN + 1];
+	char job_start_date2[OPH_LOGGINGBK_DATE_LEN + 1];
+	char job_end_date1[OPH_LOGGINGBK_DATE_LEN + 1];
+	char job_end_date2[OPH_LOGGINGBK_DATE_LEN + 1];
+	char *user;
+	int nlines;
+	char **objkeys;
+	int objkeys_num;
+	oph_json *operator_json;
+} OPH_LOGGINGBK_operator_handle;
+
+/*
+int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handle, unsigned long **field_lengths, int *num_fields, MYSQL_RES ** logging_info)
+{
+	*logging_info = NULL;
+	*field_lengths = NULL;
+
+	if (!oDB || !handle || !field_lengths || !logging_info || !num_fields) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return OPH_ODB_NULL_PARAM;
+	}
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to reconnect to OphidiaDB.\n");
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	char query[SQLITE_BUFLEN];
+	char parent_clause[OPH_MAX_STRING_SIZE];
+	int nlines = handle->nlines;
+	if (handle->parent_job_id_filter)
+		snprintf(parent_clause, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_PARENT_ID, handle->parent_job_id_filter);
+
+	//Fill the right query according to session,marker and mask with all filters
+	switch (handle->session) {
+		case 0:
+			switch (handle->marker) {
+				case 0:
+					snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_00000, handle->user, handle->session_filter, handle->session_label_filter,
+						 handle->session_creation_date1, handle->session_creation_date2, nlines);
+					break;
+				case 1:
+					switch (handle->mask[0]) {
+						case '0':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01000, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01001, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01010, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01011, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						case '1':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01100, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01101, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01110, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_01111, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						default:
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid first mask value %c.\n", handle->mask[0]);
+							return OPH_SERVER_ERROR;
+					}
+					break;
+				case 2:
+					switch (handle->mask[0]) {
+						case '0':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02000, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02001, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02010, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02011, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						case '1':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02100, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02101, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02110, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_02111, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						default:
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid first mask value %c.\n", handle->mask[0]);
+							return OPH_SERVER_ERROR;
+					}
+					break;
+				default:
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid marker value %d.\n", handle->marker);
+					return OPH_SERVER_ERROR;
+			}
+			break;
+		case 1:
+			switch (handle->marker) {
+				case 0:
+					snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_10000, handle->user, handle->session_filter, handle->session_label_filter,
+						 handle->session_creation_date1, handle->session_creation_date2, nlines);
+					break;
+				case 1:
+					switch (handle->mask[0]) {
+						case '0':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11000, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11001, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11010, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11011, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						case '1':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11100, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11101, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11110, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_11111, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						default:
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid first mask value %c.\n", handle->mask[0]);
+							return OPH_SERVER_ERROR;
+					}
+					break;
+				case 2:
+					switch (handle->mask[0]) {
+						case '0':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12000, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12001, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12010, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12011, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						case '1':
+							switch (handle->mask[1]) {
+								case '0':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12100, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12101, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								case '1':
+									switch (handle->mask[2]) {
+										case '0':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12110, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										case '1':
+											snprintf(query, SQLITE_BUFLEN, SQLITE_QUERY_OPH_LOGGINGBK_12111, handle->user, handle->session_filter,
+												 handle->session_label_filter, handle->session_creation_date1, handle->session_creation_date2,
+												 handle->workflow_id_filter, handle->marker_id_filter, handle->job_submission_date1,
+												 handle->job_submission_date2, handle->job_status, handle->submission_string_filter,
+												 handle->job_start_date1, handle->job_start_date2, handle->job_end_date1, handle->job_end_date2,
+												 (handle->parent_job_id_filter ? parent_clause : ""), nlines);
+											break;
+										default:
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid third mask value %c.\n", handle->mask[2]);
+											return OPH_SERVER_ERROR;
+									}
+									break;
+								default:
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid second mask value %c.\n", handle->mask[1]);
+									return OPH_SERVER_ERROR;
+							}
+							break;
+						default:
+							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid first mask value %c.\n", handle->mask[0]);
+							return OPH_SERVER_ERROR;
+					}
+					break;
+				default:
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid marker value %d.\n", handle->marker);
+					return OPH_SERVER_ERROR;
+			}
+			break;
+		default:
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Invalid session value %d.\n", handle->session);
+			return OPH_SERVER_ERROR;
+	}
+	//End of query processing
+
+	//Execute query
+	if (mysql_query(oDB->conn, query)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_SERVER_ERROR;
+	}
+	// Init res
+	*logging_info = mysql_store_result(oDB->conn);
+
+	int i;
+	MYSQL_FIELD *fields;
+	*num_fields = mysql_num_fields(*logging_info);
+	*field_lengths = (unsigned long *) malloc((*num_fields) * sizeof(unsigned long));
+	if (!(*field_lengths)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	fields = mysql_fetch_fields(*logging_info);
+
+	for (i = 0; i < *num_fields; i++) {
+		(*field_lengths)[i] = fields[i].max_length;
+	}
+
+	return OPH_SERVER_OK;
+}
+*/
+
+int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
+{
+	if (!handle_) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null Handle\n");
+		return OPH_SERVER_ERROR;
+	}
+	OPH_LOGGINGBK_operator_handle *handle = *handle_;
+
+	if (!task_tbl) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null operator string\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	if (!(handle = (OPH_LOGGINGBK_operator_handle *) calloc(1, sizeof(OPH_LOGGINGBK_operator_handle)))) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	//1 - Set up struct to empty values
+	handle->session = -1;
+	handle->marker = -1;
+	handle->session_filter = NULL;
+	handle->session_label_filter = NULL;
+	handle->marker_id_filter = NULL;
+	handle->workflow_id_filter = NULL;
+	handle->job_status = NULL;
+	handle->submission_string_filter = NULL;
+	handle->user = NULL;
+	handle->parent_job_id_filter = NULL;
+	handle->nlines = OPH_LOGGINGBK_DEFAULT_NLINES;
+	handle->objkeys = NULL;
+	handle->objkeys_num = -1;
+	ophidiadb *oDB = &handle->oDB;
+
+	oph_odb_initialize_ophidiadb(oDB);
+	if (oph_odb_read_config_ophidiadb(oDB)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to read OphidiaDB configuration\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	if (oph_odb_connect_to_ophidiadb(oDB)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to connect to OphidiaDB. Check access parameters.\n");
+		return OPH_SERVER_ERROR;
+	}
+	//3 - Fill struct with the correct data
+
+	char *value;
+
+	// retrieve objkeys
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_OBJKEY_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_OBJKEY_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (oph_tp_parse_multiple_value_param(value, &handle->objkeys, &handle->objkeys_num)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
+		oph_tp_free_multiple_value_param_list(handle->objkeys, handle->objkeys_num);
+		return OPH_SERVER_ERROR;
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SESSION);
+		return OPH_SERVER_ERROR;
+	}
+	handle->session = (int) strtol(value, NULL, 10);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MARKER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_MARKER);
+		return OPH_SERVER_ERROR;
+	}
+	handle->marker = (int) strtol(value, NULL, 10);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MASK);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_MASK);
+		return OPH_SERVER_ERROR;
+	}
+	snprintf(handle->mask, OPH_LOGGINGBK_MASK_LEN + 1, "%s", value);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SESSION_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->session_filter = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		if (!(handle->session_filter = (char *) strdup("%"))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_LABEL_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SESSION_LABEL_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0 && strcasecmp(value, "null") != 0) {
+		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
+		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
+		snprintf(tmp_session_label_filter, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL2, value);
+		if (!(handle->session_label_filter = (char *) strdup(tmp_session_label_filter))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else if (strcmp(value, OPH_COMMON_ALL_FILTER) == 0) {
+		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
+		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
+		snprintf(tmp_session_label_filter, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL1);
+		if (!(handle->session_label_filter = (char *) strdup(tmp_session_label_filter))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
+		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
+		snprintf(tmp_session_label_filter, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL3);
+		if (!(handle->session_label_filter = (char *) strdup(tmp_session_label_filter))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_CREATION_DATE);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SESSION_CREATION_DATE);
+		return OPH_SERVER_ERROR;
+	}
+	char *valuecopy, *cursor;
+	valuecopy = (char *) strdup(value);
+	if (!valuecopy) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	char *savepointer = NULL;
+	cursor = strtok_r(valuecopy, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+	if (valuecopy[0] == ',') {
+		if (!cursor) {
+			snprintf(handle->session_creation_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->session_creation_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+		snprintf(handle->session_creation_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_START_DEF);
+	} else {
+		snprintf(handle->session_creation_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		cursor = strtok_r(NULL, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+		if (!cursor) {
+			snprintf(handle->session_creation_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->session_creation_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+	}
+	free(valuecopy);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_WORKFLOW_ID_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_WORKFLOW_ID_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->workflow_id_filter = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		if (!(handle->workflow_id_filter = (char *) strdup("%"))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MARKER_ID_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_MARKER_ID_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->marker_id_filter = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		if (!(handle->marker_id_filter = (char *) strdup("%"))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_PARENT_ID_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_PARENT_ID_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->parent_job_id_filter = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		handle->parent_job_id_filter = NULL;
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_SUBMISSION_DATE);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_JOB_SUBMISSION_DATE);
+		return OPH_SERVER_ERROR;
+	}
+	valuecopy = (char *) strdup(value);
+	if (!valuecopy) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	cursor = strtok_r(valuecopy, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+	if (valuecopy[0] == ',') {
+		if (!cursor) {
+			snprintf(handle->job_submission_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_submission_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+		snprintf(handle->job_submission_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_START_DEF);
+	} else {
+		snprintf(handle->job_submission_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		cursor = strtok_r(NULL, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+		if (!cursor) {
+			snprintf(handle->job_submission_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_submission_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+	}
+	free(valuecopy);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_STATUS);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_JOB_STATUS);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->job_status = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		if (!(handle->job_status = (char *) strdup("%"))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SUBMISSION_STRING_FILTER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SUBMISSION_STRING_FILTER);
+		return OPH_SERVER_ERROR;
+	}
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0) {
+		if (!(handle->submission_string_filter = (char *) strdup(value))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	} else {
+		if (!(handle->submission_string_filter = (char *) strdup("%"))) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_START_DATE);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_JOB_START_DATE);
+		return OPH_SERVER_ERROR;
+	}
+	valuecopy = (char *) strdup(value);
+	if (!valuecopy) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	cursor = strtok_r(valuecopy, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+	if (valuecopy[0] == ',') {
+		if (!cursor) {
+			snprintf(handle->job_start_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_start_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+		snprintf(handle->job_start_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_START_DEF);
+	} else {
+		snprintf(handle->job_start_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		cursor = strtok_r(NULL, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+		if (!cursor) {
+			snprintf(handle->job_start_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_start_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+	}
+	free(valuecopy);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_END_DATE);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_JOB_END_DATE);
+		return OPH_SERVER_ERROR;
+	}
+	valuecopy = (char *) strdup(value);
+	if (!valuecopy) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+	cursor = strtok_r(valuecopy, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+	if (valuecopy[0] == ',') {
+		if (!cursor) {
+			snprintf(handle->job_end_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_end_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+		snprintf(handle->job_end_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_START_DEF);
+	} else {
+		snprintf(handle->job_end_date1, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		cursor = strtok_r(NULL, OPH_LOGGINGBK_DATE_DELIMITER, &savepointer);
+		if (!cursor) {
+			snprintf(handle->job_end_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", OPH_LOGGINGBK_DATE_END_DEF);
+		} else {
+			snprintf(handle->job_end_date2, OPH_LOGGINGBK_DATE_LEN + 1, "%s", cursor);
+		}
+	}
+	free(valuecopy);
+
+	value = hashtbl_get(task_tbl, OPH_IN_PARAM_LOG_LINES_NUMBER);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_LOG_LINES_NUMBER);
+		return OPH_SERVER_ERROR;
+	}
+	handle->nlines = (int) strtol(value, NULL, 10);
+	if (handle->nlines <= 0) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "nlines must be >0\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	value = hashtbl_get(task_tbl, OPH_ARG_USERNAME);
+	if (!value) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_ARG_USERNAME);
+		return OPH_SERVER_ERROR;
+	}
+	if (!(handle->user = (char *) strdup(value))) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+		return OPH_SERVER_ERROR;
+	}
+
+	return OPH_SERVER_OK;
+}
+
+int task_execute(OPH_LOGGINGBK_operator_handle * handle)
+{
+	if (!handle) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null Handle\n");
+		return OPH_SERVER_ERROR;
+	}
+/*
+	ophidiadb *oDB = &handle->oDB;
+	MYSQL_RES *logging_info = NULL;
+	int num_fields;
+	unsigned long *field_lengths = NULL;
+	int num_rows = 0;
+
+	//retrieve logging info
+	if (retrieve_logging_info(oDB, handle, &field_lengths, &num_fields, &logging_info)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve logging info\n");
+		mysql_free_result(logging_info);
+		if (field_lengths) {
+			free(field_lengths);
+			field_lengths = NULL;
+		}
+		return OPH_SERVER_ERROR;
+	}
+	//Empty set
+	if (!(num_rows = mysql_num_rows(logging_info))) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "No rows found by query\n");
+		mysql_free_result(logging_info);
+		if (field_lengths) {
+			free(field_lengths);
+			field_lengths = NULL;
+		}
+		return OPH_SERVER_OK;
+	}
+
+	MYSQL_ROW row;
+	int i, j, k, len;
+	int total_len = 1;
+	MYSQL_FIELD *fields;
+
+	fields = mysql_fetch_fields(logging_info);
+
+	int submission_string_flag = 0;
+
+	//Build row_separator
+	for (i = 0; i < num_fields; i++) {
+		if (!strncmp(fields[i].name, OPH_LOGGINGBK_SUBMISSION_STRING, strlen(OPH_LOGGINGBK_SUBMISSION_STRING))) {
+			submission_string_flag = 1;
+			continue;
+		}
+		len = (field_lengths[i] > fields[i].name_length) ? field_lengths[i] : fields[i].name_length;
+		total_len += (len + 3);
+	}
+
+	char *row_separator;
+	if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
+		row_separator = (char *) malloc((OPH_LOGGINGBK_MIN_WIDTH + 1) * sizeof(char));
+		memset(row_separator, 0, OPH_LOGGINGBK_MIN_WIDTH + 1);
+	} else {
+		row_separator = (char *) malloc((total_len + 1) * sizeof(char));
+		memset(row_separator, 0, total_len + 1);
+	}
+	int *field_new_len = (int *) malloc(num_fields * sizeof(int));
+	memset(field_new_len, 0, num_fields * sizeof(int));
+	double proportion_factor = (double) OPH_LOGGINGBK_MIN_WIDTH / total_len;
+
+	int count = 0;
+	//Print row_separator into string and compute field lengths through proportion
+	row_separator[count++] = '+';
+	for (i = 0; i < num_fields; i++) {
+		if (!strncmp(fields[i].name, OPH_LOGGINGBK_SUBMISSION_STRING, strlen(OPH_LOGGINGBK_SUBMISSION_STRING)))
+			continue;
+		row_separator[count++] = '-';
+		len = (field_lengths[i] > fields[i].name_length) ? field_lengths[i] : fields[i].name_length;
+		if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
+			field_new_len[i] = (int) ((len + 3) * proportion_factor) - 3;
+		} else
+			field_new_len[i] = len;
+		for (j = 0; j < field_new_len[i]; j++) {
+			row_separator[count++] = '-';
+		}
+		row_separator[count++] = '-';
+		if (!strncmp(fields[i].name, OPH_LOGGINGBK_JOB_ID, strlen(OPH_LOGGINGBK_JOB_ID)))
+			row_separator[count++] = '-';
+		else
+			row_separator[count++] = '+';
+	}
+
+	//If total lenght is less than minimum allowed width, extend last field
+	if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
+		count = 1;
+		for (i = 0; i < num_fields - 1; i++) {
+			count += (field_new_len[i] + 3);
+		}
+		field_new_len[i - 1] += (OPH_LOGGINGBK_MIN_WIDTH - count);
+		//Extend row_separator
+		row_separator[OPH_LOGGINGBK_MIN_WIDTH - 1] = '+';
+		for (j = 1; j <= (OPH_LOGGINGBK_MIN_WIDTH - count); j++) {
+			row_separator[OPH_LOGGINGBK_MIN_WIDTH - j - 1] = '-';
+		}
+		total_len = OPH_LOGGINGBK_MIN_WIDTH;
+	}
+
+	char **keys = NULL;
+	char **fieldtypes = NULL;
+	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		keys = (char **) malloc(sizeof(char *) * num_fields);
+		fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
+	}
+	//Build header
+	for (i = 0; i < num_fields; i++) {
+		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+			if (keys)
+				keys[i] = strdup(fields[i].name);
+			if (fieldtypes) {
+				if (!strcmp(fields[i].name, OPH_LOGGINGBK_JOB_ID) || !strcmp(fields[i].name, OPH_LOGGINGBK_MARKER_ID) || !strcmp(fields[i].name, OPH_LOGGINGBK_PARENT_JOB_ID)
+				    || !strcmp(fields[i].name, OPH_LOGGINGBK_WORKFLOW_ID))
+					fieldtypes[i] = strdup(OPH_JSON_INT);
+				else
+					fieldtypes[i] = strdup(OPH_JSON_STRING);
+			}
+		}
+	}
+
+	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		if (oph_json_add_grid(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, "", NULL, keys, num_fields, fieldtypes, num_fields)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
+			if (keys) {
+				for (i = 0; i < num_fields; i++) {
+					if (keys[i]) {
+						free(keys[i]);
+						keys[i] = NULL;
+					}
+				}
+				free(keys);
+				keys = NULL;
+			}
+			if (fieldtypes) {
+				for (i = 0; i < num_fields; i++) {
+					if (fieldtypes[i]) {
+						free(fieldtypes[i]);
+						fieldtypes[i] = NULL;
+					}
+				}
+				free(fieldtypes);
+				fieldtypes = NULL;
+			}
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		if (keys) {
+			for (i = 0; i < num_fields; i++) {
+				if (keys[i]) {
+					free(keys[i]);
+					keys[i] = NULL;
+				}
+			}
+			free(keys);
+			keys = NULL;
+		}
+		if (fieldtypes) {
+			for (i = 0; i < num_fields; i++) {
+				if (fieldtypes[i]) {
+					free(fieldtypes[i]);
+					fieldtypes[i] = NULL;
+				}
+			}
+			free(fieldtypes);
+			fieldtypes = NULL;
+		}
+	}
+	//For each ROW
+	char *tmp;
+	int row_length = total_len - 4 - OPH_LOGGINGBK_SUBMISSION_STRLEN - 3;
+	char *tmp_buffer = (char *) malloc((row_length + 1) * sizeof(char));
+
+	char **my_row = NULL;
+	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		my_row = (char **) malloc(sizeof(char *) * num_fields);
+		if (!my_row) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+			free(tmp_buffer);
+			free(row_separator);
+			free(field_new_len);
+			mysql_free_result(logging_info);
+			if (field_lengths) {
+				free(field_lengths);
+				field_lengths = NULL;
+			}
+			return OPH_SERVER_ERROR;
+		}
+	}
+
+	while ((row = mysql_fetch_row(logging_info))) {
+
+		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+			for (i = 0; i < num_fields; i++) {
+				if (row[i])
+					my_row[i] = strdup(row[i]);
+				else
+					my_row[i] = strdup("");
+				if (!my_row[i]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+					free(tmp_buffer);
+					free(row_separator);
+					free(field_new_len);
+					mysql_free_result(logging_info);
+					if (field_lengths) {
+						free(field_lengths);
+						field_lengths = NULL;
+					}
+					int j;
+					for (j = 0; j < i; j++)
+						free(my_row[j]);
+					free(my_row);
+					return OPH_SERVER_ERROR;
+				}
+			}
+		}
+
+		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+			if (oph_json_add_grid_row(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, my_row)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+				free(tmp_buffer);
+				free(row_separator);
+				free(field_new_len);
+				mysql_free_result(logging_info);
+				if (field_lengths) {
+					free(field_lengths);
+					field_lengths = NULL;
+				}
+				int j;
+				for (j = 0; j < num_fields; j++)
+					free(my_row[j]);
+				free(my_row);
+				return OPH_SERVER_ERROR;
+			}
+		}
+
+		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+			for (i = 0; i < num_fields; i++)
+				free(my_row[i]);
+		}
+	}
+
+	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		free(my_row);
+	}
+
+	free(tmp_buffer);
+	free(row_separator);
+	free(field_new_len);
+
+	mysql_free_result(logging_info);
+	if (field_lengths) {
+		free(field_lengths);
+		field_lengths = NULL;
+	}
+*/
+	return OPH_SERVER_OK;
+}
+
+int env_unset(OPH_LOGGINGBK_operator_handle * handle)
+{
+	//If NULL return success; it's already free
+	if (!handle)
+		return OPH_SERVER_OK;
+
+	oph_odb_free_ophidiadb(&handle->oDB);
+
+	if (handle->job_status) {
+		free((char *) handle->job_status);
+		handle->job_status = NULL;
+	}
+	if (handle->session_label_filter) {
+		free((char *) handle->session_label_filter);
+		handle->session_label_filter = NULL;
+	}
+	if (handle->workflow_id_filter) {
+		free((char *) handle->workflow_id_filter);
+		handle->workflow_id_filter = NULL;
+	}
+	if (handle->marker_id_filter) {
+		free((char *) handle->marker_id_filter);
+		handle->marker_id_filter = NULL;
+	}
+	if (handle->parent_job_id_filter) {
+		free((char *) handle->parent_job_id_filter);
+		handle->parent_job_id_filter = NULL;
+	}
+	if (handle->submission_string_filter) {
+		free((char *) handle->submission_string_filter);
+		handle->submission_string_filter = NULL;
+	}
+	if (handle->session_filter) {
+		free((char *) handle->session_filter);
+		handle->session_filter = NULL;
+	}
+	if (handle->user) {
+		free((char *) handle->user);
+		handle->user = NULL;
+	}
+	if (handle->objkeys) {
+		oph_tp_free_multiple_value_param_list(handle->objkeys, handle->objkeys_num);
+		handle->objkeys = NULL;
+	}
+
+	free(handle);
+
+	return OPH_SERVER_OK;
+}
+
+// Logging BK - end
+
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
 
@@ -373,7 +1715,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			oph_init_args(&args);
 			pthread_mutex_lock(&global_flag);
 			if (oph_auth_session(_username, session, oph_web_server, &args, NULL, &role)) {
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "received wrong sessionid '%s'\n", session);
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "received wrong sessionid '%s'\n", session);
 				pthread_mutex_unlock(&global_flag);
 				oph_odb_disconnect_from_ophidiadb(&oDB);
 				oph_cleanup_args(&args);
@@ -384,7 +1726,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				return OPH_SERVER_AUTH_ERROR;
 			}
 			char *str_role;
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "role of the user '%s' is '%s'\n", username, str_role = oph_role_to_string(role));
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "role of the user '%s' is '%s'\n", username, str_role = oph_role_to_string(role));
 			if (str_role)
 				free(str_role);
 			pthread_mutex_unlock(&global_flag);
@@ -757,10 +2099,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			struct timeval tv;
 			gettimeofday(&tv, 0);
 
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "scanning %s\n", directory);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "scanning %s\n", directory);
 			DIR *dirp = opendir(directory);
 			if (!dirp) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "error in opening session directory '%s'\n", directory);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "error in opening session directory '%s'\n", directory);
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&args);
 				oph_cleanup_args(&user_args);
@@ -784,21 +2126,22 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (S_ISLNK(file_stat.st_mode)) {
 					oph_init_args(&session_args);
 					if (!oph_load_file(filename, &session_args)) {
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "check for %s\n", OPH_SESSION_LAST_ACCESS_TIME);
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "check for %s\n", OPH_SESSION_LAST_ACCESS_TIME);
 						if (!oph_get_arg(session_args, OPH_SESSION_LAST_ACCESS_TIME, tmp)) {
 							last_access_time = strtol(tmp, NULL, 10);
-							pmesg(LOG_DEBUG, __FILE__, __LINE__, "check for %s\n", OPH_SESSION_AUTOREMOVE);
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "check for %s\n", OPH_SESSION_AUTOREMOVE);
 							if (timeout_value && !oph_get_arg(session_args, OPH_SESSION_AUTOREMOVE, tmp) && !strcasecmp(tmp, OPH_DEFAULT_YES)) {
-								pmesg(LOG_DEBUG, __FILE__, __LINE__, "found a removable session '%s', last access on %d\n", filename, last_access_time);
+								pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "found a removable session '%s', last access on %d\n", filename,
+									   last_access_time);
 								if (tv.tv_sec > last_access_time + timeout_value * OPH_DEFAULT_DAY_TO_SEC)	// Timeout
 								{
-									pmesg(LOG_INFO, __FILE__, __LINE__, "session '%s' has expired... removing it\n", filename);
+									pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "session '%s' has expired... removing it\n", filename);
 									remove(filename);
 									oph_cleanup_args(&session_args);
 									if (num_sessions > 0)
 										num_sessions--;
 									else
-										pmesg(LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
+										pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
 									save_user = 1;
 									continue;
 								}
@@ -806,20 +2149,20 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 						}
 
 					} else {
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "found a broken file '%s'... removing it\n", filename);
+						pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "found a broken file '%s'... removing it\n", filename);
 						remove(filename);
 						oph_cleanup_args(&session_args);
 						if (num_sessions > 0)
 							num_sessions--;
 						else
-							pmesg(LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
+							pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "error in handling session number\n");
 						save_user = 1;
 						continue;
 					}
 
 					if (oph_append_args_list(&session_args_list, session_args, last_access_time)) {
 						closedir(dirp);
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "error in handling session list\n");
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "error in handling session list\n");
 						pthread_mutex_unlock(&global_flag);
 						oph_cleanup_args(&args);
 						oph_cleanup_args(&user_args);
@@ -1066,10 +2409,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				int id_session;
 				if ((result = oph_odb_retrieve_session_id_unsafe(&oDB, wf->sessionid, &id_session))) {
 					if (result != OPH_ODB_NO_ROW_FOUND) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve session id\n");
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve session id\n");
 						success = 0;
 					} else if ((result = oph_odb_update_session_table_unsafe(&oDB, wf->sessionid, id_user, &id_session))) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to create a new entry in table 'session'\n");
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create a new entry in table 'session'\n");
 						success = 0;
 					}
 				}
@@ -1276,7 +2619,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 					pthread_mutex_lock(&global_flag);
 					if (oph_load_file(filename, &us_args))	// DT_REG
 					{
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "unable to load user-specific session data of '%s'\n", sessionid);
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "unable to load user-specific session data of '%s'\n", sessionid);
 						pthread_mutex_unlock(&global_flag);
 						oph_cleanup_args(&us_args);
 						break;
@@ -1848,7 +3191,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 									oph_init_args(&us_args);
 									if (oph_set_arg(&us_args, OPH_SESSION_CWD, OPH_WORKFLOW_ROOT_FOLDER)) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "error in saving %s\n", OPH_SESSION_CWD);
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "error in saving %s\n", OPH_SESSION_CWD);
 										pthread_mutex_unlock(&global_flag);
 										oph_cleanup_args(&us_args);
 										oph_cleanup_args(&users);
@@ -1865,9 +3208,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									pthread_mutex_lock(&global_flag);
 									if (symlink(newrole, linkname)) {
 										if (errno == EEXIST)
-											pmesg(LOG_WARNING, __FILE__, __LINE__, "symbolic link '%s' already exists\n", linkname);
+											pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "symbolic link '%s' already exists\n", linkname);
 										else {
-											pmesg(LOG_WARNING, __FILE__, __LINE__, "unable to create symbolic link '%s'\n", linkname);
+											pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "unable to create symbolic link '%s'\n", linkname);
 											pthread_mutex_unlock(&global_flag);
 											oph_cleanup_args(&us_args);
 											oph_cleanup_args(&users);
@@ -1882,7 +3225,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										}
 									}
 									if (oph_save_user_session(session_username, sessionid, us_args)) {
-										pmesg(LOG_ERROR, __FILE__, __LINE__, "error in saving user-specific session data\n");
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "error in saving user-specific session data\n");
 										pthread_mutex_unlock(&global_flag);
 										oph_cleanup_args(&us_args);
 										oph_cleanup_args(&users);
@@ -2149,7 +3492,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		if (success && save_session) {
 			pthread_mutex_lock(&global_flag);
 			if (oph_save_session(_username, session, args, DT_LNK)) {
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "unable to save session data of '%s'\n", session);
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "unable to save session data of '%s'\n", session);
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&args);
 				oph_cleanup_args(&user_args);
@@ -2179,7 +3522,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				if (num_sessions > 0)
 					num_sessions--;
 				else {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "error in handling session number\n");
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "error in handling session number\n");
 					pthread_mutex_unlock(&global_flag);
 					oph_cleanup_args(&args);
 					oph_cleanup_args(&user_args);
@@ -2240,7 +3583,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			}
 			pthread_mutex_lock(&global_flag);
 			if (oph_save_user(_username, user_args)) {
-				pmesg(LOG_WARNING, __FILE__, __LINE__, "unable to save user data of '%s'\n", username);
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "unable to save user data of '%s'\n", username);
 				pthread_mutex_unlock(&global_flag);
 				oph_cleanup_args(&user_args);
 				if (task_tbl)
@@ -2687,7 +4030,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		oph_job_info *item = NULL, *prev = NULL;
 		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
-			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
@@ -4483,6 +5826,114 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			*error_message = 0;
 		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code))
 			return OPH_SERVER_SYSTEM_ERROR;
+
+		error = OPH_SERVER_NO_RESPONSE;
+
+	} else if (!strncasecmp(operator_name, OPH_OPERATOR_LOGGINGBK, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
+		error = OPH_SERVER_SYSTEM_ERROR;
+
+		HASHTBL *task_tbl = NULL;
+		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s task parser error\n");
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		int success = 0;
+		oph_json *oper_json = NULL;
+		char *value, username[OPH_MAX_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], error_message[OPH_MAX_STRING_SIZE];
+		*error_message = 0;
+
+		// Handle
+		OPH_LOGGINGBK_operator_handle *handle = NULL;
+		if (env_set(task_tbl, &handle) || !handle)
+			return OPH_SERVER_ERROR;
+		ophidiadb *oDB = &handle->oDB;
+		handle->operator_json = oper_json;
+
+		// Format the output
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			env_unset(handle);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		int idjob = (int) strtol(oph_jobid, NULL, 10);
+		oph_odb_start_job_fast(idjob, oDB);
+
+		do {
+			if (oph_get_session_code(sessionid, session_code)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+				break;
+			}
+			if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
+				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+				break;
+			}
+			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
+
+			if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
+				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+				break;
+			}
+
+			if (oph_json_alloc(&oper_json)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+				break;
+			}
+			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Session Code", session_code)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Workflow", workflowid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Marker", markerid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "JobID", oph_jobid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_consumer(oper_json, username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				break;
+			}
+			// Write the output
+			if (task_execute(handle))
+				error = OPH_SERVER_ERROR;
+
+		} while (0);
+
+		if (task_tbl)
+			hashtbl_destroy(task_tbl);
+
+		if (!oper_json) {
+			oph_odb_disconnect_from_ophidiadb(oDB);
+			env_unset(handle);
+			return error;
+		}
+
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, oDB, exit_code)) {
+			env_unset(handle);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
+		env_unset(handle);
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}

@@ -113,6 +113,7 @@
 #define OPH_OPERATOR_MANAGE_SESSION "oph_manage_session"
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
+#define OPH_OPERATOR_LOGGINGBK "oph_loggingbk"
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
@@ -203,7 +204,7 @@
 
 typedef enum { OPH_MODE_UNKNOWN, OPH_MODE_ASYNC, OPH_MODE_SYNC } oph_mode_type;
 typedef enum { OPH_NO_OPERATOR, OPH_LOG_INFO_OPERATOR, OPH_GET_CONFIG_OPERATOR, OPH_RESUME_OPERATOR, OPH_SERVICE_OPERATOR, OPH_MANAGE_SESSION_OPERATOR, OPH_CANCEL_OPERATOR,
-	OPH_CLUSTER_OPERATOR
+	OPH_CLUSTER_OPERATOR, OPH_LOGGINGBK_OPERATOR
 } oph_known_operators;
 
 typedef struct _oph_argument {
