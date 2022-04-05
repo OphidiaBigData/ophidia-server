@@ -145,8 +145,8 @@ extern ophidiadb *ophDB;
 
 #define OPH_COMMON_ALL_FILTER "all"
 #define OPH_IN_PARAM_OBJKEY_FILTER "objkey_filter"
-#define OPH_IN_PARAM_SESSION "session"
-#define OPH_IN_PARAM_MARKER "marker"
+#define OPH_IN_PARAM_SESSION "session_level"
+#define OPH_IN_PARAM_MARKER "job_level"
 #define OPH_IN_PARAM_MASK "mask"
 #define OPH_IN_PARAM_SESSION_FILTER "session_filter"
 #define OPH_IN_PARAM_SESSION_LABEL_FILTER "session_label_filter"
@@ -724,17 +724,19 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null Handle\n");
 		return OPH_SERVER_ERROR;
 	}
-	OPH_LOGGINGBK_operator_handle *handle = *handle_;
 
 	if (!task_tbl) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null operator string\n");
 		return OPH_SERVER_ERROR;
 	}
 
+	OPH_LOGGINGBK_operator_handle *handle;
 	if (!(handle = (OPH_LOGGINGBK_operator_handle *) calloc(1, sizeof(OPH_LOGGINGBK_operator_handle)))) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 		return OPH_SERVER_ERROR;
 	}
+	*handle_ = handle;
+
 	//1 - Set up struct to empty values
 	handle->session = -1;
 	handle->marker = -1;
@@ -773,7 +775,6 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 	}
 	if (oph_tp_parse_multiple_value_param(value, &handle->objkeys, &handle->objkeys_num)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Operator string not valid\n");
-		oph_tp_free_multiple_value_param_list(handle->objkeys, handle->objkeys_num);
 		return OPH_SERVER_ERROR;
 	}
 
@@ -1057,16 +1058,6 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		return OPH_SERVER_ERROR;
 	}
 
-	value = hashtbl_get(task_tbl, OPH_ARG_USERNAME);
-	if (!value) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_ARG_USERNAME);
-		return OPH_SERVER_ERROR;
-	}
-	if (!(handle->user = (char *) strdup(value))) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-		return OPH_SERVER_ERROR;
-	}
-
 	return OPH_SERVER_OK;
 }
 
@@ -1338,8 +1329,6 @@ int env_unset(OPH_LOGGINGBK_operator_handle * handle)
 	//If NULL return success; it's already free
 	if (!handle)
 		return OPH_SERVER_OK;
-
-	oph_odb_free_ophidiadb(&handle->oDB);
 
 	if (handle->job_status) {
 		free((char *) handle->job_status);
@@ -5848,22 +5837,24 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		char *value, username[OPH_MAX_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], error_message[OPH_MAX_STRING_SIZE];
 		*error_message = 0;
 
-		// Handle
-		OPH_LOGGINGBK_operator_handle *handle = NULL;
-		if (env_set(task_tbl, &handle) || !handle)
-			return OPH_SERVER_ERROR;
-		ophidiadb *oDB = &handle->oDB;
-		handle->operator_json = oper_json;
-
 		// Format the output
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
-			env_unset(handle);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		int idjob = (int) strtol(oph_jobid, NULL, 10);
+
+		// Handle
+		OPH_LOGGINGBK_operator_handle *handle = NULL;
+		if (env_set(task_tbl, &handle) || !handle) {
+			env_unset(handle);
+			return OPH_SERVER_ERROR;
+		}
+		handle->operator_json = oper_json;
+
+		ophidiadb *oDB = &handle->oDB;
 		oph_odb_start_job_fast(idjob, oDB);
 
 		do {
@@ -5882,6 +5873,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
 				error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+				break;
+			}
+			if (!(handle->user = (char *) strdup(username))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 				break;
 			}
 
@@ -5916,6 +5911,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			// Write the output
 			if (task_execute(handle))
 				error = OPH_SERVER_ERROR;
+			else
+				success = 1;
 
 		} while (0);
 
