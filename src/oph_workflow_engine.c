@@ -826,7 +826,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
-	int i;
+	int i, j = -1;
 	oph_workflow_task *task = &(wf->tasks[task_index]);
 
 	char auto_retry = oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1);
@@ -863,6 +863,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
 			src_path_key = task->arguments_keys[i];
 			src_path = task->arguments_values[i];
+			j = i;
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBE)) {
 			if (!ncubes) {
 				datacube_input_key = task->arguments_keys[i];
@@ -924,6 +925,42 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					free(datacube_inputs[i]);
 			free(datacube_inputs);
 			datacube_inputs = NULL;
+		}
+		// Do not consider input for OPH_IMPORTNCS as massive, but expand the value of the parameter
+		if (datacube_inputs && src_path && number && !strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) && (j >= 0)) {
+			size_t max_dim = number * OPH_LONG_STRING_SIZE;
+			char *tmp = (char *) malloc(max_dim);
+			if (!tmp) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: memory error\n", ttype, jobid);
+				for (i = 0; i < (int) number; ++i)
+					if (datacube_inputs[i])
+						free(datacube_inputs[i]);
+				free(datacube_inputs);
+				datacube_inputs = NULL;
+				if (measure_name) {
+					for (i = 0; i < (int) number; ++i)
+						if (measure_name[i])
+							free(measure_name[i]);
+					free(measure_name);
+					measure_name = 0;
+				}
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+			*tmp = 0;
+			char next = 0;
+			for (i = 0; i < (int) number; ++i)
+				if (datacube_inputs[i]) {
+					if (next)
+						strncat(tmp, OPH_SEPARATOR_SUBPARAM_STR, max_dim - strlen(tmp));
+					strncat(tmp, datacube_inputs[i], max_dim - strlen(tmp));
+					free(datacube_inputs[i]);
+					next = 1;
+				}
+			free(datacube_inputs);
+			datacube_inputs = NULL;
+			free(task->arguments_values[j]);
+			task->arguments_values[j] = tmp;
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: argument '%s' of task '%s' has been updated to '%s'\n", ttype, jobid, task->arguments_keys[j], task->name, tmp);
 		}
 
 		if (datacube_inputs) {
