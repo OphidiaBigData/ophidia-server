@@ -576,8 +576,10 @@ int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char **
 	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, &res, NULL))
 		return OPH_ODB_MYSQL_ERROR;
 
-	if (res.number_of_cols != 2)
+	if (res.number_of_cols != 2) {
+		_oph_sqlite_free_list(res.head);
 		return OPH_ODB_TOO_MANY_ROWS;
+	}
 
 	*nn = res.number_of_rows;
 	if (!(*nn))

@@ -114,7 +114,9 @@
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
 #define OPH_OPERATOR_IMPORTNCS "oph_importncs"
+#ifndef OPH_DB_SUPPORT
 #define OPH_OPERATOR_LOGGINGBK "oph_loggingbk"
+#endif
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"

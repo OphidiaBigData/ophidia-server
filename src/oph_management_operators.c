@@ -43,7 +43,8 @@ extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
 
-// Logging BK - begin
+#ifndef OPH_DB_SUPPORT		// LoggingBK
+
 #define OPH_LOGGINGBK_DEFAULT_NLINES 100
 #define SQLITE_BUFLEN 4096
 
@@ -188,16 +189,111 @@ typedef struct _OPH_LOGGINGBK_operator_handle {
 	oph_json *operator_json;
 } OPH_LOGGINGBK_operator_handle;
 
-/*
-int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handle, unsigned long **field_lengths, int *num_fields, MYSQL_RES ** logging_info)
-{
-	*logging_info = NULL;
-	*field_lengths = NULL;
+typedef struct _oph_sqlite_item {
+	char **argv;
+	struct _oph_sqlite_item *next;
+} oph_sqlite_item;
 
-	if (!oDB || !handle || !field_lengths || !logging_info || !num_fields) {
+typedef struct {
+	oph_sqlite_item *head;
+	oph_sqlite_item *tail;
+	int number_of_rows;
+	int number_of_cols;
+	char **fields;
+} oph_sqlite_list;
+
+int _oph_sqlite_alloc_list(oph_sqlite_item ** head, int argc)
+{
+	if (!head)
+		return OPH_ODB_NULL_PARAM;
+
+	*head = (oph_sqlite_item *) malloc(sizeof(oph_sqlite_item));
+	if (!*head)
+		return OPH_ODB_MEMORY_ERROR;
+	(*head)->argv = (char **) calloc(argc, sizeof(char *));
+
+	return OPH_ODB_SUCCESS;
+}
+
+int _oph_sqlite_free_list(oph_sqlite_list * list)
+{
+	if (!list)
+		return OPH_ODB_NULL_PARAM;
+
+	int i, argc = list->number_of_cols;
+
+	oph_sqlite_item *head = list->head, *next = NULL;
+	for (; head; head = next) {
+		next = head->next;
+		if (head->argv) {
+			for (i = 0; i < argc; ++i) {
+				if (head->argv[i])
+					free(head->argv[i]);
+			}
+			free(head->argv);
+		}
+		free(head);
+	}
+	if (list->fields) {
+		for (i = 0; i < argc; ++i)
+			if (list->fields[i])
+				free(list->fields[i]);
+		free(list->fields);
+	}
+
+	return OPH_ODB_SUCCESS;
+}
+
+int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColName)
+{
+	if (!res)
+		return OPH_ODB_NULL_PARAM;
+
+	oph_sqlite_list *list = (oph_sqlite_list *) res;
+	list->number_of_cols = argc;
+	if (!argc)
+		return OPH_ODB_NO_ROW_FOUND;
+
+	int i;
+	if (!list->fields) {
+		list->fields = (char **) calloc(argc, sizeof(char *));
+		for (i = 0; i < argc; ++i)
+			list->fields[i] = strdup(azColName[i]);
+	}
+
+	oph_sqlite_item *tmp = NULL;
+	if (_oph_sqlite_alloc_list(&tmp, argc))
+		return OPH_ODB_MEMORY_ERROR;
+
+	for (i = 0; i < argc; ++i) {
+		if (argv && argv[i])
+			tmp->argv[i] = strdup(argv[i]);
+	}
+
+	tmp->next = NULL;
+
+	if (list->head)
+		list->tail->next = tmp;
+	else
+		list->head = tmp;
+	list->tail = tmp;
+
+	list->number_of_rows++;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handle, oph_sqlite_list * logging_info)
+{
+	if (!oDB || !handle || !logging_info) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_ODB_NULL_PARAM;
 	}
+	logging_info->head = NULL;
+	logging_info->tail = NULL;
+	logging_info->number_of_rows = 0;
+	logging_info->number_of_cols = 0;
+	logging_info->fields = NULL;
 
 	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to reconnect to OphidiaDB.\n");
@@ -692,31 +788,16 @@ int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handl
 	}
 	//End of query processing
 
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK query: %s\n", query);
+
 	//Execute query
-	if (mysql_query(oDB->conn, query)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
-		return OPH_SERVER_ERROR;
-	}
-	// Init res
-	*logging_info = mysql_store_result(oDB->conn);
-
-	int i;
-	MYSQL_FIELD *fields;
-	*num_fields = mysql_num_fields(*logging_info);
-	*field_lengths = (unsigned long *) malloc((*num_fields) * sizeof(unsigned long));
-	if (!(*field_lengths)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-		return OPH_SERVER_ERROR;
-	}
-	fields = mysql_fetch_fields(*logging_info);
-
-	for (i = 0; i < *num_fields; i++) {
-		(*field_lengths)[i] = fields[i].max_length;
+	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, logging_info, NULL)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQLite query error\n");
+		return OPH_ODB_MYSQL_ERROR;
 	}
 
 	return OPH_SERVER_OK;
 }
-*/
 
 int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 {
@@ -1067,161 +1148,45 @@ int task_execute(OPH_LOGGINGBK_operator_handle * handle)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null Handle\n");
 		return OPH_SERVER_ERROR;
 	}
-/*
+
 	ophidiadb *oDB = &handle->oDB;
-	MYSQL_RES *logging_info = NULL;
-	int num_fields;
-	unsigned long *field_lengths = NULL;
-	int num_rows = 0;
+	oph_sqlite_list logging_info;
 
 	//retrieve logging info
-	if (retrieve_logging_info(oDB, handle, &field_lengths, &num_fields, &logging_info)) {
+	if (retrieve_logging_info(oDB, handle, &logging_info)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve logging info\n");
-		mysql_free_result(logging_info);
-		if (field_lengths) {
-			free(field_lengths);
-			field_lengths = NULL;
-		}
+		_oph_sqlite_free_list(&logging_info);
 		return OPH_SERVER_ERROR;
 	}
 	//Empty set
-	if (!(num_rows = mysql_num_rows(logging_info))) {
+	int num_rows = 0;
+	if (!(num_rows = logging_info.number_of_rows)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "No rows found by query\n");
-		mysql_free_result(logging_info);
-		if (field_lengths) {
-			free(field_lengths);
-			field_lengths = NULL;
-		}
+		_oph_sqlite_free_list(&logging_info);
 		return OPH_SERVER_OK;
 	}
 
-	MYSQL_ROW row;
-	int i, j, k, len;
-	int total_len = 1;
-	MYSQL_FIELD *fields;
-
-	fields = mysql_fetch_fields(logging_info);
-
-	int submission_string_flag = 0;
-
-	//Build row_separator
-	for (i = 0; i < num_fields; i++) {
-		if (!strncmp(fields[i].name, OPH_LOGGINGBK_SUBMISSION_STRING, strlen(OPH_LOGGINGBK_SUBMISSION_STRING))) {
-			submission_string_flag = 1;
-			continue;
-		}
-		len = (field_lengths[i] > fields[i].name_length) ? field_lengths[i] : fields[i].name_length;
-		total_len += (len + 3);
+	if (!oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
+		_oph_sqlite_free_list(&logging_info);
+		return OPH_SERVER_OK;
 	}
 
-	char *row_separator;
-	if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
-		row_separator = (char *) malloc((OPH_LOGGINGBK_MIN_WIDTH + 1) * sizeof(char));
-		memset(row_separator, 0, OPH_LOGGINGBK_MIN_WIDTH + 1);
-	} else {
-		row_separator = (char *) malloc((total_len + 1) * sizeof(char));
-		memset(row_separator, 0, total_len + 1);
-	}
-	int *field_new_len = (int *) malloc(num_fields * sizeof(int));
-	memset(field_new_len, 0, num_fields * sizeof(int));
-	double proportion_factor = (double) OPH_LOGGINGBK_MIN_WIDTH / total_len;
+	int i, num_fields = logging_info.number_of_cols;
+	char **fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
 
-	int count = 0;
-	//Print row_separator into string and compute field lengths through proportion
-	row_separator[count++] = '+';
-	for (i = 0; i < num_fields; i++) {
-		if (!strncmp(fields[i].name, OPH_LOGGINGBK_SUBMISSION_STRING, strlen(OPH_LOGGINGBK_SUBMISSION_STRING)))
-			continue;
-		row_separator[count++] = '-';
-		len = (field_lengths[i] > fields[i].name_length) ? field_lengths[i] : fields[i].name_length;
-		if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
-			field_new_len[i] = (int) ((len + 3) * proportion_factor) - 3;
-		} else
-			field_new_len[i] = len;
-		for (j = 0; j < field_new_len[i]; j++) {
-			row_separator[count++] = '-';
-		}
-		row_separator[count++] = '-';
-		if (!strncmp(fields[i].name, OPH_LOGGINGBK_JOB_ID, strlen(OPH_LOGGINGBK_JOB_ID)))
-			row_separator[count++] = '-';
-		else
-			row_separator[count++] = '+';
-	}
-
-	//If total lenght is less than minimum allowed width, extend last field
-	if (submission_string_flag && (total_len < OPH_LOGGINGBK_MIN_WIDTH)) {
-		count = 1;
-		for (i = 0; i < num_fields - 1; i++) {
-			count += (field_new_len[i] + 3);
-		}
-		field_new_len[i - 1] += (OPH_LOGGINGBK_MIN_WIDTH - count);
-		//Extend row_separator
-		row_separator[OPH_LOGGINGBK_MIN_WIDTH - 1] = '+';
-		for (j = 1; j <= (OPH_LOGGINGBK_MIN_WIDTH - count); j++) {
-			row_separator[OPH_LOGGINGBK_MIN_WIDTH - j - 1] = '-';
-		}
-		total_len = OPH_LOGGINGBK_MIN_WIDTH;
-	}
-
-	char **keys = NULL;
-	char **fieldtypes = NULL;
-	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		keys = (char **) malloc(sizeof(char *) * num_fields);
-		fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
-	}
 	//Build header
 	for (i = 0; i < num_fields; i++) {
-		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-			if (keys)
-				keys[i] = strdup(fields[i].name);
-			if (fieldtypes) {
-				if (!strcmp(fields[i].name, OPH_LOGGINGBK_JOB_ID) || !strcmp(fields[i].name, OPH_LOGGINGBK_MARKER_ID) || !strcmp(fields[i].name, OPH_LOGGINGBK_PARENT_JOB_ID)
-				    || !strcmp(fields[i].name, OPH_LOGGINGBK_WORKFLOW_ID))
-					fieldtypes[i] = strdup(OPH_JSON_INT);
-				else
-					fieldtypes[i] = strdup(OPH_JSON_STRING);
-			}
+		if (fieldtypes) {
+			if (!strcmp(logging_info.fields[i], OPH_LOGGINGBK_JOB_ID) || !strcmp(logging_info.fields[i], OPH_LOGGINGBK_MARKER_ID)
+			    || !strcmp(logging_info.fields[i], OPH_LOGGINGBK_PARENT_JOB_ID) || !strcmp(logging_info.fields[i], OPH_LOGGINGBK_WORKFLOW_ID))
+				fieldtypes[i] = strdup(OPH_JSON_INT);
+			else
+				fieldtypes[i] = strdup(OPH_JSON_STRING);
 		}
 	}
 
-	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		if (oph_json_add_grid(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, "", NULL, keys, num_fields, fieldtypes, num_fields)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
-			if (keys) {
-				for (i = 0; i < num_fields; i++) {
-					if (keys[i]) {
-						free(keys[i]);
-						keys[i] = NULL;
-					}
-				}
-				free(keys);
-				keys = NULL;
-			}
-			if (fieldtypes) {
-				for (i = 0; i < num_fields; i++) {
-					if (fieldtypes[i]) {
-						free(fieldtypes[i]);
-						fieldtypes[i] = NULL;
-					}
-				}
-				free(fieldtypes);
-				fieldtypes = NULL;
-			}
-			return OPH_SERVER_ERROR;
-		}
-	}
-
-	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		if (keys) {
-			for (i = 0; i < num_fields; i++) {
-				if (keys[i]) {
-					free(keys[i]);
-					keys[i] = NULL;
-				}
-			}
-			free(keys);
-			keys = NULL;
-		}
+	if (oph_json_add_grid(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, "", NULL, logging_info.fields, num_fields, fieldtypes, num_fields)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
 		if (fieldtypes) {
 			for (i = 0; i < num_fields; i++) {
 				if (fieldtypes[i]) {
@@ -1232,95 +1197,35 @@ int task_execute(OPH_LOGGINGBK_operator_handle * handle)
 			free(fieldtypes);
 			fieldtypes = NULL;
 		}
+		_oph_sqlite_free_list(&logging_info);
+		return OPH_SERVER_ERROR;
 	}
-	//For each ROW
-	char *tmp;
-	int row_length = total_len - 4 - OPH_LOGGINGBK_SUBMISSION_STRLEN - 3;
-	char *tmp_buffer = (char *) malloc((row_length + 1) * sizeof(char));
 
-	char **my_row = NULL;
-	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		my_row = (char **) malloc(sizeof(char *) * num_fields);
-		if (!my_row) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-			free(tmp_buffer);
-			free(row_separator);
-			free(field_new_len);
-			mysql_free_result(logging_info);
-			if (field_lengths) {
-				free(field_lengths);
-				field_lengths = NULL;
+	if (fieldtypes) {
+		for (i = 0; i < num_fields; i++) {
+			if (fieldtypes[i]) {
+				free(fieldtypes[i]);
+				fieldtypes[i] = NULL;
 			}
+		}
+		free(fieldtypes);
+		fieldtypes = NULL;
+	}
+
+	oph_sqlite_item *item = logging_info.head;
+	while (item) {
+
+		if (oph_json_add_grid_row(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, item->argv)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
+			_oph_sqlite_free_list(&logging_info);
 			return OPH_SERVER_ERROR;
 		}
+
+		item = item->next;
 	}
 
-	while ((row = mysql_fetch_row(logging_info))) {
+	_oph_sqlite_free_list(&logging_info);
 
-		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-			for (i = 0; i < num_fields; i++) {
-				if (row[i])
-					my_row[i] = strdup(row[i]);
-				else
-					my_row[i] = strdup("");
-				if (!my_row[i]) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-					free(tmp_buffer);
-					free(row_separator);
-					free(field_new_len);
-					mysql_free_result(logging_info);
-					if (field_lengths) {
-						free(field_lengths);
-						field_lengths = NULL;
-					}
-					int j;
-					for (j = 0; j < i; j++)
-						free(my_row[j]);
-					free(my_row);
-					return OPH_SERVER_ERROR;
-				}
-			}
-		}
-
-		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-			if (oph_json_add_grid_row(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, my_row)) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
-				free(tmp_buffer);
-				free(row_separator);
-				free(field_new_len);
-				mysql_free_result(logging_info);
-				if (field_lengths) {
-					free(field_lengths);
-					field_lengths = NULL;
-				}
-				int j;
-				for (j = 0; j < num_fields; j++)
-					free(my_row[j]);
-				free(my_row);
-				return OPH_SERVER_ERROR;
-			}
-		}
-
-		if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-			for (i = 0; i < num_fields; i++)
-				free(my_row[i]);
-		}
-	}
-
-	if (oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		free(my_row);
-	}
-
-	free(tmp_buffer);
-	free(row_separator);
-	free(field_new_len);
-
-	mysql_free_result(logging_info);
-	if (field_lengths) {
-		free(field_lengths);
-		field_lengths = NULL;
-	}
-*/
 	return OPH_SERVER_OK;
 }
 
@@ -1372,7 +1277,7 @@ int env_unset(OPH_LOGGINGBK_operator_handle * handle)
 	return OPH_SERVER_OK;
 }
 
-// Logging BK - end
+#endif				// LoggingBK
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -5818,7 +5723,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 
-	} else if (!strncasecmp(operator_name, OPH_OPERATOR_LOGGINGBK, OPH_MAX_STRING_SIZE)) {
+	}
+#ifndef OPH_DB_SUPPORT
+	else if (!strncasecmp(operator_name, OPH_OPERATOR_LOGGINGBK, OPH_MAX_STRING_SIZE)) {
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
@@ -5852,7 +5759,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			env_unset(handle);
 			return OPH_SERVER_ERROR;
 		}
-		handle->operator_json = oper_json;
 
 		ophidiadb *oDB = &handle->oDB;
 		oph_odb_start_job_fast(idjob, oDB);
@@ -5908,6 +5814,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
 				break;
 			}
+			handle->operator_json = oper_json;
 			// Write the output
 			if (task_execute(handle))
 				error = OPH_SERVER_ERROR;
@@ -5934,6 +5841,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		error = OPH_SERVER_NO_RESPONSE;
 	}
+#endif
 
 	return error;
 }
