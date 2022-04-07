@@ -113,6 +113,7 @@
 #define OPH_OPERATOR_MANAGE_SESSION "oph_manage_session"
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
+#define OPH_OPERATOR_IMPORTNCS "oph_importncs"
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
