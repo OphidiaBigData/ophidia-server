@@ -57,75 +57,40 @@ extern ophidiadb *ophDB;
 #define SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL3 "session.label IS NULL"
 
 #define SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS " AND session.sessionid LIKE '%s' AND %s AND session.creationdate >= '%s' AND session.creationdate <= '%s' AND jobaccounting.workflowid LIKE '%s' AND jobaccounting.markerid LIKE '%s' AND jobaccounting.creationdate >= '%s' AND jobaccounting.creationdate <= '%s' AND jobaccounting.status LIKE '%s' AND jobaccounting.submissionstring LIKE '%s' AND ((jobaccounting.timestart >= '%s' AND jobaccounting.timestart <= '%s') OR (jobaccounting.timestart IS NULL)) AND ((jobaccounting.timeend >= '%s' AND jobaccounting.timeend <= '%s') OR (jobaccounting.timeend IS NULL)) %s"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS   " AND session.sessionid LIKE '%s' AND %s AND session.creationdate >= '%s' AND session.creationdate <= '%s'"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_00000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT DISTINCT session.sessionid AS Session_ID,session.label AS Session_Label FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS" ORDER BY session.sessionid DESC LIMIT %d)tmp ORDER BY tmp.Session_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_01111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_02111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.creationdate DESC, jobaccounting.idjob DESC,jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date,tmp.Job_Submission_Date, tmp.Job_ID,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_10000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT DISTINCT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_NO_JOBS" ORDER BY session.creationdate DESC LIMIT %d)tmp ORDER BY tmp.Session_Creation_Date ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_11111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12000 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12001 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12010 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12011 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12100 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12101 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12110 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_Submission_Date, tmp.Job_ID, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
-
 #define SQLITE_QUERY_OPH_LOGGINGBK_12111 SQLITE_QUERY_OPH_LOGGINGBK_SELECT_ALL"SELECT session.sessionid AS Session_ID,session.label AS Session_Label,session.creationdate AS Session_Creation_Date,jobaccounting.idjob AS Job_ID,jobaccounting.idparent AS Parent_Job_ID,jobaccounting.workflowid AS Workflow_ID,jobaccounting.markerid AS Marker_ID,jobaccounting.creationdate AS Job_Submission_Date,jobaccounting.status AS Job_Status,jobaccounting.timestart AS Job_Start_Date,jobaccounting.timeend AS Job_End_Date,jobaccounting.submissionstring AS Job_Submission_String FROM user,jobaccounting,session WHERE user.iduser=jobaccounting.iduser AND jobaccounting.idsession=session.idsession AND user.username LIKE '%s'"SQLITE_QUERY_OPH_LOGGINGBK_FILTERS_WITH_JOBS" ORDER BY jobaccounting.timeend DESC,jobaccounting.timestart DESC,jobaccounting.creationdate DESC, jobaccounting.idjob DESC, session.creationdate DESC, jobaccounting.markerid DESC LIMIT %d)tmp ORDER BY tmp.Job_End_Date,tmp.Job_Start_Date, tmp.Job_ID,tmp.Job_Submission_Date, tmp.Session_Creation_Date,tmp.Marker_ID ASC;"
 
 #define OPH_LOGGINGBK_MASK_LEN 3
@@ -143,6 +108,7 @@ extern ophidiadb *ophDB;
 #define OPH_LOGGINGBK_PARENT_JOB_STRLEN 13
 #define OPH_LOGGINGBK_JOB_STRLEN        6
 #define OPH_LOGGINGBK_MIN_WIDTH         100
+#define OPH_LOGGINGBK_JOB_ACCOUNTING	"accounting"
 
 #define OPH_COMMON_ALL_FILTER "all"
 #define OPH_IN_PARAM_OBJKEY_FILTER "objkey_filter"
@@ -265,10 +231,8 @@ int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColNam
 	if (_oph_sqlite_alloc_list(&tmp, argc))
 		return OPH_ODB_MEMORY_ERROR;
 
-	for (i = 0; i < argc; ++i) {
-		if (argv && argv[i])
-			tmp->argv[i] = strdup(argv[i]);
-	}
+	for (i = 0; i < argc; ++i)
+		tmp->argv[i] = strdup(argv && argv[i] ? argv[i] : "");
 
 	tmp->next = NULL;
 
@@ -788,10 +752,41 @@ int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handl
 	}
 	//End of query processing
 
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK query: %s\n", query);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK first query: %s\n", query);
 
 	//Execute query
 	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, logging_info, NULL)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQLite query error\n");
+		return OPH_ODB_MYSQL_ERROR;
+	}
+	// Remove 'accounting' from query
+	char query2[SQLITE_BUFLEN], *target = NULL, *_query = query, *_query2 = query2;
+	while (*_query) {
+		if (!target) {
+			target = strstr(_query, OPH_LOGGINGBK_JOB_ACCOUNTING);
+			if (!target)
+				break;
+		}
+		if (_query < target) {
+			*_query2 = *_query;
+			_query++;
+			_query2++;
+		} else {
+			target = NULL;
+			_query += strlen(OPH_LOGGINGBK_JOB_ACCOUNTING);
+		}
+	}
+	while (*_query) {
+		*_query2 = *_query;
+		_query++;
+		_query2++;
+	}
+	*_query2 = 0;
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK second query: %s\n", query2);
+
+	//Execute query
+	if (sqlite3_exec(oDB->db, query2, _oph_odb_get_list_callback, logging_info, NULL)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQLite query error\n");
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -865,6 +860,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		return OPH_SERVER_ERROR;
 	}
 	handle->session = (int) strtol(value, NULL, 10);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_SESSION, value);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MARKER);
 	if (!value) {
@@ -872,6 +868,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		return OPH_SERVER_ERROR;
 	}
 	handle->marker = (int) strtol(value, NULL, 10);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_MARKER, value);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MASK);
 	if (!value) {
@@ -879,6 +876,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		return OPH_SERVER_ERROR;
 	}
 	snprintf(handle->mask, OPH_LOGGINGBK_MASK_LEN + 1, "%s", value);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_MASK, value);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_FILTER);
 	if (!value) {
@@ -896,13 +894,14 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			return OPH_SERVER_ERROR;
 		}
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_SESSION_FILTER, value);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_LABEL_FILTER);
 	if (!value) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Missing input parameter %s\n", OPH_IN_PARAM_SESSION_LABEL_FILTER);
 		return OPH_SERVER_ERROR;
 	}
-	if (strcmp(value, OPH_COMMON_ALL_FILTER) != 0 && strcasecmp(value, "null") != 0) {
+	if (strcmp(value, OPH_COMMON_ALL_FILTER) && strcasecmp(value, "null")) {
 		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
 		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
 		snprintf(tmp_session_label_filter, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL2, value);
@@ -910,7 +909,8 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 			return OPH_SERVER_ERROR;
 		}
-	} else if (strcmp(value, OPH_COMMON_ALL_FILTER) == 0) {
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s (2)\n", OPH_IN_PARAM_SESSION_LABEL_FILTER, handle->session_label_filter);
+	} else if (!strcmp(value, OPH_COMMON_ALL_FILTER)) {
 		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
 		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
 		snprintf(tmp_session_label_filter, OPH_MAX_STRING_SIZE, SQLITE_QUERY_OPH_LOGGINGBK_SESSION_LABEL1);
@@ -918,6 +918,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 			return OPH_SERVER_ERROR;
 		}
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s (1)\n", OPH_IN_PARAM_SESSION_LABEL_FILTER, handle->session_label_filter);
 	} else {
 		char tmp_session_label_filter[OPH_MAX_STRING_SIZE];
 		memset(tmp_session_label_filter, 0, OPH_MAX_STRING_SIZE);
@@ -926,6 +927,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 			return OPH_SERVER_ERROR;
 		}
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s (3)\n", OPH_IN_PARAM_SESSION_LABEL_FILTER, handle->session_label_filter);
 	}
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_SESSION_CREATION_DATE);
@@ -958,6 +960,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		}
 	}
 	free(valuecopy);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s %s\n", OPH_IN_PARAM_SESSION_CREATION_DATE, handle->session_creation_date1, handle->session_creation_date2);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_WORKFLOW_ID_FILTER);
 	if (!value) {
@@ -975,6 +978,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			return OPH_SERVER_ERROR;
 		}
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_WORKFLOW_ID_FILTER, handle->workflow_id_filter);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_MARKER_ID_FILTER);
 	if (!value) {
@@ -992,6 +996,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			return OPH_SERVER_ERROR;
 		}
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_MARKER_ID_FILTER, handle->workflow_id_filter);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_PARENT_ID_FILTER);
 	if (!value) {
@@ -1003,9 +1008,8 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
 			return OPH_SERVER_ERROR;
 		}
-	} else {
-		handle->parent_job_id_filter = NULL;
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_PARENT_ID_FILTER, handle->parent_job_id_filter);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_SUBMISSION_DATE);
 	if (!value) {
@@ -1035,6 +1039,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		}
 	}
 	free(valuecopy);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s %s\n", OPH_IN_PARAM_JOB_SUBMISSION_DATE, handle->job_submission_date1, handle->job_submission_date2);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_STATUS);
 	if (!value) {
@@ -1069,6 +1074,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 			return OPH_SERVER_ERROR;
 		}
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_SUBMISSION_STRING_FILTER, handle->submission_string_filter);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_START_DATE);
 	if (!value) {
@@ -1098,6 +1104,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		}
 	}
 	free(valuecopy);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s %s\n", OPH_IN_PARAM_JOB_START_DATE, handle->job_start_date1, handle->job_start_date2);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_JOB_END_DATE);
 	if (!value) {
@@ -1127,6 +1134,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		}
 	}
 	free(valuecopy);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s %s\n", OPH_IN_PARAM_JOB_END_DATE, handle->job_end_date1, handle->job_end_date2);
 
 	value = hashtbl_get(task_tbl, OPH_IN_PARAM_LOG_LINES_NUMBER);
 	if (!value) {
@@ -1138,6 +1146,7 @@ int env_set(HASHTBL * task_tbl, OPH_LOGGINGBK_operator_handle ** handle_)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "nlines must be >0\n");
 		return OPH_SERVER_ERROR;
 	}
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s=%s\n", OPH_IN_PARAM_LOG_LINES_NUMBER, value);
 
 	return OPH_SERVER_OK;
 }
