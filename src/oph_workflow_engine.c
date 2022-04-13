@@ -3268,7 +3268,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check if the notification has to be neglected\n", ttype, jobid);
 		if (light_task_index >= 0) {
-			if (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].light_tasks[light_task_index].status || (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
 				      jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status),
 				      oph_odb_convert_status_to_str(odb_status));
@@ -3276,7 +3276,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				process_notification = 0;
 			}
 		} else {
-			if (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].status || (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype, jobid,
 				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].status), oph_odb_convert_status_to_str(odb_status));
 				pthread_mutex_unlock(&global_flag);
