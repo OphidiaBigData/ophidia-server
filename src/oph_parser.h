@@ -67,7 +67,7 @@
 #define OPH_ARG_INFO "info"
 #define OPH_ARG_SUBSET_DIMS "subset_dims"
 #define OPH_ARG_SUBSET_TYPE "subset_type"
-#define OPH_ARG_TIME_FILTER "type_filter"
+#define OPH_ARG_TIME_FILTER "time_filter"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
