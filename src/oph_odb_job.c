@@ -1023,8 +1023,12 @@ int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *
 		return OPH_ODB_MYSQL_ERROR;
 	}
 #else
-
-	if (sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL)) {
+	if (flag)
+		pthread_mutex_lock(flag);
+	n = sqlite3_exec(oDB->db, insertQuery, NULL, NULL, NULL);
+	if (flag)
+		pthread_mutex_unlock(flag);
+	if (n) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", insertQuery);
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -1207,7 +1211,12 @@ int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t 
 		return OPH_ODB_MYSQL_ERROR;
 	}
 #else
-	if (sqlite3_exec(oDB->db, deleteQuery, NULL, NULL, NULL)) {
+	if (flag)
+		pthread_mutex_lock(flag);
+	n = sqlite3_exec(oDB->db, deleteQuery, NULL, NULL, NULL);
+	if (flag)
+		pthread_mutex_unlock(flag);
+	if (n) {
 		pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", deleteQuery);
 		return OPH_ODB_MYSQL_ERROR;
 	}

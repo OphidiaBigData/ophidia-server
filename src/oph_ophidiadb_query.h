@@ -74,7 +74,7 @@
 #ifdef OPH_DB_SUPPORT
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "LOCK TABLES session WRITE; UPDATE session SET label = '%s' WHERE idsession = %d; UNLOCK TABLES;"
 #else
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "BEGIN TRANSACTION; UPDATE session SET label = '%s' WHERE idsession = %d; COMMIT;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_SESSION_LABEL "UPDATE session SET label = '%s' WHERE idsession = %d;"
 #endif
 
 // Job update
@@ -103,10 +103,10 @@
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1 "UPDATE job SET status='%s' WHERE idjob=%d"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3 "UPDATE job SET status='%s', timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL"
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d; COMMIT;"
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d, timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL; COMMIT;"
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "BEGIN TRANSACTION; UPDATE job SET status='%s', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL; COMMIT;"
-#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_4 "BEGIN TRANSACTION; UPDATE job SET status=status || '_ERROR', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL; COMMIT;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "UPDATE job SET status='%s', nchildrencompleted=%d, timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "UPDATE job SET status='%s', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL;"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_4 "UPDATE job SET status=status || '_ERROR', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL;"
 #endif
 
 #define MYSQL_QUERY_DELETE_OPHIDIADB_JOB "DELETE FROM `job` WHERE idjob=%d"
@@ -143,9 +143,9 @@
 #define MYSQL_QUERY_DROP_JOB_PARENT "LOCK TABLES job WRITE; DELETE FROM `job` WHERE idjob = %d OR idparent = %d; UNLOCK TABLES;"
 #define MYSQL_QUERY_DROP_JOB_CHILD "LOCK TABLES job WRITE; DELETE FROM `job` WHERE idparent = %d; UNLOCK TABLES;"
 #else
-#define MYSQL_QUERY_DROP_JOB "BEGIN TRANSACTION; DELETE FROM `job` WHERE idjob = %d; COMMIT;"
-#define MYSQL_QUERY_DROP_JOB_PARENT "BEGIN TRANSACTION; DELETE FROM `job` WHERE idjob = %d OR idparent = %d; COMMIT;"
-#define MYSQL_QUERY_DROP_JOB_CHILD "BEGIN TRANSACTION; DELETE FROM `job` WHERE idparent = %d; COMMIT;"
+#define MYSQL_QUERY_DROP_JOB "DELETE FROM `job` WHERE idjob = %d;"
+#define MYSQL_QUERY_DROP_JOB_PARENT "DELETE FROM `job` WHERE idjob = %d OR idparent = %d;"
+#define MYSQL_QUERY_DROP_JOB_CHILD "DELETE FROM `job` WHERE idparent = %d;"
 #endif
 
 #ifndef OPH_DB_SUPPORT
