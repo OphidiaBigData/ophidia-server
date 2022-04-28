@@ -6745,21 +6745,20 @@ int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
 	if (!list || !string)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	int n = 0;
-	char tmp[OPH_MAX_STRING_SIZE], flag = 0;
-
-	if (*string) {
-		n += snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", *string);
-		flag = 1;
-	}
-
+	char *tmp;
 	while (list) {
-		n += snprintf(tmp + n, OPH_MAX_STRING_SIZE - n, "%s%s", flag ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object);
-		flag = 1;
+		tmp = NULL;
+		if (asprintf(&tmp, "%s%s", *string ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object) <= 0) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error while filling an argument\n");
+			if (tmp)
+				free(tmp);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		if (*string)
+			free(*string);
+		*string = tmp;
 		list = list->next;
 	}
-
-	*string = strdup(tmp);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

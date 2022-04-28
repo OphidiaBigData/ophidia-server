@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Procedure to evaluate values of parameters passed from a task to another one
 - Execution of OPH_RESUME in case of request for a specific task
 - Allocation of JSON Requests to heap memory for comment deletion
 - Bug in evaluation of user quota in OPH_CLUSTER
