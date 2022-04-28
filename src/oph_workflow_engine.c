@@ -134,26 +134,33 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 {
 	if (!error_notification)
 		return NULL;
-	char tmp0[OPH_MAX_STRING_SIZE], tmp1[OPH_MAX_STRING_SIZE], tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *output = NULL, *pointer, close;
-	size_t len;
+	size_t len, maxlen = OPH_MAX_STRING_SIZE + (submit_string ? strlen(submit_string) : 0);
+	char *tmp0 = strdup(error_notification);
+	if (!tmp0)
+		return NULL;
+	char *tmp1 = (char *) malloc(maxlen * sizeof(char));
+	if (!tmp1) {
+		free(tmp0);
+		return NULL;
+	}
 	*tmp1 = 0;
-	snprintf(tmp0, OPH_MAX_STRING_SIZE, "%s", error_notification);
+	char tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *output = NULL, *pointer, close;
 	pch = strtok_r(tmp0, OPH_SEPARATOR_PARAM, &save_pointer);
 	while (pch) {
 		if (!strncasecmp(pch, OPH_ARG_JOBID, strlen(OPH_ARG_JOBID))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_JOBID, OPH_SEPARATOR_KV, odb_jobid);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_TASKINDEX, strlen(OPH_ARG_TASKINDEX))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_TASKINDEX, OPH_SEPARATOR_KV, task_index);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_LIGHTTASKINDEX, strlen(OPH_ARG_LIGHTTASKINDEX))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_LIGHTTASKINDEX, OPH_SEPARATOR_KV, light_task_index);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_STATUS, strlen(OPH_ARG_STATUS))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_STATUS, OPH_SEPARATOR_KV, new_status);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else {
-			strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, pch);
 			if (!strncasecmp(pch, OPH_ARG_CWD, strlen(OPH_ARG_CWD)))
 				cwd = pch;
 			else if (!strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE)))
@@ -161,44 +168,46 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 			else if (!strncasecmp(pch, OPH_OPERATOR_PARAMETER_OUTPUT, strlen(OPH_OPERATOR_PARAMETER_OUTPUT)))
 				output = pch;
 		}
-		strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+		strcat(tmp1, OPH_SEPARATOR_PARAM);
 		pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);
 	}
+	free(tmp0);
 	// Transfer "cube" and "cwd" to notification string
 	if (submit_string) {
-		snprintf(tmp0, OPH_MAX_STRING_SIZE, "%s", submit_string);
+		tmp0 = strdup(submit_string);
 		pch = strtok_r(tmp0, OPH_SEPARATOR_PARAM, &save_pointer);
 		while (pch) {
 			if (!cwd && !strncasecmp(pch, OPH_ARG_CWD, strlen(OPH_ARG_CWD))) {
 				close = 0;
 				len = 1 + strlen(OPH_ARG_CWD);
 				if (pch[len] != OPH_WORKFLOW_ROOT_FOLDER[0]) {
-					strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
+					strcat(tmp1, pch);
 					close = 1;
 				} else if (!oph_get_session_code(sessionid, tmp2)) {
 					pointer = strstr(pch + len, tmp2);
 					if (pointer && (pointer == pch + len + 1)) {
-						strncat(tmp1, OPH_ARG_CWD, OPH_MAX_STRING_SIZE - strlen(tmp1));
-						strncat(tmp1, OPH_SEPARATOR_KV, OPH_MAX_STRING_SIZE - strlen(tmp1));
+						strcat(tmp1, OPH_ARG_CWD);
+						strcat(tmp1, OPH_SEPARATOR_KV);
 						pointer = strchr(pointer, OPH_WORKFLOW_ROOT_FOLDER[0]);
-						strncat(tmp1, pointer && (strlen(pointer) > 1) ? pointer : OPH_WORKFLOW_ROOT_FOLDER, OPH_MAX_STRING_SIZE - strlen(tmp1));
+						strcat(tmp1, pointer && (strlen(pointer) > 1) ? pointer : OPH_WORKFLOW_ROOT_FOLDER);
 						close = 1;
 					}
 				}
 				if (close)
-					strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+					strcat(tmp1, OPH_SEPARATOR_PARAM);
 			} else if (!cube && !strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE))) {
-				strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strcat(tmp1, pch);
+				strcat(tmp1, OPH_SEPARATOR_PARAM);
 			} else if (!output && !strncasecmp(pch, OPH_OPERATOR_PARAMETER_INPUT, strlen(OPH_OPERATOR_PARAMETER_INPUT))) {
-				strncat(tmp1, OPH_ARG_FILE, OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, pch + strlen(OPH_OPERATOR_PARAMETER_INPUT), OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strcat(tmp1, OPH_ARG_FILE);
+				strcat(tmp1, pch + strlen(OPH_OPERATOR_PARAMETER_INPUT));
+				strcat(tmp1, OPH_SEPARATOR_PARAM);
 			}
 			pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);
 		}
+		free(tmp0);
 	}
-	return strdup(tmp1);
+	return tmp1;
 }
 
 int oph_build_hash(char *str, unsigned int len)
