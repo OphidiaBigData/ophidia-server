@@ -3292,7 +3292,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check if the notification has to be neglected\n", ttype, jobid);
 		if (light_task_index >= 0) {
-			if (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].light_tasks[light_task_index].status || (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
 				      jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status),
 				      oph_odb_convert_status_to_str(odb_status));
@@ -3300,7 +3300,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				process_notification = 0;
 			}
 		} else {
-			if (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].status || (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype, jobid,
 				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].status), oph_odb_convert_status_to_str(odb_status));
 				pthread_mutex_unlock(&global_flag);
@@ -6784,21 +6784,20 @@ int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
 	if (!list || !string)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	int n = 0;
-	char tmp[OPH_MAX_STRING_SIZE], flag = 0;
-
-	if (*string) {
-		n += snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", *string);
-		flag = 1;
-	}
-
+	char *tmp;
 	while (list) {
-		n += snprintf(tmp + n, OPH_MAX_STRING_SIZE - n, "%s%s", flag ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object);
-		flag = 1;
+		tmp = NULL;
+		if (asprintf(&tmp, "%s%s", *string ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object) <= 0) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error while filling an argument\n");
+			if (tmp)
+				free(tmp);
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		if (*string)
+			free(*string);
+		*string = tmp;
 		list = list->next;
 	}
-
-	*string = strdup(tmp);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
