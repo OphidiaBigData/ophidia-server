@@ -1643,7 +1643,12 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j)
 				if (wf->tasks[i].arguments_lists[j]) {
-					oph_workflow_print_list(wf->tasks[i].arguments_lists[j], wf->tasks[i].arguments_values + j);
+					if (oph_workflow_print_list(wf->tasks[i].arguments_lists[j], wf->tasks[i].arguments_values + j)) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error while filling the argument '%s' of task '%s'\n", ttype, jobid, wf->tasks[i].arguments_keys[j],
+						      wf->tasks[i].name);
+						pthread_mutex_unlock(&global_flag);
+						return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+					}
 					oph_workflow_free_list(wf->tasks[i].arguments_lists[j]);
 					wf->tasks[i].arguments_lists[j] = NULL;
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: use '%s=%s' for task '%s'\n", ttype, jobid, wf->tasks[i].arguments_keys[j], wf->tasks[i].arguments_values[j],
@@ -6793,7 +6798,7 @@ int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
 	if (!list || !string)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	int r;
+	int r = 0;
 	char *tmp;
 	while (list) {
 		if (*string) {
@@ -6802,11 +6807,9 @@ int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
 			free(*string);
 		} else if (!(tmp = strdup(list->object)))
 			r = -1;
-		if (r < 0) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error while filling an argument\n");
-			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-		}
 		*string = tmp;
+		if (r < 0)
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		list = list->next;
 	}
 
