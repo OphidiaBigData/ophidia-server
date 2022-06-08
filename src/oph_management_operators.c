@@ -2718,7 +2718,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		snprintf(workflowid, OPH_MAX_STRING_SIZE, "%d", wid);
 
-		int success = 0, success2 = 0, nhosts = 0;
+		int success = 0, success2 = 1, nhosts = 0;
 		oph_json *oper_json = NULL;
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, host_type = 0, *user_filter = NULL, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
@@ -2844,9 +2844,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		oph_odb_start_job_fast(idjob, &oDB);
 
-		if (success && oph_json_alloc(&oper_json)) {
+		if (oph_json_alloc(&oper_json)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
-			success = 0;
+			success = success2 = 0;
 		}
 
 		ophidiadb_list list;
@@ -4432,7 +4432,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		oph_odb_free_ophidiadb_list(&list);
 		oph_odb_free_ophidiadb_list(&user_list);
 
-		while (!success2) {
+		while (success2) {
+			success2 = 0;
+
 			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
 				break;
@@ -4465,6 +4467,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			}
 
 			success2 = 1;
+			break;
 		}
 		if (success)
 			success = success2;
