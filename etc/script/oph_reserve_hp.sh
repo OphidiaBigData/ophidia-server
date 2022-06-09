@@ -29,7 +29,7 @@ hosts=${4}
 type=${5}
 
 # Body
-if [ "${name}" == "" ] || [ "${id_user}" == "" ] || [ "${id_user}" == "0" ] || [ "${id_job}" == "" ] || [ "${id_job}" == "0" ] || [ "${hosts}" == "" ] || [ "${hosts}" == "0" ] || [ "${type}" == "" ] || [ "${type}" == "0" ]
+if [ "${name}" == "" ] || [ "${id_user}" == "" ] || [ "${id_user}" == "0" ] || [ "${id_job}" == "" ] || [ "${id_job}" == "0" ] || [ "${hosts}" == "" ] || [ "${hosts}" == "0" ] || [ "${type}" == "" ]
 then
 	echo "Missing input arguments"
 	exit 1
