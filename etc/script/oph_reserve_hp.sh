@@ -27,9 +27,10 @@ id_user=${2}
 id_job=${3}
 hosts=${4}
 type=${5}
+outfile=${6}
 
 # Body
-if [ "${name}" == "" ] || [ "${id_user}" == "" ] || [ "${id_user}" == "0" ] || [ "${id_job}" == "" ] || [ "${id_job}" == "0" ] || [ "${hosts}" == "" ] || [ "${hosts}" == "0" ] || [ "${type}" == "" ]
+if [ "${name}" == "" ] || [ "${id_user}" == "" ] || [ "${id_user}" == "0" ] || [ "${id_job}" == "" ] || [ "${id_job}" == "0" ] || [ "${hosts}" == "" ] || [ "${hosts}" == "0" ] || [ "${type}" == "" ]  || [ "${outfile}" == "" ]
 then
 	echo "Missing input arguments"
 	exit 1
@@ -39,6 +40,18 @@ mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB
 if [ $? -ne 0 ]; then
 	echo "Query failed"
 	exit 2
+fi
+
+OUTPUT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "SELECT idhostpartition FROM hostpartition WHERE partitionname = '${name}'" | sed -n '2{p;q;}'`
+if [ $? -ne 0 ]; then
+	echo "Query failed"
+	exit 3
+fi
+
+echo $OUTPUT > $outfile
+if [ $? -ne 0 ]; then
+	echo "Error in saving output"
+	exit 4
 fi
 
 exit 0
