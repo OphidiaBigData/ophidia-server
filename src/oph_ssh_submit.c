@@ -85,7 +85,7 @@ int _system(const char *command)
 		return -1;
 
 	pid_t childPid;
-	int status;
+	int status = 0;
 
 	switch (childPid = fork()) {
 
