@@ -37,7 +37,7 @@ if [ $? -ne 0 ]; then
 	exit 2
 fi
 
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "DELETE FROM hostpartition WHERE idhostpartition = ${id_hostpartition});"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "DELETE FROM hostpartition WHERE idhostpartition = ${id_hostpartition};"
 if [ $? -ne 0 ]; then
 	echo "Query failed"
 	exit 3
