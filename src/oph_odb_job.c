@@ -1249,7 +1249,7 @@ int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB)
 
 	char updateQuery[MYSQL_BUFLEN];
 	int n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_0, oph_odb_convert_status_to_str(OPH_ODB_STATUS_RUNNING), idjob,
-			 oph_odb_convert_status_to_str(OPH_ODB_STATUS_UNKNOWN));
+			 oph_odb_convert_status_to_str(OPH_ODB_STATUS_PENDING));
 	if (n >= MYSQL_BUFLEN) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
 		return OPH_ODB_STR_BUFF_OVERFLOW;
