@@ -1234,3 +1234,46 @@ int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
 }
+
+int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB)
+{
+	if (!oDB) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return OPH_ODB_NULL_PARAM;
+	}
+
+	if (oph_odb_check_connection_to_ophidiadb(oDB)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reconnect to OphidiaDB.\n");
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	char updateQuery[MYSQL_BUFLEN];
+	int n = snprintf(updateQuery, MYSQL_BUFLEN, MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_0, oph_odb_convert_status_to_str(OPH_ODB_STATUS_RUNNING), idjob,
+			 oph_odb_convert_status_to_str(OPH_ODB_STATUS_UNKNOWN));
+	if (n >= MYSQL_BUFLEN) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Size of query exceed query limit.\n");
+		return OPH_ODB_STR_BUFF_OVERFLOW;
+	}
+#ifdef OPH_DB_SUPPORT
+
+	if (mysql_set_server_option(oDB->conn, MYSQL_OPTION_MULTI_STATEMENTS_ON)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_ODB_MYSQL_ERROR;
+	}
+
+	if (mysql_query(oDB->conn, updateQuery)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "MySQL query error: %s\n", mysql_error(oDB->conn));
+		return OPH_ODB_MYSQL_ERROR;
+	}
+#else
+
+	if (sqlite3_exec(oDB->db, updateQuery, NULL, NULL, NULL)) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQLite error while executing query '%s'\n", updateQuery);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+#endif
+
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Job status changed into '%s' using: %s\n", oph_odb_convert_status_to_str(OPH_ODB_STATUS_RUNNING), updateQuery);
+
+	return OPH_ODB_SUCCESS;
+}
