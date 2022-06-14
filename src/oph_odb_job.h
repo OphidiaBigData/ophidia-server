@@ -71,4 +71,6 @@ int oph_odb_copy_job_unsafe(ophidiadb * oDB, int idjob, int idparent);
 int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent);
 int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent);
 
+int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB);
+
 #endif				/* OPH_ODB_JOB_H */
