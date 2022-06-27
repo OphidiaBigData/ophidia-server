@@ -517,3 +517,15 @@ int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
 }
+
+int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB)
+{
+	UNUSED(idjob);
+
+	if (!oDB) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return OPH_ODB_NULL_PARAM;
+	}
+
+	return OPH_ODB_SUCCESS;
+}
