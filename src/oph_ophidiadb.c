@@ -1329,11 +1329,32 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 	if (!oDB->rshp)
 		return OPH_ODB_NULL_PARAM;
 
-	char command[MYSQL_BUFLEN];
-	snprintf(command, MYSQL_BUFLEN, "%s %s %d %d %d %d", oDB->rshp, name, id_user, id_job, hosts, type);
+	unsigned int sequence = 0;
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	sequence = oph_odb_sequence++;
+	pthread_mutex_unlock(&global_flag);
+#endif
+
+	char command[MYSQL_BUFLEN], outfile[MYSQL_BUFLEN];
+	snprintf(outfile, MYSQL_BUFLEN, OPH_ODB_TEMPORARY_FILE, oph_txt_location, oph_server_port, OPH_SERVER_PREFIX, sequence);
+	snprintf(command, MYSQL_BUFLEN, "%s %s %d %d %d %d %s", oDB->rshp, name, id_user, id_job, hosts, type, outfile);
 
 	if (system(command))
 		return OPH_ODB_MYSQL_ERROR;
+
+	char tmp[MYSQL_BUFLEN];
+	FILE *file = fopen(outfile, "r");
+	if (!file) {
+		unlink(outfile);
+		return OPH_ODB_MYSQL_ERROR;
+	}
+	*tmp = 0;
+	fscanf(file, "%s", tmp);
+	if (strcmp(tmp, OPH_NULL_VALUE))
+		*id_hostpartition = (int) strtol(tmp, NULL, 10);
+	fclose(file);
+	unlink(outfile);
 
 #else
 

@@ -95,6 +95,8 @@
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=NOW() WHERE idjob=%d AND timestart IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3 "UPDATE job SET status='%s', timeend=NOW() WHERE idjob=%d AND timeend IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_4 "UPDATE job SET status=CONCAT(status,'_ERROR'), timeend=NOW() WHERE idjob=%d AND timeend IS NULL"
+
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_0 "LOCK TABLES job WRITE; UPDATE job SET status='%s' WHERE idjob=%d AND status='%s'; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d, timestart=NOW() WHERE idjob=%d AND timestart IS NULL; UNLOCK TABLES;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "LOCK TABLES job WRITE; UPDATE job SET status='%s', nchildrencompleted=%d, timeend=NOW() WHERE idjob=%d AND timeend IS NULL; UNLOCK TABLES;"
@@ -103,6 +105,7 @@
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_1 "UPDATE job SET status='%s' WHERE idjob=%d"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_2 "UPDATE job SET status='%s', timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_3 "UPDATE job SET status='%s', timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL"
+#define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_0 "UPDATE job SET status='%s' WHERE idjob=%d AND status='%s';"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_1 "UPDATE job SET status='%s', nchildrencompleted=%d WHERE idjob=%d;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_2 "UPDATE job SET status='%s', nchildrencompleted=%d, timestart=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timestart IS NULL;"
 #define MYSQL_QUERY_UPDATE_OPHIDIADB_JOB_STATUS_PARENT_3 "UPDATE job SET status='%s', nchildrencompleted=%d, timeend=strftime('%%Y-%%m-%%d %%H-%%M-%%S','now') WHERE idjob=%d AND timeend IS NULL;"
