@@ -375,7 +375,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 				}
 				for (j = 0; j < stack->tasks[i].arguments_num; ++j) {
 					wf->tasks[i].arguments_keys[j] = strdup(stack->tasks[i].arguments_keys[j]);
-					wf->tasks[i].arguments_values[j] = strdup(stack->tasks[i].arguments_values[j]);
+					wf->tasks[i].arguments_values[j] = stack->tasks[i].arguments_values[j] ? strdup(stack->tasks[i].arguments_values[j]) : NULL;
 					wf->tasks[i].arguments_lists[j] = oph_workflow_copy_list(stack->tasks[i].arguments_lists[j]);
 				}
 			}
