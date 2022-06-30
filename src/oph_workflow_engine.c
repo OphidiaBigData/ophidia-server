@@ -995,6 +995,10 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					task->light_tasks[i].arguments_num = arguments_num;
 					task->light_tasks[i].response = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
+						if (!task->arguments_keys[j]) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to set arguments of light tasks from task '%s'\n", ttype, jobid, task->name);
+							continue;
+						}
 						task->light_tasks[i].arguments_keys[j] = strdup(task->arguments_keys[j]);
 						if ((src_path && (task->arguments_keys[j] == src_path_key)) || (!src_path && (task->arguments_keys[j] == datacube_input_key)))
 							task->light_tasks[i].arguments_values[j] = strdup(datacube_inputs[i]);
@@ -1004,7 +1008,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 							else
 								task->light_tasks[i].arguments_values[j] = strdup(measure);
 						} else
-							task->light_tasks[i].arguments_values[j] = strdup(task->arguments_values[j]);
+							task->light_tasks[i].arguments_values[j] = task->arguments_values[j] ? strdup(task->arguments_values[j]) : NULL;
 					}
 					if (add_measure && measure_name[i]) {
 						task->light_tasks[i].arguments_keys[j] = strdup(OPH_ARG_MEASURE);

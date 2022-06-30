@@ -1,8 +1,9 @@
 
-## Next release
+## v1.7.0 - 2022-06-30
 
 ### Fixed:
 
+- Bug in handling the ordered list of output cubes
 - Bug in OPH_CLUSTER to return the JSON result in case of wrong input argument
 - Bugs in configuration script for code building
 - Bugs in workflow engine
