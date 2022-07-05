@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2021 CMCC Foundation
+    Copyright (C) 2012-2022 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -520,4 +520,16 @@ int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent)
 int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
+}
+
+int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB)
+{
+	UNUSED(idjob);
+
+	if (!oDB) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
+		return OPH_ODB_NULL_PARAM;
+	}
+
+	return OPH_ODB_SUCCESS;
 }

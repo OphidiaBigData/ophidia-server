@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2021 CMCC Foundation
+    Copyright (C) 2012-2022 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -417,7 +417,7 @@ int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **sv
 				tmp->tasks[i].arguments_lists = (oph_workflow_ordered_list **) malloc(workflow->tasks[i].arguments_num * sizeof(oph_workflow_ordered_list *));
 				for (j = 0; j < workflow->tasks[i].arguments_num; ++j) {
 					tmp->tasks[i].arguments_keys[j] = strdup(workflow->tasks[i].arguments_keys[j]);
-					tmp->tasks[i].arguments_values[j] = strdup(workflow->tasks[i].arguments_values[j]);
+					tmp->tasks[i].arguments_values[j] = workflow->tasks[i].arguments_values[j] ? strdup(workflow->tasks[i].arguments_values[j]) : NULL;
 					tmp->tasks[i].arguments_lists[j] = oph_workflow_copy_list(workflow->tasks[i].arguments_lists[j]);
 				}
 			} else {

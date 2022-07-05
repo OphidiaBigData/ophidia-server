@@ -1,13 +1,30 @@
 
-## Next release
+## v1.7.0 - 2022-07-01
 
 ### Fixed:
 
+- Bug in handling the ordered list of output cubes
+- Bug in OPH_CLUSTER to return the JSON result in case of wrong input argument
+- Bugs in configuration script for code building
+- Bugs in workflow engine
 - Procedure to evaluate values of parameters passed from a task to another one
 - Execution of OPH_RESUME in case of request for a specific task
 - Allocation of JSON Requests to heap memory for comment deletion
 - Bug in evaluation of user quota in OPH_CLUSTER
+- Bug in debug printing function
 
+### Added:
+
+- Support for cube argument for importncs [#58](https://github.com/OphidiaBigData/ophidia-server/pull/58)
+- Features to load/store variables from/to JSON Requests
+- Support for checkpointing workflow execution
+- Dynamic back-off in case of task re-submission
+
+### Changed:
+
+- Improve reliability of OPH_WAIT in case of cancellation  
+- New 'measure' and subset parameters to OPH_WAIT operator
+- 'author' and 'abstract' are not mandatory parameters of a workflow anymore
 
 ## v1.6.2 - 2021-08-03
 
