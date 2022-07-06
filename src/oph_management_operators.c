@@ -155,25 +155,25 @@ typedef struct _OPH_LOGGINGBK_operator_handle {
 	oph_json *operator_json;
 } OPH_LOGGINGBK_operator_handle;
 
-typedef struct _oph_sqlite_item {
+typedef struct _oph_management_item {
 	char **argv;
-	struct _oph_sqlite_item *next;
-} oph_sqlite_item;
+	struct _oph_management_item *next;
+} oph_management_item;
 
 typedef struct {
-	oph_sqlite_item *head;
-	oph_sqlite_item *tail;
+	oph_management_item *head;
+	oph_management_item *tail;
 	int number_of_rows;
 	int number_of_cols;
 	char **fields;
-} oph_sqlite_list;
+} oph_management_list;
 
-int _oph_sqlite_alloc_list(oph_sqlite_item ** head, int argc)
+int _oph_management_alloc_list(oph_management_item ** head, int argc)
 {
 	if (!head)
 		return OPH_ODB_NULL_PARAM;
 
-	*head = (oph_sqlite_item *) malloc(sizeof(oph_sqlite_item));
+	*head = (oph_management_item *) malloc(sizeof(oph_management_item));
 	if (!*head)
 		return OPH_ODB_MEMORY_ERROR;
 	(*head)->argv = (char **) calloc(argc, sizeof(char *));
@@ -181,14 +181,14 @@ int _oph_sqlite_alloc_list(oph_sqlite_item ** head, int argc)
 	return OPH_ODB_SUCCESS;
 }
 
-int _oph_sqlite_free_list(oph_sqlite_list * list)
+int _oph_management_free_list(oph_management_list * list)
 {
 	if (!list)
 		return OPH_ODB_NULL_PARAM;
 
 	int i, argc = list->number_of_cols;
 
-	oph_sqlite_item *head = list->head, *next = NULL;
+	oph_management_item *head = list->head, *next = NULL;
 	for (; head; head = next) {
 		next = head->next;
 		if (head->argv) {
@@ -210,12 +210,12 @@ int _oph_sqlite_free_list(oph_sqlite_list * list)
 	return OPH_ODB_SUCCESS;
 }
 
-int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColName)
+int _oph_management_get_list_callback(void *res, int argc, char **argv, char **azColName)
 {
 	if (!res)
 		return OPH_ODB_NULL_PARAM;
 
-	oph_sqlite_list *list = (oph_sqlite_list *) res;
+	oph_management_list *list = (oph_management_list *) res;
 	list->number_of_cols = argc;
 	if (!argc)
 		return OPH_ODB_NO_ROW_FOUND;
@@ -227,8 +227,8 @@ int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColNam
 			list->fields[i] = strdup(azColName[i]);
 	}
 
-	oph_sqlite_item *tmp = NULL;
-	if (_oph_sqlite_alloc_list(&tmp, argc))
+	oph_management_item *tmp = NULL;
+	if (_oph_management_alloc_list(&tmp, argc))
 		return OPH_ODB_MEMORY_ERROR;
 
 	for (i = 0; i < argc; ++i)
@@ -247,7 +247,7 @@ int _oph_odb_get_list_callback(void *res, int argc, char **argv, char **azColNam
 	return OPH_ODB_SUCCESS;
 }
 
-int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handle, oph_sqlite_list * logging_info)
+int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handle, oph_management_list * logging_info)
 {
 	if (!oDB || !handle || !logging_info) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -755,7 +755,7 @@ int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handl
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK first query: %s\n", query);
 
 	//Execute query
-	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, logging_info, NULL)) {
+	if (sqlite3_exec(oDB->db, query, _oph_management_get_list_callback, logging_info, NULL)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQLite query error\n");
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -786,7 +786,7 @@ int retrieve_logging_info(ophidiadb * oDB, OPH_LOGGINGBK_operator_handle * handl
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LoggingBK second query: %s\n", query2);
 
 	//Execute query
-	if (sqlite3_exec(oDB->db, query2, _oph_odb_get_list_callback, logging_info, NULL)) {
+	if (sqlite3_exec(oDB->db, query2, _oph_management_get_list_callback, logging_info, NULL)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQLite query error\n");
 		return OPH_ODB_MYSQL_ERROR;
 	}
@@ -1159,24 +1159,24 @@ int task_execute(OPH_LOGGINGBK_operator_handle * handle)
 	}
 
 	ophidiadb *oDB = &handle->oDB;
-	oph_sqlite_list logging_info;
+	oph_management_list logging_info;
 
 	//retrieve logging info
 	if (retrieve_logging_info(oDB, handle, &logging_info)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve logging info\n");
-		_oph_sqlite_free_list(&logging_info);
+		_oph_management_free_list(&logging_info);
 		return OPH_SERVER_ERROR;
 	}
 	//Empty set
 	int num_rows = 0;
 	if (!(num_rows = logging_info.number_of_rows)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "No rows found by query\n");
-		_oph_sqlite_free_list(&logging_info);
+		_oph_management_free_list(&logging_info);
 		return OPH_SERVER_OK;
 	}
 
 	if (!oph_json_is_objkey_printable(handle->objkeys, handle->objkeys_num, OPH_JSON_OBJKEY_LOGGINGBK)) {
-		_oph_sqlite_free_list(&logging_info);
+		_oph_management_free_list(&logging_info);
 		return OPH_SERVER_OK;
 	}
 
@@ -1206,7 +1206,7 @@ int task_execute(OPH_LOGGINGBK_operator_handle * handle)
 			free(fieldtypes);
 			fieldtypes = NULL;
 		}
-		_oph_sqlite_free_list(&logging_info);
+		_oph_management_free_list(&logging_info);
 		return OPH_SERVER_ERROR;
 	}
 
@@ -1221,19 +1221,19 @@ int task_execute(OPH_LOGGINGBK_operator_handle * handle)
 		fieldtypes = NULL;
 	}
 
-	oph_sqlite_item *item = logging_info.head;
+	oph_management_item *item = logging_info.head;
 	while (item) {
 
 		if (oph_json_add_grid_row(handle->operator_json, OPH_JSON_OBJKEY_LOGGINGBK, item->argv)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
-			_oph_sqlite_free_list(&logging_info);
+			_oph_management_free_list(&logging_info);
 			return OPH_SERVER_ERROR;
 		}
 
 		item = item->next;
 	}
 
-	_oph_sqlite_free_list(&logging_info);
+	_oph_management_free_list(&logging_info);
 
 	return OPH_SERVER_OK;
 }
