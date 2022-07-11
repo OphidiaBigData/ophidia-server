@@ -63,6 +63,7 @@ extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_max_cores;
 extern unsigned int oph_default_max_hosts;
 extern unsigned int oph_default_session_timeout;
+extern char oph_direct_output;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -2856,7 +2857,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
 #ifdef OPH_DIRECT_OUTPUT
-											else if (old_wf->tasks_num == 1) {
+											else if (oph_direct_output && (old_wf->tasks_num == 1)) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
 											}
@@ -2865,7 +2866,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 												submission_string = strdup(old_wf->name);
 										} else {
 #ifdef OPH_DIRECT_OUTPUT
-											if (old_wf->tasks_num == 1) {
+											if (oph_direct_output && (old_wf->tasks_num == 1)) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
 											} else
@@ -3592,7 +3593,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					}
 #ifdef LEVEL1
 #ifdef OPH_DIRECT_OUTPUT
-					if (!document_type && !id_type && (level == 1) && (n > 2))	// Found a multi-task workflow --> show the task list
+					if (!document_type && !id_type && (level == 1) && (!oph_direct_output || (n > 2)))	// Found a multi-task workflow --> show the task list
 #else
 					if (!document_type && !id_type && (level == 1))	// Show the task list
 #endif
@@ -5664,7 +5665,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
 #ifdef OPH_DIRECT_OUTPUT
-									else if (old_wf->tasks_num == 1) {
+									else if (oph_direct_output && (old_wf->tasks_num == 1)) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
 									}
@@ -5674,7 +5675,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								} else	// if (level==2)
 								{
 #ifdef OPH_DIRECT_OUTPUT
-									if (old_wf->tasks_num == 1) {
+									if (oph_direct_output && (old_wf->tasks_num == 1)) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
 									} else
@@ -6095,7 +6096,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	if (wf->command)
 		submission_string = strdup(wf->command);
 #ifdef OPH_DIRECT_OUTPUT
-	else if (wf->tasks_num == 1) {
+	else if (oph_direct_output && (wf->tasks_num == 1)) {
 		if (oph_workflow_get_submitted_string(wf, 0, -1, 0, &submission_string))
 			submission_string = NULL;
 	}
@@ -6398,7 +6399,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			}
 #ifdef OPH_DIRECT_OUTPUT
 #if defined(LEVEL1)
-			if (wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
+			if (oph_direct_output && wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
 
 				unsigned int iextra = 0;
 				if (strlen(_new_token))

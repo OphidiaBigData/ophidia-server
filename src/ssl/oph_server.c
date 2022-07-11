@@ -130,6 +130,7 @@ unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment = 0;
 char oph_auth_enabled = 1;
 char oph_cancel_all_enabled = 0;
+char oph_direct_output = 1;
 #ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
@@ -539,7 +540,7 @@ int main(int argc, char *argv[])
 
 	set_debug_level(msglevel + 10);
 
-	while ((ch = getopt(argc, argv, "ac:dhl:mp:s:t:vwxz")) != -1) {
+	while ((ch = getopt(argc, argv, "ac:dhl:mop:s:t:vwxz")) != -1) {
 		switch (ch) {
 			case 'a':
 				oph_auth_enabled = 0;
@@ -558,6 +559,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'm':
 				oph_subm_ssh = 1;
+				break;
+			case 'o':
+				oph_direct_output = 0;
 				break;
 			case 'p':
 				oph_server_port = optarg;
