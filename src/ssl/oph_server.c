@@ -130,7 +130,11 @@ unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment = 0;
 char oph_auth_enabled = 1;
 char oph_cancel_all_enabled = 0;
+#ifdef OPH_DIRECT_OUTPUT
 char oph_direct_output = 1;
+#else
+char oph_direct_output = 0;
+#endif
 #ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;
@@ -561,7 +565,7 @@ int main(int argc, char *argv[])
 				oph_subm_ssh = 1;
 				break;
 			case 'o':
-				oph_direct_output = 0;
+				oph_direct_output = !oph_direct_output;
 				break;
 			case 'p':
 				oph_server_port = optarg;

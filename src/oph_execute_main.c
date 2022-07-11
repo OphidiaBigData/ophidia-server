@@ -2856,22 +2856,16 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 										if (level == 1) {
 											if (old_wf->command)
 												submission_string = strdup(old_wf->command);
-#ifdef OPH_DIRECT_OUTPUT
 											else if (oph_direct_output && (old_wf->tasks_num == 1)) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
-											}
-#endif
-											else
+											} else
 												submission_string = strdup(old_wf->name);
 										} else {
-#ifdef OPH_DIRECT_OUTPUT
 											if (oph_direct_output && (old_wf->tasks_num == 1)) {
 												if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 													submission_string = NULL;
-											} else
-#endif
-											if (old_wf->command)
+											} else if (old_wf->command)
 												submission_string = strdup(old_wf->command);
 											else
 												submission_string = strdup(old_wf->name);
@@ -3592,11 +3586,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							continue;	// In case of more than one rows then the first is related to the parent and the others are related to children
 					}
 #ifdef LEVEL1
-#ifdef OPH_DIRECT_OUTPUT
 					if (!document_type && !id_type && (level == 1) && (!oph_direct_output || (n > 2)))	// Found a multi-task workflow --> show the task list
-#else
-					if (!document_type && !id_type && (level == 1))	// Show the task list
-#endif
 					{
 						marker = markers[0];	// In case of more than one rows then the first is related to the parent and the others are related to children
 						iterate = 0;
@@ -5664,23 +5654,17 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								if (level == 1) {
 									if (old_wf->command)
 										submission_string = strdup(old_wf->command);
-#ifdef OPH_DIRECT_OUTPUT
 									else if (oph_direct_output && (old_wf->tasks_num == 1)) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
-									}
-#endif
-									else
+									} else
 										submission_string = strdup(old_wf->name);
 								} else	// if (level==2)
 								{
-#ifdef OPH_DIRECT_OUTPUT
 									if (oph_direct_output && (old_wf->tasks_num == 1)) {
 										if (oph_workflow_get_submitted_string(old_wf, 0, -1, 1, &submission_string))
 											submission_string = NULL;
-									} else
-#endif
-									if (old_wf->command)
+									} else if (old_wf->command)
 										submission_string = strdup(old_wf->command);
 									else
 										submission_string = strdup(old_wf->name);
@@ -6095,13 +6079,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	char *submission_string = NULL;
 	if (wf->command)
 		submission_string = strdup(wf->command);
-#ifdef OPH_DIRECT_OUTPUT
 	else if (oph_direct_output && (wf->tasks_num == 1)) {
 		if (oph_workflow_get_submitted_string(wf, 0, -1, 0, &submission_string))
 			submission_string = NULL;
-	}
-#endif
-	else
+	} else
 		submission_string = strdup(wf->name);
 	if (!oph_session_report_append_command(session_code, wf->workflowid, wf->markerid, wf->username, submission_string ? submission_string : request))
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: command added to session report\n", jobid);
@@ -6397,7 +6378,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				oph_cleanup_args(&session_args);
 				nextra++;
 			}
-#ifdef OPH_DIRECT_OUTPUT
 #if defined(LEVEL1)
 			if (oph_direct_output && wf->response && (wf->tasks_num == 1)) {	// Add volatile extra data only in case of the output of single commands
 
@@ -6454,7 +6434,6 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				free_string_vector(keys, nextra);
 				free_string_vector(values, nextra);
 			}
-#endif
 #endif
 
 			if (!response->response)

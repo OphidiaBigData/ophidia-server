@@ -84,6 +84,7 @@ unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment;
 char oph_cancel_all_enabled = 0;
+char oph_direct_output = 1;
 
 void set_global_values(const char *configuration_file)
 {

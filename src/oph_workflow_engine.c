@@ -6082,7 +6082,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 #endif
 			}
-#ifdef OPH_DIRECT_OUTPUT
 			if (oph_direct_output) {
 #if defined(LEVEL1)
 				if (wf->response && (wf->tasks_num == 1)) {
@@ -6114,7 +6113,6 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 #endif
 			}
-#endif
 #endif
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: sending termination signal for workflow '%s'\n", ttype, jobid, wf->name);
 			pthread_cond_broadcast(&termination_flag);
