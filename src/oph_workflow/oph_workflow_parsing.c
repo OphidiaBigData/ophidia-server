@@ -33,6 +33,7 @@
 #define OPH_GLOBAL_VARS "Global variables"
 
 extern unsigned int oph_base_backoff;
+extern char oph_direct_output;
 
 /* Alloc oph_workflow struct */
 int _oph_workflow_alloc(oph_workflow ** workflow);
@@ -88,11 +89,11 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
 	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save =
-	    NULL, *checkpoint = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid,
-		    "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit,
-		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project, "save", &save,
-		    "checkpoint", &checkpoint);
+	    NULL, *checkpoint = NULL, *direct_output = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid",
+		    &sessionid, "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command,
+		    "on_exit", &on_exit, "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project,
+		    "save", &save, "checkpoint", &checkpoint, "direct_output", &direct_output);
 
 	//add global vars
 	if (!name) {
@@ -299,6 +300,24 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
 	}
+	(*workflow)->direct_output = oph_direct_output;
+	if (direct_output && strlen(direct_output)) {
+		if (!strcmp(direct_output, OPH_WORKFLOW_NO))
+			(*workflow)->direct_output = 0;
+		else if (!strcmp(direct_output, OPH_WORKFLOW_YES))
+			(*workflow)->direct_output = 1;
+		else {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'direct_output'\n");
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		}
+	}
+
+	pmesg(LOG_ERROR, __FILE__, __LINE__, "Direct output: %d %s\n", (*workflow)->direct_output, direct_output);
+
+
 	if (host_partition && strlen(host_partition)) {
 		(*workflow)->host_partition = (char *) strdup((const char *) host_partition);
 		if (!((*workflow)->host_partition)) {

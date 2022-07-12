@@ -50,7 +50,6 @@ extern FILE *task_logfile;
 extern oph_service_info *service_info;
 extern char *oph_status_log_file_name;
 extern char oph_cancel_all_enabled;
-extern char oph_direct_output;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -6082,7 +6081,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 #endif
 			}
-			if (oph_direct_output) {
+			if (wf->direct_output) {
 #if defined(LEVEL1)
 				if (wf->response && (wf->tasks_num == 1)) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
