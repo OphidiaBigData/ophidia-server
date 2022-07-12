@@ -1,4 +1,10 @@
 
+## Next release
+
+### Fixed:
+
+- Bug in reading the global option 'checkpoint' [#60](https://github.com/OphidiaBigData/ophidia-server/issues/60)
+
 ## v1.7.0 - 2022-07-01
 
 ### Fixed:
