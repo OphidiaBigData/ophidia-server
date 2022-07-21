@@ -6081,37 +6081,37 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 #endif
 			}
-#ifdef OPH_DIRECT_OUTPUT
+			if (wf->direct_output) {
 #if defined(LEVEL1)
-			if (wf->response && (wf->tasks_num == 1)) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
-				free(wf->response);	// Clear level-1 JSON Response
-				if (my_output_json)
-					wf->response = strdup(my_output_json);
-				else if (output_json)
-					wf->response = strdup(output_json);
-			}
+				if (wf->response && (wf->tasks_num == 1)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
+					free(wf->response);	// Clear level-1 JSON Response
+					if (my_output_json)
+						wf->response = strdup(my_output_json);
+					else if (output_json)
+						wf->response = strdup(output_json);
+				}
 #elif defined(LEVEL2)
-			if (wf->response) {
-				oph_workflow_load_aggregate_response(wf, 2);
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with a level-2 JSON Response:\n%s\n", ttype, jobid, wf->response);
-			}
+				if (wf->response) {
+					oph_workflow_load_aggregate_response(wf, 2);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with a level-2 JSON Response:\n%s\n", ttype, jobid, wf->response);
+				}
 #elif defined(LEVEL3)
-			if (wf->response) {
-				oph_workflow_load_aggregate_response(wf, 3);
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with a level-3 JSON Response:\n%s\n", ttype, jobid, wf->response);
-			}
+				if (wf->response) {
+					oph_workflow_load_aggregate_response(wf, 3);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with a level-3 JSON Response:\n%s\n", ttype, jobid, wf->response);
+				}
 #else
-			if (wf->response && !wf->author) {
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
-				free(wf->response);	// Clear level-1 JSON Response
-				if (my_output_json)
-					wf->response = strdup(my_output_json);
-				else if (output_json)
-					wf->response = strdup(output_json);
+				if (wf->response && !wf->author) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reply with the JSON Response related to single task\n", ttype, jobid);
+					free(wf->response);	// Clear level-1 JSON Response
+					if (my_output_json)
+						wf->response = strdup(my_output_json);
+					else if (output_json)
+						wf->response = strdup(output_json);
+				}
+#endif
 			}
-#endif
-#endif
 #endif
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: sending termination signal for workflow '%s'\n", ttype, jobid, wf->name);
 			pthread_cond_broadcast(&termination_flag);
