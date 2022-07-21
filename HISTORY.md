@@ -5,6 +5,10 @@
 
 - Bug in reading the global option 'checkpoint' [#60](https://github.com/OphidiaBigData/ophidia-server/issues/60)
 
+### Added:
+
+- Option 'direct_output' to control the output of single-task workflows [#61](https://github.com/OphidiaBigData/ophidia-server/pull/61)
+
 ## v1.7.0 - 2022-07-01
 
 ### Fixed:
