@@ -315,9 +315,6 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		}
 	}
 
-	pmesg(LOG_ERROR, __FILE__, __LINE__, "Direct output: %d %s\n", (*workflow)->direct_output, direct_output);
-
-
 	if (host_partition && strlen(host_partition)) {
 		(*workflow)->host_partition = (char *) strdup((const char *) host_partition);
 		if (!((*workflow)->host_partition)) {
