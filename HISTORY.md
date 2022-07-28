@@ -1,5 +1,5 @@
 
-## Next release
+## v1.7.1 - 2022-07-28
 
 ### Fixed:
 
@@ -138,7 +138,7 @@
 
 ### Fixed:
 
-- Issue [#41](https://github.com/OphidiaBigData/ophidia-server/issues/41) 
+- Issue [#41](https://github.com/OphidiaBigData/ophidia-server/issues/41)
 - Bug [#33](https://github.com/OphidiaBigData/ophidia-server/issues/33)
 - Bug in reading rmanager configuration file with empty lines
 - Bug in update OPH_USER_LAST_CDD by means of oph_manage_user
@@ -339,8 +339,8 @@
 - Warning messages set in JSON response in case of successful tasks
 - Bug in handling wrong expression with OPH_IF (INDIGO-DataCloud Project)
 - Bug in setting exit status of OPH_ENDFOR (INDIGO-DataCloud Project)
-- Compact output format in resuming status of running workflow 
-- Improved procedure to set final operation arguments 
+- Compact output format in resuming status of running workflow
+- Improved procedure to set final operation arguments
 - Bug in OphidiaDB update when a massive operation is retried
 - Bug in handling OPH_IF when Matheval is not enabled (INDIGO-DataCloud Project)
 - Bug in job monitoring procedure
@@ -361,7 +361,7 @@
 - Query of OPH_RESUME to return OPH_STATUS_WAITING in case there is at least a waiting task (INDIGO-DataCloud Project)
 - Workflow status list; added OPH_STATUS_WAITING and OPH_STATUS_UNSELECTED (INDIGO-DataCloud Project)
 - Policy to set auto-retry interval (backoff-based policy)
-- OPH_FOR and OPH_SET input parameter "name" to "key" 
+- OPH_FOR and OPH_SET input parameter "name" to "key"
 - Default value for SERVER_FARM_SIZE to 128
 
 ## v0.10.5 - 2016-08-24

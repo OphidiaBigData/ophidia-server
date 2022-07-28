@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [1.7.0], [ophidia-info@cmcc.it])
+AC_INIT([ophidia-server], [1.7.1], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -246,17 +246,17 @@ OPH_NOTIFIER=$ws_notifier
 AC_SUBST(OPH_NOTIFIER)
 
 AUTHORIZATION="$prefix/authz/dn.dat"
-AC_SUBST(AUTHORIZATION) 
+AC_SUBST(AUTHORIZATION)
 AUTHORIZATION_FILE="$prefix/authz/dn.dat"
 AC_SUBST(AUTHORIZATION_FILE)
 
 BLACK_LIST="$prefix/authz/black_dn.dat"
-AC_SUBST(BLACK_LIST) 
+AC_SUBST(BLACK_LIST)
 BLACK_LIST_FILE="$prefix/authz/black_dn.dat"
 AC_SUBST(BLACK_LIST_FILE)
 
 AUTHORIZED_VO="$prefix/authz/vo.dat"
-AC_SUBST(AUTHORIZED_VO) 
+AC_SUBST(AUTHORIZED_VO)
 AUTHORIZED_VO_FILE="$prefix/authz/vo.dat"
 AC_SUBST(AUTHORIZED_VO_FILE)
 
@@ -566,4 +566,3 @@ AM_CONDITIONAL(VOMS, test $voms_enable = 1)
 AC_CONFIG_FILES([etc/oph_server], [chmod 0755 etc/oph_server])
 
 AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate etc/rms/slurm.conf])
-
