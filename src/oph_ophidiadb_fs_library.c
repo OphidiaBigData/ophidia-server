@@ -350,7 +350,7 @@ int oph_odb_fs_get_session_home_id(char *sessionid, ophidiadb * oDB, int *folder
 
 int oph_odb_fs_build_path(int folder_id, ophidiadb * oDB, char (*out_path)[MYSQL_BUFLEN])
 {
-	if(!oDB || !folder_id || !out_path) {
+	if (!oDB || !folder_id || !out_path) {
 		return OPH_ODB_NULL_PARAM;
 	}
 

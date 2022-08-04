@@ -133,7 +133,7 @@ void *_oph_system(oph_command_data * data)
 
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
 {
-	if(!command) {
+	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
