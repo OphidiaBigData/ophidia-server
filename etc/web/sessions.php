@@ -18,28 +18,19 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-	function make_links_blank($text) {
-		return preg_replace(
-		     array(
-			'/(?(?=<a[^>]*>.+<\/a>)
-			     (?:<a[^>]*>.+<\/a>)
-			     |
-			     ([^="\']?)((?:https?|ftp|bf2|):\/\/[^<> \n\r]+)
-			 )/iex',
-			'/<a([^>]*)target="?[^"\']+"?/i',
-			'/<a([^>]+)>/i',
-			'/(^|\s)(www.[^<> \n\r]+)/iex',
-			'/(([_A-Za-z0-9-]+)(\\.[_A-Za-z0-9-]+)*@([A-Za-z0-9-]+)
-			(\\.[A-Za-z0-9-]+)*)/iex'       ),
-		     array(
-		       "stripslashes((strlen('\\2')>0?'\\1<a href=\"\\2\">\\2</a>\\3':'\\0'))",
-		       '<a\\1',
-		       '<a\\1 target="_blank">',
-		       "stripslashes((strlen('\\2')>0?'\\1<a href=\"http://\\2\">\\2</a>\\3':'\\0'))",
-		       "stripslashes((strlen('\\2')>0?'<a href=\"mailto:\\0\">\\0</a>':'\\0'))"
-		       ),
-		       $text
-		);
+	function make_links_blank($text) { 
+		$rexProtocol = 'https?://';
+		$rexDomain   = '((?:[-a-zA-Z0-9]{1,63}\.)+[-a-zA-Z0-9]{2,63}|(?:[0-9]{1,3}\.){3}[0-9]{1,3})';
+		$rexPort     = '(:[0-9]{1,5})?';
+		$rexPath     = '(/[!$-/0-9:;=@_\':;!a-zA-Z\x7f-\xff]*?)?';
+		$rexQuery    = '(\?[!$-/0-9:;=@_\':;!a-zA-Z\x7f-\xff]+?)?';
+		$rexFragment = '(#[!$-/0-9:;=@_\':;!a-zA-Z\x7f-\xff]+?)?';    
+		return $text = preg_replace_callback("&\\b$rexProtocol$rexDomain$rexPort$rexPath$rexQuery$rexFragment(?=[?.!,;:\"]?(\s|$))&",
+		function ($match) {
+			$completeUrl = $match[1] ? $match[0] : "https://{$match[0]}";
+			#return '<a href="' . $completeUrl . '">' . $match[2] . $match[3] . $match[4] . '</a>';
+			return '<a href="' . $completeUrl . '">' . $completeUrl . '</a>';
+		}, $text);
 	}
 	include('env.php');
 	include('userinfo.php');
@@ -88,7 +79,7 @@
 			$ext = substr(strrchr($file,'.'),1);
 			$filename = substr(strrchr($file,'/'),1);
 			$url_to_dir = $oph_web_server.'/sessions'.$target;
-			if ($url_to_dir{strlen($url_to_dir)-1} == '/')
+			if ($url_to_dir[strlen($url_to_dir)-1] == '/')
 				$url_to_dir = substr($url_to_dir,0,strlen($url_to_dir)-1);
 			$url_to_dir_p = substr($url_to_dir,0,strrpos($url_to_dir,'/'));
 			if (is_dir($file)) {
