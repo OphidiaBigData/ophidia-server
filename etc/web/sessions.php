@@ -18,6 +18,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+	This script processes the requests for sessions and datacubes. Web server should be configured to redirect these requests correctly.
+	For instance, the following configuration should be adequate for Apache.
+
+		RedirectMatch permanent /ophidia/sessions/(.*) /ophidia/sessions.php/$1
+		RedirectMatch permanent /ophidia/[0-9]+/(.*) /ophidia/sessions.php?cube=$0
+*/
+
 	function make_links_blank($text) { 
 		$rexProtocol = 'https?://';
 		$rexDomain   = '((?:[-a-zA-Z0-9]{1,63}\.)+[-a-zA-Z0-9]{2,63}|(?:[0-9]{1,3}\.){3}[0-9]{1,3})';
@@ -43,12 +51,31 @@
 			header('Location: '.$oph_web_server_secure.'/index.php');
 	}
 	if (isset($_SESSION['userid'])) {
+
+		if (isset($_GET['cube'])) {
+			$cube_id = strrchr($_GET['cube'],'/');
+			$container_id = strrchr(substr($_GET['cube'],0,strlen($_GET['cube'])-strlen($cube_id)),'/');
+			$pid = $oph_web_server . $container_id . $cube_id;
+			header('Content-Type: text/html');
+			include('header.php');
+			if (!empty($container_id) && is_numeric(substr($container_id,1)) && !empty($cube_id) && is_numeric(substr($cube_id,1))) {
+				$linktype = "Datacube";
+			} else {
+				$linktype = "Container";
+			}
+?>
+		<P><?php echo $linktype; ?> <A href='<?php echo $pid; ?>'><?php echo $pid; ?></A></P>
+		<HR/>
+<?php
+			include('tailer.php');
+			exit;
+		}
+
 		if (isset($_SESSION['url'])) {
 			$target = $_SESSION['url'];
 			unset($_SESSION['url']);
 		} else
 			$target = $_SERVER['PATH_INFO'];
-
 		$session_code = strtok($target,"/");
 		if (isset($session_code) && !empty($session_code) && $session_code) {
 			$handle = fopen($oph_auth_location . '/users/' . $_SESSION['userid'] . '/sessions/' . $session_code . '.session', 'r');
