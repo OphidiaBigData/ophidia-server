@@ -23,7 +23,7 @@
 	For instance, the following configuration should be adequate for Apache.
 
 		RedirectMatch permanent /ophidia/sessions/(.*) /ophidia/sessions.php/$1
-		RedirectMatch permanent /ophidia/[0-9]+/(.*) /ophidia/sessions.php?cube=$0
+		RedirectMatch permanent /ophidia/[0-9]+/?(.*) /ophidia/sessions.php?cube=$0
 */
 
 	function make_links_blank($text) { 
@@ -55,18 +55,27 @@
 		if (isset($_GET['cube'])) {
 			$cube_id = strrchr($_GET['cube'],'/');
 			$container_id = strrchr(substr($_GET['cube'],0,strlen($_GET['cube'])-strlen($cube_id)),'/');
-			$pid = $oph_web_server . $container_id . $cube_id;
 			header('Content-Type: text/html');
 			include('header.php');
 			if (!empty($container_id) && is_numeric(substr($container_id,1)) && !empty($cube_id) && is_numeric(substr($cube_id,1))) {
 				$linktype = "Datacube";
+				$file = $oph_web_server_location.'/sessions/cubes'.$cube_id.'.cube';
 			} else {
+				if (!is_numeric(substr($container_id,1)) && is_numeric(substr($cube_id,1))) {
+					$container_id = $cube_id;
+					$cube_id = "";
+				}
 				$linktype = "Container";
+				$file = $oph_web_server_location.'/sessions/cubes'.$container_id.'.container';
 			}
+			$pid = $oph_web_server . $container_id . $cube_id;
 ?>
-		<P><?php echo $linktype; ?> <A href='<?php echo $pid; ?>'><?php echo $pid; ?></A></P>
+		<P><?php echo $linktype; ?> <A href='<?php echo $pid; ?>'><?php echo $pid; ?></A> is in output of the following workflows:</P>
 		<HR/>
 <?php
+			if (file_exists($file)) {
+				readfile($file);
+			}
 			include('tailer.php');
 			exit;
 		}
