@@ -1,4 +1,10 @@
 
+## Next release
+
+### Added:
+
+- Support to show information about datacubes and containers in the web interface
+
 ## v1.7.1 - 2022-07-28
 
 ### Fixed:

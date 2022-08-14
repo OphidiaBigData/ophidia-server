@@ -37,6 +37,8 @@ extern pthread_mutex_t global_flag;
 #define OPH_SESSION_REPORT_LINK1_WO_ANCHOR "\t\t\t<SCRIPT>document.getElementById(\"%cID%d\").innerHTML+='&nbsp;<A href=\"%s\">%s</A>';</SCRIPT>\n"
 #define OPH_SESSION_REPORT_LINK2 "\t\t\t<SCRIPT>if (document.getElementById(\"%cID%d\").innerHTML.length==0) document.getElementById(\"%cID%d\").innerHTML+='</BR>[%s]:&nbsp;'; document.getElementById(\"%cID%d\").innerHTML+='&nbsp;<A name=\"%s\" href=\"%s\">%s</A>';</SCRIPT>\n"
 #define OPH_SESSION_REPORT_LINK2_WO_ANCHOR "\t\t\t<SCRIPT>if (document.getElementById(\"%cID%d\").innerHTML.length==0) document.getElementById(\"%cID%d\").innerHTML+='</BR>[%s]:&nbsp;'; document.getElementById(\"%cID%d\").innerHTML+='&nbsp;<A href=\"%s\">%s</A>';</SCRIPT>\n"
+#define OPH_SESSION_REPORT_CONTAINER "<P>[<A href=\"%s\">%d</A>] <A href=\"%s\">%s</A></P>\n"
+#define OPH_SESSION_REPORT_CUBE "<P>[<A href=\"%s\">%d</A>] <A href=\"%s\">%s</A></P>\n"
 
 // Thread_unsafe
 int oph_session_report_init(const char *session_code)
@@ -105,10 +107,6 @@ int oph_session_report_append_link(const char *session_code, const int workflowi
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return OPH_SERVER_NULL_POINTER;
 	}
-
-	if (type == 'C')
-		return OPH_SERVER_OK;	// Link to data cubes will not be shown
-
 	// Update the file
 	char name[OPH_MAX_STRING_SIZE];
 	snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSIONID_TEMPLATE, oph_web_server_location, session_code);
@@ -138,6 +136,42 @@ int oph_session_report_append_link(const char *session_code, const int workflowi
 	}
 
 	fclose(file);
+
+	if (type == 'C') {
+		char tmp[1 + strlen(link)];
+		strcpy(tmp, link);
+		char *cubeid = strrchr(tmp, '/');
+		if (cubeid) {
+			*cubeid = 0;	// It allows to extract the container id
+			char sessionid[OPH_MAX_STRING_SIZE], *point = NULL;
+			snprintf(sessionid, OPH_MAX_STRING_SIZE, OPH_SESSIONID_TEMPLATE "#%s", oph_web_server, session_code, linkname);
+			point = strrchr(sessionid, '.');
+			if (point) {
+				*point = 0;
+				snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_CUBE_FOLDER_TEMPLATE "/%s.cube", oph_web_server_location, cubeid + 1);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Cube report update: '%s'\n", name);
+				file = fopen(name, "a");
+				if (!file) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Cube report cannot be created\n");
+					return OPH_SERVER_IO_ERROR;
+				}
+				fprintf(file, OPH_SESSION_REPORT_CUBE, sessionid, workflowid, sessionid, sessionid);
+				fclose(file);
+				char *containerid = strrchr(tmp, '/');
+				if (containerid) {
+					snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_CUBE_FOLDER_TEMPLATE "/%s.container", oph_web_server_location, containerid + 1);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Container report update: '%s'\n", name);
+					file = fopen(name, "a");
+					if (!file) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Container report cannot be created\n");
+						return OPH_SERVER_IO_ERROR;
+					}
+					fprintf(file, OPH_SESSION_REPORT_CUBE, sessionid, workflowid, sessionid, sessionid);
+					fclose(file);
+				}
+			}
+		}
+	}
 
 	return OPH_SERVER_OK;
 }

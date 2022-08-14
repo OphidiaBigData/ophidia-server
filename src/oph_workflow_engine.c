@@ -640,6 +640,11 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
+		snprintf(name, OPH_MAX_STRING_SIZE, OPH_SESSION_CUBE_FOLDER_TEMPLATE, oph_web_server_location);
+		if (oph_mkdir2(name, mk_user_dir ? 0775 : 0755)) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "R%d: error in creating session folder '%s'\n", jobid, name);
+			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+		}
 
 		if (!oph_session_report_init(hash))
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: session index created\n", jobid);
