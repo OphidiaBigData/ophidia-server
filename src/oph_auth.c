@@ -708,7 +708,7 @@ int get_json_number(const json_t * json, const char *key, double *num)
 	return OPH_SERVER_OK;
 }
 
-int get_json_boolean(const json_t * json, const char *key, bool * value)
+int get_json_boolean(const json_t * json, const char *key, bool *value)
 {
 	if (!value)
 		return OPH_SERVER_NULL_POINTER;
@@ -726,7 +726,7 @@ int get_json_boolean(const json_t * json, const char *key, bool * value)
 	return OPH_SERVER_OK;
 }
 
-int read_values(const json_t * json, const char **char_arg, char ***char_ptr, int n_char_arg, const char **num_arg, double **num_ptr, int n_num_arg, const char **bool_arg, bool ** bool_ptr,
+int read_values(const json_t * json, const char **char_arg, char ***char_ptr, int n_char_arg, const char **num_arg, double **num_ptr, int n_num_arg, const char **bool_arg, bool **bool_ptr,
 		int n_bool_arg)
 {
 	int i, j;
