@@ -316,6 +316,8 @@ typedef struct _oph_workflow_stack {
  * \param client_address IP Address of client node
  * \param new_token Pointer to an up-to-dated token
  * \param project Pointer to project name
+ * \param checkpoint Checkpoint label
+ * \param direct_output Flag set in case output of workflows with a single task is sent back automatically
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -368,6 +370,7 @@ typedef struct _oph_workflow {
 	char *new_token;
 	char *project;
 	char *checkpoint;
+	char direct_output;
 } oph_workflow;
 
 /* Functions for structs cleanup */
