@@ -88,9 +88,11 @@ int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_t
 			arg[j] = toupper(arg[j]);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Check if %s=%s for workflow '%s'\n", key, arg, workflow->name);
 		if (!strcmp(key, arg)) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found argument equal to key '%s' for workflow '%s'\n", key, workflow->name);
 			*value = strdup(is_task ? workflow->tasks[task_index].arguments_values[i] : workflow->tasks[task_index].light_tasks[light_task_index].arguments_values[i]);
 			if (!*value)
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Value of key '%s' is '%s'\n", key, *value);
 			*index = i;
 			return OPH_WORKFLOW_EXIT_SUCCESS;
 		}
@@ -109,9 +111,9 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 	}
 
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
-	char *p, *ep, firstc, lastc, lastcc, return_error, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL;
+	char *p, *ep, firstc, lastc, lastcc, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL;
 	oph_workflow_var *var = NULL;
-	int index, new_size;
+	int index, new_size, return_error;
 
 	while (((p = strchr(*submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(*submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
@@ -228,6 +230,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 				value = NULL;
 			}
 			free(target_value);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Skipping...\n");
 			continue;
 		}
 		offset = p - *submit_string;
@@ -254,6 +257,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		else
 			snprintf(replaced_value + offset, new_size, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
 
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Value '%s' will be replaced by '%s'\n", *submit_string, replaced_value);
 		free(*submit_string);
 		*submit_string = replaced_value;
 
