@@ -317,6 +317,12 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	}
 
 	list->size = mysql_num_rows(res);
+	if (!list->size) {
+		list->name = list->ctime = list->max_status = NULL;
+		list->id = list->pid = list->wid = NULL;
+		mysql_free_result(res);
+		return OPH_ODB_SUCCESS;
+	}
 
 	list->name = (char **) malloc(list->size * sizeof(char *));
 	list->id = (int *) malloc(list->size * sizeof(int));
