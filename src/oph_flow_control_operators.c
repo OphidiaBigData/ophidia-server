@@ -1536,7 +1536,7 @@ int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugi
 				free(var_buffer);
 				break;
 			}
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s' in environment of workflow '%s'.\n", name, twf->name);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, twf->name);
 
 			if (ttt >= 0)
 				free(name);
