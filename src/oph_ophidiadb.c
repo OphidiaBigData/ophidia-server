@@ -636,8 +636,10 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 
 	list->size = mysql_num_rows(res);
 	if (!list->size) {
+		list->name = list->ctime = list->max_status = NULL;
+		list->id = list->pid = list->wid = NULL;
 		mysql_free_result(res);
-		return OPH_ODB_NO_ROW_FOUND;
+		return OPH_ODB_SUCCESS;
 	}
 
 	list->name = (char **) malloc(list->size * sizeof(char *));
@@ -687,8 +689,11 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 		return OPH_ODB_TOO_MANY_ROWS;
 
 	list->size = res.number_of_rows;
-	if (!list->size)
-		return OPH_ODB_NO_ROW_FOUND;
+	if (!list->size) {
+		list->name = list->ctime = list->max_status = NULL;
+		list->id = list->pid = list->wid = NULL;
+		return OPH_ODB_SUCCESS;
+	}
 
 	list->name = (char **) malloc(list->size * sizeof(char *));
 	list->id = (int *) malloc(list->size * sizeof(int));
