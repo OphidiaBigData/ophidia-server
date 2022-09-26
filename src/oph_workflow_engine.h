@@ -32,7 +32,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *json, int *response);
 int oph_workflow_command_to_json(const char *command, char **json);
 
-int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query);
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
+				    char *remake_submission_string);
 int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
 			   int *workflowid, char *str_workflowid, char *oph_jobid, int prev_markerid);
 

@@ -829,7 +829,8 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query, char *remake_submission_string)
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
+				    char *remake_submission_string)
 {
 	if (!wf || !oDB || !output_list || !output_list_dim) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
