@@ -877,10 +877,16 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	int res = OPH_SERVER_OK;
 	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *cdd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0, ncubes = 0;
 	for (i = 0; i < task->arguments_num; ++i) {
-		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
+		if (!strcmp(task->arguments_keys[i], OPH_ARG_INPUT)) {	// More priority than OPH_ARG_SRC_PATH
 			src_path_key = task->arguments_keys[i];
 			src_path = task->arguments_values[i];
 			j = i;
+		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
+			if (!src_path_key) {
+				src_path_key = task->arguments_keys[i];
+				src_path = task->arguments_values[i];
+				j = i;
+			}
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBE)) {
 			if (!ncubes) {
 				datacube_input_key = task->arguments_keys[i];
