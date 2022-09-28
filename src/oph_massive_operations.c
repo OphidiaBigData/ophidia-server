@@ -169,7 +169,13 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_ERROR;
 		}
-		if (cdd && (*path != OPH_MF_ROOT_FOLDER[0])) {
+		if (oph_base_src_path && strlen(oph_base_src_path) && (*path == '~')) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' cannot begin with '~'.\n", OPH_MF_ARG_PATH);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_ERROR;
+		}
+		if (cdd && (*path != OPH_MF_ROOT_FOLDER[0]) && (*path != '~')) {
 			if (*cdd != OPH_MF_ROOT_FOLDER[0]) {
 				pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' must begin with '/'.\n", OPH_ARG_CDD);
 				if (task_tbl)
