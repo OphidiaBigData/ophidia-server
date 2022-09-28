@@ -829,7 +829,8 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query)
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
+				    char *remake_submission_string)
 {
 	if (!wf || !oDB || !output_list || !output_list_dim) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
@@ -839,6 +840,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: index %d out of boundaries\n", ttype, jobid, task_index);
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
+	if (remake_submission_string)
+		*remake_submission_string = 0;
 
 	int i, j = -1;
 	oph_workflow_task *task = &(wf->tasks[task_index]);
@@ -874,10 +877,16 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	int res = OPH_SERVER_OK;
 	char *src_path = 0, *datacube_input = 0, *measure = 0, *cwd_value = 0, *cdd_value = 0, *src_path_key = 0, *datacube_input_key = 0, *measure_key = 0, ncubes = 0;
 	for (i = 0; i < task->arguments_num; ++i) {
-		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
+		if (!strcmp(task->arguments_keys[i], OPH_ARG_INPUT)) {	// More priority than OPH_ARG_SRC_PATH
 			src_path_key = task->arguments_keys[i];
 			src_path = task->arguments_values[i];
 			j = i;
+		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
+			if (!src_path_key) {
+				src_path_key = task->arguments_keys[i];
+				src_path = task->arguments_values[i];
+				j = i;
+			}
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBE)) {
 			if (!ncubes) {
 				datacube_input_key = task->arguments_keys[i];
@@ -975,6 +984,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			free(task->arguments_values[j]);
 			task->arguments_values[j] = tmp;
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: argument '%s' of task '%s' has been updated to '%s'\n", ttype, jobid, task->arguments_keys[j], task->name, tmp);
+			if (remake_submission_string)
+				*remake_submission_string = 1;
 		}
 
 		if (datacube_inputs) {
@@ -1737,9 +1748,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				continue;
 			}
 
-			char **output_list = NULL;
+			char **output_list = NULL, remake_submission_string = 0;
 			int output_list_dim = 0;
-			if ((wf->tasks[i].parent < 0) && ((res = oph_check_for_massive_operation(state, ttype, jobid, wf, i, oDB, &output_list, &output_list_dim, NULL)))) {
+			if ((wf->tasks[i].parent < 0) && ((res = oph_check_for_massive_operation(state, ttype, jobid, wf, i, oDB, &output_list, &output_list_dim, NULL, &remake_submission_string)))) {
 				odb_jobid = 0;
 				// Create the child job in OphidiaDB
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: create the entry for '%s' in OphidiaDB.\n", ttype, jobid, wf->tasks[i].name);
@@ -2393,6 +2404,45 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				continue;
 			}
 			wf->tasks[i].idjob = odb_jobid;
+
+			if (remake_submission_string)	// OPH_IMPORTNCS
+			{
+				if (submission_string)
+					free(submission_string);
+				if (sss)
+					free(sss);
+
+				submission_string = sss = errore = NULL;
+				if (oph_workflow_get_submission_string(wf, i, -1, &submission_string, &sss, &errore)) {
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: submission string cannot be loaded\n", ttype, jobid);
+					wf->tasks[i].status = OPH_ODB_STATUS_ERROR;
+					if (oph_workflow_set_status(ttype, jobid, wf, wf->tasks[i].dependents_indexes, wf->tasks[i].dependents_indexes_num, OPH_ODB_STATUS_ABORTED))
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in updating the status of dependents of '%s'\n", ttype, jobid, wf->tasks[i].name);
+
+					nnn = 1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
+					submission_string_ext = (char *) malloc(nnn * sizeof(char));
+					snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, i, -1, wf->tasks[i].idjob, wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
+
+					if (!oph_odb_create_job_unsafe(oDB, sss ? sss : "-", task_tbl, wf->tasks[i].light_tasks_num ? wf->tasks[i].light_tasks_num : -1, &odb_jobid))
+						oph_odb_abort_job_fast(odb_jobid, oDB);
+
+					if (submission_string)
+						free(submission_string);
+					if (sss)
+						free(sss);
+
+					request_data_dim[k] = 1;
+					request_data[k] = (oph_request_data *) malloc(sizeof(oph_request_data));
+					oph_request_data_init(request_data[k]);
+
+					request_data[k]->serve_request = 0;
+					request_data[k]->error_notification = submission_string_ext;
+					request_data[k]->markerid = strdup(str_markerid);
+					request_data[k]->error = errore;
+
+					continue;
+				}
+			}
 
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: initialize variables to be sent to resource manager.\n", ttype, jobid);
 			if (wf->tasks[i].light_tasks_num)	// Massive operation
