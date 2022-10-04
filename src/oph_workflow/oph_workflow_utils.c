@@ -354,7 +354,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			if (!strcmp(key, OPH_WORKFLOW_KEY_HOST_PARTITION))
 				break;
 		}
-		if (j < n) {
+		if (j >= n) {
 			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
 			if (oph_workflow_strcat(&long_submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
@@ -370,7 +370,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 			if (!strcmp(key, OPH_WORKFLOW_KEY_NHOSTS))
 				break;
 		}
-		if (j < n) {
+		if (j >= n) {
 			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
 			if (oph_workflow_strcat(&long_submit_string, key_value)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
