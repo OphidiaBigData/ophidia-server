@@ -7,6 +7,7 @@
 
 ### Changed:
 
+- Program soapcpp2 is necessary only to make oph.wsdl, but not to build the package
 - Script and configuration to start I/O servers using OPH_CLUSTER
 
 ## v1.7.1 - 2022-07-28

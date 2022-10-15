@@ -373,22 +373,32 @@ oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CF
 oph_manage_user_LDFLAGS= $(GLOBUS_BASIC)
 oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_parser -lhashtbl -loph_ophidiadb -loph_auth
 
+if MAKE_WSDL
+MAKE_WSDL=yes
+else
+MAKE_WSDL=no
+endif
+
 clean-local:
-	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
+	rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
 
 distclean-local:
-	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
+	rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
 
 install-exec-hook:
-	mkdir -p wsdl && \
-	cd wsdl && \
-	cat ../oph_types.h > oph_wsdl.h && \
-	echo "//gsoap oph service location:      ${PLUGIN_DEFAULT_PROTOCOL}://${PLUGIN_DEFAULT_HOSTNAME}:${PLUGIN_DEFAULT_PORT}/" >> oph_wsdl.h && \
-	cat ../oph_execute_main.h >> oph_wsdl.h && \
-	$(SOAPCPP2_PROG) -c -x oph_wsdl.h && \
-	cp -f *.wsdl $(OPH_WEB_SERVER_LOCATION)/ && \
-	mv -f *.wsdl $(DESTDIR)$(sysconfdir)
-	rm -rf wsdl
+	if test "$(MAKE_WSDL)" == "yes"; then \
+		mkdir -p wsdl && \
+		cd wsdl && \
+		cat ../oph_types.h > oph_wsdl.h && \
+		echo "//gsoap oph service location:      ${PLUGIN_DEFAULT_PROTOCOL}://${PLUGIN_DEFAULT_HOSTNAME}:${PLUGIN_DEFAULT_PORT}/" >> oph_wsdl.h && \
+		cat ../oph_execute_main.h >> oph_wsdl.h && \
+		$(SOAPCPP2_PROG) -c -x oph_wsdl.h && \
+		cp -f *.wsdl $(OPH_WEB_SERVER_LOCATION)/ && \
+		mv -f *.wsdl $(DESTDIR)$(sysconfdir) && \
+		cd .. && \
+		rm -rf wsdl; \
+	fi
 
 uninstall-local:
-	rm $(DESTDIR)$(sysconfdir)/oph.wsdl
+	rm -f $(DESTDIR)$(sysconfdir)/oph.wsdl
+
