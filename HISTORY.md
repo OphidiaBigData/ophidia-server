@@ -5,6 +5,10 @@
 
 - Support to show information about datacubes and containers in the web interface
 
+### Changed:
+
+- Script and configuration to start I/O servers using OPH_CLUSTER
+
 ## v1.7.1 - 2022-07-28
 
 ### Fixed:

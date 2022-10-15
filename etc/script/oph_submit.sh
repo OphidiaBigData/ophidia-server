@@ -52,6 +52,7 @@ fi
 ${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
+	rm ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 	exit -1
 fi
 

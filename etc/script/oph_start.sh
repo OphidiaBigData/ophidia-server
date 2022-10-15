@@ -25,12 +25,13 @@ log=${3}
 hostpartition=${4}
 queue=${5}
 serverid=${6}
-project=${7}
+workflowid=${7}
+project=${8}
 
 # Const
 fixString=
 LAUNCHER=/usr/local/ophidia/extra/bin/srun
-IO_SERVER_LAUNCHER=/usr/local/ophidia/oph-cluster/oph-io-server/etc/start_ioserver.sh
+IO_SERVER_LAUNCHER=/usr/local/ophidia/oph-server/etc/script/start_ioserver.sh
 
 # Body
 mkdir -p ${HOME}/.ophidia
@@ -42,6 +43,7 @@ chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 ${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
+	rm ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 	exit -1
 fi
 
