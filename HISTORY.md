@@ -1,8 +1,9 @@
 
-## Next release
+## v1.7.2 - 2022-10-25
 
 ### Added:
 
+- Support for CentOS9
 - Support to show information about datacubes and containers in the web interface
 
 ### Changed:
