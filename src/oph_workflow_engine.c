@@ -50,6 +50,7 @@ extern FILE *task_logfile;
 extern oph_service_info *service_info;
 extern char *oph_status_log_file_name;
 extern char oph_cancel_all_enabled;
+extern ophidiadb *ophDB;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -832,7 +833,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
 				    char *remake_submission_string)
 {
-	if (!wf || !oDB || !output_list || !output_list_dim) {
+	if (!wf) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
 		return OPH_SERVER_NULL_POINTER;
 	}
@@ -857,7 +858,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: release markerid '%d'\n", ttype, jobid, task->light_tasks[i].markerid);
 				task->light_tasks[i].markerid = 0;
 				task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
-				if (oph_odb_set_job_status(task->light_tasks[i].idjob, task->light_tasks[i].status, oDB))
+				if (oDB && oph_odb_set_job_status(task->light_tasks[i].idjob, task->light_tasks[i].status, oDB))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
 				task->light_tasks[i].idjob = 0;
 			}
@@ -950,7 +951,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			datacube_inputs = NULL;
 		}
 		// Do not consider input for OPH_IMPORTNCS as massive, but expand the value of the parameter
-		if (datacube_inputs && src_path && number && !strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) && (j >= 0)) {
+		if (datacube_inputs && src_path && number && (!strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) || !strcasecmp(task->operator, OPH_OPERATOR_FOR)) && (j >= 0)) {
 			size_t max_dim = number * OPH_LONG_STRING_SIZE;
 			char *tmp = (char *) malloc(max_dim);
 			if (!tmp) {
@@ -1041,8 +1042,10 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			} else {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation without effective execution\n", ttype, jobid, task->name);
 				res = OPH_SERVER_NO_RESPONSE;
-				*output_list = datacube_inputs;
-				*output_list_dim = number;
+				if (output_list)
+					*output_list = datacube_inputs;
+				if (output_list_dim)
+					*output_list_dim = number;
 			}
 		} else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: no light tasks found\n", ttype, jobid);
@@ -1185,7 +1188,7 @@ int oph_workflow_mark_children_of(oph_workflow * wf, int k, int p)
 }
 
 // Thread safe
-int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
+int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_plugin_data *state)
 {
 	if (!wf || !wf->tasks) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1194,7 +1197,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 
 	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL;
 	int *ivalues = NULL;	// If not allocated then it is equal to [1:values_num]
-	int i, j, k, kk, svalues_num = 0, ivalues_num = 0, new_branch_num, replied_num, old_tasks_num, new_index[wf->tasks_num];
+	int i, j, jj, k, kk, svalues_num = 0, ivalues_num = 0, new_branch_num, replied_num, old_tasks_num, new_index[wf->tasks_num];
 	int old_dependents_indexes_num, *old_dependents_indexes = NULL, old_deps_num;
 	unsigned int kkk, kkkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	long value;
@@ -1202,12 +1205,71 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 	oph_workflow_var var;
 	void *var_buffer;
 	size_t var_size = sizeof(oph_workflow_var), svalue_size;
+	int jobid;
 
-	char exploded = 0, found = 0;	// Found a FOR with higher nesting_level
+	char reset = 0, exploded = 0, found = 0;	// Found a FOR with higher nesting_level
 	for (i = 0; i < wf->tasks_num; ++i) {
 		if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
 			if (wf->tasks[i].parallel_mode)
 				continue;	// The current task is a parallel-for already exploded
+
+			// Pre-parsing for possible file list
+			if (!wf->tasks[i].massive_expansion) {
+				jj = -1;
+				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+					if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_INPUT) && strlen(wf->tasks[i].arguments_values[j])
+					    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+						jj = j;
+						break;
+					}
+				if (jj < 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SRC_PATH) && strlen(wf->tasks[i].arguments_values[j])
+						    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+							jj = j;
+							break;
+						}
+				}
+
+				pthread_mutex_lock(&global_flag);
+				jobid = *state->jobid;
+				if (wf->workflowid < 0) {
+					jobid = ++*state->jobid;
+					wf->workflowid = -jobid;
+					oph_get_new_jobid_from_job_list(state->job_info, &wf->idjob);	// Get a valid odb_jobid that is unique in job list
+					reset = 1;
+				}
+				pthread_mutex_unlock(&global_flag);
+
+				oph_wf_list_append(state->job_info, wf);
+
+				pthread_mutex_lock(&global_flag);
+				oph_check_for_massive_operation(state, 'F', jobid, wf, i, ophDB, NULL, NULL, NULL, NULL);
+				pthread_mutex_unlock(&global_flag);
+
+				if (reset) {
+					oph_wf_list_drop2(state->job_info, wf->idjob, 0);
+					wf->workflowid = -1;
+				}
+
+				if (jj >= 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES)) {
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Override value of parameter '%s' of task '%s' with '%s'\n", OPH_ARG_VALUES,
+								   wf->tasks[i].name, wf->tasks[i].arguments_values[jj]);
+							free(wf->tasks[i].arguments_values[j]);
+							wf->tasks[i].arguments_values[j] = strdup(wf->tasks[i].arguments_values[jj]);
+							break;
+						}
+					if (j >= wf->tasks[i].arguments_num) {
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Override key of parameter '%s' of task '%s' with '%s'\n", wf->tasks[i].arguments_keys[jj],
+							   wf->tasks[i].name, OPH_ARG_VALUES);
+						free(wf->tasks[i].arguments_keys[jj]);
+						wf->tasks[i].arguments_keys[jj] = strdup(OPH_ARG_VALUES);
+					}
+					wf->tasks[i].massive_expansion = 1;
+				}
+			}
 
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
@@ -1585,12 +1647,12 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 	}
 	if (i < wf->tasks_num) {
 		if (exploded)
-			return oph_workflow_parallel_fco(wf, nesting_level);
+			return oph_workflow_parallel_fco(wf, nesting_level, state);
 		else
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	if (found)
-		return oph_workflow_parallel_fco(wf, nesting_level + 1);
+		return oph_workflow_parallel_fco(wf, nesting_level + 1, state);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

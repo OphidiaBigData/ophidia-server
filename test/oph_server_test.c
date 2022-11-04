@@ -2574,8 +2574,6 @@ int _check_oph_server(const char *function, int option)
 
 				case 23:
 				case 24:
-				case 25:
-				case 26:
 					if (res != OPH_SERVER_NULL_POINTER) {
 						pmesg(LOG_ERROR, __FILE__, __LINE__, "Return code: %d\n", res);
 						goto _EXIT_1;

@@ -37,7 +37,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
 			   int *workflowid, char *str_workflowid, char *oph_jobid, int prev_markerid);
 
-int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level);
+int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_plugin_data *state);
 
 int oph_workflow_check_job_queue(struct oph_plugin_data *state);
 
