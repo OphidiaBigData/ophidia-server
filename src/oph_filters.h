@@ -61,7 +61,22 @@
 // Const
 #define OPH_MF_SYMBOL_NOT "!"	// "`"
 
+// Main interface of this library
 int oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB);
 int oph_filter_unsafe(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB);
+
+// Internal functions
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_measure(const char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_container(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+int oph_filter_free_kvp(HASHTBL * task_tbl, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause);
+#endif
 
 #endif				/* OPH_FILTERS_H */

@@ -41,15 +41,20 @@ typedef struct _oph_wait_data {
 	char *subset_params;
 } oph_wait_data;
 
+// Main interface of the library
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
 				    int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
 				    const char *operator_name);
 
+// Internal functions
 int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output);
 int oph_else_impl(oph_workflow * wf, int i, char *error_message, int *exit_output);
 int oph_for_impl(oph_workflow * wf, int i, char *error_message);
 int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * trash, int *task_id, int *odb_jobid);
 int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugin_data *state, char has_action);
 int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message, oph_notify_data * data);
+
+int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, char skip_the_next, int *exit_output);
+int oph_extract_from_json(char **key, const char *json_string);
 
 #endif				/* OPH_FLOW_OPERATORS_H */

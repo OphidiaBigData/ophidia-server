@@ -27,7 +27,7 @@
 #include "debug.h"
 #include "oph_auth.h"
 
-int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t * max)
+int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t *max)
 {
 	if (!workflow || !max)
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
