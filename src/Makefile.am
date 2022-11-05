@@ -16,8 +16,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 bin_PROGRAMS=oph_client oph_server oph_manage_user
 bindir=${prefix}/bin
 
