@@ -148,11 +148,9 @@ int oph_workflow_validate(oph_workflow * workflow)
 						      workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR);
 						return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 					}
-					if (workflow->tasks[i].arguments_values[j][k] == OPH_WORKFLOW_KV_SEPARATOR2[0]) {
-						pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong value '%s' for key '%s': '%s' is reserved\n", workflow->tasks[i].arguments_values[j],
+					if (workflow->tasks[i].arguments_values[j][k] == OPH_WORKFLOW_KV_SEPARATOR2[0])
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "Value '%s' for key '%s' is not recommended: '%s' was reserved\n", workflow->tasks[i].arguments_values[j],
 						      workflow->tasks[i].arguments_keys[j], OPH_WORKFLOW_KV_SEPARATOR2);
-						return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-					}
 				}
 			}
 		}
