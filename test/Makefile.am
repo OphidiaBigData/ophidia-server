@@ -16,6 +16,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Note: the following line, sometimes requested by newer compilers but not necessary, results in error in CentOS7
+# AUTOMAKE_OPTIONS = subdir-objects
+
 TESTS=oph_server_test
 check_PROGRAMS=oph_server_test
 
