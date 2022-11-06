@@ -25,6 +25,7 @@
 #include "oph_workflow_engine.h"
 #include "oph_subset_library.h"
 #include "oph_service_info.h"
+#include "oph_rmanager.h"
 
 #include <math.h>
 #include <time.h>

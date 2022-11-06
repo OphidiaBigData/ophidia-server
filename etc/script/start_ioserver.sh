@@ -29,9 +29,12 @@ IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server/bin/oph_io_server
 IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-cluster/oph-io-server/etc/oph_ioserver.conf.template
 
 # Body
-hostlist=`hostname --all-fqdns`
-myhost=`echo ${hostlist} | tail -c 7`
-myid=`echo ${hostlist} | tail -c 2 | bc`
+# Let us assume there is only one I/O server running on host 127.0.0.2.
+# So that, preliminarly, the host has to registered in Ophidia DB as follows
+# mysql > use ophidiadb;
+# mysql > INSERT INTO host (hostname, cores, memory, status) VALUES ('127.0.0.2',1,1,'down');
+myhost="127.0.0.2"
+myid=1
 
 echo "Add host ${myhost} to partition ${hpid}"
 mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
