@@ -299,12 +299,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	jobid = ++*state->jobid;
 	pthread_mutex_unlock(&global_flag);
 
-	oph_argument *args = NULL;
-
-	if (get_debug_level() != LOG_DEBUG)
-		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: received a request from %s:%d sent by user '%s'\n", jobid, _host, soap->port, userid ? userid : "NONE");
-	else
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
+	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: received a request from %s:%d sent by user '%s'\n", jobid, _host, soap->port, userid ? userid : "NONE");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
 
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -2164,6 +2160,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 
+	oph_argument *args = NULL;
 	char oph_jobid[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
 
 	// Handle RESUME_OPERATOR

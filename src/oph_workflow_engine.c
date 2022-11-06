@@ -3155,7 +3155,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	// New status for workflow
 	enum oph__oph_odb_job_status status = odb_status;
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: status of job %d has been updated to %s\n", ttype, jobid, odb_jobid, oph_odb_convert_status_to_str(status));
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of job %d has been updated to %s\n", ttype, jobid, odb_jobid, oph_odb_convert_status_to_str(status));
 	switch (status) {
 		case OPH_ODB_STATUS_PENDING:
 		case OPH_ODB_STATUS_RUNNING:
