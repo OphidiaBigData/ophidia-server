@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [1.7.1], [ophidia-info@cmcc.it])
+AC_INIT([ophidia-server], [1.7.2], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -186,7 +186,7 @@ AC_SUBST(VOMS)
 #Set VOMS libs path
 AC_ARG_WITH(voms-libs, [  --with-voms-libs=VOMS_LIBS       Sets the VOMS libraries path], [ VOMS_LIBS="$withval" ] )
 if test -z "$VOMS_LIBS" && test $voms_enable = 1; then
-        AC_MSG_ERROR([no VOMS libraries directory found])
+	AC_MSG_ERROR([no VOMS libraries directory found])
 else
 	AC_MSG_NOTICE([VOMS libraries directory: $VOMS_LIBS])
 	VOMS_DEFINE="GLITE_VOMS"
@@ -197,7 +197,7 @@ AC_SUBST(VOMS_DEFINE)
 #Set VOMS include path
 AC_ARG_WITH(voms-include, [  --with-voms-include=VOMS_INCLUDE       Sets the VOMS include path], [  VOMS_INCLUDE="$withval" ] )
 if test -z "$VOMS_INCLUDE" && test $voms_enable = 1; then
-        AC_MSG_ERROR([no VOMS include directory found])
+	AC_MSG_ERROR([no VOMS include directory found])
 else
 	AC_MSG_NOTICE([VOMS includes: $VOMS_INCLUDE])
 fi
@@ -401,22 +401,18 @@ SOAPCPP2_PROG=
 AC_ARG_WITH(soapcpp2_path,
            [  --with-soapcpp2-path=PATH  Set the soapcpp2 root dir],
            [
-                soapcpp2_path="$withval"
-		have_soapcpp2=yes
-		SOAPCPP2_PROG="${withval}/bin/soapcpp2"
+				soapcpp2_path="$withval"
+				have_soapcpp2=yes
+				SOAPCPP2_PROG="${withval}/bin/soapcpp2"
            ],
            [
-                AC_PATH_PROG([SOAPCPP2_PROG], soapcpp2)
-			          if test -n "$SOAPCPP2_PROG" ; then
-				          have_soapcpp2=yes
-              	fi
+				AC_PATH_PROG([SOAPCPP2_PROG], soapcpp2)
+				if test -n "$SOAPCPP2_PROG" ; then
+					have_soapcpp2=yes
+				fi
            ]
            )
-if test "x${have_soapcpp2}" = "xyes"; then
-	AC_MSG_NOTICE([SoapCPP2 available.])
-else
-	AC_MSG_ERROR([SoapCPP2 not found! Aborting configure!])
-fi
+AM_CONDITIONAL([MAKE_WSDL], [test "x${have_soapcpp2}" = "xyes"])
 
 PKG_CHECK_MODULES(JANSSON, jansson >= 2.3)
 AC_ARG_WITH(jansson_header_path,

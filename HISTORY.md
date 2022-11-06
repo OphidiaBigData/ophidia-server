@@ -1,9 +1,21 @@
 
 ## Next release
 
+### Changed:
+
+- Enable the possibility to use '=' in parameter values
+
+## v1.7.2 - 2022-10-25
+
 ### Added:
 
+- Support for CentOS9
 - Support to show information about datacubes and containers in the web interface
+
+### Changed:
+
+- Program soapcpp2 is necessary only to make oph.wsdl, but not to build the package
+- Script and configuration to start I/O servers using OPH_CLUSTER
 
 ## v1.7.1 - 2022-07-28
 

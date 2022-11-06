@@ -45,4 +45,5 @@ test/oph_server_test
 test/*-coverage
 coverage.xml
 ophidiadb
+.dirstamp
 
