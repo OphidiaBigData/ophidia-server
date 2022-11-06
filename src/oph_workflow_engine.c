@@ -806,7 +806,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_LAST_ACCESS_TIME);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
-	if (oph_set_arg(&args, OPH_SESSION_LAST_COMMAND, wf->command ? wf->command : wf->name)) {
+	if (oph_set_arg(&args, OPH_SESSION_LAST_COMMAND, wf->command && (strlen(wf->command) < OPH_LONG_STRING_SIZE) ? wf->command : wf->name)) {
 		oph_cleanup_args(&args);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_LAST_COMMAND);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
