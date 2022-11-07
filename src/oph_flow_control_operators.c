@@ -1752,6 +1752,53 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			void *var_buffer;
 			size_t var_size = sizeof(oph_workflow_var), svalue_size;
 			var.caller = i;
+
+			// Add the number of loops to workflow environment (the variable could also be used after the loop)
+			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
+			char number_of_loops[name_size];
+			snprintf(number_of_loops, name_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
+			if (!hashtbl_get(wf->vars, number_of_loops)) {
+				var.ivalue = 1;	// Not used
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", svalues_num);
+				if (!var.svalue) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					if (arg_value)
+						free(arg_value);
+					break;
+				}
+				svalue_size = strlen(var.svalue) + 1;
+				var_buffer = malloc(var_size + svalue_size);
+				if (!var_buffer) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Memory error.");
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					free(var.svalue);
+					if (arg_value)
+						free(arg_value);
+					break;
+				}
+				memcpy(var_buffer, (void *) &var, var_size);
+				memcpy(var_buffer + var_size, var.svalue, svalue_size);
+				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", number_of_loops,
+						 wf->name);
+					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+					ret = OPH_SERVER_ERROR;
+					free(var.svalue);
+					free(var_buffer);
+					if (arg_value)
+						free(arg_value);
+					break;
+				}
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", number_of_loops, var.svalue, wf->name);
+				free(var.svalue);
+				free(var_buffer);
+			}
+			// Add current value of index and counter to workflow environment
 			if (ivalues)
 				var.ivalue = ivalues[0];
 			else
@@ -1794,7 +1841,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 					free(arg_value);
 				break;
 			}
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s' in environment of workflow '%s'.\n", name, wf->name);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Add variable '%s=%s' in environment of workflow '%s'.\n", name, var.svalue, wf->name);
 			free(var.svalue);
 			free(var_buffer);
 

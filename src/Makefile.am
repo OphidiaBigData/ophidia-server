@@ -16,7 +16,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-AUTOMAKE_OPTIONS = subdir-objects
+# Note: the following line, sometimes requested by newer compilers but not necessary, results in error in CentOS7
+# AUTOMAKE_OPTIONS = subdir-objects
 
 bin_PROGRAMS=oph_client oph_server oph_manage_user
 bindir=${prefix}/bin

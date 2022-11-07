@@ -807,7 +807,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_LAST_ACCESS_TIME);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 	}
-	if (oph_set_arg(&args, OPH_SESSION_LAST_COMMAND, wf->command ? wf->command : wf->name)) {
+	if (oph_set_arg(&args, OPH_SESSION_LAST_COMMAND, wf->command && (strlen(wf->command) < OPH_LONG_STRING_SIZE) ? wf->command : wf->name)) {
 		oph_cleanup_args(&args);
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: error in saving %s\n", ttype, jobid, OPH_SESSION_LAST_COMMAND);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -1415,11 +1415,45 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 			if (!replied_num)
 				continue;
 
+			var.caller = i;
+
+			// Add the number of branches to workflow environment
+			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
+			char number_of_loops[name_size];
+			snprintf(number_of_loops, var_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
+			if (!hashtbl_get(wf->vars, number_of_loops)) {
+				var.ivalue = 1;	// Non used
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", svalues_num);
+				if (!var.svalue) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					break;
+				}
+				svalue_size = strlen(var.svalue) + 1;
+				var_buffer = malloc(var_size + svalue_size);
+				if (!var_buffer) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					free(var.svalue);
+					break;
+				}
+				memcpy(var_buffer, (void *) &var, var_size);
+				memcpy(var_buffer + var_size, var.svalue, svalue_size);
+				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
+						   number_of_loops, wf->tasks[j].name);
+					free(var.svalue);
+					free(var_buffer);
+					break;
+				}
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", number_of_loops, var.svalue, wf->tasks[j].name);
+				free(var.svalue);
+				free(var_buffer);
+			}
 			// In case no additional branch has to be created, simply add for-variable as task local variable to marked tasks
 			if (!new_branch_num) {
 				for (j = 0; j < wf->tasks_num; ++j)
 					if (wf->tasks[j].is_marked) {
-						var.caller = i;
 						if (ivalues)
 							var.ivalue = ivalues[0];
 						else
@@ -1451,12 +1485,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 							free(var_buffer);
 							break;
 						}
-						if (svalues)
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", name, var.svalue,
-								   wf->tasks[j].name);
-						else
-							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of task '%s'.\n", name, var.ivalue,
-								   wf->tasks[j].name);
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", name, var.svalue, wf->tasks[j].name);
 						free(var.svalue);
 						free(var_buffer);
 					}
@@ -1593,7 +1622,6 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 						k = 0;
 					else
 						k = 1 + (j - old_tasks_num) / replied_num;
-					var.caller = i;
 					if (ivalues)
 						var.ivalue = ivalues[k];
 					else
@@ -3217,7 +3245,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	// New status for workflow
 	enum oph__oph_odb_job_status status = odb_status;
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "%c%d: status of job %d has been updated to %s\n", ttype, jobid, odb_jobid, oph_odb_convert_status_to_str(status));
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of job %d has been updated to %s\n", ttype, jobid, odb_jobid, oph_odb_convert_status_to_str(status));
 	switch (status) {
 		case OPH_ODB_STATUS_PENDING:
 		case OPH_ODB_STATUS_RUNNING:
