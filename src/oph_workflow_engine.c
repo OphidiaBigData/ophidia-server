@@ -1415,13 +1415,12 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 			if (!replied_num)
 				continue;
 
-			var.caller = i;
-
 			// Add the number of branches to workflow environment
 			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
 			char number_of_loops[name_size];
 			snprintf(number_of_loops, var_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
 			if (!hashtbl_get(wf->vars, number_of_loops)) {
+				var.caller = -1;	// Global scope
 				var.ivalue = 1;	// Non used
 				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
 				if (var.svalue)
@@ -1454,6 +1453,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 			if (!new_branch_num) {
 				for (j = 0; j < wf->tasks_num; ++j)
 					if (wf->tasks[j].is_marked) {
+						var.caller = i;
 						if (ivalues)
 							var.ivalue = ivalues[0];
 						else
@@ -1622,6 +1622,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 						k = 0;
 					else
 						k = 1 + (j - old_tasks_num) / replied_num;
+					var.caller = i;
 					if (ivalues)
 						var.ivalue = ivalues[k];
 					else
