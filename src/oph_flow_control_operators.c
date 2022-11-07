@@ -1751,13 +1751,13 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			oph_workflow_var var;
 			void *var_buffer;
 			size_t var_size = sizeof(oph_workflow_var), svalue_size;
-			var.caller = i;
 
 			// Add the number of loops to workflow environment (the variable could also be used after the loop)
 			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
 			char number_of_loops[name_size];
 			snprintf(number_of_loops, name_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
 			if (!hashtbl_get(wf->vars, number_of_loops)) {
+				var.caller = -1;	// Global variable
 				var.ivalue = 1;	// Not used
 				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
 				if (var.svalue)
@@ -1799,6 +1799,7 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 			}
 
 			// Add current value of index and counter to workflow environment
+			var.caller = i;
 			if (ivalues)
 				var.ivalue = ivalues[0];
 			else
