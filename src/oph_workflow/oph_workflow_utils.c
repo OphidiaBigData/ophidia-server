@@ -182,7 +182,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = -1;
 		else if (workflow->tasks[task_index].vars && ((var = hashtbl_get(workflow->tasks[task_index].vars, key))))
 			return_error = 0;
-		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
+		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && ((var->caller < 0) || oph_workflow_is_child_of(workflow, var->caller, task_index)))
 			return_error = 0;
 		else {
 			char *current_arg = NULL;
