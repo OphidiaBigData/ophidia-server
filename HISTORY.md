@@ -1,8 +1,13 @@
 
 ## Next release
 
+### Added:
+
+- Workflow variable indicating the number of loops of a 'OPH_FOR' statement
+
 ### Changed:
 
+- Save last commands by name in case of long strings
 - Enable the possibility to use '=' in parameter values
 
 ## v1.7.2 - 2022-10-25
