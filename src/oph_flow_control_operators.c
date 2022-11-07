@@ -1784,7 +1784,8 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 				memcpy(var_buffer, (void *) &var, var_size);
 				memcpy(var_buffer + var_size, var.svalue, svalue_size);
 				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
-					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", number_of_loops, wf->name);
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.", number_of_loops,
+						 wf->name);
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
 					ret = OPH_SERVER_ERROR;
 					free(var.svalue);
@@ -1797,7 +1798,6 @@ int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 				free(var.svalue);
 				free(var_buffer);
 			}
-
 			// Add current value of index and counter to workflow environment
 			if (ivalues)
 				var.ivalue = ivalues[0];
