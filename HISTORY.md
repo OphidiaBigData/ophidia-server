@@ -1,6 +1,10 @@
 
 ## Next release
 
+### Fixed:
+
+- Bug in parsing for comments in JSON Requests
+
 ### Added:
 
 - Workflow variable indicating the number of loops of a 'OPH_FOR' statement
