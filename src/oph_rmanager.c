@@ -49,6 +49,7 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t service_flag;
+extern pthread_mutex_t limit_flag;
 #endif
 extern char *oph_rmanager_conf_file;
 extern char *oph_txt_location;
@@ -58,6 +59,10 @@ extern char *oph_server_port;
 extern oph_rmanager *orm;
 extern char *oph_subm_user;
 extern oph_service_info *service_info;
+extern unsigned int oph_server_task_limit;
+extern unsigned int oph_server_core_limit;
+extern unsigned int oph_server_task_running;
+extern unsigned int oph_server_core_running;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -748,6 +753,26 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	if (ncores < 1) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The job will be executed with 1 core!\n");
 		_ncores = 1;
+	}
+	// Check for limits
+	if (oph_server_task_limit) {
+		pthread_mutex_lock(&global_flag);
+		while (oph_server_task_running >= oph_server_task_limit) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+			pthread_cond_wait(&limit_flag, &global_flag);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+		}
+		oph_server_task_running++;
+		pthread_mutex_unlock(&global_flag);
+	} else if (oph_server_core_limit) {
+		pthread_mutex_lock(&global_flag);
+		while (oph_server_core_running + _ncores > oph_server_core_limit) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for %d cores to be freed\n", _ncores);
+			pthread_cond_wait(&limit_flag, &global_flag);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+		}
+		oph_server_core_running += _ncores;
+		pthread_mutex_unlock(&global_flag);
 	}
 
 	int result;

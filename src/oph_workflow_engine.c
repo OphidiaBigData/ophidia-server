@@ -40,6 +40,10 @@ extern char *oph_user_admin;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_json_location;
+extern unsigned int oph_server_task_limit;
+extern unsigned int oph_server_core_limit;
+extern unsigned int oph_server_task_running;
+extern unsigned int oph_server_core_running;
 extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
@@ -58,6 +62,7 @@ extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
 extern pthread_mutex_t savefile_flag;
+extern pthread_mutex_t limit_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -3272,6 +3277,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: sessionid in memory is different from sessionid in notification\n", ttype, jobid);
 	if (sessionid)
 		free(sessionid);
+
+	// Update limits
+	if (status >= OPH_ODB_STATUS_COMPLETED) {
+		if (oph_server_task_limit && (oph_server_task_running > 0)) {
+			oph_server_task_running--;
+			pthread_cond_broadcast(&limit_flag);
+		} else if (oph_server_core_limit && (oph_server_task_running >= wf->tasks[task_index].ncores)) {
+			oph_server_core_running -= wf->tasks[task_index].ncores;
+			pthread_cond_broadcast(&limit_flag);
+		}
+	}
 
 	if (!odb_jobid && !wf->tasks[task_index].idjob && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ERROR)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: an internal operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,
