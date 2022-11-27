@@ -3280,13 +3280,17 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 	// Update limits
 	if (status >= OPH_ODB_STATUS_COMPLETED) {
+		char broadcast = 0;
 		if (oph_server_task_limit && (oph_server_task_running > 0)) {
 			oph_server_task_running--;
-			pthread_cond_broadcast(&limit_flag);
-		} else if (oph_server_core_limit && (oph_server_task_running >= wf->tasks[task_index].ncores)) {
-			oph_server_core_running -= wf->tasks[task_index].ncores;
-			pthread_cond_broadcast(&limit_flag);
+			broadcast = 1;
 		}
+		if (oph_server_core_limit && (oph_server_core_running >= wf->tasks[task_index].ncores)) {
+			oph_server_core_running -= wf->tasks[task_index].ncores;
+			broadcast = 1;
+		}
+		if (broadcast)
+			pthread_cond_broadcast(&limit_flag);
 	}
 
 	if (!odb_jobid && !wf->tasks[task_index].idjob && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ERROR)) {

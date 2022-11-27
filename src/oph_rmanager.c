@@ -755,23 +755,17 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		_ncores = 1;
 	}
 	// Check for limits
-	if (oph_server_task_limit) {
+	if (oph_server_task_limit || oph_server_core_limit) {
 		pthread_mutex_lock(&global_flag);
-		while (oph_server_task_running >= oph_server_task_limit) {
+		while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit)) || (oph_server_core_limit && (oph_server_core_running + _ncores > oph_server_core_limit))) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 			pthread_cond_wait(&limit_flag, &global_flag);
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 		}
-		oph_server_task_running++;
-		pthread_mutex_unlock(&global_flag);
-	} else if (oph_server_core_limit) {
-		pthread_mutex_lock(&global_flag);
-		while (oph_server_core_running + _ncores > oph_server_core_limit) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for %d cores to be freed\n", _ncores);
-			pthread_cond_wait(&limit_flag, &global_flag);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
-		}
-		oph_server_core_running += _ncores;
+		if (oph_server_task_limit)
+			oph_server_task_running++;
+		if (oph_server_core_limit)
+			oph_server_core_running += _ncores;
 		pthread_mutex_unlock(&global_flag);
 	}
 
