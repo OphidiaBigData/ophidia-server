@@ -3278,8 +3278,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (sessionid)
 		free(sessionid);
 
-	// Update limits
-	if (status >= OPH_ODB_STATUS_COMPLETED) {
+	// Update limits: known operators do not use resources
+	if ((status >= OPH_ODB_STATUS_COMPLETED) && !oph_is_known_operator(wf->tasks[task_index].operator)) {
 		char broadcast = 0;
 		if (oph_server_task_limit && (oph_server_task_running > 0)) {
 			oph_server_task_running--;

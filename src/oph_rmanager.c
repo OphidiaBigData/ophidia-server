@@ -754,7 +754,13 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "The job will be executed with 1 core!\n");
 		_ncores = 1;
 	}
-	// Check for limits
+
+	int result =
+	    oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username, project);
+	if (result != OPH_SERVER_UNKNOWN)
+		return result;
+
+	// Check for limits: known operators do not use resources
 	if (oph_server_task_limit || oph_server_core_limit) {
 		pthread_mutex_lock(&global_flag);
 		while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit)) || (oph_server_core_limit && (oph_server_core_running + _ncores > oph_server_core_limit))) {
@@ -768,12 +774,6 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			oph_server_core_running += _ncores;
 		pthread_mutex_unlock(&global_flag);
 	}
-
-	int result;
-	if ((result =
-	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
-				      username, project)) != OPH_SERVER_UNKNOWN)
-		return result;
 
 	char *cmd = NULL;
 
