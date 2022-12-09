@@ -32,6 +32,7 @@ struct oph_plugin_data {
 	oph_job_list *job_info;
 	int authorization;
 	oph_trash *trash;
+	struct soap *soap;
 };
 
 int oph_plugin(struct soap *soap, struct soap_plugin *plugin, void *arg);

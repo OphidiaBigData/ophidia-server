@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE operator SYSTEM "ophidiaoperator.dtd">
+<operator name="OPH_CALL" version="1.0">
+    <info>
+        <abstract>[Type]
+Flow control.
+
+[Behaviour]
+Call the execution of another workflow.
+
+[Parameters]
+- id : set to identifier of the workflow to be executed.
+- name : set to name of the workflow to be executed (negleted in case &quot;id&quot; is set).
+- order : flag used to select the workflow in case of homonymy (negleted in case &quot;id&quot; is set):
+          - set to &quot;first&quot; to consider the first workflow with the same name in the session;
+          - set to &quot;last&quot; to consider the last workflow with the same name in the session (default).
+- args : set to workflow arguments.
+- run : set to &quot;yes&quot; in case the target workflow has to be executed (default).
+
+</abstract>
+        <author>CMCC Foundation</author>
+        <category>Workflow Management</category>
+        <creationdate>09/12/2022</creationdate>
+        <license url="http://www.gnu.org/licenses/gpl.txt">GPLv3</license>
+        <permission>read</permission>
+    </info>
+    <args>
+		<argument type="int" mandatory="no" default="0" minvalue="0">id</argument>
+		<argument type="string" mandatory="no" default="-" minvalue="0">name</argument>
+		<argument type="string" mandatory="no" default="last" values="first|last">order</argument>
+		<argument type="string" mandatory="no" default="-" multivalue="yes">args</argument>
+		<argument type="string" mandatory="no" default="yes" values="yes|no">run</argument>
+    </args>
+</operator>

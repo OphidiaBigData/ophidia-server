@@ -25,6 +25,7 @@
 #include "oph_workflow_engine.h"
 #include "oph_rmanager.h"
 #include "oph_utils.h"
+#include "oph_session_report.h"
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -33,6 +34,7 @@
 extern pthread_mutex_t global_flag;
 #endif
 extern char *oph_web_server;
+extern char *oph_web_server_location;
 extern char *oph_log_file_name;
 extern char *oph_auth_location;
 extern unsigned int oph_default_max_sessions;
@@ -45,6 +47,7 @@ extern ophidiadb *ophDB;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
+extern int oph_execute(struct soap *soap, const char *jstring);
 
 int oph_serve_management_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
 				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *project,
@@ -4480,6 +4483,213 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
 		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+
+		if (success)
+			*error_message = 0;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code))
+			return OPH_SERVER_SYSTEM_ERROR;
+
+		error = OPH_SERVER_NO_RESPONSE;
+
+	} else if (!strncasecmp(operator_name, OPH_OPERATOR_CALL, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
+		HASHTBL *task_tbl = NULL;
+		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE];
+		char type[OPH_MAX_STRING_SIZE], execute[OPH_MAX_STRING_SIZE], name[OPH_MAX_STRING_SIZE];
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		int idjob = (int) strtol(oph_jobid, NULL, 10);
+
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_WORKFLOWID, workflowid)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_WORKFLOWID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		*type = *execute = *name = 0;
+		oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_ORDER, type);
+		oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_RUN, execute);
+
+		int wid, success = 0, success2 = 0;
+		oph_json *oper_json = NULL;
+		char error_message[OPH_MAX_STRING_SIZE], btype = 'l', bexecute = 1, session_code[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+		if (oph_get_session_code(sessionid, session_code)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+
+		while (!success) {
+			snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ID);
+			char *str_id = hashtbl_get(task_tbl, OPH_ARG_ID);
+			if (!str_id)
+				break;
+
+			wid = (int) strtol(str_id, NULL, 10);
+			if (wid < 0)
+				break;
+			if (!wid) {
+				if (oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_NAME, name) || !strcmp(name, OPH_COMMON_NULL)) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_NAME);
+					break;
+				}
+			}
+
+			if (!strcasecmp(type, OPH_OPERATOR_CALL_PARAMETER_ORDER_FIRST))
+				btype = 'f';
+			else if (*type && strcasecmp(type, OPH_OPERATOR_CALL_PARAMETER_ORDER_LAST)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_ORDER);
+				break;
+			}
+
+			if (!strcasecmp(execute, OPH_COMMON_NO))
+				bexecute = 0;
+			else if (*execute && strcasecmp(execute, OPH_COMMON_YES)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_RUN);
+				break;
+			}
+
+			success = 1;
+		}
+
+		while (success) {
+			if (wid)
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%d' not found!", wid);
+			else {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%s' not found!", name);
+				char *pch;
+				snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_REQUEST_INDEX, oph_web_server_location, session_code);
+				FILE *fil = fopen(filename, "r");
+				if (!fil) {
+					success = 0;
+					break;
+				}
+				while (fgets(filename, OPH_MAX_STRING_SIZE, fil)) {
+					for (pch = filename; pch && *pch && (*pch != OPH_SEPARATOR_BASIC[0]); pch++);
+					if (!pch || !*pch) {
+						success = 0;
+						break;
+					}
+					*pch = 0;
+					pch++;	// Point to workflow name
+					pch[strlen(pch) - 1] = 0;	// Remove the last '\n'
+					if (!strcmp(name, pch)) {
+						wid = (int) strtol(filename, NULL, 10);
+						if (btype == 'f')
+							break;
+					}
+				}
+				fclose(fil);
+				if (!wid) {
+					success = 0;
+					break;
+				}
+			}
+
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to call workflow %d\n", wid);
+
+			struct stat s;
+			snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server_location, session_code, wid);
+			pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+			char check = stat(filename, &s) && (errno == ENOENT);
+			pthread_mutex_unlock(&global_flag);
+			if (check) {
+				snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_MAIN, oph_web_server_location, session_code, wid);
+				pthread_mutex_lock(&global_flag);	// setting of 'errno' could be thread-unsafe
+				check = stat(filename, &s) && (errno == ENOENT);
+				pthread_mutex_unlock(&global_flag);
+			}
+			if (check) {
+				success = 0;
+				break;
+			}
+
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Call %s\n", filename);
+			char *jstring = NULL;
+			if (oph_get_result_from_file(filename, &jstring) || !jstring) {
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to load JSON Request '%s'\n", filename);
+				success = 0;
+				break;
+			}
+			// Run the workflow as a new request
+			if (bexecute)
+				oph_execute(state->soap, jstring);
+			free(jstring);
+
+			break;
+		}
+
+		while (!success2) {
+			if (oph_json_alloc(&oper_json)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+				break;
+			}
+			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Session Code", session_code)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Workflow", workflowid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Marker", markerid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
+			if (oph_json_add_source_detail(oper_json, "JobID", oph_jobid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_consumer(oper_json, username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				break;
+			}
+
+			success2 = 1;
+		}
+		if (success)
+			success = success2;
+
+		if (task_tbl)
+			hashtbl_destroy(task_tbl);
+
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+		if (oph_odb_read_config_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if (oph_odb_connect_to_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
 
 		if (success)
 			*error_message = 0;

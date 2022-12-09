@@ -113,6 +113,7 @@
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
 #define OPH_OPERATOR_IMPORTNCS "oph_importncs"
+#define OPH_OPERATOR_CALL "oph_call"
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
@@ -138,6 +139,8 @@
 #define OPH_OPERATOR_PARAMETER_OUTPUT "output"
 #define OPH_OPERATOR_PARAMETER_EXECUTE "execute"
 #define OPH_OPERATOR_PARAMETER_CHECKPOINT "checkpoint"
+#define OPH_OPERATOR_PARAMETER_ORDER "order"
+#define OPH_OPERATOR_PARAMETER_NAME "name"
 
 // Known values
 #define OPH_COMMON_NULL "-"
@@ -183,6 +186,8 @@
 #define OPH_OPERATOR_CLUSTER_PARAMETER_COMPUTE "compute"
 #define OPH_OPERATOR_CLUSTER_VALUE_IO "I/O"
 #define OPH_OPERATOR_CLUSTER_VALUE_COMPUTE "Compute"
+#define OPH_OPERATOR_CALL_PARAMETER_ORDER_FIRST "first"
+#define OPH_OPERATOR_CALL_PARAMETER_ORDER_LAST "last"
 
 // Session management
 #define OPH_ARG_ACTION_VALUE_DISABLE "disable"

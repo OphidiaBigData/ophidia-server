@@ -253,6 +253,28 @@ void *_ophExecuteMain(_ophExecuteMain_data * data)
 	return (void *) NULL;;
 }
 
+int oph_execute(struct soap *soap, const char *jstring)
+{
+	if (!soap || !jstring)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	struct soap *tsoap = soap_copy(soap);
+	if (tsoap) {
+		if (!tsoap->userid && soap->userid)
+			tsoap->userid = strdup(soap->userid);
+		if (!tsoap->passwd && soap->passwd)
+			tsoap->passwd = strdup(soap->passwd);
+		_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
+		data->soap = tsoap;
+		data->request = strdup(jstring);
+		pthread_t tid;
+		pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
+	}
+#endif
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	if (service_info) {
@@ -5620,23 +5642,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 								oph_json_free(oper_json);
 								return SOAP_OK;
 							}
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 							// Run the workflow as a new request
-							if (execute) {
-								struct soap *tsoap = soap_copy(soap);
-								if (tsoap) {
-									if (!tsoap->userid && soap->userid)
-										tsoap->userid = strdup(soap->userid);
-									if (!tsoap->passwd && soap->passwd)
-										tsoap->passwd = strdup(soap->passwd);
-									_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
-									data->soap = tsoap;
-									data->request = strdup(jstring);
-									pthread_t tid;
-									pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
-								}
-							}
-#endif
+							if (execute)
+								oph_execute(soap, jstring);
 						}
 					}
 
@@ -6109,16 +6117,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		}
 		pthread_mutex_unlock(&global_flag);
 
-		char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+		char linkname[OPH_SHORT_STRING_SIZE];
 		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server_location, session_code, wf->workflowid);
-		FILE *fil = fopen(filename, "w");
+		fil = fopen(filename, "w");
 		if (fil) {
 			fprintf(fil, "%s", jstring);
 			fclose(fil);
 		} else
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save the extended JSON Request\n", jobid);
 
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: extended JSON Request saved\n", jobid);
 		if (jstring)
 			free(jstring);
 
@@ -6126,6 +6133,15 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server, session_code, wf->workflowid);
 		oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, filename, 'R');
 	}
+	// Append call to request index
+	snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_REQUEST_INDEX, oph_web_server_location, session_code);
+	fil = fopen(filename, "a");
+	if (fil) {
+		fprintf(fil, "%d%s%s\n", wf->workflowid, OPH_SEPARATOR_BASIC, wf->name);
+		fclose(fil);
+	} else
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to append the request to index\n", jobid);
+
 	// Open the OphidiaDB
 	ophidiadb oDB;
 	oph_odb_initialize_ophidiadb(&oDB);

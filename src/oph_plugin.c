@@ -46,6 +46,7 @@ int oph_plugin(struct soap *soap, struct soap_plugin *p, void *arg)
 	((struct oph_plugin_data *) p->data)->authorization = 0;
 	if (oph_trash_create(&(((struct oph_plugin_data *) p->data)->trash)))
 		((struct oph_plugin_data *) p->data)->trash = NULL;
+	((struct oph_plugin_data *) p->data)->soap = soap;
 
 	p->fcopy = oph_copy;
 	p->fdelete = oph_delete;
