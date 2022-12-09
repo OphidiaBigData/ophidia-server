@@ -111,6 +111,11 @@ char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
 #endif
 
+int oph_execute(struct soap *soap, const char *jstring)
+{
+	return 0;
+}
+
 void set_global_values(const char *configuration_file)
 {
 	if (!configuration_file)

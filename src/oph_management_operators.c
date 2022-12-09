@@ -4495,6 +4495,19 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
+		pthread_mutex_lock(&global_flag);
+
+		oph_job_info *item = NULL, *prev = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		//char em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
+		struct soap *soap = (struct soap *) item->wf->soap;
+
+		pthread_mutex_unlock(&global_flag);
+
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
@@ -4633,7 +4646,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			}
 			// Run the workflow as a new request
 			if (bexecute)
-				oph_execute(state->soap, jstring);
+				oph_execute(soap, jstring);
 			free(jstring);
 
 			break;

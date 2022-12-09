@@ -314,6 +314,7 @@ typedef struct _oph_workflow_stack {
  * \param project Pointer to project name
  * \param checkpoint Checkpoint label
  * \param direct_output Flag set in case output of workflows with a single task is sent back automatically
+ * \param soap Link to soap struct
  */
 typedef struct _oph_workflow {
 	int idjob;
@@ -366,6 +367,7 @@ typedef struct _oph_workflow {
 	char *project;
 	char *checkpoint;
 	char direct_output;
+	void *soap;
 } oph_workflow;
 
 /* Functions for structs cleanup */

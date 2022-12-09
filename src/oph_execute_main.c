@@ -250,7 +250,7 @@ void *_ophExecuteMain(_ophExecuteMain_data * data)
 	mysql_thread_end();
 #endif
 
-	return (void *) NULL;;
+	return (void *) NULL;
 }
 
 int oph_execute(struct soap *soap, const char *jstring)
@@ -491,6 +491,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 #endif
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: workflow loaded correctly\n", jobid);
+
+	// Remember the soap struct
+	wf->soap = soap;
 
 	// Remember the password
 	if (soap->passwd)
