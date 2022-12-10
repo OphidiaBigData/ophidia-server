@@ -4586,11 +4586,11 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 
 		while (success) {
+			char *pch;
 			if (wid)
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%d' not found!", wid);
 			else {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%s' not found!", name);
-				char *pch;
 				snprintf(filename, OPH_MAX_STRING_SIZE, OPH_JSON_REQUEST_INDEX, oph_web_server_location, session_code);
 				FILE *fil = fopen(filename, "r");
 				if (!fil) {
@@ -4643,6 +4643,23 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to load JSON Request '%s'\n", filename);
 				success = 0;
 				break;
+			}
+			// Set sync mode in any case: otherwise soap struct will be destroyed before completing the task
+			pch = strstr(jstring, "\"" OPH_ARG_MODE "\"");
+			if (pch) {
+				pch = strstr(pch, OPH_ARG_MODE_ASYNC);
+				if (pch) {
+					*pch = '"';
+					pch--;
+					*pch = OPH_SEPARATOR_NULL;
+				}
+			} else {
+				char tmpp[OPH_MAX_STRING_SIZE + strlen(jstring)];
+				strcpy(tmpp, jstring);
+				pch = strrchr(tmpp, OPH_SEPARATOR_BRACKET_CLOSE);
+				snprintf(pch, OPH_MAX_STRING_SIZE, ",\"%s\":\"%s\"%c", OPH_ARG_MODE, OPH_ARG_MODE_SYNC, OPH_SEPARATOR_BRACKET_CLOSE);
+				free(jstring);
+				jstring = strdup(tmpp);
 			}
 			// Run the workflow as a new request
 			if (bexecute)
