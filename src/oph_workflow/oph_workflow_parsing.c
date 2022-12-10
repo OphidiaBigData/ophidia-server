@@ -1764,7 +1764,7 @@ int _oph_workflow_skip_comments(const char *json_string, char **clean_json_strin
 	for (i = j = 0; i < size; ++i) {
 		print = 1;
 		drop = 0;
-		if (json_string[i] == '"') {
+		if (json_string[i] == '"' && (!i || json_string[i - 1] != '\\')) {
 			if (invalue)
 				invalue = 0;
 			else
