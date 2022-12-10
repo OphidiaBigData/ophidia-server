@@ -1,8 +1,18 @@
 
 ## Next release
 
+### Fixed:
+
+- Bug in parsing for comments in JSON Requests
+
+### Added:
+
+- Simple scripts to generate digital certificates
+- Workflow variable indicating the number of loops of a 'OPH_FOR' statement
+
 ### Changed:
 
+- Save last commands by name in case of long strings
 - Enable the possibility to use '=' in parameter values
 
 ## v1.7.2 - 2022-10-25
