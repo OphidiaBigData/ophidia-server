@@ -7,6 +7,7 @@
 
 ### Added:
 
+- Simple scripts to generate digital certificates
 - Workflow variable indicating the number of loops of a 'OPH_FOR' statement
 
 ### Changed:

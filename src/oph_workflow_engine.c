@@ -1377,7 +1377,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				memcpy(var_buffer, (void *) &var, var_size);
 				memcpy(var_buffer + var_size, var.svalue, svalue_size);
 				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", number_of_loops, wf->tasks[j].name);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
+						   number_of_loops, wf->tasks[j].name);
 					free(var.svalue);
 					free(var_buffer);
 					break;
@@ -1386,7 +1387,6 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 				free(var.svalue);
 				free(var_buffer);
 			}
-
 			// In case no additional branch has to be created, simply add for-variable as task local variable to marked tasks
 			if (!new_branch_num) {
 				for (j = 0; j < wf->tasks_num; ++j)
