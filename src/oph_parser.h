@@ -141,6 +141,7 @@
 #define OPH_OPERATOR_PARAMETER_CHECKPOINT "checkpoint"
 #define OPH_OPERATOR_PARAMETER_ORDER "order"
 #define OPH_OPERATOR_PARAMETER_NAME "name"
+#define OPH_OPERATOR_PARAMETER_ARGS "args"
 
 // Known values
 #define OPH_COMMON_NULL "-"

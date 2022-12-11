@@ -268,7 +268,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if (run && strlen(run)) {
 		if (!strcmp(run, OPH_WORKFLOW_NO))
 			(*workflow)->run = 0;
-		else if (strcmp(run, OPH_WORKFLOW_YES)) {
+		else if (strcmp(run, OPH_WORKFLOW_YES) && strcmp(run, OPH_WORKFLOW_YES2)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
 				json_decref(jansson);
@@ -280,7 +280,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if (save && strlen(save)) {
 		if (!strcmp(save, OPH_WORKFLOW_NO))
 			(*workflow)->save = 0;
-		else if (strcmp(save, OPH_WORKFLOW_YES)) {
+		else if (strcmp(save, OPH_WORKFLOW_YES) && strcmp(save, OPH_WORKFLOW_YES2)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
 				json_decref(jansson);
@@ -304,7 +304,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if (direct_output && strlen(direct_output)) {
 		if (!strcmp(direct_output, OPH_WORKFLOW_NO))
 			(*workflow)->direct_output = 0;
-		else if (!strcmp(direct_output, OPH_WORKFLOW_YES))
+		else if (!strcmp(direct_output, OPH_WORKFLOW_YES) || !strcmp(direct_output, OPH_WORKFLOW_YES2))
 			(*workflow)->direct_output = 1;
 		else {
 			oph_workflow_free(*workflow);
@@ -790,7 +790,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		if (run_task && strlen(run_task)) {
 			if (!strcmp(run_task, OPH_WORKFLOW_NO))
 				(*workflow)->tasks[i].run = 0;
-			else if (strcmp(run_task, OPH_WORKFLOW_YES)) {
+			else if (strcmp(run_task, OPH_WORKFLOW_YES) && strcmp(run_task, OPH_WORKFLOW_YES2)) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -805,7 +805,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		if (save_task && strlen(save_task)) {
 			if (!strcmp(save_task, OPH_WORKFLOW_NO))
 				(*workflow)->tasks[i].save = 0;
-			else if (strcmp(save_task, OPH_WORKFLOW_YES)) {
+			else if (strcmp(save_task, OPH_WORKFLOW_YES) && strcmp(save_task, OPH_WORKFLOW_YES2)) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -835,7 +835,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if (run && strlen(run)) {
 		if (!strcmp(run, OPH_WORKFLOW_NO))
 			(*workflow)->tasks[(*workflow)->tasks_num].run = 0;
-		else if (strcmp(run, OPH_WORKFLOW_YES)) {
+		else if (strcmp(run, OPH_WORKFLOW_YES) && strcmp(run, OPH_WORKFLOW_YES2)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
 				json_decref(jansson);

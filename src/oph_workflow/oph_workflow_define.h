@@ -61,6 +61,7 @@
 #define OPH_WORKFLOW_PATH_SET_SIZE	2
 
 #define OPH_WORKFLOW_YES		"yes"
+#define OPH_WORKFLOW_YES2		"on"
 #define OPH_WORKFLOW_NO			"no"
 #define OPH_WORKFLOW_NOP		"nop"
 #define OPH_WORKFLOW_SKIP		"skip"

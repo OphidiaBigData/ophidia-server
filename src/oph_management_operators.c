@@ -29,6 +29,7 @@
 
 #include <sys/stat.h>
 #include <dirent.h>
+#include <ctype.h>
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -4517,7 +4518,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 
 		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE];
-		char type[OPH_MAX_STRING_SIZE], execute[OPH_MAX_STRING_SIZE], name[OPH_MAX_STRING_SIZE];
+		char type[OPH_MAX_STRING_SIZE], execute[OPH_MAX_STRING_SIZE], name[OPH_MAX_STRING_SIZE], args[OPH_MAX_STRING_SIZE], **arg = NULL;
+		unsigned int kk, arg_num = 0;
 		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
 			if (task_tbl)
@@ -4544,7 +4546,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		int wid, success = 0, success2 = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE], btype = 'l', bexecute = 1, session_code[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+		char error_message[OPH_MAX_STRING_SIZE], btype = 'l', bexecute = 1, session_code[OPH_MAX_STRING_SIZE], filename[OPH_MAX_STRING_SIZE], *pch, *pch2, *save_pointer = NULL;
 		if (oph_get_session_code(sessionid, session_code)) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 			if (task_tbl)
@@ -4582,11 +4584,30 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				break;
 			}
 
+			if (!oph_tp_find_param_in_task_string(request, OPH_OPERATOR_PARAMETER_ARGS, args) && strcmp(args, OPH_COMMON_NULL)) {
+				pch = strchr(args, OPH_SEPARATOR_SUBPARAM);
+				for (arg_num++; pch; arg_num++) {
+					pch2 = pch + 1;
+					if (!pch2 || !*pch2)
+						break;
+					pch = strchr(pch2, OPH_SEPARATOR_SUBPARAM);
+				}
+				arg = (char **) malloc(arg_num * sizeof(char *));
+				if (!arg) {
+					snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s': memory error!", OPH_OPERATOR_PARAMETER_ARGS);
+					break;
+				}
+				pch = strtok_r(args, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+				for (kk = 0; kk < arg_num; ++kk) {
+					arg[kk] = pch;
+					pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+				}
+			}
+
 			success = 1;
 		}
 
 		while (success) {
-			char *pch;
 			if (wid)
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Workflow '%d' not found!", wid);
 			else {
@@ -4644,26 +4665,77 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				success = 0;
 				break;
 			}
-			// Set sync mode in any case: otherwise soap struct will be destroyed before completing the task
-			pch = strstr(jstring, "\"" OPH_ARG_MODE "\"");
-			if (pch) {
-				pch = strstr(pch, OPH_ARG_MODE_ASYNC);
+
+			if (bexecute) {
+				// Set sync mode in any case: otherwise soap struct will be destroyed before completing the task
+				pch = strstr(jstring, "\"" OPH_ARG_MODE "\"");
 				if (pch) {
-					*pch = '"';
-					pch--;
-					*pch = OPH_SEPARATOR_NULL;
+					pch2 = strstr(pch, OPH_ARG_MODE_ASYNC);
+					if (pch2 && (pch2 - pch < 20)) {
+						*pch2 = '"';
+						pch2--;
+						*pch2 = OPH_SEPARATOR_NULL;
+					}
+				} else {
+					char tmpp[OPH_MAX_STRING_SIZE + strlen(jstring)];
+					strcpy(tmpp, jstring);
+					pch = strrchr(tmpp, OPH_SEPARATOR_BRACKET_CLOSE);
+					snprintf(pch, OPH_MAX_STRING_SIZE, ",\"%s\":\"%s\"%c", OPH_ARG_MODE, OPH_ARG_MODE_SYNC, OPH_SEPARATOR_BRACKET_CLOSE);
+					free(jstring);
+					jstring = strdup(tmpp);
 				}
-			} else {
-				char tmpp[OPH_MAX_STRING_SIZE + strlen(jstring)];
-				strcpy(tmpp, jstring);
-				pch = strrchr(tmpp, OPH_SEPARATOR_BRACKET_CLOSE);
-				snprintf(pch, OPH_MAX_STRING_SIZE, ",\"%s\":\"%s\"%c", OPH_ARG_MODE, OPH_ARG_MODE_SYNC, OPH_SEPARATOR_BRACKET_CLOSE);
-				free(jstring);
-				jstring = strdup(tmpp);
-			}
-			// Run the workflow as a new request
-			if (bexecute)
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Set sync mode for workflow %d\n", wid);
+				// Set run mode
+				pch = jstring;
+				while ((pch = strstr(pch, "\"" OPH_OPERATOR_PARAMETER_RUN "\""))) {
+					pch2 = strstr(pch, OPH_WORKFLOW_NO);
+					if (pch2 && (pch2 - pch < 10))
+						strncpy(pch2, OPH_WORKFLOW_YES2, strlen(OPH_WORKFLOW_NO));
+					pch++;
+				}
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Set run mode for workflow %d\n", wid);
+				// Parameters
+				if (arg_num) {
+					unsigned int n, nn, ny, nnn, bracket;
+					char tmpp[arg_num * OPH_MAX_STRING_SIZE + strlen(jstring)], *xp = jstring, *nxp, *yp = tmpp, *nyp, copy = 0;
+					char value[1 + OPH_MAX_STRING_SIZE];
+					while ((nxp = nyp = strchr(xp, OPH_SUBSTITUTION_MARK))) {
+						copy = 1;
+						n = nxp - xp;
+						strncpy(yp, xp, n);
+						yp += n;
+						bracket = nxp[1] == OPH_SEPARATOR_BRACKET_OPEN ? 1 : 0;
+						for (nn = 1 + bracket; nxp[nn] && isdigit(nxp[nn]); ++nn);
+						nnn = nn - 1 - bracket;
+						ny = n = nn + (bracket && (nxp[nn] == OPH_SEPARATOR_BRACKET_CLOSE) ? 1 : 0);
+						if ((nnn > 0) && (nnn < OPH_MAX_STRING_SIZE) && (!bracket || (nxp[nn] == OPH_SEPARATOR_BRACKET_CLOSE))) {
+							strncpy(value, nxp + 1 + bracket, nnn);
+							value[nnn] = 0;
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Found parameter '%c%s' of workflow %d\n", OPH_SUBSTITUTION_MARK, value, wid);
+							kk = (unsigned int) (strtol(value, NULL, 10) - 1);	// Non 'C-like' indexing
+							if (kk < arg_num) {
+								nyp = arg[kk];
+								ny = strlen(arg[kk]);
+							}
+						}
+						strncpy(yp, nyp, ny);
+						xp = nxp + n;
+						yp += ny;
+					}
+					if (copy) {
+						strcpy(yp, xp);
+						free(jstring);
+						jstring = strdup(tmpp);
+					}
+				}
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Set parameters of workflow %d\n", wid);
+				// Run the workflow as a new request
 				oph_execute(soap, jstring);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Workflow %d has been started\n", wid);
+
+			} else
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Workflow %d has not been started as run option is disabled\n", wid);
+
 			free(jstring);
 
 			break;
@@ -4707,6 +4779,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		if (task_tbl)
 			hashtbl_destroy(task_tbl);
+		if (arg)
+			free(arg);
 
 		ophidiadb oDB;
 		oph_odb_initialize_ophidiadb(&oDB);
