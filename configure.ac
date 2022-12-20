@@ -307,7 +307,7 @@ AC_ARG_WITH(libxml_header_path,
 AC_ARG_WITH(libxml_lib_path,
 	   [  --with-libxml-lib-path=PATH 		Location of libxml2.a],
 	   [
-		libxml_lib_path="-L$withval"
+		libxml_lib_path="-L$withval -lxml2"
 	   ],
 	   [
 		libxml_lib_path="$XML_LIBS"
@@ -330,7 +330,7 @@ AC_ARG_WITH(libcurl_header_path,
 AC_ARG_WITH(libcurl_lib_path,
 	   [  --with-libcurl-lib-path=PATH 		Location of libcurl.a],
 	   [
-		libcurl_lib_path="-L$withval"
+		libcurl_lib_path="-L$withval -lcurl"
 	   ],
 	   [
 		libcurl_lib_path="$CURL_LIBS"
@@ -353,7 +353,7 @@ AC_ARG_WITH(libopenssl_header_path,
 AC_ARG_WITH(libopenssl_lib_path,
 	   [  --with-libopenssl-lib-path=PATH 		Location of openssl],
 	   [
-		libopenssl_lib_path="-L$withval"
+		libopenssl_lib_path="-L$withval -lssl -lcrypto"
 	   ],
  	   [
 		libopenssl_lib_path="$OPENSSL_LIBS"
@@ -385,7 +385,7 @@ AC_ARG_WITH(libssh2_header_path,
 AC_ARG_WITH(libssh2_lib_path,
 	   [  --with-libssh2-lib-path=PATH 		Location of libssh2],
 	   [
-		libssh2_lib_path="-L$withval"
+		libssh2_lib_path="-L$withval -lssh2"
 	   ],
      [
     libssh2_lib_path="$SSH2_LIBS"
@@ -426,7 +426,7 @@ AC_ARG_WITH(jansson_header_path,
 AC_ARG_WITH(jansson_lib_path,
        [  --with-jansson-lib-path=PATH       Location of jansson lib],
        [
-        jansson_lib_path="-L$withval"
+        jansson_lib_path="-L$withval -ljansson"
        ],
      [
     jansson_lib_path="$JANSSON_LIBS"
