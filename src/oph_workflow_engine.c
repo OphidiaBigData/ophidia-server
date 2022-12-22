@@ -57,12 +57,12 @@ extern char oph_cancel_all_enabled;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
-extern pthread_cond_t termination_flag;
-extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
 extern pthread_mutex_t savefile_flag;
-extern pthread_mutex_t limit_flag;
+extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
+extern pthread_cond_t limit_flag;
 #endif
 
 typedef struct _oph_request_data {
