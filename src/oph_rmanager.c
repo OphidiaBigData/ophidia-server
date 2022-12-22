@@ -49,6 +49,7 @@
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t service_flag;
+extern pthread_cond_t limit_flag;
 #endif
 extern char *oph_rmanager_conf_file;
 extern char *oph_txt_location;
@@ -58,6 +59,10 @@ extern char *oph_server_port;
 extern oph_rmanager *orm;
 extern char *oph_subm_user;
 extern oph_service_info *service_info;
+extern unsigned int oph_server_task_limit;
+extern unsigned int oph_server_core_limit;
+extern unsigned int oph_server_task_running;
+extern unsigned int oph_server_core_running;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -750,11 +755,25 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		_ncores = 1;
 	}
 
-	int result;
-	if ((result =
-	     oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
-				      username, project)) != OPH_SERVER_UNKNOWN)
+	int result =
+	    oph_serve_known_operator(state, request, _ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username, project);
+	if (result != OPH_SERVER_UNKNOWN)
 		return result;
+
+	// Check for limits: known operators do not use resources
+	if (oph_server_task_limit || oph_server_core_limit) {
+		pthread_mutex_lock(&global_flag);
+		while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit)) || (oph_server_core_limit && (oph_server_core_running + _ncores > oph_server_core_limit))) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+			pthread_cond_wait(&limit_flag, &global_flag);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+		}
+		if (oph_server_task_limit)
+			oph_server_task_running++;
+		if (oph_server_core_limit)
+			oph_server_core_running += _ncores;
+		pthread_mutex_unlock(&global_flag);
+	}
 
 	char *cmd = NULL;
 

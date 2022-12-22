@@ -120,15 +120,26 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char *request,
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	}
 
-	if ((error =
-	     oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
-					     operator_name)) != OPH_SERVER_UNKNOWN)
+	error =
+	    oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
+					    operator_name);
+	if (error != OPH_SERVER_UNKNOWN)
 		return error;
 
-	if ((error =
-	     oph_serve_management_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
-					   project, operator_name)) != OPH_SERVER_UNKNOWN)
+	error =
+	    oph_serve_management_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
+					  project, operator_name);
+	if (error != OPH_SERVER_UNKNOWN)
 		return error;
 
 	return error;
+}
+
+int oph_is_known_operator(const char *operator_name)
+{
+	if (!operator_name)
+		return 0;
+	if (oph_is_flow_control_operator(operator_name))
+		return 1;
+	return oph_is_management_operator(operator_name);
 }

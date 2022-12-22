@@ -40,6 +40,10 @@ extern char *oph_user_admin;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_json_location;
+extern unsigned int oph_server_task_limit;
+extern unsigned int oph_server_core_limit;
+extern unsigned int oph_server_task_running;
+extern unsigned int oph_server_core_running;
 extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
@@ -53,11 +57,12 @@ extern char oph_cancel_all_enabled;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
-extern pthread_cond_t termination_flag;
-extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
 extern pthread_mutex_t savefile_flag;
+extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
+extern pthread_cond_t limit_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -3272,6 +3277,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: sessionid in memory is different from sessionid in notification\n", ttype, jobid);
 	if (sessionid)
 		free(sessionid);
+
+	// Update limits: known operators do not use resources
+	if ((status >= OPH_ODB_STATUS_COMPLETED) && !oph_is_known_operator(wf->tasks[task_index].operator)) {
+		char broadcast = 0;
+		if (oph_server_task_limit && (oph_server_task_running > 0)) {
+			oph_server_task_running--;
+			broadcast = 1;
+		}
+		if (oph_server_core_limit && (oph_server_core_running >= wf->tasks[task_index].ncores)) {
+			oph_server_core_running -= wf->tasks[task_index].ncores;
+			broadcast = 1;
+		}
+		if (broadcast)
+			pthread_cond_broadcast(&limit_flag);
+	}
 
 	if (!odb_jobid && !wf->tasks[task_index].idjob && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ERROR)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: an internal operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,

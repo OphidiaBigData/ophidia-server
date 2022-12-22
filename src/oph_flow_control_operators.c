@@ -3233,3 +3233,22 @@ int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *r
 	return _oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
 						os_username, operator_name, NULL);
 }
+
+int oph_is_flow_control_operator(const char *operator_name)
+{
+	if (!strncasecmp(operator_name, OPH_OPERATOR_SET, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_FOR, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_ENDFOR, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ELSEIF, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_WAIT, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_INPUT, OPH_MAX_STRING_SIZE))
+		return 1;
+	return 0;
+}

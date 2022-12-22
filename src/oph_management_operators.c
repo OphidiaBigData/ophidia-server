@@ -4491,3 +4491,16 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 	return error;
 }
+
+int oph_is_management_operator(const char *operator_name)
+{
+	if (!strncasecmp(operator_name, OPH_OPERATOR_CANCEL, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_MANAGE_SESSION, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_LOG_INFO, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_CLUSTER, OPH_MAX_STRING_SIZE))
+		return 1;
+	return 0;
+}

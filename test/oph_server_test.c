@@ -42,6 +42,7 @@ pthread_mutex_t service_flag;
 pthread_mutex_t savefile_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
+pthread_cond_t limit_flag;
 #ifdef OPH_OPENID_SUPPORT
 pthread_t token_tid_openid = 0;
 #endif
@@ -76,6 +77,10 @@ char *oph_subm_user_privk = 0;
 char *oph_xml_operator_dir = 0;
 unsigned int oph_server_farm_size = 0;
 unsigned int oph_server_queue_size = 0;
+unsigned int oph_server_task_limit = 0;
+unsigned int oph_server_core_limit = 0;
+unsigned int oph_server_task_running = 0;
+unsigned int oph_server_core_running = 0;
 unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
@@ -167,6 +172,7 @@ void cleanup()
 	pthread_mutex_destroy(&savefile_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
+	pthread_cond_destroy(&limit_flag);
 #endif
 	oph_tp_end_xml_parser();
 }
@@ -4432,6 +4438,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&savefile_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
+	pthread_cond_init(&limit_flag, NULL);
 #endif
 
 	int ch, msglevel = LOG_DEBUG, abort_on_first_error = 1;
