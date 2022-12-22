@@ -514,7 +514,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 	// Validate the workflow
-	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf) || oph_workflow_parallel_fco(wf, 0) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
+	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf) || oph_workflow_parallel_fco(wf, 0, state) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: workflow '%s' is not valid\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		oph_workflow_free(wf);

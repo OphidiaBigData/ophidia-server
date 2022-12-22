@@ -53,7 +53,7 @@ int oph_wf_list_append(oph_job_list * job_info, oph_workflow * wf)
 	return OPH_SERVER_OK;
 }
 
-int oph_wf_list_drop(oph_job_list * job_info, int jobid)
+int oph_wf_list_drop2(oph_job_list * job_info, int jobid, char remove)
 {
 	int result;
 	oph_job_info *item, *prev;
@@ -64,9 +64,14 @@ int oph_wf_list_drop(oph_job_list * job_info, int jobid)
 		pthread_mutex_unlock(&global_flag);
 		return OPH_SERVER_OK;
 	}
-	result = oph_delete_from_job_list(job_info, item, prev);
+	result = oph_delete_from_job_list2(job_info, item, prev, remove);
 	pthread_mutex_unlock(&global_flag);
 	if (result)
 		return OPH_SERVER_ERROR;
 	return OPH_SERVER_OK;
+}
+
+int oph_wf_list_drop(oph_job_list * job_info, int jobid)
+{
+	return oph_wf_list_drop2(job_info, jobid, 1);
 }

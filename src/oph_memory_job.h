@@ -24,5 +24,6 @@
 
 int oph_wf_list_append(oph_job_list * job_info, oph_workflow * wf);
 int oph_wf_list_drop(oph_job_list * job_info, int jobid);
+int oph_wf_list_drop2(oph_job_list * job_info, int jobid, char remove);
 
 #endif				/* OPH_MEMORY_JOB_H */
