@@ -230,12 +230,13 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		char *sessionid = strdup(wf->sessionid);
 		char *os_username = wf->os_username ? strdup(wf->os_username) : strdup(wf->username);
 		char *project = wf->project ? strdup(wf->project) : NULL;
+		char *taskname = wf->tasks[task_index].name ? strdup(wf->tasks[task_index].name) : NULL;
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, wid = wf->workflowid;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, wid);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
@@ -245,6 +246,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			free(os_username);
 		if (project)
 			free(project);
+		if (taskname)
+			free(taskname);
 
 		if (response) {
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system\n");

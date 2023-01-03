@@ -48,7 +48,7 @@ extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const ch
 
 int oph_serve_management_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
 				  int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username, const char *project,
-				  const char *operator_name)
+				  const char *taskname, const char *operator_name)
 {
 	UNUSED(ncores);
 	UNUSED(task_id);
@@ -4355,7 +4355,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							char *cmd = NULL;
-							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 1 + host_type)) {
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, taskname, wid, &cmd, 1 + host_type)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 								if (cmd) {
