@@ -27,6 +27,7 @@ queue=${5}
 serverid=${6}
 workflowid=${7}
 project=${8}
+taskname=${9}
 
 # Const
 fixString=
@@ -40,7 +41,7 @@ echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 
-${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J "${taskname} ${fixString}${serverid}${taskid}" ${HOME}/.ophidia/${serverid}${taskid}.start.sh
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
 	rm ${HOME}/.ophidia/${serverid}${taskid}.start.sh

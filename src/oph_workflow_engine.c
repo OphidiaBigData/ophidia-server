@@ -74,6 +74,7 @@ typedef struct _oph_request_data {
 	char *error;
 	char run;
 	int delay;
+	char *taskname;
 } oph_request_data;
 
 typedef struct _oph_monitor_data {
@@ -89,6 +90,7 @@ int oph_request_data_init(oph_request_data * item)
 		item->error_notification = NULL;
 		item->output_json = NULL;
 		item->error = NULL;
+		item->taskname = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -106,6 +108,8 @@ int oph_request_data_free(oph_request_data * item)
 			free(item->output_json);
 		if (item->error)
 			free(item->error);
+		if (item->taskname)
+			free(item->taskname);
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -1727,6 +1731,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k]->serve_request = 0;
 					request_data[k]->error_notification = submission_string_ext;
+					request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 					continue;
 				}
@@ -1771,6 +1776,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 0;
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->error = errore;
 
@@ -2398,6 +2404,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is finished\n", ttype, jobid, wf->tasks[i].name);
 
@@ -2429,6 +2436,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 0;
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				continue;
 			}
@@ -2469,6 +2477,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k]->serve_request = 0;
 					request_data[k]->error_notification = submission_string_ext;
+					request_data[k]->taskname = strdup(wf->tasks[i].name);
 					request_data[k]->markerid = strdup(str_markerid);
 					request_data[k]->error = errore;
 
@@ -2512,6 +2521,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 
 						continue;
 					}
@@ -2562,6 +2572,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 						request_data[k][j].markerid = strdup(str_markerid);
 						request_data[k][j].error = errore;
 
@@ -2588,6 +2599,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 						request_data[k][j].markerid = strdup(str_markerid);
 
 						continue;
@@ -2623,6 +2635,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].light_tasks[j].markerid,
 						 wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 					request_data[k][j].error_notification = submission_string_ext;
+					request_data[k][j].taskname = strdup(wf->tasks[i].name);
 
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
@@ -2695,6 +2708,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, wf->tasks[i].idjob,
 					 OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				struct timeval tv;
 				gettimeofday(&tv, 0);
@@ -2752,7 +2766,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username, project, wid)) != OPH_SERVER_OK) {
+							   os_username, project, request_data[k][j].taskname, wid)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
