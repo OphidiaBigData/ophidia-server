@@ -87,7 +87,7 @@ extern pthread_cond_t waiting_flag;
     ]\
 }"
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
 {
 	UNUSED(error);
 	UNUSED(state);
