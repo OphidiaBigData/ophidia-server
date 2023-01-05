@@ -2354,11 +2354,11 @@ int _check_oph_server(const char *function, int option)
 		if ((option >= 4) && (option <= 10))
 			res =
 			    _oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
-							     os_username, operator_name, &tid);
+							     os_username, operator_name, operator_name, &tid);
 		else
 			res =
 			    oph_serve_flow_control_operator(state, NULL, 0, sessionid, markerid, &odb_wf_id, &task_id, &light_task_id, &odb_jobid, &response, NULL, &exit_code, &exit_output,
-							    os_username, operator_name);
+							    os_username, operator_name, operator_name);
 
 		if (response)
 			free(response);
