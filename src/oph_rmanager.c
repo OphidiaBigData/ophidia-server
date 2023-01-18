@@ -73,7 +73,7 @@ typedef struct _oph_command_data {
 	char *error;
 	struct oph_plugin_data *state;
 	int delay;
-	int (*postprocess)(int);
+	int (*postprocess) (int);
 	int id;
 } oph_command_data;
 
@@ -136,7 +136,7 @@ void *_oph_system(oph_command_data * data)
 	return (void *) NULL;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
