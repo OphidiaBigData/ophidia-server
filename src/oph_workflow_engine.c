@@ -3595,12 +3595,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 							}
 						}
+
+						int outputs_file = -1;
 						for (i = 0; i < outputs_num; ++i) {
 							if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
 								for (j = 0; j < outputs_num; ++j) {
 									if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 										free(outputs_values[j]);
 										outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+										outputs_file = j;
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid,
 										      OPH_ARG_CUBE, OPH_ARG_FILE);
 										break;
@@ -3619,8 +3622,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										outputs_values[outputs_num] = strdup(outputs_values[i]);
 									} else
 										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
+									outputs_file = outputs_num;
 									outputs_num++;
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
 								}
 								break;
 							}
@@ -3651,6 +3655,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							      wf->tasks[task_index].name);
 							wf->tasks[task_index].outputs_keys = outputs_keys;
 							wf->tasks[task_index].outputs_values = outputs_values;
+							wf->tasks[task_index].outputs_file = outputs_file;
 							wf->tasks[task_index].outputs_num = outputs_num;
 						}
 
@@ -4516,12 +4521,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 						}
 					}
+
+					int outputs_file = -1;
 					for (i = 0; i < outputs_num; ++i) {
 						if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
 							for (j = 0; j < outputs_num; ++j) {
 								if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 									free(outputs_values[j]);
 									outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+									outputs_file = j;
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
 									      OPH_ARG_FILE);
 									break;
@@ -4540,6 +4548,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									outputs_values[outputs_num] = strdup(outputs_values[i]);
 								} else
 									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+								outputs_file = outputs_num;
 								outputs_num++;
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
 							}
@@ -4559,6 +4568,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					} else {
 						wf->tasks[task_index].outputs_keys = outputs_keys;
 						wf->tasks[task_index].outputs_values = outputs_values;
+						wf->tasks[task_index].outputs_file = outputs_file;
 						wf->tasks[task_index].outputs_num = outputs_num;
 					}
 
@@ -4693,6 +4703,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes/containers for final operation\n", ttype, jobid,
 								      wf->tasks[task_index].outputs_values[k]);
+								if (k == wf->tasks[task_index].outputs_file) {
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: '%s' will be not considered for final operation\n", ttype, jobid,
+									      wf->tasks[task_index].outputs_values[k]);
+									break;
+								}
 								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {

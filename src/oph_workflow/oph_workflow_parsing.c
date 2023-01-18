@@ -783,6 +783,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 		}
+		(*workflow)->tasks[i].outputs_file = -1;
 
 		(*workflow)->tasks[i].run = 1;	// Default value (yes)
 		if (!run_task)
