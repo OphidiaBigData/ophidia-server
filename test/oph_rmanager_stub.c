@@ -258,3 +258,8 @@ int oph_remove_detached_task(int id)
 {
 	return OPH_SERVER_OK;
 }
+
+int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jobid)
+{
+	return OPH_SERVER_OK;
+}
