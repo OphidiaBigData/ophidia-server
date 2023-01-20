@@ -66,7 +66,7 @@ void freeBlock(char ***block, unsigned int count)
 int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd,
 		     char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **_query, pthread_mutex_t * flag)
 {
-	if (!task_string || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
+	if (!task_string || !datacube_inputs || !measure_name || !counter || !sessionid || !running)
 		return OPH_SERVER_NULL_POINTER;
 	*datacube_inputs = *measure_name = NULL;
 	*counter = 0;
@@ -131,8 +131,14 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 #ifdef OPH_DB_SUPPORT
 	char query[OPH_MAX_STRING_SIZE];
 	if (!is_src_path) {
+		if (!oDB) {
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create filtering query: link to OphidiaDB is not given.\n");
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_NULL_POINTER;
+		}
 		if (oph_filter_unsafe(task_tbl, query, cwd ? cwd : OPH_MF_ROOT_FOLDER, sessionid, oDB)) {
-			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create filtering query.\n");
+			pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Unable to create filtering query: error in building OphidiaDB query\n");
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_SYSTEM_ERROR;
@@ -223,14 +229,15 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		snprintf(markerid, OPH_SHORT_STRING_SIZE, "%d", wf->tasks[task_index].markerid);
 
 		char *sessionid = strdup(wf->sessionid);
-		char *os_username = strdup(wf->os_username);
+		char *os_username = wf->os_username ? strdup(wf->os_username) : strdup(wf->username);
 		char *project = wf->project ? strdup(wf->project) : NULL;
+		char *taskname = wf->tasks[task_index].name ? strdup(wf->tasks[task_index].name) : NULL;
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, wid = wf->workflowid;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, wid);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
@@ -240,6 +247,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			free(os_username);
 		if (project)
 			free(project);
+		if (taskname)
+			free(taskname);
 
 		if (response) {
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system\n");
@@ -324,12 +333,13 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 		char *sessionid = strdup(wf->sessionid);
 		char *os_username = strdup(wf->os_username);
 		char *project = wf->project ? strdup(wf->project) : NULL;
+		char *taskname = wf->tasks[task_index].name ? strdup(wf->tasks[task_index].name) : NULL;
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, wid = wf->workflowid;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, wid);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
@@ -339,6 +349,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 			free(os_username);
 		if (project)
 			free(project);
+		if (taskname)
+			free(taskname);
 
 		if (response) {
 			pmesg_safe(flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan virtual file system\n");
@@ -472,7 +484,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_
 int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
 			char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query, pthread_mutex_t * flag)
 {
-	if (!datacube_input || !datacube_inputs || !measure_name || !counter || !sessionid || !running || !oDB)
+	if (!datacube_input || !datacube_inputs || !measure_name || !counter || !sessionid || !running)
 		return OPH_SERVER_NULL_POINTER;
 	*datacube_inputs = *measure_name = NULL;
 	*counter = 0;

@@ -36,14 +36,12 @@ typedef struct _oph_child_job_info {
 	int jobid;
 	int marker_id;
 	int status;
-
 	struct _oph_child_job_info *next;
 } oph_child_job_info;
 
 typedef struct _oph_job_info {
 	int timestamp;
 	oph_workflow *wf;
-
 	struct _oph_job_info *next;
 } oph_job_info;
 
@@ -60,6 +58,7 @@ oph_job_info *oph_find_job_in_job_list(oph_job_list * list, int jobid, oph_job_i
 int oph_insert_into_job_list(oph_job_list * list, oph_job_info * item);
 int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
 int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev);
+int oph_delete_from_job_list2(oph_job_list * list, oph_job_info * item, oph_job_info * prev, char remove);
 int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item);
 int oph_delete_saved_jobs_from_job_list(oph_job_list * list, int hysteresis);
 
@@ -75,5 +74,7 @@ oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const c
 oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *sessionid, int workflowid);
 oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessionid, int markerid, int *task_index, int *light_task_index);
 oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list);
+
+int oph_get_new_jobid_from_job_list(oph_job_list * list, int *jobid);
 
 #endif				/* OPH_JOB_LIST_H */

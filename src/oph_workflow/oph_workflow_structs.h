@@ -112,6 +112,7 @@ typedef struct _oph_workflow_dep {
  * \param dependents_indexes_num Number of dependents
  * \param outputs_keys Array of output keys for the current task (default=cube)
  * \param outputs_values Array of output values for the current task (default=PID)
+ * \param outputs_file Index of possible output file (default=-1)
  * \param outputs_num Number of outputs for the current task
  * \param light_tasks Light tasks, used for massive operations
  * \param light_tasks_num Number of light tasks 
@@ -162,6 +163,7 @@ typedef struct _oph_workflow_task {
 	int dependents_indexes_num;
 	char **outputs_keys;
 	char **outputs_values;
+	int outputs_file;
 	int outputs_num;
 	oph_workflow_light_task *light_tasks;
 	int light_tasks_num;
@@ -192,6 +194,7 @@ typedef struct _oph_workflow_task {
 	char backoff_type;
 	char *checkpoint;
 	char *query;
+	char massive_expansion;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

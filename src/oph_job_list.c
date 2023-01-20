@@ -137,28 +137,39 @@ int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_inf
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item)
+int oph_save_job_in_job_list2(oph_job_list * list, oph_job_info * item, char remove)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
-	if (oph_status_log_file_name) {
+	if (remove && oph_status_log_file_name) {
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
 		item->timestamp = tv.tv_sec;
 		item->next = list->saved;
 		list->saved = item;
 	} else {
-		oph_workflow_free(item->wf);
+		if (remove)
+			oph_workflow_free(item->wf);
 		free(item);
 	}
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev)
+int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item)
+{
+	return oph_save_job_in_job_list2(list, item, 1);
+}
+
+int oph_delete_from_job_list2(oph_job_list * list, oph_job_info * item, oph_job_info * prev, char remove)
 {
 	if (oph_drop_from_job_list(list, item, prev))
 		return OPH_JOB_LIST_ERROR;
-	return oph_save_job_in_job_list(list, item);
+	return oph_save_job_in_job_list2(list, item, remove);
+}
+
+int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev)
+{
+	return oph_delete_from_job_list2(list, item, prev, 1);
 }
 
 int oph_delete_saved_jobs_from_job_list(oph_job_list * list, int hysteresis)
@@ -419,4 +430,17 @@ oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list)
 			if (!temp->wf->status)
 				return temp;	// not started yet
 	return NULL;
+}
+
+int oph_get_new_jobid_from_job_list(oph_job_list * list, int *jobid)
+{
+	if (!list || !jobid)
+		return OPH_JOB_LIST_ERROR;
+	*jobid = 0;
+	oph_job_info *temp;
+	for (temp = list->head; temp; temp = temp->next)
+		if (temp->wf->idjob > *jobid)
+			*jobid = temp->wf->idjob;
+	++*jobid;
+	return OPH_JOB_LIST_OK;
 }

@@ -16,6 +16,8 @@ Implement a loop &quot;for&quot;.
 - counter : subset string of the values to be assigned to the counter.
             Current value can be accessed with &amp;key or &amp;{key}.
 - parallel : set to &quot;yes&quot; in case of parallel processing; sequential processing is the default.
+- src_path : it is parsed to extract a list of NetCDF files to be used as &quot;values&quot;.
+- input : alias for &quot;src_path&quot;; the value of this argument will be overwritten.
 
 [System parameters]
 - save : set to &quot;yes&quot; (default) in case output has to be saved remotely.
@@ -35,5 +37,7 @@ By default &quot;counter&quot; will be set to &quot;1&quot; in case &quot;values
 		<argument type="string" mandatory="no" default="-">counter</argument>
 		<argument type="string" mandatory="no" default="no" values="no|yes">parallel</argument>
 		<argument type="string" mandatory="no" default="yes" values="yes|no">save</argument>
+		<argument type="string" mandatory="no" default="-" multivalue="yes">src_path</argument>
+		<argument type="string" mandatory="no" default="-" multivalue="yes">input</argument>
     </args>
 </operator>

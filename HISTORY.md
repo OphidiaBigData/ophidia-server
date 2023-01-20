@@ -1,5 +1,5 @@
 
-## Next release
+## v1.7.3 - 2023-01-20
 
 ### Fixed:
 
@@ -7,6 +7,8 @@
 
 ### Added:
 
+- Possibility to create one branch for each file of a folder with parallel OPH_FOR [#63](https://github.com/OphidiaBigData/ophidia-server/pull/63)
+- Submission control to limit the number of running tasks or busy cores [#62](https://github.com/OphidiaBigData/ophidia-server/pull/62)
 - Simple scripts to generate digital certificates
 - Workflow variable indicating the number of loops of a 'OPH_FOR' statement
 
