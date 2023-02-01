@@ -33,13 +33,16 @@ taskname=${9}
 fixString=
 FRAMEWORK_PATH=/usr/local/ophidia/oph-cluster/oph-analytics-framework
 LAUNCHER=/usr/local/ophidia/extra/bin/srun
+JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
+SCRIPT_DIR=${HOME}/.ophidia
+SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.submit.sh
 
 # Body
-mkdir -p ${HOME}/.ophidia
-> ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
-echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
-echo "${FRAMEWORK_PATH}/bin/oph_analytics_framework \"${submissionstring}\"" >> ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
-chmod +x ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+mkdir -p ${SCRIPT_DIR}
+> ${SCRIPT_FILE}
+echo "#!/bin/bash" >> ${SCRIPT_FILE}
+echo "${FRAMEWORK_PATH}/bin/oph_analytics_framework \"${submissionstring}\"" >> ${SCRIPT_FILE}
+chmod +x ${SCRIPT_FILE}
 
 MPI_TYPE=--mpi=pmi2
 if [ ${ncores} -eq 1 ]
@@ -50,14 +53,14 @@ then
 	fi
 fi
 
-${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J "${taskname} ${fixString}${serverid}${taskid}" ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J "${JOBNAME}" ${SCRIPT_FILE}
 if [ $? -ne 0 ]; then
-	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
-	rm ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+	echo "Unable to submit ${SCRIPT_FILE}"
+	rm ${SCRIPT_FILE}
 	exit -1
 fi
 
-rm ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+rm ${SCRIPT_FILE}
 
 exit 0
 

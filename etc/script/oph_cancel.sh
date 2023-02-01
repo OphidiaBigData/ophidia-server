@@ -26,9 +26,10 @@ taskname=${3}
 # Const
 fixString=
 KILLER=/usr/local/ophidia/extra/bin/scancel
+JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 
 # Body
-${KILLER} -n "${taskname} ${fixString}${serverid}${taskid}"
+${KILLER} -n "${JOBNAME}"
 
 exit $?
 
