@@ -63,9 +63,11 @@ int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *marke
 	int success = 1;
 
 	int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, saved_idjob = wf->tasks[task_index].idjob;
-	wf->tasks[task_index].idjob = 0;	// Set for internel operations
+	wf->tasks[task_index].idjob = 0;	// Set for internal operations
 
-	response = oph_serve_request(command, 1, wf->sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, wf->os_username, wf->project, wf->workflowid);
+	response =
+	    oph_serve_request(command, 1, wf->sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, wf->os_username, wf->project, wf->tasks[task_index].name,
+			      wf->workflowid);
 
 	if (response) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system: error %s. Aborting...\n", response);
@@ -2346,7 +2348,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 
 int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
 				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
-				     const char *operator_name, pthread_t * tid)
+				     const char *taskname, const char *operator_name, pthread_t * tid)
 {
 	UNUSED(ncores);
 	UNUSED(request);
@@ -3232,8 +3234,27 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 int oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
 				    int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
-				    const char *operator_name)
+				    const char *taskname, const char *operator_name)
 {
 	return _oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output,
-						os_username, operator_name, NULL);
+						os_username, taskname, operator_name, NULL);
+}
+
+int oph_is_flow_control_operator(const char *operator_name)
+{
+	if (!strncasecmp(operator_name, OPH_OPERATOR_SET, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_FOR, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_ENDFOR, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_IF, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ELSEIF, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_ELSE, OPH_MAX_STRING_SIZE) || !strncasecmp(operator_name, OPH_OPERATOR_ENDIF, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_WAIT, OPH_MAX_STRING_SIZE))
+		return 1;
+	if (!strncasecmp(operator_name, OPH_OPERATOR_INPUT, OPH_MAX_STRING_SIZE))
+		return 1;
+	return 0;
 }

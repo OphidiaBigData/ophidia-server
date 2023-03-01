@@ -157,6 +157,11 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	return OPH_ODB_SUCCESS;
 }
 
+int oph_odb_retrieve_list2(ophidiadb * oDB, const char *command, ophidiadb_list * list)
+{
+	return oph_odb_retrieve_list(oDB, command, list);
+}
+
 int oph_odb_initialize_ophidiadb_list(ophidiadb_list * list)
 {
 	if (!list)

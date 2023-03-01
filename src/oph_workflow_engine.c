@@ -40,6 +40,10 @@ extern char *oph_user_admin;
 extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern char *oph_json_location;
+extern unsigned int oph_server_task_limit;
+extern unsigned int oph_server_core_limit;
+extern unsigned int oph_server_task_running;
+extern unsigned int oph_server_core_running;
 extern unsigned int oph_auto_retry;
 extern unsigned int oph_server_poll_time;
 extern char oph_server_is_running;
@@ -50,14 +54,16 @@ extern FILE *task_logfile;
 extern oph_service_info *service_info;
 extern char *oph_status_log_file_name;
 extern char oph_cancel_all_enabled;
+extern ophidiadb *ophDB;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
-extern pthread_cond_t termination_flag;
-extern pthread_cond_t waiting_flag;
 extern pthread_mutex_t curl_flag;
 extern pthread_mutex_t service_flag;
 extern pthread_mutex_t savefile_flag;
+extern pthread_cond_t termination_flag;
+extern pthread_cond_t waiting_flag;
+extern pthread_cond_t limit_flag;
 #endif
 
 typedef struct _oph_request_data {
@@ -74,6 +80,7 @@ typedef struct _oph_request_data {
 	char *error;
 	char run;
 	int delay;
+	char *taskname;
 } oph_request_data;
 
 typedef struct _oph_monitor_data {
@@ -89,6 +96,7 @@ int oph_request_data_init(oph_request_data * item)
 		item->error_notification = NULL;
 		item->output_json = NULL;
 		item->error = NULL;
+		item->taskname = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -106,6 +114,8 @@ int oph_request_data_free(oph_request_data * item)
 			free(item->output_json);
 		if (item->error)
 			free(item->error);
+		if (item->taskname)
+			free(item->taskname);
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -832,7 +842,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
 				    char *remake_submission_string)
 {
-	if (!wf || !oDB || !output_list || !output_list_dim) {
+	if (!wf) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
 		return OPH_SERVER_NULL_POINTER;
 	}
@@ -857,7 +867,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: release markerid '%d'\n", ttype, jobid, task->light_tasks[i].markerid);
 				task->light_tasks[i].markerid = 0;
 				task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
-				if (oph_odb_set_job_status(task->light_tasks[i].idjob, task->light_tasks[i].status, oDB))
+				if (oDB && oph_odb_set_job_status(task->light_tasks[i].idjob, task->light_tasks[i].status, oDB))
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
 				task->light_tasks[i].idjob = 0;
 			}
@@ -950,7 +960,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			datacube_inputs = NULL;
 		}
 		// Do not consider input for OPH_IMPORTNCS as massive, but expand the value of the parameter
-		if (datacube_inputs && src_path && number && !strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) && (j >= 0)) {
+		if (datacube_inputs && src_path && number && (!strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) || !strcasecmp(task->operator, OPH_OPERATOR_FOR)) && (j >= 0)) {
 			size_t max_dim = number * OPH_LONG_STRING_SIZE;
 			char *tmp = (char *) malloc(max_dim);
 			if (!tmp) {
@@ -1041,8 +1051,10 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			} else {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: serving task '%s' as massive operation without effective execution\n", ttype, jobid, task->name);
 				res = OPH_SERVER_NO_RESPONSE;
-				*output_list = datacube_inputs;
-				*output_list_dim = number;
+				if (output_list)
+					*output_list = datacube_inputs;
+				if (output_list_dim)
+					*output_list_dim = number;
 			}
 		} else
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: no light tasks found\n", ttype, jobid);
@@ -1185,7 +1197,7 @@ int oph_workflow_mark_children_of(oph_workflow * wf, int k, int p)
 }
 
 // Thread safe
-int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
+int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_plugin_data *state)
 {
 	if (!wf || !wf->tasks) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1194,7 +1206,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 
 	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL;
 	int *ivalues = NULL;	// If not allocated then it is equal to [1:values_num]
-	int i, j, k, kk, svalues_num = 0, ivalues_num = 0, new_branch_num, replied_num, old_tasks_num, new_index[wf->tasks_num];
+	int i, j, jj, k, kk, svalues_num = 0, ivalues_num = 0, new_branch_num, replied_num, old_tasks_num, new_index[wf->tasks_num];
 	int old_dependents_indexes_num, *old_dependents_indexes = NULL, old_deps_num;
 	unsigned int kkk, kkkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
 	long value;
@@ -1202,12 +1214,71 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 	oph_workflow_var var;
 	void *var_buffer;
 	size_t var_size = sizeof(oph_workflow_var), svalue_size;
+	int jobid;
 
-	char exploded = 0, found = 0;	// Found a FOR with higher nesting_level
+	char reset = 0, exploded = 0, found = 0;	// Found a FOR with higher nesting_level
 	for (i = 0; i < wf->tasks_num; ++i) {
 		if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
 			if (wf->tasks[i].parallel_mode)
 				continue;	// The current task is a parallel-for already exploded
+
+			// Pre-parsing for possible file list
+			if (!wf->tasks[i].massive_expansion) {
+				jj = -1;
+				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+					if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_INPUT) && strlen(wf->tasks[i].arguments_values[j])
+					    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+						jj = j;
+						break;
+					}
+				if (jj < 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SRC_PATH) && strlen(wf->tasks[i].arguments_values[j])
+						    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+							jj = j;
+							break;
+						}
+				}
+
+				pthread_mutex_lock(&global_flag);
+				jobid = *state->jobid;
+				if (wf->workflowid < 0) {
+					jobid = ++*state->jobid;
+					wf->workflowid = -jobid;
+					oph_get_new_jobid_from_job_list(state->job_info, &wf->idjob);	// Get a valid odb_jobid that is unique in job list
+					reset = 1;
+				}
+				pthread_mutex_unlock(&global_flag);
+
+				oph_wf_list_append(state->job_info, wf);
+
+				pthread_mutex_lock(&global_flag);
+				oph_check_for_massive_operation(state, 'F', jobid, wf, i, ophDB, NULL, NULL, NULL, NULL);
+				pthread_mutex_unlock(&global_flag);
+
+				if (reset) {
+					oph_wf_list_drop2(state->job_info, wf->idjob, 0);
+					wf->workflowid = -1;
+				}
+
+				if (jj >= 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES)) {
+							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Override value of parameter '%s' of task '%s' with '%s'\n", OPH_ARG_VALUES,
+								   wf->tasks[i].name, wf->tasks[i].arguments_values[jj]);
+							free(wf->tasks[i].arguments_values[j]);
+							wf->tasks[i].arguments_values[j] = strdup(wf->tasks[i].arguments_values[jj]);
+							break;
+						}
+					if (j >= wf->tasks[i].arguments_num) {
+						pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Override key of parameter '%s' of task '%s' with '%s'\n", wf->tasks[i].arguments_keys[jj],
+							   wf->tasks[i].name, OPH_ARG_VALUES);
+						free(wf->tasks[i].arguments_keys[jj]);
+						wf->tasks[i].arguments_keys[jj] = strdup(OPH_ARG_VALUES);
+					}
+					wf->tasks[i].massive_expansion = 1;
+				}
+			}
 
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
@@ -1614,12 +1685,12 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level)
 	}
 	if (i < wf->tasks_num) {
 		if (exploded)
-			return oph_workflow_parallel_fco(wf, nesting_level);
+			return oph_workflow_parallel_fco(wf, nesting_level, state);
 		else
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 	if (found)
-		return oph_workflow_parallel_fco(wf, nesting_level + 1);
+		return oph_workflow_parallel_fco(wf, nesting_level + 1, state);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -1727,6 +1798,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k]->serve_request = 0;
 					request_data[k]->error_notification = submission_string_ext;
+					request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 					continue;
 				}
@@ -1771,6 +1843,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 0;
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->error = errore;
 
@@ -2398,6 +2471,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 wf->tasks[i].status, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: massive operation '%s' is finished\n", ttype, jobid, wf->tasks[i].name);
 
@@ -2429,6 +2503,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 				request_data[k]->serve_request = 0;
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				continue;
 			}
@@ -2469,6 +2544,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					request_data[k]->serve_request = 0;
 					request_data[k]->error_notification = submission_string_ext;
+					request_data[k]->taskname = strdup(wf->tasks[i].name);
 					request_data[k]->markerid = strdup(str_markerid);
 					request_data[k]->error = errore;
 
@@ -2512,6 +2588,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 
 						continue;
 					}
@@ -2562,6 +2639,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 						request_data[k][j].markerid = strdup(str_markerid);
 						request_data[k][j].error = errore;
 
@@ -2588,6 +2666,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 						request_data[k][j].serve_request = 0;
 						request_data[k][j].error_notification = submission_string_ext;
+						request_data[k][j].taskname = strdup(wf->tasks[i].name);
 						request_data[k][j].markerid = strdup(str_markerid);
 
 						continue;
@@ -2623,6 +2702,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 						 wf->tasks[i].light_tasks[j].idjob, OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].light_tasks[j].markerid,
 						 wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 					request_data[k][j].error_notification = submission_string_ext;
+					request_data[k][j].taskname = strdup(wf->tasks[i].name);
 
 					wf->tasks[i].light_tasks[j].status = OPH_ODB_STATUS_PENDING;
 				}
@@ -2695,6 +2775,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				snprintf(submission_string_ext, nnn, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k]->task_id, request_data[k]->light_task_id, wf->tasks[i].idjob,
 					 OPH_ODB_STATUS_START_ERROR, wf->sessionid, wf->tasks[i].markerid, wf->tasks[i].save ? OPH_COMMON_YES : OPH_COMMON_NO);
 				request_data[k]->error_notification = submission_string_ext;
+				request_data[k]->taskname = strdup(wf->tasks[i].name);
 
 				struct timeval tv;
 				gettimeofday(&tv, 0);
@@ -2752,7 +2833,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username, project, wid)) != OPH_SERVER_OK) {
+							   os_username, project, request_data[k][j].taskname, wid)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -3290,6 +3371,21 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (sessionid)
 		free(sessionid);
 
+	// Update limits: known operators do not use resources
+	if ((status >= OPH_ODB_STATUS_COMPLETED) && !oph_is_known_operator(wf->tasks[task_index].operator)) {
+		char broadcast = 0;
+		if (oph_server_task_limit && (oph_server_task_running > 0)) {
+			oph_server_task_running--;
+			broadcast = 1;
+		}
+		if (oph_server_core_limit && (oph_server_core_running >= wf->tasks[task_index].ncores)) {
+			oph_server_core_running -= wf->tasks[task_index].ncores;
+			broadcast = 1;
+		}
+		if (broadcast)
+			pthread_cond_broadcast(&limit_flag);
+	}
+
 	if (!odb_jobid && !wf->tasks[task_index].idjob && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_ERROR)) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: an internal operation '%s' is waiting for a response: received a notification with status %s\n", ttype, jobid, wf->tasks[task_index].name,
 		      oph_odb_convert_status_to_str(status));
@@ -3524,12 +3620,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 							}
 						}
+
+						int outputs_file = -1;
 						for (i = 0; i < outputs_num; ++i) {
 							if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
 								for (j = 0; j < outputs_num; ++j) {
 									if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 										free(outputs_values[j]);
 										outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+										outputs_file = j;
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid,
 										      OPH_ARG_CUBE, OPH_ARG_FILE);
 										break;
@@ -3548,8 +3647,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										outputs_values[outputs_num] = strdup(outputs_values[i]);
 									} else
 										pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
+									outputs_file = outputs_num;
 									outputs_num++;
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
 								}
 								break;
 							}
@@ -3580,6 +3680,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							      wf->tasks[task_index].name);
 							wf->tasks[task_index].outputs_keys = outputs_keys;
 							wf->tasks[task_index].outputs_values = outputs_values;
+							wf->tasks[task_index].outputs_file = outputs_file;
 							wf->tasks[task_index].outputs_num = outputs_num;
 						}
 
@@ -4446,12 +4547,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 						}
 					}
+
+					int outputs_file = -1;
 					for (i = 0; i < outputs_num; ++i) {
 						if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
 							for (j = 0; j < outputs_num; ++j) {
 								if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
 									free(outputs_values[j]);
 									outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+									outputs_file = j;
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
 									      OPH_ARG_FILE);
 									break;
@@ -4470,6 +4574,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									outputs_values[outputs_num] = strdup(outputs_values[i]);
 								} else
 									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+								outputs_file = outputs_num;
 								outputs_num++;
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
 							}
@@ -4489,6 +4594,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					} else {
 						wf->tasks[task_index].outputs_keys = outputs_keys;
 						wf->tasks[task_index].outputs_values = outputs_values;
+						wf->tasks[task_index].outputs_file = outputs_file;
 						wf->tasks[task_index].outputs_num = outputs_num;
 					}
 
@@ -4623,6 +4729,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes/containers for final operation\n", ttype, jobid,
 								      wf->tasks[task_index].outputs_values[k]);
+								if (k == wf->tasks[task_index].outputs_file) {
+									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: '%s' will be not considered for final operation\n", ttype, jobid,
+									      wf->tasks[task_index].outputs_values[k]);
+									break;
+								}
 								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {

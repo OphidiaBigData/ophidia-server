@@ -21,13 +21,14 @@
 # Input parameters
 taskid=${1}
 serverid=${2}
+taskname=${3}
 
 # Const
 fixString=
 KILLER=/usr/local/ophidia/extra/bin/scancel
 
 # Body
-${KILLER} -n ${fixString}${serverid}${taskid}
+${KILLER} -n "${taskname} ${fixString}${serverid}${taskid}"
 
 exit $?
 

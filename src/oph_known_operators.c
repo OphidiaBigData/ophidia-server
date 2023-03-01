@@ -93,7 +93,7 @@ int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *ope
 }
 
 int oph_serve_known_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id, int *light_task_id,
-			     int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project)
+			     int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project, char *taskname)
 {
 	int error = OPH_SERVER_UNKNOWN;
 	if (exit_code)
@@ -122,13 +122,22 @@ int oph_serve_known_operator(struct oph_plugin_data *state, const char *request,
 
 	if ((error =
 	     oph_serve_flow_control_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
-					     operator_name)) != OPH_SERVER_UNKNOWN)
+					     taskname, operator_name)) != OPH_SERVER_UNKNOWN)
 		return error;
 
 	if ((error =
 	     oph_serve_management_operator(state, request, ncores, sessionid, markerid, odb_wf_id, task_id, light_task_id, odb_jobid, response, jobid_response, exit_code, exit_output, username,
-					   project, operator_name)) != OPH_SERVER_UNKNOWN)
+					   project, taskname, operator_name)) != OPH_SERVER_UNKNOWN)
 		return error;
 
 	return error;
+}
+
+int oph_is_known_operator(const char *operator_name)
+{
+	if (!operator_name)
+		return 0;
+	if (oph_is_flow_control_operator(operator_name))
+		return 1;
+	return oph_is_management_operator(operator_name);
 }

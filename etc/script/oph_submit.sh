@@ -27,6 +27,7 @@ queue=${5}
 serverid=${6}
 workflowid=${7}
 project=${8}
+taskname=${9}
 
 # Const
 fixString=
@@ -49,7 +50,7 @@ then
 	fi
 fi
 
-${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
+${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J "${taskname} ${fixString}${serverid}${taskid}" ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.submit.sh"
 	rm ${HOME}/.ophidia/${serverid}${taskid}.submit.sh
