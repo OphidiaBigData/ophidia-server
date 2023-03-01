@@ -23,8 +23,11 @@ PASSWD=${1}
 SERVER=${2} 
 PORT=11732
 
+# Base path
+OPH_BASE=/usr/local/ophidia
+
 # Body
-echo -e "# >>> Variables for Ophidia environment >>>\nexport PATH=\"/usr/local/ophidia/oph-terminal/bin/:\$PATH\"\nexport OPH_USER=${USER}\nexport OPH_PASSWD=\"${PASSWD}\"\nexport OPH_SERVER_PORT=${PORT}\nexport OPH_SERVER_HOST=${SERVER}\n# <<< Variables for Ophidia environment <<<" >> ${HOME}/.oph_profile
+echo -e "# >>> Variables for Ophidia environment >>>\nexport PATH=\"${OPH_BASE}/oph-terminal/bin/:\$PATH\"\nexport OPH_USER=${USER}\nexport OPH_PASSWD=\"${PASSWD}\"\nexport OPH_SERVER_PORT=${PORT}\nexport OPH_SERVER_HOST=${SERVER}\n# <<< Variables for Ophidia environment <<<" >> ${HOME}/.oph_profile
 chmod 600 ${HOME}/.oph_profile
 
 exit 0

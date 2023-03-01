@@ -30,7 +30,7 @@ bindir=${prefix}/etc
 bin_SCRIPTS = etc/oph_server
 
 scriptdir=${prefix}/etc/script
-dist_script_SCRIPTS = etc/script/*.sh
+dist_script_SCRIPTS = etc/script/*.sh etc/script/oph_ioserver.conf.template
 
 certdir = $(prefix)/etc/cert/
 dist_cert_DATA =

@@ -29,26 +29,33 @@ workflowid=${7}
 project=${8}
 taskname=${9}
 
+# Base path
+OPH_BASE=/usr/local/ophidia
+SLURM_BASE=/usr/local/ophidia/extra
+
 # Const
 fixString=
-LAUNCHER=/usr/local/ophidia/extra/bin/srun
-IO_SERVER_LAUNCHER=/usr/local/ophidia/oph-server/etc/script/start_ioserver.sh
+LAUNCHER=${SLURM_BASE}/bin/srun
+IO_SERVER_LAUNCHER=${OPH_BASE}/oph-server/etc/script/start_ioserver.sh
+JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
+SCRIPT_DIR=${HOME}/.ophidia
+SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.start.sh
 
 # Body
-mkdir -p ${HOME}/.ophidia
-> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
-echo "#!/bin/bash" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
-echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${HOME}/.ophidia/${serverid}${taskid}.start.sh
-chmod +x ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+mkdir -p ${SCRIPT_DIR}
+> ${SCRIPT_FILE}
+echo "#!/bin/bash" >> ${SCRIPT_FILE}
+echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${SCRIPT_FILE}
+chmod +x ${SCRIPT_FILE}
 
-${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J "${taskname} ${fixString}${serverid}${taskid}" ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J "${JOBNAME}" ${SCRIPT_FILE}
 if [ $? -ne 0 ]; then
-	echo "Unable to submit ${HOME}/.ophidia/${serverid}${taskid}.start.sh"
-	rm ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+	echo "Unable to submit ${SCRIPT_FILE}"
+	rm ${SCRIPT_FILE}
 	exit -1
 fi
 
-rm ${HOME}/.ophidia/${serverid}${taskid}.start.sh
+rm ${SCRIPT_FILE}
 
 exit 0
 
