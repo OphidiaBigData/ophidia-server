@@ -20,9 +20,12 @@
 
 # Input parameters
 
+# Base path
+SLURM_BASE=/usr/local/ophidia/extra
+
 # Const
 fixString=
-CHECKER=/usr/local/ophidia/extra/bin/squeue
+CHECKER=${SLURM_BASE}/bin/squeue
 
 # Body
 ${CHECKER} -o "%j %u"

@@ -29,10 +29,14 @@ workflowid=${7}
 project=${8}
 taskname=${9}
 
+# Base path
+OPH_BASE=/usr/local/ophidia
+SLURM_BASE=/usr/local/ophidia/extra
+
 # Const
 fixString=
-LAUNCHER=/usr/local/ophidia/extra/bin/srun
-IO_SERVER_LAUNCHER=/usr/local/ophidia/oph-server/etc/script/start_ioserver.sh
+LAUNCHER=${SLURM_BASE}/bin/srun
+IO_SERVER_LAUNCHER=${OPH_BASE}/oph-server/etc/script/start_ioserver.sh
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 SCRIPT_DIR=${HOME}/.ophidia
 SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.start.sh

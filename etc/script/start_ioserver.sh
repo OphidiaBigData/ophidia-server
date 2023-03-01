@@ -21,39 +21,37 @@
 # Input parameters
 hpid=${1}
 
+# Base path
+OPH_BASE=/usr/local/ophidia
+
 # Const
-OPHDB_NAME=ophidiadb
-OPHDB_HOST=127.0.0.1
-OPHDB_PORT=3306
-OPHDB_LOGIN=root
-OPHDB_PWD=abcd
-IO_SERVER_PATH=/usr/local/ophidia/oph-cluster/oph-io-server/bin/oph_io_server
-IO_SERVER_TEMPLATE=/usr/local/ophidia/oph-cluster/oph-io-server/etc/oph_ioserver.conf.template
+source ${OPH_BASE}/oph-server/etc/ophidiadb.conf
+IO_SERVER_PATH=${OPH_BASE}/oph-cluster/oph-io-server/bin/oph_io_server
+IO_SERVER_TEMPLATE=${OPH_BASE}/oph-server/etc/oph_ioserver.conf.template
+SCRIPT_DIR=${HOME}/.ophidia
 
 # Body
-# Let us assume there is only one I/O server running on host 127.0.0.2.
-# So that, preliminarly, the host has to registered in Ophidia DB as follows
-# mysql > use ophidiadb;
-# mysql > INSERT INTO host (hostname, cores, memory, status) VALUES ('127.0.0.2',1,1,'down');
-myhost="127.0.0.2"
+myhost=`hostname -i | awk '{print $NF}'`
 myid=1
 
 echo "Add host ${myhost} to partition ${hpid}"
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; INSERT IGNORE INTO host (hostname) VALUES ('${myhost}'); UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
 if [ $? -ne 0 ]; then
 	echo "Query failed"
 	exit 1
 fi
 echo "OphidiaDB updated"
 
-rm -rf ${HOME}/.ophidia/data${myid}/*
-mkdir -p ${HOME}/.ophidia/data${myid}/{var,log}
+rm -rf ${SCRIPT_DIR}/data${myid}/*
+mkdir -p ${SCRIPT_DIR}/data${myid}/{var,log}
 
-cp -f ${IO_SERVER_TEMPLATE} ${HOME}/.ophidia/data${myid}/oph_ioserver.conf
-sed -i "s|\$HOME|${HOME}|g" ${HOME}/.ophidia/data${myid}/oph_ioserver.conf
+cp -f ${IO_SERVER_TEMPLATE} ${SCRIPT_DIR}/data${myid}/oph_ioserver.conf
+sed -i "s|\$SCRIPTDIR|${SCRIPT_DIR}|g" ${SCRIPT_DIR}/data${myid}/oph_ioserver.conf
+sed -i "s|\$HOST|${myhost}|g" ${SCRIPT_DIR}/data${myid}/oph_ioserver.conf
+sed -i "s|\$ID|${myid}|g" ${SCRIPT_DIR}/data${myid}/oph_ioserver.conf
 
 echo "Starting I/O server ${myid}"
-${IO_SERVER_PATH} -i ${myid} -c ${HOME}/.ophidia/data${myid}/oph_ioserver.conf > ${HOME}/.ophidia/data${myid}/log/server.log 2>&1 < /dev/null
+${IO_SERVER_PATH} -i ${myid} -c ${SCRIPT_DIR}/data${myid}/oph_ioserver.conf > ${SCRIPT_DIR}/data${myid}/log/server.log 2>&1 < /dev/null
 echo "Exit from IO server ${myid}"
 
 echo "Remove host ${myhost} from partition ${hpid}"
@@ -64,7 +62,7 @@ if [ $? -ne 0 ]; then
 fi
 echo "OphidiaDB updated"
 
-rm -rf ${HOME}/.ophidia/data${myid}/*
+rm -rf ${SCRIPT_DIR}/data${myid}/*
 
 exit 0
 

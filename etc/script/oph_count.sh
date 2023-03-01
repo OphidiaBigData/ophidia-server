@@ -22,11 +22,7 @@
 WORK_FILE=${1}
 
 # Const
-OPHDB_NAME=ophidiadb
-OPHDB_HOST=127.0.0.1
-OPHDB_PORT=3306
-OPHDB_LOGIN=root
-OPHDB_PWD=abcd
+source /usr/local/ophidia/oph-server/etc/ophidiadb.conf
 
 # Body
 COUNT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -s -N -e "SELECT COUNT(*) FROM host WHERE status = 'down' AND idhost NOT IN (SELECT idhost FROM hashost);" 2> ${WORK_FILE}`

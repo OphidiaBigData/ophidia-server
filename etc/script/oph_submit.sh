@@ -29,10 +29,14 @@ workflowid=${7}
 project=${8}
 taskname=${9}
 
+# Base path
+OPH_BASE=/usr/local/ophidia
+SLURM_BASE=/usr/local/ophidia/extra
+
 # Const
 fixString=
-FRAMEWORK_PATH=/usr/local/ophidia/oph-cluster/oph-analytics-framework
-LAUNCHER=/usr/local/ophidia/extra/bin/srun
+FRAMEWORK_PATH=${OPH_BASE}/oph-cluster/oph-analytics-framework
+LAUNCHER=${SLURM_BASE}/bin/srun
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 SCRIPT_DIR=${HOME}/.ophidia
 SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.submit.sh

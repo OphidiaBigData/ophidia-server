@@ -23,9 +23,12 @@ taskid=${1}
 serverid=${2}
 taskname=${3}
 
+# Base path
+SLURM_BASE=/usr/local/ophidia/extra
+
 # Const
 fixString=
-KILLER=/usr/local/ophidia/extra/bin/scancel
+KILLER=${SLURM_BASE}/bin/scancel
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 
 # Body
