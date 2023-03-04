@@ -19,7 +19,7 @@
 #!/bin/bash
 
 my_dir="$(dirname "$0")"
-source $my_dir/oph_odb.sh
+source $my_dir/../ophidiadb.conf
 
 # Input parameters
 id_hostpartition=${1}

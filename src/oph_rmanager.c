@@ -562,6 +562,7 @@ int oph_get_available_host_number(int *size, int jobid)
 		if (fgets(buffer, OPH_SHORT_STRING_SIZE, file))
 			*size = (int) strtol(buffer, NULL, 10);
 		fclose(file);
+		unlink(workfile);
 	}
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Current cluster size is %d\n", *size);
 #else

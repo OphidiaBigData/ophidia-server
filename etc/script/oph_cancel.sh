@@ -18,17 +18,17 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
+
 # Input parameters
 taskid=${1}
 serverid=${2}
 taskname=${3}
 
-# Base path
-SLURM_BASE=/usr/local/ophidia/extra
-
 # Const
 fixString=
-KILLER=${SLURM_BASE}/bin/scancel
+KILLER=${OPH_EXTRA_LOCATION}/bin/scancel
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 
 # Body

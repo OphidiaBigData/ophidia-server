@@ -18,6 +18,9 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
+
 # Input parameters
 taskid=${1}
 ncores=${2}
@@ -29,14 +32,10 @@ workflowid=${7}
 project=${8}
 taskname=${9}
 
-# Base path
-OPH_BASE=/usr/local/ophidia
-SLURM_BASE=/usr/local/ophidia/extra
-
 # Const
 fixString=
-LAUNCHER=${SLURM_BASE}/bin/srun
-IO_SERVER_LAUNCHER=${OPH_BASE}/oph-server/etc/script/start_ioserver.sh
+LAUNCHER=${OPH_EXTRA_LOCATION}/bin/srun
+IO_SERVER_LAUNCHER=${OPH_SERVER_LOCATION}/etc/script/start_ioserver.sh
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 SCRIPT_DIR=${HOME}/.ophidia
 SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.start.sh

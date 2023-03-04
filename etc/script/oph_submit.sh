@@ -18,6 +18,9 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
+
 # Input parameters
 taskid=${1}
 ncores=${2}
@@ -29,14 +32,9 @@ workflowid=${7}
 project=${8}
 taskname=${9}
 
-# Base path
-OPH_BASE=/usr/local/ophidia
-SLURM_BASE=/usr/local/ophidia/extra
-
 # Const
 fixString=
-FRAMEWORK_PATH=${OPH_BASE}/oph-cluster/oph-analytics-framework
-LAUNCHER=${SLURM_BASE}/bin/srun
+LAUNCHER=${OPH_EXTRA_LOCATION}/bin/srun
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 SCRIPT_DIR=${HOME}/.ophidia
 SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.submit.sh
@@ -45,7 +43,7 @@ SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.submit.sh
 mkdir -p ${SCRIPT_DIR}
 > ${SCRIPT_FILE}
 echo "#!/bin/bash" >> ${SCRIPT_FILE}
-echo "${FRAMEWORK_PATH}/bin/oph_analytics_framework \"${submissionstring}\"" >> ${SCRIPT_FILE}
+echo "${OPERATOR_CLIENT} \"${submissionstring}\"" >> ${SCRIPT_FILE}
 chmod +x ${SCRIPT_FILE}
 
 MPI_TYPE=--mpi=pmi2
