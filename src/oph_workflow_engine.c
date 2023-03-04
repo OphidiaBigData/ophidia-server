@@ -29,6 +29,7 @@
 #include "oph_subset_library.h"
 #include "oph_filters.h"
 #include "oph_service_info.h"
+#include "oph_known_operators.h"
 
 #include <sys/stat.h>
 #include <sys/time.h>

@@ -18,11 +18,14 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
+
 # Input parameters
 WORK_FILE=${1}
 
 # Const
-source /usr/local/ophidia/oph-server/etc/ophidiadb.conf
+source ${OPH_SERVER_LOCATION}/etc/ophidiadb.conf
 
 # Body
 COUNT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -s -N -e "SELECT COUNT(*) FROM host WHERE status = 'down' AND idhost NOT IN (SELECT idhost FROM hashost);" 2> ${WORK_FILE}`

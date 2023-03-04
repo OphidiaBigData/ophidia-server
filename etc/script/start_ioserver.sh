@@ -18,16 +18,16 @@
 
 #!/bin/bash
 
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
+
 # Input parameters
 hpid=${1}
 
-# Base path
-OPH_BASE=/usr/local/ophidia
-
 # Const
-source ${OPH_BASE}/oph-server/etc/ophidiadb.conf
-IO_SERVER_PATH=${OPH_BASE}/oph-cluster/oph-io-server/bin/oph_io_server
-IO_SERVER_TEMPLATE=${OPH_BASE}/oph-server/etc/oph_ioserver.conf.template
+source ${OPH_SERVER_LOCATION}/etc/ophidiadb.conf
+IO_SERVER_PATH=${OPH_IOSERVER_LOCATION}/bin/oph_io_server
+IO_SERVER_TEMPLATE=${OPH_SERVER_LOCATION}/etc/oph_ioserver.conf.template
 SCRIPT_DIR=${HOME}/.ophidia
 
 # Body

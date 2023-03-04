@@ -18,14 +18,14 @@
 
 #!/bin/bash
 
-# Input parameters
+my_dir="$(dirname "$0")"
+source $my_dir/../server.conf
 
-# Base path
-SLURM_BASE=/usr/local/ophidia/extra
+# Input parameters
 
 # Const
 fixString=
-CHECKER=${SLURM_BASE}/bin/squeue
+CHECKER=${OPH_EXTRA_LOCATION}/bin/squeue
 
 # Body
 ${CHECKER} -o "%j %u"

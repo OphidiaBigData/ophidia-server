@@ -274,6 +274,28 @@ AC_ARG_WITH(framework_path,
 OPH_FRAMEWORK_LOCATION=${framework_path}
 AC_SUBST(OPH_FRAMEWORK_LOCATION)
 
+AC_ARG_WITH(ophidiaio_server_path,
+	   [  --with-ophidiaio-server-path=PATH 		Location of oph-io-server],
+	   [
+		ophidiaio_server_path="$withval"
+	   ],
+	   [
+		ophidiaio_server_path="/usr/local/ophidia/oph-cluster/oph-io-server"
+	   ])
+OPH_IOSERVER_LOCATION=${ophidiaio_server_path}
+AC_SUBST(OPH_IOSERVER_LOCATION)
+
+AC_ARG_WITH(extra_path,
+	   [  --with-extra-path=PATH 		Location of extra packages, e.g. SLURM],
+	   [
+		extra_path="$withval"
+	   ],
+	   [
+		extra_path="/usr/local/ophidia/extra"
+	   ])
+OPH_EXTRA_LOCATION=${extra_path}
+AC_SUBST(OPH_EXTRA_LOCATION)
+
 AC_ARG_WITH(web_server_url,
 	   [  --with-web-server-url=URL 		Location of web server],
 	   [
