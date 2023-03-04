@@ -20,19 +20,19 @@
 
 my_dir="$(dirname "$0")"
 source $my_dir/../server.conf
+source $my_dir/../ophidiadb.conf
 
 # Input parameters
 hpid=${1}
 
 # Const
-source ${OPH_SERVER_LOCATION}/etc/ophidiadb.conf
 IO_SERVER_PATH=${OPH_IOSERVER_LOCATION}/bin/oph_io_server
 IO_SERVER_TEMPLATE=${OPH_SERVER_LOCATION}/etc/oph_ioserver.conf.template
 SCRIPT_DIR=${HOME}/.ophidia
 
 # Body
-myhost=`hostname -i | awk '{print $NF}'`
-myid=1
+myhost=$(hostname -i | awk '{print $NF}')
+myid=${myhost##*.}
 
 echo "Add host ${myhost} to partition ${hpid}"
 mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; INSERT IGNORE INTO host (hostname) VALUES ('${myhost}'); UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
