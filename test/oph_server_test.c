@@ -116,6 +116,17 @@ char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
 #endif
 
+int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
+				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
+				     const char *taskname, const char *operator_name, pthread_t * tid);
+int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB, pthread_mutex_t * flag);
+void freeBlock(char ***block, unsigned int count);
+int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd,
+		     char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **_query, pthread_mutex_t * flag);
+int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
+			char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query, pthread_mutex_t * flag);
+void *_oph_wait(oph_notify_data * data);
+
 void set_global_values(const char *configuration_file)
 {
 	if (!configuration_file)
@@ -4222,11 +4233,11 @@ int _check_oph_server(const char *function, int option)
 				break;
 
 			case 1:
-				res = _oph_mf_parse_KV(NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
+				res = _oph_mf_parse_KV(NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 				break;
 
 			case 2:
-				res = _oph_mf_parse_query(NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
+				res = _oph_mf_parse_query(NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL);
 				break;
 
 			case 3:
