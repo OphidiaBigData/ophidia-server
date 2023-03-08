@@ -3142,7 +3142,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									break;
 								}
 								jjj++;
-								snprintf(tmp, OPH_MAX_STRING_SIZE, oph_cluster_increase ? "%s" : "%d", oph_cluster_increase ? OPH_INFINITY : available_hosts);
+								if (oph_cluster_increase)
+									strcpy(tmp, OPH_INFINITY);
+								else
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
 								jsonvalues[jjj] = strdup(tmp);
 								if (!jsonvalues[jjj]) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -3704,7 +3707,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									break;
 								}
 								jjj++;
-								snprintf(tmp, OPH_MAX_STRING_SIZE, oph_cluster_increase ? "%s" : "%d", oph_cluster_increase ? OPH_INFINITY : available_hosts);
+								if (oph_cluster_increase)
+									strcpy(tmp, OPH_INFINITY);
+								else
+									snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
 								jsonvalues[jjj] = strdup(tmp);
 								if (!jsonvalues[jjj]) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
