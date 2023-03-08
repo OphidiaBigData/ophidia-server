@@ -35,7 +35,7 @@ myhost=$(hostname -i | awk '{print $NF}')
 myid=${myhost##*.}
 
 echo "Add host ${myhost} to partition ${hpid}"
-mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; INSERT IGNORE INTO host (hostname) VALUES ('${myhost}'); UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
+mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} ${OPHDB_NAME} -e "START TRANSACTION; INSERT IGNORE INTO host (hostname) VALUES ('${myhost}'); INSERT IGNORE INTO dbmsinstance (idhost, port, ioservertype) SELECT idhost, 65000, 'ophidiaio_memory' FROM host WHERE hostname='${myhost}'; UPDATE host SET status = 'up' WHERE hostname = '${myhost}'; INSERT INTO hashost(idhostpartition, idhost) VALUES (${hpid}, (SELECT idhost FROM host WHERE hostname = '${myhost}')); COMMIT;"
 if [ $? -ne 0 ]; then
 	echo "Query failed"
 	exit 1
