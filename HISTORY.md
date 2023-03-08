@@ -1,4 +1,10 @@
 
+## Next release
+
+### Added:
+
+- Option ENABLE_CLUSTER_INCREASE
+
 ## v1.7.3 - 2023-01-20
 
 ### Fixed:

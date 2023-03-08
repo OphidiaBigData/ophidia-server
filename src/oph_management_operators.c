@@ -29,6 +29,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#define OPH_INFINITY "Infinity"
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
@@ -39,6 +41,7 @@ extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
 extern char oph_cluster_deployment;
+extern char oph_cluster_increase;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
@@ -3139,7 +3142,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									break;
 								}
 								jjj++;
-								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
+								snprintf(tmp, OPH_MAX_STRING_SIZE, oph_cluster_increase ? "%s" : "%d", oph_cluster_increase ? OPH_INFINITY : available_hosts);
 								jsonvalues[jjj] = strdup(tmp);
 								if (!jsonvalues[jjj]) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -3701,7 +3704,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									break;
 								}
 								jjj++;
-								snprintf(tmp, OPH_MAX_STRING_SIZE, "%d", available_hosts);
+								snprintf(tmp, OPH_MAX_STRING_SIZE, oph_cluster_increase ? "%s" : "%d", oph_cluster_increase ? OPH_INFINITY : available_hosts);
 								jsonvalues[jjj] = strdup(tmp);
 								if (!jsonvalues[jjj]) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -4282,47 +4285,50 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								break;
 							}
 
-							if (oph_get_available_host_number(&available_hosts, idjob)) {
-								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
-								break;
-							}
-							if (!available_hosts) {
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "No host available");
-								break;
-							}
-							if (max_hosts) {
-								int rhosts = 0;
-								if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
-									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n", username);
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+							if (!oph_cluster_increase) {
+								if (oph_get_available_host_number(&available_hosts, idjob)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available hosts cannot be retrieved\n");
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
 									break;
 								}
-								if (!nhosts) {
-									nhosts = max_hosts - rhosts;
-									if (nhosts <= 0) {
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
-										break;
-									}
-								}
-								if (rhosts + nhosts > max_hosts) {
-									nhosts = max_hosts - rhosts;
-									if (nhosts <= 0) {
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
-										break;
-									}
-									if (nhosts > available_hosts)
-										nhosts = available_hosts;
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: only %d host%s available", nhosts,
-										 nhosts == 1 ? " is" : "s are");
+								if (!available_hosts) {
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "No host available");
 									break;
 								}
-							} else if (!nhosts)
-								nhosts = available_hosts;
-							if (nhosts > available_hosts) {
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive host number: only %d host%s available", available_hosts,
-									 available_hosts == 1 ? " is" : "s are");
-								break;
+								if (max_hosts) {
+									int rhosts = 0;
+									if (oph_odb_get_reserved_hosts(&oDB, id_user, &rhosts)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved hosts of '%s' cannot be retrieved\n",
+											   username);
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved hosts!");
+										break;
+									}
+									if (!nhosts) {
+										nhosts = max_hosts - rhosts;
+										if (nhosts <= 0) {
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
+											break;
+										}
+									}
+									if (rhosts + nhosts > max_hosts) {
+										nhosts = max_hosts - rhosts;
+										if (nhosts <= 0) {
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
+											break;
+										}
+										if (nhosts > available_hosts)
+											nhosts = available_hosts;
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: only %d host%s available",
+											 nhosts, nhosts == 1 ? " is" : "s are");
+										break;
+									}
+								} else if (!nhosts)
+									nhosts = available_hosts;
+								if (nhosts > available_hosts) {
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive host number: only %d host%s available", available_hosts,
+										 available_hosts == 1 ? " is" : "s are");
+									break;
+								}
 							}
 
 							int id_hostpartition = 0;
