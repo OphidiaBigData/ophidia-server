@@ -18,7 +18,7 @@
 
 #!/bin/bash
 
-my_dir="$(dirname "$0")"
+my_dir=$(dirname "$0")
 source $my_dir/../server.conf
 source $my_dir/../ophidiadb.conf
 
