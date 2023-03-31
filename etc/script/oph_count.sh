@@ -29,7 +29,7 @@ COUNT=`mysql -u ${OPHDB_LOGIN} -p${OPHDB_PWD} -h ${OPHDB_HOST} -P ${OPHDB_PORT} 
 ERROR=`wc -l < ${WORK_FILE}`
 if [ $ERROR -gt 1 ]; then
 	echo "Query failed"
-	exit -1
+	exit 1
 fi
 echo $COUNT > ${WORK_FILE}
 exit 0

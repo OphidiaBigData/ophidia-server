@@ -50,11 +50,11 @@ chmod +x ${SCRIPT_FILE}
 ${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J "${JOBNAME}" ${SCRIPT_FILE}
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${SCRIPT_FILE}"
-	rm ${SCRIPT_FILE}
-	exit -1
+	rm -f ${SCRIPT_FILE}
+	exit 1
 fi
 
-rm ${SCRIPT_FILE}
+rm -f ${SCRIPT_FILE}
 
 exit 0
 
