@@ -1,9 +1,13 @@
 
-## Next release
+## v1.7.4 - 2023-03-31
 
 ### Added:
 
 - Option ENABLE_CLUSTER_INCREASE
+
+### Changed:
+
+- Argument AUTO_RETRY is set to 0 by default
 
 ## v1.7.3 - 2023-01-20
 

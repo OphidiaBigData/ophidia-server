@@ -94,6 +94,7 @@ unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment;
+char oph_cluster_increase = 0;
 char oph_cancel_all_enabled = 0;
 #ifdef OPH_DIRECT_OUTPUT
 char oph_direct_output = 1;
