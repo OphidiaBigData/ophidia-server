@@ -19,8 +19,8 @@
 #!/bin/bash
 
 my_dir=$(dirname "$0")
-source $my_dir/../server.conf
-source $my_dir/../ophidiadb.conf
+. $my_dir/../server.conf
+. $my_dir/../ophidiadb.conf
 
 # Input parameters
 hpid=${1}

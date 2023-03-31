@@ -19,7 +19,7 @@
 #!/bin/bash
 
 my_dir=$(dirname "$0")
-source $my_dir/../server.conf
+. $my_dir/../server.conf
 
 # Input parameters
 taskid=${1}

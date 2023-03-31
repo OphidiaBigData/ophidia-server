@@ -19,7 +19,7 @@
 #!/bin/bash
 
 my_dir=$(dirname "$0")
-source $my_dir/../ophidiadb.conf
+. $my_dir/../ophidiadb.conf
 
 # Input parameters
 WORK_FILE=${1}
