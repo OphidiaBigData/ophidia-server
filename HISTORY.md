@@ -3,7 +3,7 @@
 
 ### Added:
 
-- Option ENABLE_CLUSTER_INCREASE
+- New argument ENABLE_CLUSTER_INCREASE
 
 ### Changed:
 
@@ -72,7 +72,7 @@
 
 ### Changed:
 
-- Improve reliability of OPH_WAIT in case of cancellation  
+- Improve reliability of OPH_WAIT in case of cancellation
 - New 'measure' and subset parameters to OPH_WAIT operator
 - 'author' and 'abstract' are not mandatory parameters of a workflow anymore
 
