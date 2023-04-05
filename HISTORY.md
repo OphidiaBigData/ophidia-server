@@ -1,4 +1,10 @@
 
+## Next release
+
+### Fixed:
+
+- Fix port in template of Ophidia IO Server configuration
+
 ## v1.7.4 - 2023-03-31
 
 ### Added:
