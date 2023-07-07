@@ -3,7 +3,8 @@
 
 ### Fixed:
 
-- Fix port in template of Ophidia IO Server configuration
+- Handling of flag 'output' in setting its value to an input argument from a dependence
+- Port in template of Ophidia IO Server configuration
 
 ## v1.7.4 - 2023-03-31
 

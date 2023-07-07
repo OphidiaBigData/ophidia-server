@@ -2146,6 +2146,7 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 		} else if (input) {
 			snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s%s", OPH_OPERATOR_PARAMETER_OUTPUT, OPH_SEPARATOR_KV, input, OPH_SEPARATOR_PARAM);
 			strncat(add_to_notify, tmp, OPH_MAX_STRING_SIZE - strlen(add_to_notify));
+			wd->filename = strdup(input);
 		}
 		if (input)
 			free(input);
