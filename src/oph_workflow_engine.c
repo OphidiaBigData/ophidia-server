@@ -4523,37 +4523,43 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						}
 					}
 
-					int outputs_file = -1;
+					int outputs_file = -1, f_i = -1, o_i = -1;
+					// Priority on flag 'file' with respect to 'output'
 					for (i = 0; i < outputs_num; ++i) {
 						if (!strncmp(outputs_keys[i], OPH_ARG_FILE, OPH_MAX_STRING_SIZE)) {
-							for (j = 0; j < outputs_num; ++j) {
-								if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-									free(outputs_values[j]);
-									outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
-									outputs_file = j;
-									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
-									      OPH_ARG_FILE);
-									break;
-								}
-							}
-							if (j == outputs_num) {	// parameter 'cube' not found
-								char **outputs_keys_new = (char **) realloc(outputs_keys, (1 + outputs_num) * sizeof(char *));
-								if (outputs_keys_new) {
-									outputs_keys = outputs_keys_new;
-									outputs_keys[outputs_num] = strdup(OPH_ARG_CUBE);
-								} else
-									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
-								char **outputs_values_new = (char **) realloc(outputs_values, (1 + outputs_num) * sizeof(char *));
-								if (outputs_values_new) {
-									outputs_values = outputs_values_new;
-									outputs_values[outputs_num] = strdup(outputs_values[i]);
-								} else
-									pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
-								outputs_file = outputs_num;
-								outputs_num++;
-								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
-							}
+							f_i = i;
 							break;
+						}
+						if (!strncmp(outputs_keys[i], OPH_OPERATOR_PARAMETER_OUTPUT, OPH_MAX_STRING_SIZE))
+							o_i = i;
+					}
+					i = f_i >= 0 ? f_i : o_i;
+					if (i >= 0) {
+						for (j = 0; j < outputs_num; ++j) {
+							if ((i != j) && !strncmp(outputs_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+								free(outputs_values[j]);
+								outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
+								outputs_file = j;
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE, OPH_ARG_FILE);
+								break;
+							}
+						}
+						if (j == outputs_num) {	// parameter 'cube' not found
+							char **outputs_keys_new = (char **) realloc(outputs_keys, (1 + outputs_num) * sizeof(char *));
+							if (outputs_keys_new) {
+								outputs_keys = outputs_keys_new;
+								outputs_keys[outputs_num] = strdup(OPH_ARG_CUBE);
+							} else
+								pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+							char **outputs_values_new = (char **) realloc(outputs_values, (1 + outputs_num) * sizeof(char *));
+							if (outputs_values_new) {
+								outputs_values = outputs_values_new;
+								outputs_values[outputs_num] = strdup(outputs_values[i]);
+							} else
+								pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: error in adding parameter '%s'\n", ttype, jobid, OPH_ARG_CUBE);
+							outputs_file = outputs_num;
+							outputs_num++;
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s=%s' to notification\n", ttype, jobid, OPH_ARG_CUBE, outputs_values[i]);
 						}
 					}
 

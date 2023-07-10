@@ -1,4 +1,15 @@
 
+## Next release
+
+### Fixed:
+
+- Handling of flag 'output' in setting its value to an input argument from a dependence
+- Port in template of Ophidia IO Server configuration
+
+### Added:
+
+- Argument 'fileref' to OPH_WAIT [#64](https://github.com/OphidiaBigData/ophidia-server/pull/64)
+
 ## v1.7.4 - 2023-03-31
 
 ### Added:
