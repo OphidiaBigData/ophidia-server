@@ -77,7 +77,7 @@ typedef struct _oph_command_data {
 	int id;
 } oph_command_data;
 
-void __oph_system(oph_command_data * data)
+void __oph_system(oph_command_data *data)
 {
 	if (data) {
 		if (data->command) {
@@ -117,7 +117,7 @@ void __oph_system(oph_command_data * data)
 	}
 }
 
-void *_oph_system(oph_command_data * data)
+void *_oph_system(oph_command_data *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -138,7 +138,7 @@ void *_oph_system(oph_command_data * data)
 
 int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
 {
-	if (!command) {
+	if(!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
@@ -207,7 +207,7 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	return RMANAGER_SUCCESS;
 }
 
-int oph_read_rmanager_conf(oph_rmanager * orm)
+int oph_read_rmanager_conf(oph_rmanager *orm)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -322,7 +322,7 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 
 }
 
-int initialize_rmanager(oph_rmanager * orm)
+int initialize_rmanager(oph_rmanager *orm)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -560,7 +560,7 @@ int oph_get_available_host_number(int *size, int jobid)
 	return RMANAGER_SUCCESS;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project,
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager *orm, int jobid, const char *username, const char *project,
 			 const char *taskname, int wid, char **cmd, char type)
 {
 	if (!orm) {
@@ -629,7 +629,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	return RMANAGER_SUCCESS;
 }
 
-int free_oph_rmanager(oph_rmanager * orm)
+int free_oph_rmanager(oph_rmanager *orm)
 {
 	if (!orm) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -702,7 +702,7 @@ int free_oph_rmanager(oph_rmanager * orm)
 
 }
 
-int _oph_get_result_from_file(char *filename, char **response, pthread_mutex_t * flag)
+int _oph_get_result_from_file(char *filename, char **response, pthread_mutex_t *flag)
 {
 	/* declare a file pointer */
 	FILE *infile;

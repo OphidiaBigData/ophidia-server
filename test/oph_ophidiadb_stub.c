@@ -26,12 +26,12 @@ extern ophidiadb *ophDB;
 extern pthread_mutex_t global_flag;
 #endif
 
-int oph_odb_read_config_ophidiadb(ophidiadb * oDB)
+int oph_odb_read_config_ophidiadb(ophidiadb *oDB)
 {
 	return oph_odb_initialize_ophidiadb(oDB);
 }
 
-int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
+int oph_odb_initialize_ophidiadb(ophidiadb *oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -45,7 +45,7 @@ int oph_odb_initialize_ophidiadb(ophidiadb * oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_free_ophidiadb(ophidiadb * oDB)
+int oph_odb_free_ophidiadb(ophidiadb *oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -76,7 +76,7 @@ int oph_odb_free_ophidiadb(ophidiadb * oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
+int oph_odb_connect_to_ophidiadb(ophidiadb *oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -84,7 +84,7 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
+int oph_odb_check_connection_to_ophidiadb(ophidiadb *oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -92,7 +92,7 @@ int oph_odb_check_connection_to_ophidiadb(ophidiadb * oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
+int oph_odb_disconnect_from_ophidiadb(ophidiadb *oDB)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -103,7 +103,7 @@ int oph_odb_disconnect_from_ophidiadb(ophidiadb * oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char ***ctime, int *nn)
+int oph_odb_retrieve_ids(ophidiadb *oDB, const char *command, int **id, char ***ctime, int *nn)
 {
 	if (!oDB || !command || !id || !nn)
 		return OPH_ODB_NULL_PARAM;
@@ -124,7 +124,7 @@ int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char **
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list * list)
+int oph_odb_retrieve_list(ophidiadb *oDB, const char *command, ophidiadb_list *list)
 {
 	if (!oDB || !command || !list)
 		return OPH_ODB_NULL_PARAM;
@@ -151,7 +151,7 @@ int oph_odb_retrieve_list(ophidiadb * oDB, const char *command, ophidiadb_list *
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_initialize_ophidiadb_list(ophidiadb_list * list)
+int oph_odb_initialize_ophidiadb_list(ophidiadb_list *list)
 {
 	if (!list)
 		return OPH_ODB_NULL_PARAM;
@@ -166,7 +166,7 @@ int oph_odb_initialize_ophidiadb_list(ophidiadb_list * list)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_free_ophidiadb_list(ophidiadb_list * list)
+int oph_odb_free_ophidiadb_list(ophidiadb_list *list)
 {
 	int j;
 	if (!list)
@@ -207,7 +207,7 @@ int oph_odb_free_ophidiadb_list(ophidiadb_list * list)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube, int *counter)
+int oph_odb_extract_datacube_ids(ophidiadb *oDB, char *query, cube **datacube, int *counter)
 {
 	if (!oDB || !query || !datacube || !counter)
 		return OPH_ODB_NULL_PARAM;
@@ -231,7 +231,7 @@ int oph_odb_extract_datacube_ids(ophidiadb * oDB, char *query, cube ** datacube,
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_insert_user(ophidiadb * oDB, const char *username)
+int oph_odb_insert_user(ophidiadb *oDB, const char *username)
 {
 	if (!oDB || !username)
 		return OPH_ODB_NULL_PARAM;
@@ -239,30 +239,7 @@ int oph_odb_insert_user(ophidiadb * oDB, const char *username)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_insert_user2(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
-{
-	UNUSED(password);
-	UNUSED(name);
-	UNUSED(surname);
-	UNUSED(email);
-	UNUSED(country);
-	UNUSED(max_hosts);
-
-	if (!oDB || !username)
-		return OPH_ODB_NULL_PARAM;
-
-	return OPH_ODB_SUCCESS;
-}
-
-int oph_odb_delete_user(ophidiadb * oDB, const char *username)
-{
-	if (!oDB || !username)
-		return OPH_ODB_NULL_PARAM;
-
-	return OPH_ODB_SUCCESS;
-}
-
-int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
+int oph_odb_insert_user2(ophidiadb *oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
 {
 	UNUSED(password);
 	UNUSED(name);
@@ -277,7 +254,30 @@ int oph_odb_update_user(ophidiadb * oDB, const char *username, const char *passw
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int id_user)
+int oph_odb_delete_user(ophidiadb *oDB, const char *username)
+{
+	if (!oDB || !username)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_update_user(ophidiadb *oDB, const char *username, const char *password, const char *name, const char *surname, const char *email, const char *country, const int max_hosts)
+{
+	UNUSED(password);
+	UNUSED(name);
+	UNUSED(surname);
+	UNUSED(email);
+	UNUSED(country);
+	UNUSED(max_hosts);
+
+	if (!oDB || !username)
+		return OPH_ODB_NULL_PARAM;
+
+	return OPH_ODB_SUCCESS;
+}
+
+int oph_odb_create_hp(ophidiadb *oDB, const char *name, const char *parent, int id_user)
 {
 	if (!oDB || !name || !parent || !id_user)
 		return OPH_ODB_NULL_PARAM;
@@ -285,7 +285,7 @@ int oph_odb_create_hp(ophidiadb * oDB, const char *name, const char *parent, int
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
+int oph_odb_destroy_hp(ophidiadb *oDB, const char *name)
 {
 	if (!oDB || !name)
 		return OPH_ODB_NULL_PARAM;
@@ -293,7 +293,7 @@ int oph_odb_destroy_hp(ophidiadb * oDB, const char *name)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition)
+int oph_odb_reserve_hp(ophidiadb *oDB, const char *name, int id_user, int id_job, int hosts, char type, int *id_hostpartition)
 {
 	if (!oDB || !name || !id_user || !id_job || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
@@ -301,7 +301,7 @@ int oph_odb_reserve_hp(ophidiadb * oDB, const char *name, int id_user, int id_jo
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_release_hp(ophidiadb * oDB, int id_hostpartition)
+int oph_odb_release_hp(ophidiadb *oDB, int id_hostpartition)
 {
 	if (!oDB || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
@@ -314,7 +314,7 @@ int oph_odb_release_hp2(int id_hostpartition)
 	return oph_odb_release_hp(ophDB, id_hostpartition);
 }
 
-int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
+int oph_odb_retrieve_hp(ophidiadb *oDB, const char *name, int id_user, int *id_hostpartition, int *id_job, char *host_type)
 {
 	if (!oDB || !name || !id_user || !id_hostpartition)
 		return OPH_ODB_NULL_PARAM;
@@ -324,7 +324,7 @@ int oph_odb_retrieve_hp(ophidiadb * oDB, const char *name, int id_user, int *id_
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
+int oph_odb_get_reserved_hosts(ophidiadb *oDB, int id_user, int *rhosts)
 {
 	if (!oDB || !id_user || !rhosts)
 		return OPH_ODB_NULL_PARAM;
@@ -332,7 +332,7 @@ int oph_odb_get_reserved_hosts(ophidiadb * oDB, int id_user, int *rhosts)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_get_total_hosts(ophidiadb * oDB, int *thosts)
+int oph_odb_get_total_hosts(ophidiadb *oDB, int *thosts)
 {
 	if (!oDB || !thosts)
 		return OPH_ODB_NULL_PARAM;

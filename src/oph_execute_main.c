@@ -222,7 +222,7 @@ typedef struct __ophExecuteMain_data {
 	xsd__string request;
 } _ophExecuteMain_data;
 
-void *_ophExecuteMain(_ophExecuteMain_data * data)
+void *_ophExecuteMain(_ophExecuteMain_data *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());

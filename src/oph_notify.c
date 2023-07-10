@@ -36,7 +36,7 @@ extern pthread_mutex_t global_flag;
 extern pthread_mutex_t service_flag;
 #endif
 
-int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json, xsd__int * response)
+int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json, xsd__int *response)
 {
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
