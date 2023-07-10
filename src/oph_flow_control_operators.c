@@ -2082,6 +2082,37 @@ int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message,
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILENAME) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				if (!wd->filename)
 					wd->filename = strdup(arg_value);
+			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_FILEREF) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
+				// TODO: local file system is not correct, unless it corresponds to remote file system is correct
+				// TODO: reference is not based on base_src_path
+				char *src_paths = NULL;
+				FILE *src_list_file = fopen(arg_value, "r");
+				if (!src_list_file) {
+					snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Unable to access '%s'!", arg_value);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+					free(arg_value);
+					break;
+				}
+				size_t size = 0;
+				char buffer[OPH_WORKFLOW_MAX_STRING], *tmp = NULL;
+				if (fgets(buffer, OPH_WORKFLOW_MAX_STRING, src_list_file)) {
+					if ((size = strlen(buffer)) && (buffer[size - 1] == '\n'))
+						buffer[size - 1] = 0;
+					src_paths = strdup(buffer);
+					if (!src_paths) {
+						snprintf(error_message, OPH_WORKFLOW_MAX_STRING, "Memory error!");
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%s\n", error_message);
+						free(arg_value);
+						fclose(src_list_file);
+						break;
+					}
+				}
+				fclose(src_list_file);
+				if (src_paths && strlen(src_paths)) {
+					if (wd->filename)
+						free(wd->filename);
+					wd->filename = src_paths;
+				}
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_INPUT) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
 				input = strdup(arg_value);
 			} else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_OUTPUT) && strcasecmp(arg_value, OPH_COMMON_NULL)) {
