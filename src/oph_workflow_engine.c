@@ -4540,7 +4540,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								free(outputs_values[j]);
 								outputs_values[j] = strdup(outputs_values[i]);	// Option 'file' has the priority, value of 'cube' is overwritten
 								outputs_file = j;
-								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE, OPH_ARG_FILE);
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: value of '%s' is overwritten with value of '%s'\n", ttype, jobid, OPH_ARG_CUBE,
+								      OPH_ARG_FILE);
 								break;
 							}
 						}
