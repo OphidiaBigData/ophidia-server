@@ -1,0 +1,42 @@
+[client]
+port    = $PORT
+socket  = $PREFIX/$MYSQLENV/var/run/mysqld/mysqld.sock
+###user = $USER
+###password = $PASSWORD
+
+
+[mysqld_safe]
+log-error       = $PREFIX/$MYSQLENV/var/log/mysql/mysql.log
+pid-file        = $PREFIX/$MYSQLENV/var/run/mysqld/mysqld.pid
+
+[mysqld]
+# Basic Settings
+bind-address = 0.0.0.0
+user            = mysql
+pid-file        = $PREFIX/$MYSQLENV/var/run/mysqld/mysqld.pid
+socket          = $PREFIX/$MYSQLENV/var/run/mysqld/mysqld.sock
+port            = $PORT
+basedir         = $PREFIX/$MYSQLENV
+datadir         = $PREFIX/$MYSQLENV/var/lib/mysql
+tmpdir          = $PREFIX/$MYSQLENV/tmp
+plugin_dir      = $PREFIX/$MYSQLENV/ophidia-primitives/lib
+
+lc-messages-dir         = $PREFIX/$MYSQLENV/share/mysql
+
+
+# CACHES AND LIMITS #
+connect_timeout                 = 60
+max_connections                 = 1024
+max_user_connections    = 0
+max_allowed_packet              = 10M
+open_files_limit                = 4096
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links  = 0
+
+# Recommended in standard MySQL setup
+sql_mode        = NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+
+# LOGGING
+general_log_file        = $PREFIX/$MYSQLENV/var/log/mysql/mysql.log
+log-error           = $PREFIX/$MYSQLENV/var/log/mysql/mysql-error.log
