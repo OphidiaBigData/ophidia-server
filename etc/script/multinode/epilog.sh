@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #    Ophidia Server
-#    Copyright (C) 2012-2021 CMCC Foundation
+#    Copyright (C) 2012-2023 CMCC Foundation
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #
 
 # Start mysql
-module load anaconda3/2020.02
+module load anaconda
 source activate $HOME/mysql-env
 myhost=`hostname`
 OPHDB_NAME=ophidiadb
