@@ -24,7 +24,12 @@ myuser=ophidia
 mypassword=ophidia2022
 mymemory=16384
 numnodes=1
-export PREFIX=/scratch/shared/
+
+if [ $# -eq 0 ]; then
+	export PREFIX=/scratch/shared/
+else
+	export PREFIX=$1
+fi
 export MYSQLENV=mysql-env
 export CNFDIR=$(realpath "$(dirname "$0")")
 export TMP=$PREFIX/tmp;
@@ -90,7 +95,7 @@ if ! command -v srun > $CNFDIR/slurm_path.txt
 then
     if ! spack location -i slurm
     then
-        $CNFDIR/slurm-conf.sh
+        $CNFDIR/slurm-conf.sh $PREFIX
     fi
     export SLURM_PATH=`spack location -i slurm`
 else

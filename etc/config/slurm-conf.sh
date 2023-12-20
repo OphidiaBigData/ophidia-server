@@ -18,7 +18,11 @@
 
 #!/bin/bash
 set -e
-export PREFIX=/scratch/shared/
+if [ $# -eq 0 ]; then
+        export PREFIX=/scratch/shared/
+else
+        export PREFIX=$1
+fi
 export CNFDIR=$(realpath "$(dirname "$0")")
 echo "[LOG] MUNGE AND SLURM INSTALLATION"
 spack install slurm
