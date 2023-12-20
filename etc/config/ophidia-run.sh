@@ -20,7 +20,9 @@
 
 set -e
 
-if [ $# -gt 1 ]; then
+echo "[LOG] Total number of arguments: $#"
+
+if [ $# -gt 0 ]; then
 	export PREFIX=$1
 else
 	echo "[LOG] SET PREFIX TO $PWD/share"
@@ -30,17 +32,33 @@ fi
 
 export MYSQLENV=mysql-env
 export SLURM_CONF=$HOME/.ophidia/etc/slurm.conf
+export CNFDIR=$(realpath "$(dirname "$0")")
 
-cd `spack location -i munge`
-echo "[LOG] STARTING MUNGE..."
-sbin/munged -S $HOME/.ophidia/var_run_munge/munge.socket.2
-cd `spack location -i slurm`
-echo "[LOG] STARTING SLURM..."
-sbin/slurmd
-sbin/slurmctld
+if ! command -v srun > $CNFDIR/slurm_path.txt
+then
+    if ! spack location -i slurm
+    then
+        $CNFDIR/slurm-conf.sh $PREFIX
+    fi
+    export SLURM_PATH=`spack location -i slurm`
+	cd `spack location -i munge`
+	echo "[LOG] STARTING MUNGE..."
+	sbin/munged -S $HOME/.ophidia/var_run_munge/munge.socket.2
+	cd `spack location -i slurm`
+	echo "[LOG] STARTING SLURM..."
+	sbin/slurmd
+	sbin/slurmctld
+else
+    SRUN_PATH=$(cat $CNFDIR/slurm_path.txt)
+    tmp=$(dirname $SRUN_PATH)
+    export SLURM_PATH=${tmp%/*}
+fi
+echo "[LOG] SLURM IS RUNNING"
+
 echo "[LOG] STARTING MYSQL..."
-cd $CONDA_PREFIX
+cd $PREFIX/$MYSQLENV
 bin/mysqld_safe --defaults-file=$PREFIX/$MYSQLENV/etc/my.cnf &
+
 echo "[LOG] STARTING OPHIDIA SERVER..."
 cd `spack location -i ophidia-server`
 bin/oph_server -d 2>&1 > /dev/null < /dev/null &

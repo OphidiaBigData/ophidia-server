@@ -26,20 +26,22 @@ myuser=ophidia
 mymemory=16384
 numnodes=1
 
-if [ $# -gt 1 ]; then
+echo "[LOG] Total number of arguments: $#"
+
+if [ $# -gt 0 ]; then
 	export PREFIX=$1
 else
 	echo "[LOG] SET PREFIX TO $PWD/share"
 	mkdir -p share
 	export PREFIX=$PWD/share
 fi
-if [ $# -gt 2 ]; then
+if [ $# -gt 1 ]; then
 	mypassword=$2
 else
 	echo "[LOG] USE DEFAULT PASSWORD"
 	mypassword=ophidia2022
 fi
-if [ $# -gt 3 ]; then
+if [ $# -gt 2 ]; then
 	echo "[LOG] CONDA INSTALLATION"
 	wget https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
 	bash Anaconda3-2022.10-Linux-x86_64.sh
