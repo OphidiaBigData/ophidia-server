@@ -170,5 +170,8 @@ mkdir -p log
 
 echo "[LOG] MYSQL SERVER SHUTDOWN"
 cd $PREFIX/$MYSQLENV
-bin/mysqladmin -u root shutdown -p$mypassword
+bin/mysqladmin -u root shutdown -p${mypassword}
 conda deactivate
+
+echo "[LOG] OPHIDIA HAS BEEN INSTALLED"
+

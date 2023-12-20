@@ -46,4 +46,6 @@ test/*-coverage
 coverage.xml
 ophidiadb
 .dirstamp
+mysql.sql
+slurm_path.txt
 
