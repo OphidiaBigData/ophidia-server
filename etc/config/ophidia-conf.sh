@@ -17,24 +17,42 @@
 #
 
 #!/bin/bash
+
 set -e
+
 myhost=`hostname`
 myport=3306
 myuser=ophidia
-mypassword=ophidia2022
 mymemory=16384
 numnodes=1
 
-if [ $# -eq 0 ]; then
-	export PREFIX=/scratch/shared/
-else
+if [ $# -gt 1 ]; then
 	export PREFIX=$1
+else
+	echo "[LOG] SET PREFIX TO $PWD/share"
+	mkdir -p share
+	export PREFIX=$PWD/share
 fi
+if [ $# -gt 2 ]; then
+	mypassword=$2
+else
+	echo "[LOG] USE DEFAULT PASSWORD"
+	mypassword=ophidia2022
+fi
+if [ $# -gt 3 ]; then
+	echo "[LOG] CONDA INSTALLATION"
+	wget https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
+	bash Anaconda3-2022.10-Linux-x86_64.sh
+else
+	echo "[LOG] SKIP CONDA INSTALLATION"
+fi
+
 export MYSQLENV=mysql-env
 export CNFDIR=$(realpath "$(dirname "$0")")
 export TMP=$PREFIX/tmp;
 export SPACK_USER_CACHE_PATH=$PREFIX/spack/tmp;
 sed -i "s|# build_jobs: 16|build_jobs: 2|g" $SPACK_ROOT/etc/spack/defaults/config.yaml
+
 echo "[LOG] OPHIDIA COMPONENTS INSTALLATION"
 spack install ophidia-primitives
 spack install ophidia-io-server
@@ -44,9 +62,8 @@ export OPHIDIA_PRIMITIVES=`spack location -i ophidia-primitives`
 export OPHIDIA_IOSERVER=`spack location -i ophidia-io-server`
 export OPHIDIA_FRAMEWORK=`spack location -i ophidia-analytics-framework`
 export OPHIDIA_SERVER=`spack location -i ophidia-server`
+
 echo "[LOG] CONDA ENVIRONMENT CREATION"
-wget https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
-bash Anaconda3-2022.10-Linux-x86_64.sh
 conda create python=3.7 --prefix=$PREFIX/$MYSQLENV -y
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate $PREFIX/$MYSQLENV
@@ -153,5 +170,5 @@ mkdir -p log
 
 echo "[LOG] MYSQL SERVER SHUTDOWN"
 cd $PREFIX/$MYSQLENV
-bin/mysqladmin -u root shutdown -pophidia2022
+bin/mysqladmin -u root shutdown -p$mypassword
 conda deactivate
