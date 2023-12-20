@@ -17,7 +17,20 @@
 #
 
 #!/bin/bash
+
+set -e
+
+if [ $# -gt 1 ]; then
+	export PREFIX=$1
+else
+	echo "[LOG] SET PREFIX TO $PWD/share"
+	mkdir -p share
+	export PREFIX=$PWD/share
+fi
+
+export MYSQLENV=mysql-env
 export SLURM_CONF=$HOME/.ophidia/etc/slurm.conf
+
 cd `spack location -i munge`
 echo "[LOG] STARTING MUNGE..."
 sbin/munged -S $HOME/.ophidia/var_run_munge/munge.socket.2
@@ -25,7 +38,11 @@ cd `spack location -i slurm`
 echo "[LOG] STARTING SLURM..."
 sbin/slurmd
 sbin/slurmctld
+echo "[LOG] STARTING MYSQL..."
 cd $CONDA_PREFIX
-bin/mysqld_safe --defaults-file=/scratch/shared/mysql-env/etc/my.cnf &
+bin/mysqld_safe --defaults-file=$PREFIX/$MYSQLENV/etc/my.cnf &
+echo "[LOG] STARTING OPHIDIA SERVER..."
 cd `spack location -i ophidia-server`
 bin/oph_server -d 2>&1 > /dev/null < /dev/null &
+echo "[LOG] OPHIDIA IS RUNNING (check $PWD/log/server.log)"
+
