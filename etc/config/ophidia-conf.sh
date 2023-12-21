@@ -152,6 +152,9 @@ spack stage ophidia-server
 spack cd ophidia-server
 
 cp -r authz $OPHIDIA_SERVER
+mkdir -p $OPHIDIA_SERVER/authz/users/ophidia
+echo "${myuser}:${mypassword}" >> $OPHIDIA_SERVER/authz/users.dat
+cp $OPHIDIA_SERVER/authz/users/admin/user.dat $OPHIDIA_SERVER/authz/users/ophidia/
 
 echo "[LOG] OPHIDIA ANALYTICS FRAMEWORK CONFIGURATION"
 sed -i "s|127.0.0.1|${myhost}|g" $OPHIDIA_FRAMEWORK/etc/oph_configuration
