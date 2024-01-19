@@ -290,9 +290,11 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	}
 	(*workflow)->output_format = 0;
 	if (output_format && strlen(output_format)) {
-		if (!strcmp(output_format, OPH_WORKFLOW_COMPACT))
+		if (!strcmp(output_format, OPH_WORKFLOW_CLASSIC))
 			(*workflow)->output_format = 1;
-		else if (strcmp(output_format, OPH_WORKFLOW_CLASSIC)) {
+		else if (!strcmp(output_format, OPH_WORKFLOW_COMPACT))
+			(*workflow)->output_format = 2;
+		else if (strcmp(output_format, OPH_WORKFLOW_EXTENDED)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
 				json_decref(jansson);

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <time.h>
 
 #include "oph_workflow_structs.h"
 
@@ -176,6 +177,18 @@ int oph_workflow_free(oph_workflow *workflow)
 			free(workflow->output->response);
 			workflow->output->response = NULL;
 		}
+		if (workflow->output->output) {
+			free(workflow->output->output);
+			workflow->output->output = NULL;
+		}
+		if (workflow->output->begin_time) {
+			free(workflow->output->begin_time);
+			workflow->output->begin_time = NULL;
+		}
+		if (workflow->output->end_time) {
+			free(workflow->output->end_time);
+			workflow->output->end_time = NULL;
+		}
 		free(workflow->output);
 		workflow->output = tmp;
 	}
@@ -282,6 +295,10 @@ int oph_workflow_task_free(oph_workflow_task *task)
 		free(task->on_exit);
 		task->on_exit = NULL;
 	}
+	if (task->begin_time) {
+		free(task->begin_time);
+		task->begin_time = NULL;
+	}
 	if (task->checkpoint) {
 		free(task->checkpoint);
 		task->checkpoint = NULL;
@@ -349,6 +366,14 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 		free(light_task->response);
 		light_task->response = NULL;
 	}
+	if (light_task->output) {
+		free(light_task->output);
+		light_task->output = NULL;
+	}
+	if (light_task->end_time) {
+		free(light_task->end_time);
+		light_task->end_time = NULL;
+	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
@@ -361,11 +386,22 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	if (!(*task_out))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
+	time_t nowtime;
+	struct tm nowtm;
+	char buffer[128];
+	*buffer = 0;
+	time(&nowtime);
+	if (localtime_r(&nowtime, &nowtm))
+		strftime(buffer, 128, "%Y-%m-%d %H:%M:%S", &nowtm);
+
 	(*task_out)->name = strdup(task->name);
 	(*task_out)->markerid = task->markerid;
 	(*task_out)->status = task->status;
 	(*task_out)->light_tasks_num = task->light_tasks_num;
 	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
+	(*task_out)->output = task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file] ? strdup(task->outputs_values[task->outputs_file]) : strdup("");
+	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
+	(*task_out)->end_time = strdup(buffer);
 	(*task_out)->next = NULL;
 
 	if (task->light_tasks_num) {

@@ -80,6 +80,7 @@
 
 #define OPH_WORKFLOW_CLASSIC		"classic"
 #define OPH_WORKFLOW_COMPACT		"compact"
+#define OPH_WORKFLOW_EXTENDED		"extended"
 
 #define OPH_WORKFLOW_FINAL_TASK		"Final task"
 
