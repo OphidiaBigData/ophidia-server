@@ -1077,6 +1077,25 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "host_partition", workflow->host_partition_orig ? workflow->host_partition_orig : workflow->host_partition))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (_oph_workflow_add_to_json(request, "direct_output", workflow->direct_output ? OPH_WORKFLOW_NO : OPH_WORKFLOW_NO))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (workflow->output_format) {
+		switch (workflow->output_format) {
+			case 3:
+				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_CLASSIC);
+				break;
+			case 2:
+				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_COMPACT);
+				break;
+			case 1:
+				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_EXTENDED);
+				break;
+			default:
+				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_EXTENDED_COMPACT);
+		}
+		if (_oph_workflow_add_to_json(request, "output_format", jsontmp))
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
 
 	json_t *tasks = json_array();
 	if (!tasks) {
@@ -1353,7 +1372,8 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 			if (first || json_object_set_new(task, "variables", variables)) {
 				if (variables)
 					json_decref(variables);
-				break;
+				if (!first)
+					break;
 			}
 		}
 

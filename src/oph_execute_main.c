@@ -217,42 +217,6 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 	return OPH_SERVER_OK;
 }
 
-typedef struct __ophExecuteMain_data {
-	struct soap *soap;
-	xsd__string request;
-} _ophExecuteMain_data;
-
-void *_ophExecuteMain(_ophExecuteMain_data *data)
-{
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_detach(pthread_self());
-	oph_service_info_thread_incr(service_info);
-#endif
-
-	struct oph__ophResponse new_response;
-
-	oph__ophExecuteMain(data->soap, data->request, &new_response);
-
-	if (data->soap->userid)
-		free((char *) data->soap->userid);
-	if (data->soap->passwd)
-		free((char *) data->soap->passwd);
-
-	soap_destroy(data->soap);	/* for C++ */
-	soap_end(data->soap);
-	soap_free(data->soap);
-
-	free(data->request);
-	free(data);
-
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	oph_service_info_thread_decr(service_info);
-	mysql_thread_end();
-#endif
-
-	return (void *) NULL;;
-}
-
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	if (service_info) {
@@ -5622,20 +5586,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 							}
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 							// Run the workflow as a new request
-							if (execute) {
-								struct soap *tsoap = soap_copy(soap);
-								if (tsoap) {
-									if (!tsoap->userid && soap->userid)
-										tsoap->userid = strdup(soap->userid);
-									if (!tsoap->passwd && soap->passwd)
-										tsoap->passwd = strdup(soap->passwd);
-									_ophExecuteMain_data *data = (_ophExecuteMain_data *) malloc(sizeof(_ophExecuteMain_data));
-									data->soap = tsoap;
-									data->request = strdup(jstring);
-									pthread_t tid;
-									pthread_create(&tid, NULL, (void *(*)(void *)) &_ophExecuteMain, data);
-								}
-							}
+							if (execute)
+								oph__ophExecuteMain(soap, jstring, response);
 #endif
 						}
 					}
