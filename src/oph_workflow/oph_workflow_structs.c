@@ -177,6 +177,10 @@ int oph_workflow_free(oph_workflow *workflow)
 			free(workflow->output->response);
 			workflow->output->response = NULL;
 		}
+		if (workflow->output->input) {
+			free(workflow->output->input);
+			workflow->output->input = NULL;
+		}
 		if (workflow->output->output) {
 			free(workflow->output->output);
 			workflow->output->output = NULL;
@@ -366,6 +370,10 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 		free(light_task->response);
 		light_task->response = NULL;
 	}
+	if (light_task->input) {
+		free(light_task->input);
+		light_task->input = NULL;
+	}
 	if (light_task->output) {
 		free(light_task->output);
 		light_task->output = NULL;
@@ -375,6 +383,67 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 		light_task->end_time = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+char *_oph_workflow_input_of(oph_workflow_task *task)
+{
+	if (!task)
+		return NULL;
+	int i;
+	char *value = NULL, *tmp = NULL, cube = 1;
+	if (task->light_tasks_num) {
+		char *tmp2 = NULL;
+		for (i = 0; i < task->light_tasks_num; ++i) {
+			if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->light_tasks[i].input) <= 0)
+				break;
+			if (tmp)
+				free(tmp);
+			tmp = tmp2;
+		}
+	}
+	for (i = 0; i < task->arguments_num; ++i) {
+		if (!task->arguments_values[i])
+			continue;
+		if (!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_INPUT)) {	// The highest priority
+			value = task->arguments_values[i];
+			if (tmp) {
+				free(tmp);
+				tmp = NULL;
+			}
+			cube = 0;	// Useless
+			break;
+		}
+		if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_SRC_PATH)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_FILE)) {	// Mean priority
+			value = task->arguments_values[i];
+			if (tmp) {
+				free(tmp);
+				tmp = NULL;
+			}
+			cube = 0;
+		}
+		if (cube) {
+			if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBES)) {	// Less priority
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;
+				continue;
+			}
+			if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE2)) {	// The lowest priority
+				char *tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->arguments_values[i]) <= 0)
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
+			}
+		}
+	}
+	if (tmp)
+		return (tmp);
+	return (value ? strdup(value) : NULL);
 }
 
 int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
@@ -399,6 +468,9 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	(*task_out)->status = task->status;
 	(*task_out)->light_tasks_num = task->light_tasks_num;
 	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
+	(*task_out)->input = _oph_workflow_input_of(task);
+	if (!(*task_out)->input)
+		(*task_out)->input = strdup("");
 	(*task_out)->output = task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file] ? strdup(task->outputs_values[task->outputs_file]) : strdup("");
 	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
 	(*task_out)->end_time = strdup(buffer);

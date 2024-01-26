@@ -26,6 +26,13 @@
 
 #include "hashtbl.h"
 
+#define OPH_WORKFLOW_ARG_INPUT "input"
+#define OPH_WORKFLOW_ARG_SRC_PATH "src_path"
+#define OPH_WORKFLOW_ARG_FILE "file"
+#define OPH_WORKFLOW_ARG_CUBE "cube"
+#define OPH_WORKFLOW_ARG_CUBE2 "cube2"
+#define OPH_WORKFLOW_ARG_CUBES "cubes"
+
 typedef struct _oph_workflow_ordered_list {
 	char *key;
 	char *object;
@@ -67,6 +74,7 @@ typedef struct _oph_workflow_light_task {
 	int arguments_num;
 	char *response;
 	char is_marked_to_be_aborted;
+	char *input;
 	char *output;
 	char *end_time;
 } oph_workflow_light_task;
@@ -224,6 +232,7 @@ typedef struct _oph_workflow_task_out {
 	oph_workflow_light_task_out *light_task_outs;
 	int light_tasks_num;
 	char *response;
+	char *input;
 	char *output;
 	char *begin_time;
 	char *end_time;
