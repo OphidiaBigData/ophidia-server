@@ -4581,6 +4581,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												free(jsonvalues);
 											break;
 										}
+										if (jsonvalues[jjj] && strlen(jsonvalues[jjj]))
+											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
 										jjj++;
 										jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].output);
 										if (!jsonvalues[jjj]) {
@@ -4591,6 +4593,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											if (jsonvalues)
 												free(jsonvalues);
 											break;
+										}
+										if (strlen(jsonvalues[jjj - 1]) && strlen(jsonvalues[jjj]) && !strcmp(jsonvalues[jjj - 1], jsonvalues[jjj])) {	// Remove reference in case no new data is produced
+											free(jsonvalues[jjj - 1]);
+											free(jsonvalues[jjj]);
+											jsonvalues[jjj - 1] = strdup("");
+											jsonvalues[jjj] = strdup("");
 										}
 										jjj++;
 										jsonvalues[jjj] = wf->tasks[task_index].begin_time ? strdup(wf->tasks[task_index].begin_time) : strdup("");
@@ -5322,9 +5330,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (wtmp && (wtmp->markerid == wf->tasks[task_index].markerid))
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task '%s' of '%s' has been already traced\n", ttype, jobid, wf->tasks[task_index].name,
 						      wf->name);
-					else if (oph_workflow_save_task_output(&(wf->tasks[task_index]), &wtmp2))
+					else if (oph_workflow_save_task_output(&(wf->tasks[task_index]), &wtmp2) || !wtmp2)
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task '%s' of '%s' cannot be traced\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
 					else {
+						if (wtmp2->input && strlen(wtmp2->input))
+							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->input, NULL, NULL);
 						if (wf->tasks[task_index].outputs_file < 0) {	// Check for a cube in case no file is returned
 							for (i = 0; i < wf->tasks[task_index].outputs_num; ++i)
 								if (!strncmp(wf->tasks[task_index].outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
@@ -5333,6 +5343,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									wtmp2->output = strdup(wf->tasks[task_index].outputs_values[i]);
 									break;
 								}
+						}
+						if (strlen(wtmp2->input) && strlen(wtmp2->output) && !strcmp(wtmp2->input, wtmp2->output)) {	// Remove reference in case no new data is produced
+							free(wtmp2->input);
+							free(wtmp2->output);
+							wtmp2->input = strdup("");
+							wtmp2->output = strdup("");
 						}
 						if (prev)
 							prev->next = wtmp2;
