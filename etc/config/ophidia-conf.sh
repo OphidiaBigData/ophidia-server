@@ -109,7 +109,7 @@ bin/mysql --defaults-file=$PREFIX/$MYSQLENV/etc/my.cnf ophidiadb < $OPHIDIA_FRAM
 spack load gsl
 bin/mysql -u root -p${mypassword} mysql < $OPHIDIA_PRIMITIVES/etc/create_func.sql
 
-bin/mysql -u root -p${mypassword} ophidiadb -e "insert into user(username) values('${myuser}');"
+bin/mysql -u root -p${mypassword} ophidiadb -e "insert ingnore into user(username) values('${myuser}');"
 
 echo "[LOG] CHECK SRUN INSTALLATION"
 if ! command -v srun > $CNFDIR/slurm_path.txt
