@@ -1596,7 +1596,7 @@ int oph_auth_check_forged_tokens(const char *token)
 
 int oph_auth_read_token(const char *token, const char *userid, oph_argument **args)
 {
-	if (!token || !args)
+	if (!token || !userid || !args)
 		return OPH_SERVER_NULL_POINTER;
 	*args = NULL;
 

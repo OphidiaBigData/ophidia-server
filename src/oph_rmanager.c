@@ -847,6 +847,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 	}
 #ifdef LOCAL_FRAMEWORK
+	UNUSED(wid);
 	char command[OPH_MAX_STRING_SIZE];
 #ifdef USE_MPI
 	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s", outfile, _ncores, oph_operator_client, request, outfile, outfile);

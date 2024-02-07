@@ -3890,7 +3890,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 									case 1:	// EXTENDED
 										is_compact = 0;
 										break;
-									default:
+									default:;
 								}
 
 								if (task_index < 0) {
@@ -4877,8 +4877,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 														jjj++;
 														oph_workflow_task *task = item->wf->tasks + i;
 														jsonvalues[jjj] = task->outputs_values && (task->outputs_file >= 0)
-														    && task->outputs_values[task->
-																	    outputs_file] ?
+														    && task->outputs_values[task->outputs_file] ?
 														    strdup(task->outputs_values[task->outputs_file]) : strdup("");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
@@ -5689,7 +5688,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 													}
 													if (is_extended) {
 														jjj++;
-														jsonvalues[jjj] = _oph_workflow_input_of_l(item->wf->tasks[task_index].light_tasks + i);
+														jsonvalues[jjj] = oph_workflow_input_of_l(item->wf->tasks[task_index].light_tasks + i);
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5735,8 +5734,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 														}
 														jjj++;
 														jsonvalues[jjj] =
-														    item->wf->tasks[task_index].light_tasks[i].end_time ? strdup(item->
-																						 wf->tasks
+														    item->wf->tasks[task_index].light_tasks[i].end_time ? strdup(item->wf->tasks
 																						 [task_index].light_tasks
 																						 [i].end_time) :
 														    strdup("");

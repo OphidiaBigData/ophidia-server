@@ -3285,7 +3285,7 @@ int oph_workflow_abort_task(char ttype, int jobid, oph_workflow *wf, int task_in
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-char *_oph_workflow_input_of_l(oph_workflow_light_task *task)
+char *oph_workflow_input_of_l(oph_workflow_light_task *task)
 {
 	if (!task)
 		return NULL;
@@ -4571,7 +4571,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									}
 									if (is_extended) {
 										jjj++;
-										jsonvalues[jjj] = _oph_workflow_input_of_l(wf->tasks[task_index].light_tasks + i);
+										jsonvalues[jjj] = oph_workflow_input_of_l(wf->tasks[task_index].light_tasks + i);
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)
@@ -5881,7 +5881,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					case 1:	// EXTENDED
 						is_compact = 0;
 						break;
-					default:
+					default:;
 				}
 
 				// Header
