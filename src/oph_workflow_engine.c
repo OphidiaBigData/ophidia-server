@@ -2271,8 +2271,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									free(jsonkeys);
 								break;
 							}
-							jjj++;
 							if (is_extended) {
+								jjj++;
 								jsonkeys[jjj] = strdup("INPUT");
 								if (!jsonkeys[jjj]) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -2427,8 +2427,8 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 									free(fieldtypes);
 								break;
 							}
-							jjj++;
 							if (is_extended) {
+								jjj++;
 								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 								if (!fieldtypes[jjj]) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);

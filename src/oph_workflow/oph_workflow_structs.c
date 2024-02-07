@@ -299,9 +299,17 @@ int oph_workflow_task_free(oph_workflow_task *task)
 		free(task->on_exit);
 		task->on_exit = NULL;
 	}
+	if (task->output) {
+		free(task->output);
+		task->output = NULL;
+	}
 	if (task->begin_time) {
 		free(task->begin_time);
 		task->begin_time = NULL;
+	}
+	if (task->end_time) {
+		free(task->end_time);
+		task->end_time = NULL;
 	}
 	if (task->checkpoint) {
 		free(task->checkpoint);
@@ -385,7 +393,7 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-char *_oph_workflow_input_of(oph_workflow_task *task)
+char *oph_workflow_input_of(oph_workflow_task *task)
 {
 	if (!task)
 		return NULL;
@@ -468,13 +476,18 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	(*task_out)->status = task->status;
 	(*task_out)->light_tasks_num = task->light_tasks_num;
 	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
-	(*task_out)->input = _oph_workflow_input_of(task);
+	(*task_out)->input = oph_workflow_input_of(task);
 	if (!(*task_out)->input)
 		(*task_out)->input = strdup("");
 	(*task_out)->output = task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file] ? strdup(task->outputs_values[task->outputs_file]) : strdup("");
 	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
 	(*task_out)->end_time = strdup(buffer);
 	(*task_out)->next = NULL;
+
+	if (!task->output)
+		task->output = strdup((*task_out)->output);
+	if (!task->end_time)
+		task->end_time = strdup((*task_out)->end_time);
 
 	if (task->light_tasks_num) {
 		(*task_out)->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));

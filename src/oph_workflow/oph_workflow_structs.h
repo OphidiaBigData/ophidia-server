@@ -197,7 +197,9 @@ typedef struct _oph_workflow_task {
 	char is_known;
 	char forward;
 	double timestamp;
+	char *output;
 	char *begin_time;
+	char *end_time;
 	char is_marked_to_be_aborted;
 	int backoff_time;
 	char backoff_type;
@@ -398,6 +400,7 @@ int oph_workflow_expand(oph_workflow * workflow, int tasks_num);
 int oph_workflow_copy_task(oph_workflow_task * stask, oph_workflow_task * dtask, int suffix);
 oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list);
 int oph_workflow_free_list(oph_workflow_ordered_list * list);
+char *oph_workflow_input_of(oph_workflow_task * task);
 
 // Others
 int oph_output_data_free(char **output, int num);
