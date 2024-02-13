@@ -31,7 +31,6 @@ else
 fi
 
 export MYSQLENV=mysql-env
-export SLURM_CONF=$HOME/.ophidia/etc/slurm.conf
 export CNFDIR=$(realpath "$(dirname "$0")")
 
 if ! command -v srun > $CNFDIR/slurm_path.txt
@@ -39,6 +38,8 @@ then
     if ! spack location -i slurm
     then
         $CNFDIR/slurm-conf.sh $PREFIX
+    else
+        export SLURM_CONF=$HOME/.ophidia/etc/slurm.conf
     fi
     export SLURM_PATH=`spack location -i slurm`
 	cd `spack location -i munge`
