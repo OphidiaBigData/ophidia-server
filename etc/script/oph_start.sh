@@ -35,26 +35,44 @@ taskname=${9}
 # Const
 fixString=
 LAUNCHER=${OPH_EXTRA_LOCATION}/bin/srun
+BLAUNCHER=${OPH_EXTRA_LOCATION}/bin/sbatch
 IO_SERVER_LAUNCHER=${OPH_SERVER_LOCATION}/etc/script/start_ioserver.sh
+IO_SERVER_FLUSHER=${OPH_SERVER_LOCATION}/etc/script/stop_ioserver.sh
 JOBNAME="${taskname} ${fixString}${serverid}${taskid}"
 SCRIPT_DIR=${HOME}/.ophidia
-SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.start.sh
+START_SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.start.sh
+STOP_SCRIPT_FILE=${SCRIPT_DIR}/${serverid}${taskid}.stop.sh
 
 # Body
 mkdir -p ${SCRIPT_DIR}
-> ${SCRIPT_FILE}
-echo "#!/bin/bash" >> ${SCRIPT_FILE}
-echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${SCRIPT_FILE}
-chmod +x ${SCRIPT_FILE}
+> ${START_SCRIPT_FILE}
+echo "#!/bin/bash" >> ${START_SCRIPT_FILE}
+echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${START_SCRIPT_FILE}
+chmod +x ${START_SCRIPT_FILE}
 
-${LAUNCHER} --mpi=pmi2 --input=none --exclusive --ntasks-per-node=1 -N ${ncores} -o ${log} -e ${log} -J "${JOBNAME}" ${SCRIPT_FILE}
+JID="$(${BLAUNCHER} --input=none --ntasks-per-node=1 -N 1 -o ${log} -e ${log} -J "${JOBNAME}" ${START_SCRIPT_FILE})"
 if [ $? -ne 0 ]; then
-	echo "Unable to submit ${SCRIPT_FILE}"
-	rm -f ${SCRIPT_FILE}
+	echo "Unable to submit ${START_SCRIPT_FILE}"
+	rm -f ${START_SCRIPT_FILE}
 	exit 1
 fi
 
-rm -f ${SCRIPT_FILE}
+> ${STOP_SCRIPT_FILE}
+echo "#!/bin/bash" >> ${STOP_SCRIPT_FILE}
+echo "${IO_SERVER_FLUSHER} ${hostpartition} ${JID##* }" >> ${STOP_SCRIPT_FILE}
+chmod +x ${STOP_SCRIPT_FILE}
+
+echo "Schedule the flushing procedure"
+${LAUNCHER} -input=none -n 1 -o ${log} -e ${log} -J "${JOBNAME}" -d singleton ${STOP_SCRIPT_FILE}
+if [ $? -ne 0 ]; then
+	echo "Unable to submit ${STOP_SCRIPT_FILE}"
+	rm -f ${START_SCRIPT_FILE}
+	rm -f ${STOP_SCRIPT_FILE}
+	exit 1
+fi
+
+rm -f ${START_SCRIPT_FILE}
+rm -f ${STOP_SCRIPT_FILE}
 
 exit 0
 
