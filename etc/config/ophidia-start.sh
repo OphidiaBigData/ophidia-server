@@ -41,7 +41,7 @@ then
     else
         export SLURM_CONF=$HOME/.ophidia/etc/slurm.conf
     fi
-    export SLURM_PATH=`spack location -i slurm`
+	export SLURM_PATH=`spack location -i slurm`
 	cd `spack location -i munge`
 	echo "[LOG] STARTING MUNGE..."
 	sbin/munged -S $HOME/.ophidia/var_run_munge/munge.socket.2
