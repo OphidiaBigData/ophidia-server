@@ -23,7 +23,7 @@ my_dir=$(dirname "$0")
 
 # Input parameters
 taskid=${1}
-ncores=${2}
+nhosts=${2}
 log=${3}
 hostpartition=${4}
 queue=${5}
@@ -50,7 +50,7 @@ echo "#!/bin/bash" >> ${START_SCRIPT_FILE}
 echo "${IO_SERVER_LAUNCHER} ${hostpartition}" >> ${START_SCRIPT_FILE}
 chmod +x ${START_SCRIPT_FILE}
 
-JID="$(${BLAUNCHER} --input=none --ntasks-per-node=1 -N 1 -o ${log} -e ${log} -J "${JOBNAME}" ${START_SCRIPT_FILE})"
+JID="$(${BLAUNCHER} --input=none --ntasks-per-node=1 -N ${nhosts} -o ${log} -e ${log} -J "${JOBNAME}" ${START_SCRIPT_FILE})"
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${START_SCRIPT_FILE}"
 	rm -f ${START_SCRIPT_FILE}

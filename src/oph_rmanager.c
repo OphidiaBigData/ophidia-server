@@ -563,7 +563,7 @@ int oph_get_available_host_number(int *size, int jobid)
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager *orm, int jobid, const char *username, const char *project,
 			 const char *taskname, int wid, char **cmd, char type)
 {
-	if (!orm) {
+	if (!orm || !ncores) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
@@ -622,7 +622,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	}
 
 	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
-		request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", orm->subm_postfix);
+		request, type
+		|| (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
