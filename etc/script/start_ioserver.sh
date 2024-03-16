@@ -41,6 +41,8 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 echo "OphidiaDB updated"
+mkdir -p ${SCRIPT_DIR}/host
+echo "${myhost}" > ${SCRIPT_DIR}/host/${SLURM_JOB_ID}.address
 
 rm -rf ${SCRIPT_DIR}/data${myid}/*
 mkdir -p ${SCRIPT_DIR}/data${myid}/{var,log}

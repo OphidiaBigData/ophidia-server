@@ -5,6 +5,10 @@
 
 - Parsing input data as a single command: only JSON Requests are admitted
 
+### Changed:
+
+- Script to start Ophidia I/O Servers by means of OPH_CLUSTER
+
 ## v1.8.0 - 2023-07-31
 
 ### Fixed:

@@ -440,7 +440,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	// Load workflow
 	oph_workflow *wf = NULL;
 	if (oph_workflow_load(request, userid, _host, &wf)) {
-#ifdef COMMAND_TO_JSON	// Deprecated after release 1.8.0 
+#ifdef COMMAND_TO_JSON		// Deprecated after release 1.8.0
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for JSON conversion\n", jobid);
 		char *json = NULL;
 		if (oph_workflow_command_to_json(request, &json)) {
