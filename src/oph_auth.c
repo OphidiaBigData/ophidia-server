@@ -185,7 +185,7 @@ int oph_get_session_code(const char *sessionid, char *code)
 	return OPH_SERVER_OK;
 }
 
-int oph_load_file(const char *filename, oph_argument ** args)
+int oph_load_file(const char *filename, oph_argument **args)
 {
 	if (!filename || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -236,7 +236,7 @@ int oph_load_file(const char *filename, oph_argument ** args)
 	return result;
 }
 
-int oph_load_file2(const char *filename, oph_argument ** args)
+int oph_load_file2(const char *filename, oph_argument **args)
 {
 	if (!filename || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -287,7 +287,7 @@ int oph_load_file2(const char *filename, oph_argument ** args)
 	return result;
 }
 
-int _oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host, char verified)
+int _oph_add_to_bl(oph_auth_user_bl **head, const char *userid, const char *host, char verified)
 {
 	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
@@ -308,12 +308,12 @@ int _oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *hos
 	return OPH_SERVER_OK;
 }
 
-int oph_add_to_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+int oph_add_to_bl(oph_auth_user_bl **head, const char *userid, const char *host)
 {
 	return (_oph_add_to_bl(head, userid, host, 0));
 }
 
-void oph_delete_item_in_bl(oph_auth_user_bl * bl_item)
+void oph_delete_item_in_bl(oph_auth_user_bl *bl_item)
 {
 	if (bl_item->userid)
 		free(bl_item->userid);
@@ -324,7 +324,7 @@ void oph_delete_item_in_bl(oph_auth_user_bl * bl_item)
 	free(bl_item);
 }
 
-short oph_is_in_bl(oph_auth_user_bl ** head, const char *userid, const char *host, char *deadline)
+short oph_is_in_bl(oph_auth_user_bl **head, const char *userid, const char *host, char *deadline)
 {
 	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
@@ -361,7 +361,7 @@ short oph_is_in_bl(oph_auth_user_bl ** head, const char *userid, const char *hos
 	return 0;
 }
 
-char *oph_get_host_by_user_in_bl(oph_auth_user_bl ** head, const char *userid, char *deadline)
+char *oph_get_host_by_user_in_bl(oph_auth_user_bl **head, const char *userid, char *deadline)
 {
 	if (!head || !userid)
 		return NULL;
@@ -397,7 +397,7 @@ char *oph_get_host_by_user_in_bl(oph_auth_user_bl ** head, const char *userid, c
 	return NULL;
 }
 
-int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **userid, char **new_token, char *verified)
+int oph_get_user_by_token(oph_auth_user_bl **head, const char *token, char **userid, char **new_token, char *verified)
 {
 	if (!head || !token)
 		return OPH_SERVER_NULL_POINTER;
@@ -442,7 +442,7 @@ int oph_get_user_by_token(oph_auth_user_bl ** head, const char *token, char **us
 	return OPH_SERVER_ERROR;
 }
 
-int oph_drop_from_bl(oph_auth_user_bl ** head, const char *userid, const char *host)
+int oph_drop_from_bl(oph_auth_user_bl **head, const char *userid, const char *host)
 {
 	if (!head || !userid || !host)
 		return OPH_SERVER_NULL_POINTER;
@@ -474,7 +474,7 @@ int oph_drop_from_bl(oph_auth_user_bl ** head, const char *userid, const char *h
 	return OPH_SERVER_OK;
 }
 
-int oph_free_bl(oph_auth_user_bl ** head)
+int oph_free_bl(oph_auth_user_bl **head)
 {
 	oph_auth_user_bl *bl_item = *head;
 	while (bl_item) {
@@ -503,7 +503,7 @@ int oph_auth_free()
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_update_values_of_user(oph_auth_user_bl ** head, const char *userid, const char *access_token)
+int oph_auth_update_values_of_user(oph_auth_user_bl **head, const char *userid, const char *access_token)
 {
 	if (!head || !userid || !access_token)
 		return OPH_SERVER_NULL_POINTER;
@@ -601,7 +601,7 @@ char *mystrdup(const char *s, size_t len)
 	return (char *) memcpy(new, s, len);
 }
 
-void header_free(auth_jwt_hdr * header)
+void header_free(auth_jwt_hdr *header)
 {
 	if (header->cnt != NULL)
 		json_decref(header->cnt);
@@ -625,7 +625,7 @@ void header_free(auth_jwt_hdr * header)
 	header->enc = NULL;
 }
 
-void payload_free(auth_jwt_payload * payload)
+void payload_free(auth_jwt_payload *payload)
 {
 	if (payload->cnt != NULL)
 		json_decref(payload->cnt);
@@ -664,7 +664,7 @@ void payload_free(auth_jwt_payload * payload)
 	payload->kid = NULL;
 }
 
-int get_json_string(const json_t * json, const char *key, char **str)
+int get_json_string(const json_t *json, const char *key, char **str)
 {
 	if (!str)
 		return OPH_SERVER_NULL_POINTER;
@@ -688,7 +688,7 @@ int get_json_string(const json_t * json, const char *key, char **str)
 	return OPH_SERVER_OK;
 }
 
-int get_json_number(const json_t * json, const char *key, double *num)
+int get_json_number(const json_t *json, const char *key, double *num)
 {
 	if (!num)
 		return OPH_SERVER_NULL_POINTER;
@@ -706,7 +706,7 @@ int get_json_number(const json_t * json, const char *key, double *num)
 	return OPH_SERVER_OK;
 }
 
-int get_json_boolean(const json_t * json, const char *key, bool * value)
+int get_json_boolean(const json_t *json, const char *key, bool *value)
 {
 	if (!value)
 		return OPH_SERVER_NULL_POINTER;
@@ -724,7 +724,7 @@ int get_json_boolean(const json_t * json, const char *key, bool * value)
 	return OPH_SERVER_OK;
 }
 
-int read_values(const json_t * json, const char **char_arg, char ***char_ptr, int n_char_arg, const char **num_arg, double **num_ptr, int n_num_arg, const char **bool_arg, bool ** bool_ptr,
+int read_values(const json_t *json, const char **char_arg, char ***char_ptr, int n_char_arg, const char **num_arg, double **num_ptr, int n_num_arg, const char **bool_arg, bool **bool_ptr,
 		int n_bool_arg)
 {
 	int i, j;
@@ -747,7 +747,7 @@ int read_values(const json_t * json, const char **char_arg, char ***char_ptr, in
 	return OPH_SERVER_OK;
 }
 
-int extract_header(cjose_jws_t * jwt, auth_jwt_hdr * header)
+int extract_header(cjose_jws_t *jwt, auth_jwt_hdr *header)
 {
 	cjose_header_t *hdr = cjose_jws_get_protected(jwt);
 
@@ -779,7 +779,7 @@ int extract_header(cjose_jws_t * jwt, auth_jwt_hdr * header)
 	return OPH_SERVER_OK;
 }
 
-int extract_payload(cjose_jws_t * jwt, auth_jwt_payload * payload)
+int extract_payload(cjose_jws_t *jwt, auth_jwt_payload *payload)
 {
 	char *payload_ptr = NULL;
 	size_t payload_length;
@@ -828,7 +828,7 @@ int extract_payload(cjose_jws_t * jwt, auth_jwt_payload * payload)
 	return OPH_SERVER_OK;
 }
 
-int auth_jwt_import(const char *token, auth_jwt_hdr * header, auth_jwt_payload * payload)
+int auth_jwt_import(const char *token, auth_jwt_hdr *header, auth_jwt_payload *payload)
 {
 	if (!token || (!header && !payload))
 		return OPH_SERVER_NULL_POINTER;
@@ -967,7 +967,7 @@ int oph_auth_cache_userinfo(const char *access_token, const char *userinfo)
 
 #ifdef OPH_OPENID_SUPPORT
 
-void *_oph_refresh(oph_refresh_token * refresh)
+void *_oph_refresh(oph_refresh_token *refresh)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -1594,7 +1594,7 @@ int oph_auth_check_forged_tokens(const char *token)
 #endif
 }
 
-int oph_auth_read_token(const char *token, const char *userid, oph_argument ** args)
+int oph_auth_read_token(const char *token, const char *userid, oph_argument **args)
 {
 	if (!token || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -1784,7 +1784,7 @@ int oph_auth_is_user_black_listed(const char *userid)
 #endif
 }
 
-int oph_auth_vo(oph_argument * args, char **username)
+int oph_auth_vo(oph_argument *args, char **username)
 {
 	if (!args)
 		return OPH_SERVER_NULL_POINTER;
@@ -2052,7 +2052,7 @@ int oph_auth_user(const char *userid, const char *passwd, const char *host, char
 	return result;
 }
 
-int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
+int oph_load_user(const char *userid, oph_argument **args, int *save_in_odb)
 {
 	if (!userid || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -2221,7 +2221,7 @@ int oph_load_user(const char *userid, oph_argument ** args, int *save_in_odb)
 	return OPH_SERVER_OK;
 }
 
-int oph_save_user(const char *userid, oph_argument * args)
+int oph_save_user(const char *userid, oph_argument *args)
 {
 	if (!userid || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -2244,7 +2244,7 @@ int oph_save_user(const char *userid, oph_argument * args)
 }
 
 // This function changes the argument 'user_string'
-int oph_check_role_of(const char *userid, char *user_string, oph_auth_user_role * role)
+int oph_check_role_of(const char *userid, char *user_string, oph_auth_user_role *role)
 {
 	if (!userid || !user_string || !role)
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2285,7 +2285,7 @@ int oph_check_role_of(const char *userid, char *user_string, oph_auth_user_role 
 	return OPH_SERVER_OK;
 }
 
-int oph_auth_session(const char *userid, const char *sessionid, const char *serverid, oph_argument ** args, int *active, oph_auth_user_role * role)
+int oph_auth_session(const char *userid, const char *sessionid, const char *serverid, oph_argument **args, int *active, oph_auth_user_role *role)
 {
 	if (!userid || !sessionid || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -2362,7 +2362,7 @@ int oph_auth_session(const char *userid, const char *sessionid, const char *serv
 	return OPH_SERVER_OK;
 }
 
-int oph_save_session(const char *userid, const char *sessionid, oph_argument * args, int type)
+int oph_save_session(const char *userid, const char *sessionid, oph_argument *args, int type)
 {
 	if (!userid || !sessionid || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -2445,7 +2445,7 @@ int oph_save_session(const char *userid, const char *sessionid, oph_argument * a
 	return OPH_SERVER_OK;
 }
 
-int oph_save_user_session(const char *userid, const char *sessionid, oph_argument * args)
+int oph_save_user_session(const char *userid, const char *sessionid, oph_argument *args)
 {
 	if (!userid || !sessionid || !args)
 		return OPH_SERVER_NULL_POINTER;

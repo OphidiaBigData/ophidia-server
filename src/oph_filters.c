@@ -34,7 +34,7 @@ extern pthread_mutex_t global_flag;
 #define OPH_FILTER_NOT1 "!"
 #define OPH_FILTER_NOT2 "NOT "
 
-int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -87,7 +87,7 @@ int oph_filter_level(char *value, char *tables, char *where_clause, pthread_mute
 	return OPH_MF_OK;
 }
 
-int oph_filter_measure(const char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_measure(const char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -112,7 +112,7 @@ int oph_filter_measure(const char *value, char *tables, char *where_clause, pthr
 	return OPH_MF_OK;
 }
 
-int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
@@ -170,7 +170,7 @@ int oph_filter_parent(char *value, char *tables, char *where_clause, pthread_mut
 	return OPH_MF_OK;
 }
 
-int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -242,7 +242,7 @@ int oph_filter_using_subset(char *value, char *tables, char *where_clause, pthre
 	return OPH_MF_OK;
 }
 
-int oph_filter_container(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_container(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -269,7 +269,7 @@ int oph_filter_container(char *value, char *tables, char *where_clause, pthread_
 	return OPH_MF_OK;
 }
 
-int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -304,7 +304,7 @@ int oph_filter_container_pid(char *value, char *tables, char *where_clause, pthr
 	return OPH_MF_OK;
 }
 
-int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
@@ -368,7 +368,7 @@ int oph_filter_metadata_key(char *value, char *tables, char *where_clause, pthre
 	return OPH_MF_OK;
 }
 
-int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t * flag, unsigned int prefix, char not_clause)
+int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t *flag, unsigned int prefix, char not_clause)
 {
 	if (!value || !strlen(value))
 		return OPH_MF_OK;
@@ -453,12 +453,12 @@ int _oph_filter_metadata_value(char *key, char *value, char *tables, char *where
 	return OPH_MF_OK;
 }
 
-int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_metadata_value(char *key, char *value, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	return _oph_filter_metadata_value(key, value, tables, where_clause, flag, 0, not_clause);
 }
 
-int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * oDB, int recursive_flag, pthread_mutex_t * flag, char not_clause)
+int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb *oDB, int recursive_flag, pthread_mutex_t *flag, char not_clause)
 {
 	unsigned int s;
 	char condition[OPH_MAX_STRING_SIZE];
@@ -491,7 +491,7 @@ int oph_add_folder(int folder_id, int *counter, char *where_clause, ophidiadb * 
 	return OPH_MF_OK;
 }
 
-int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb * oDB, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, ophidiadb *oDB, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	UNUSED(tables);
 
@@ -542,7 +542,7 @@ int oph_filter_path(char *path, char *recursive, char *depth, char *sessionid, o
 	return OPH_MF_OK;
 }
 
-int oph_filter_free_kvp(HASHTBL * task_tbl, char *tables, char *where_clause, pthread_mutex_t * flag, char not_clause)
+int oph_filter_free_kvp(HASHTBL *task_tbl, char *tables, char *where_clause, pthread_mutex_t *flag, char not_clause)
 {
 	unsigned int i, j = 0;
 	struct hashnode_s *node;
@@ -554,7 +554,7 @@ int oph_filter_free_kvp(HASHTBL * task_tbl, char *tables, char *where_clause, pt
 	return OPH_MF_OK;
 }
 
-int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB, pthread_mutex_t * flag)
+int _oph_filter(HASHTBL *task_tbl, char *query, char *cwd, char *sessionid, ophidiadb *oDB, pthread_mutex_t *flag)
 {
 	if (!query || !sessionid) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
@@ -724,12 +724,12 @@ int _oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, oph
 	return OPH_MF_OK;
 }
 
-int oph_filter(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB)
+int oph_filter(HASHTBL *task_tbl, char *query, char *cwd, char *sessionid, ophidiadb *oDB)
 {
 	return _oph_filter(task_tbl, query, cwd, sessionid, oDB, &global_flag);
 }
 
-int oph_filter_unsafe(HASHTBL * task_tbl, char *query, char *cwd, char *sessionid, ophidiadb * oDB)
+int oph_filter_unsafe(HASHTBL *task_tbl, char *query, char *cwd, char *sessionid, ophidiadb *oDB)
 {
 	return _oph_filter(task_tbl, query, cwd, sessionid, oDB, NULL);
 }
