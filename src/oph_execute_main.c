@@ -4882,7 +4882,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															jsonvalues[jjj] = strdup(task->outputs_values[task->outputs_file] ? task->outputs_values[task->outputs_file] : "");
 														else {
 															for (iii = 0; iii < task->outputs_num; ++iii)
-																if (!strncmp(task->outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE))
+																if (!strncmp(task->outputs_keys[iii], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE))
 																	break;
 															jsonvalues[jjj] = strdup((iii < task->outputs_num) && task->outputs_values[iii] ? task->outputs_values[iii] : "");
 														}
