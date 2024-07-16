@@ -399,7 +399,7 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 	if (!task)
 		return NULL;
 	int i;
-	char *value = NULL, *tmp = NULL, cube = 1;
+	char *value = NULL, *tmp = NULL, *tmp2 = NULL, cube = 1;
 	if (task->light_tasks_num) {
 		char *tmp2 = NULL;
 		for (i = 0; i < task->light_tasks_num; ++i) {
@@ -414,21 +414,39 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 		if (!task->arguments_values[i])
 			continue;
 		if (!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_INPUT)) {	// The highest priority
-			value = task->arguments_values[i];
-			if (tmp) {
-				free(tmp);
-				tmp = NULL;
+			if (!task->operator || strncasecmp(task->operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;	// Useless
+				break;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? "|" : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
 			}
-			cube = 0;	// Useless
-			break;
 		}
 		if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_SRC_PATH)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_FILE)) {	// Mean priority
-			value = task->arguments_values[i];
-			if (tmp) {
-				free(tmp);
-				tmp = NULL;
+			if (!task->operator || strncasecmp(task->operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? "|" : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
 			}
-			cube = 0;
 		}
 		if (cube) {
 			if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBES)) {	// Less priority
@@ -441,8 +459,8 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 				continue;
 			}
 			if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE2)) {	// The lowest priority
-				char *tmp2 = NULL;
-				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->arguments_values[i]) <= 0)
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->arguments_values[i]) <= 0)	// Order is important
 					break;
 				if (tmp)
 					free(tmp);

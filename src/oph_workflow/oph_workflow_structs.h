@@ -32,6 +32,7 @@
 #define OPH_WORKFLOW_ARG_CUBE "cube"
 #define OPH_WORKFLOW_ARG_CUBE2 "cube2"
 #define OPH_WORKFLOW_ARG_CUBES "cubes"
+#define OPH_WORKFLOW_OPERATOR "oph_concat"
 
 typedef struct _oph_workflow_ordered_list {
 	char *key;

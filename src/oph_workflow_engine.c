@@ -1022,6 +1022,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					task->light_tasks[i].arguments_num = arguments_num;
 					task->light_tasks[i].response = NULL;
 					task->light_tasks[i].input = NULL;
+					task->light_tasks[i].output = NULL;
+					task->light_tasks[i].end_time = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
 						if (!task->arguments_keys[j]) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to set arguments of light tasks from task '%s'\n", ttype, jobid, task->name);
@@ -3285,31 +3287,49 @@ int oph_workflow_abort_task(char ttype, int jobid, oph_workflow *wf, int task_in
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-char *oph_workflow_input_of_l(oph_workflow_light_task *task)
+char *oph_workflow_input_of_l(oph_workflow_light_task *task, char *operator)
 {
 	if (!task)
 		return NULL;
 	int i;
-	char *value = NULL, *tmp = NULL, cube = 1;
+	char *value = NULL, *tmp = NULL, *tmp2 = NULL, cube = 1;
 	for (i = 0; i < task->arguments_num; ++i) {
 		if (!task->arguments_values[i])
 			continue;
 		if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_INPUT)) {	// The highest priority
-			value = task->arguments_values[i];
-			if (tmp) {
-				free(tmp);
-				tmp = NULL;
+			if (!operator || strncasecmp(operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;	// Useless
+				break;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? OPH_SEPARATOR_SUBPARAM_STR : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
 			}
-			cube = 0;	// Useless
-			break;
 		}
 		if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_SRC_PATH) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_FILE)) {	// Mean priority
-			value = task->arguments_values[i];
-			if (tmp) {
-				free(tmp);
-				tmp = NULL;
+			if (!operator || strncasecmp(operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? OPH_SEPARATOR_SUBPARAM_STR : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
 			}
-			cube = 0;
 		}
 		if (cube) {
 			if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBES)) {	// Less priority
@@ -3322,8 +3342,8 @@ char *oph_workflow_input_of_l(oph_workflow_light_task *task)
 				continue;
 			}
 			if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE2)) {	// The lowest priority
-				char *tmp2 = NULL;
-				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? OPH_SEPARATOR_SUBPARAM_STR : "", task->arguments_values[i]) <= 0)
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? OPH_SEPARATOR_SUBPARAM_STR : "", task->arguments_values[i]) <= 0)	// Order is important
 					break;
 				if (tmp)
 					free(tmp);
@@ -4571,7 +4591,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									}
 									if (is_extended) {
 										jjj++;
-										jsonvalues[jjj] = oph_workflow_input_of_l(wf->tasks[task_index].light_tasks + i);
+										jsonvalues[jjj] = oph_workflow_input_of_l(wf->tasks[task_index].light_tasks + i, wf->tasks[task_index].operator);
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)

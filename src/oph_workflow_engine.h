@@ -50,6 +50,6 @@ int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate
 int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list ** list);
 int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string);
 
-char *oph_workflow_input_of_l(oph_workflow_light_task * task);
+char *oph_workflow_input_of_l(oph_workflow_light_task * task, char *operator);
 
 #endif				/* OPH_WORKFLOW_ENGINE_H */
