@@ -27,7 +27,7 @@
 #include "debug.h"
 #include "oph_auth.h"
 
-int oph_workflow_get_argument_size(oph_workflow *workflow, int task_index, size_t *max)
+int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t * max)
 {
 	if (!workflow || !max)
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -46,7 +46,7 @@ int oph_workflow_get_argument_size(oph_workflow *workflow, int task_index, size_
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_check_args(oph_workflow *workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
+int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
 {
 	if (!value || !index)
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -101,7 +101,7 @@ int oph_workflow_check_args(oph_workflow *workflow, int task_index, int light_ta
 	return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 }
 
-int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int light_task_index, char **submit_string, char **error, const char *skip_arg)
+int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int light_task_index, char **submit_string, char **error, const char *skip_arg)
 {
 	if (!workflow || !submit_string || !*submit_string) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null parameter\n");
@@ -290,7 +290,7 @@ int oph_workflow_strcat(char **base, char *extension)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, int light_task_index, char **long_submission_string, char **short_submission_string, char **error)
+int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, int light_task_index, char **long_submission_string, char **short_submission_string, char **error)
 {
 	if (error)
 		*error = NULL;
@@ -458,7 +458,7 @@ int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, i
 }
 
 
-int oph_workflow_get_submitted_string(oph_workflow *workflow, int task_index, int light_task_index, int show_callback, char **submitted_string)
+int oph_workflow_get_submitted_string(oph_workflow * workflow, int task_index, int light_task_index, int show_callback, char **submitted_string)
 {
 	if (!workflow || !submitted_string) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -552,7 +552,7 @@ int oph_realloc_vector(char ***vector, int *length, int incr)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_realloc_vector2(oph_workflow_ordered_list ***vector, int *length, int incr)
+int oph_realloc_vector2(oph_workflow_ordered_list *** vector, int *length, int incr)
 {
 	if (!vector || !(*vector) || !length)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;

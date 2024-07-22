@@ -805,7 +805,7 @@ typedef struct _oph_status_object {
 	struct _oph_status_object *next;
 } oph_status_object;
 
-int oph_status_add(oph_status_object **list, const char *key, unsigned long *old_value, char **tag, size_t number_of_tags, unsigned long *new_value, size_t number_of_new_values)
+int oph_status_add(oph_status_object ** list, const char *key, unsigned long *old_value, char **tag, size_t number_of_tags, unsigned long *new_value, size_t number_of_new_values)
 {
 	if (!list || !key || (number_of_tags > OPH_SERVER_MAX_WF_LOG_PARAM) || (number_of_new_values > OPH_SERVER_MAX_WF_LOG_PARAM))
 		return 1;
@@ -852,7 +852,7 @@ int oph_status_add(oph_status_object **list, const char *key, unsigned long *old
 	return 0;
 }
 
-int oph_status_destroy(oph_status_object **list)
+int oph_status_destroy(oph_status_object ** list)
 {
 	if (!list)
 		return 1;

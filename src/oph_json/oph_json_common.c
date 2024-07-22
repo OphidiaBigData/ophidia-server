@@ -65,7 +65,7 @@ int _oph_json_add_graph(oph_json * json, const char *objkey, int is_digraph, con
 int _oph_json_add_graph_node(oph_json * json, const char *objkey, char **nodevalues, pthread_mutex_t * flag);
 int _oph_json_add_graph_link(oph_json * json, const char *objkey, int node1, int node2, const char *description, pthread_mutex_t * flag);
 
-int _oph_json_to_json_string(oph_json *json, char **jstring, pthread_mutex_t *flag)
+int _oph_json_to_json_string(oph_json * json, char **jstring, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1297,17 +1297,17 @@ int _oph_json_to_json_string(oph_json *json, char **jstring, pthread_mutex_t *fl
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_to_json_string(oph_json *json, char **jstring)
+int oph_json_to_json_string(oph_json * json, char **jstring)
 {
 	return _oph_json_to_json_string(json, jstring, &global_flag);
 }
 
-int oph_json_to_json_string_unsafe(oph_json *json, char **jstring)
+int oph_json_to_json_string_unsafe(oph_json * json, char **jstring)
 {
 	return _oph_json_to_json_string(json, jstring, NULL);
 }
 
-int __oph_json_to_json_file(oph_json *json, char *filename, char **jstring, pthread_mutex_t *flag)
+int __oph_json_to_json_file(oph_json * json, char *filename, char **jstring, pthread_mutex_t * flag)
 {
 	*jstring = NULL;
 
@@ -1332,7 +1332,7 @@ int __oph_json_to_json_file(oph_json *json, char *filename, char **jstring, pthr
 	return OPH_JSON_SUCCESS;
 }
 
-int _oph_json_to_json_file(oph_json *json, char *filename, pthread_mutex_t *flag)
+int _oph_json_to_json_file(oph_json * json, char *filename, pthread_mutex_t * flag)
 {
 	char *jstring = NULL;
 	int res = __oph_json_to_json_file(json, filename, &jstring, flag);
@@ -1341,17 +1341,17 @@ int _oph_json_to_json_file(oph_json *json, char *filename, pthread_mutex_t *flag
 	return res;
 }
 
-int oph_json_to_json_file(oph_json *json, char *filename)
+int oph_json_to_json_file(oph_json * json, char *filename)
 {
 	return _oph_json_to_json_file(json, filename, &global_flag);
 }
 
-int oph_json_to_json_file_unsafe(oph_json *json, char *filename)
+int oph_json_to_json_file_unsafe(oph_json * json, char *filename)
 {
 	return _oph_json_to_json_file(json, filename, NULL);
 }
 
-int _oph_write_json(oph_json *oper_json, pthread_mutex_t *flag)
+int _oph_write_json(oph_json * oper_json, pthread_mutex_t * flag)
 {
 	if (!oper_json)
 		return OPH_JSON_BAD_PARAM_ERROR;
@@ -1372,17 +1372,17 @@ int _oph_write_json(oph_json *oper_json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_write_json(oph_json *oper_json)
+int oph_write_json(oph_json * oper_json)
 {
 	return _oph_write_json(oper_json, &global_flag);
 }
 
-int oph_write_json_unsafe(oph_json *oper_json)
+int oph_write_json_unsafe(oph_json * oper_json)
 {
 	return _oph_write_json(oper_json, NULL);
 }
 
-int _oph_write_and_get_json(oph_json *oper_json, char **jstring, pthread_mutex_t *flag)
+int _oph_write_and_get_json(oph_json * oper_json, char **jstring, pthread_mutex_t * flag)
 {
 	if (!oper_json || !jstring)
 		return OPH_JSON_BAD_PARAM_ERROR;
@@ -1407,12 +1407,12 @@ int _oph_write_and_get_json(oph_json *oper_json, char **jstring, pthread_mutex_t
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_write_and_get_json(oph_json *oper_json, char **jstring)
+int oph_write_and_get_json(oph_json * oper_json, char **jstring)
 {
 	return _oph_write_and_get_json(oper_json, jstring, &global_flag);
 }
 
-int oph_write_and_get_json_unsafe(oph_json *oper_json, char **jstring)
+int oph_write_and_get_json_unsafe(oph_json * oper_json, char **jstring)
 {
 	return _oph_write_and_get_json(oper_json, jstring, NULL);
 }
@@ -1470,7 +1470,7 @@ int oph_json_is_type_correct(const char *type)
 }
 
 // Add an objkey to the responseKeyset if new
-int _oph_json_add_responseKey(oph_json *json, const char *responseKey, pthread_mutex_t *flag)
+int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_mutex_t * flag)
 {
 	if (!json || !responseKey) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1513,18 +1513,18 @@ int _oph_json_add_responseKey(oph_json *json, const char *responseKey, pthread_m
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_responseKey(oph_json *json, const char *responseKey)
+int oph_json_add_responseKey(oph_json * json, const char *responseKey)
 {
 	return _oph_json_add_responseKey(json, responseKey, &global_flag);
 }
 
-int oph_json_add_responseKey_unsafe(oph_json *json, const char *responseKey)
+int oph_json_add_responseKey_unsafe(oph_json * json, const char *responseKey)
 {
 	return _oph_json_add_responseKey(json, responseKey, NULL);
 }
 
 // Free consumers
-int _oph_json_free_consumers(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free_consumers(oph_json * json, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1545,18 +1545,18 @@ int _oph_json_free_consumers(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free_consumers(oph_json *json)
+int oph_json_free_consumers(oph_json * json)
 {
 	return _oph_json_free_consumers(json, &global_flag);
 }
 
-int oph_json_free_consumers_unsafe(oph_json *json)
+int oph_json_free_consumers_unsafe(oph_json * json)
 {
 	return _oph_json_free_consumers(json, NULL);
 }
 
 // Free responseKeyset
-int _oph_json_free_responseKeyset(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free_responseKeyset(oph_json * json, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1577,18 +1577,18 @@ int _oph_json_free_responseKeyset(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free_responseKeyset(oph_json *json)
+int oph_json_free_responseKeyset(oph_json * json)
 {
 	return _oph_json_free_responseKeyset(json, &global_flag);
 }
 
-int oph_json_free_responseKeyset_unsafe(oph_json *json)
+int oph_json_free_responseKeyset_unsafe(oph_json * json)
 {
 	return _oph_json_free_responseKeyset(json, NULL);
 }
 
 // Free source
-int _oph_json_free_source(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free_source(oph_json * json, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1646,18 +1646,18 @@ int _oph_json_free_source(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free_source(oph_json *json)
+int oph_json_free_source(oph_json * json)
 {
 	return _oph_json_free_source(json, &global_flag);
 }
 
-int oph_json_free_source_unsafe(oph_json *json)
+int oph_json_free_source_unsafe(oph_json * json)
 {
 	return _oph_json_free_source(json, NULL);
 }
 
 // Free extra
-int _oph_json_free_extra(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free_extra(oph_json * json, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1695,18 +1695,18 @@ int _oph_json_free_extra(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free_extra(oph_json *json)
+int oph_json_free_extra(oph_json * json)
 {
 	return _oph_json_free_extra(json, &global_flag);
 }
 
-int oph_json_free_extra_unsafe(oph_json *json)
+int oph_json_free_extra_unsafe(oph_json * json)
 {
 	return _oph_json_free_extra(json, NULL);
 }
 
 // Free response
-int _oph_json_free_response(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free_response(oph_json * json, pthread_mutex_t * flag)
 {
 	if (!json) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1758,19 +1758,19 @@ int _oph_json_free_response(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free_response(oph_json *json)
+int oph_json_free_response(oph_json * json)
 {
 	return _oph_json_free_response(json, &global_flag);
 }
 
-int oph_json_free_response_unsafe(oph_json *json)
+int oph_json_free_response_unsafe(oph_json * json)
 {
 	return _oph_json_free_response(json, NULL);
 }
 
 /***********OPH_JSON FUNCTIONS***********/
 
-int _oph_json_alloc(oph_json **json, pthread_mutex_t *flag)
+int _oph_json_alloc(oph_json ** json, pthread_mutex_t * flag)
 {
 	*json = (oph_json *) malloc(sizeof(oph_json));
 	if (!*json) {
@@ -1788,17 +1788,17 @@ int _oph_json_alloc(oph_json **json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_alloc(oph_json **json)
+int oph_json_alloc(oph_json ** json)
 {
 	return _oph_json_alloc(json, &global_flag);
 }
 
-int oph_json_alloc_unsafe(oph_json **json)
+int oph_json_alloc_unsafe(oph_json ** json)
 {
 	return _oph_json_alloc(json, NULL);
 }
 
-int _oph_json_free(oph_json *json, pthread_mutex_t *flag)
+int _oph_json_free(oph_json * json, pthread_mutex_t * flag)
 {
 	if (json) {
 		_oph_json_free_consumers(json, flag);
@@ -1812,17 +1812,17 @@ int _oph_json_free(oph_json *json, pthread_mutex_t *flag)
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_free(oph_json *json)
+int oph_json_free(oph_json * json)
 {
 	return _oph_json_free(json, &global_flag);
 }
 
-int oph_json_free_unsafe(oph_json *json)
+int oph_json_free_unsafe(oph_json * json)
 {
 	return _oph_json_free(json, NULL);
 }
 
-int _oph_json_add_consumer(oph_json *json, const char *consumer, pthread_mutex_t *flag)
+int _oph_json_add_consumer(oph_json * json, const char *consumer, pthread_mutex_t * flag)
 {
 	if (!json || !consumer) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1865,17 +1865,17 @@ int _oph_json_add_consumer(oph_json *json, const char *consumer, pthread_mutex_t
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_consumer(oph_json *json, const char *consumer)
+int oph_json_add_consumer(oph_json * json, const char *consumer)
 {
 	return _oph_json_add_consumer(json, consumer, &global_flag);
 }
 
-int oph_json_add_consumer_unsafe(oph_json *json, const char *consumer)
+int oph_json_add_consumer_unsafe(oph_json * json, const char *consumer)
 {
 	return _oph_json_add_consumer(json, consumer, NULL);
 }
 
-int _oph_json_set_source(oph_json *json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer, pthread_mutex_t *flag)
+int _oph_json_set_source(oph_json * json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer, pthread_mutex_t * flag)
 {
 	if (!json || !srckey || !srcname) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -1936,17 +1936,17 @@ int _oph_json_set_source(oph_json *json, const char *srckey, const char *srcname
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_set_source(oph_json *json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer)
+int oph_json_set_source(oph_json * json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer)
 {
 	return _oph_json_set_source(json, srckey, srcname, srcurl, description, producer, &global_flag);
 }
 
-int oph_json_set_source_unsafe(oph_json *json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer)
+int oph_json_set_source_unsafe(oph_json * json, const char *srckey, const char *srcname, const char *srcurl, const char *description, const char *producer)
 {
 	return _oph_json_set_source(json, srckey, srcname, srcurl, description, producer, NULL);
 }
 
-int _oph_json_add_source_detail(oph_json *json, const char *key, const char *value, pthread_mutex_t *flag)
+int _oph_json_add_source_detail(oph_json * json, const char *key, const char *value, pthread_mutex_t * flag)
 {
 	if (!json || !key || !value) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -2020,17 +2020,17 @@ int _oph_json_add_source_detail(oph_json *json, const char *key, const char *val
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_source_detail(oph_json *json, const char *key, const char *value)
+int oph_json_add_source_detail(oph_json * json, const char *key, const char *value)
 {
 	return _oph_json_add_source_detail(json, key, value, &global_flag);
 }
 
-int oph_json_add_source_detail_unsafe(oph_json *json, const char *key, const char *value)
+int oph_json_add_source_detail_unsafe(oph_json * json, const char *key, const char *value)
 {
 	return _oph_json_add_source_detail(json, key, value, NULL);
 }
 
-int _oph_json_add_extra_detail(oph_json *json, const char *key, const char *value, pthread_mutex_t *flag)
+int _oph_json_add_extra_detail(oph_json * json, const char *key, const char *value, pthread_mutex_t * flag)
 {
 	if (!json || !key || !value) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -2111,12 +2111,12 @@ int _oph_json_add_extra_detail(oph_json *json, const char *key, const char *valu
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_extra_detail(oph_json *json, const char *key, const char *value)
+int oph_json_add_extra_detail(oph_json * json, const char *key, const char *value)
 {
 	return _oph_json_add_extra_detail(json, key, value, NULL);
 }
 
-int oph_json_add_extra_detail_unsafe(oph_json *json, const char *key, const char *value)
+int oph_json_add_extra_detail_unsafe(oph_json * json, const char *key, const char *value)
 {
 	return _oph_json_add_extra_detail(json, key, value, NULL);
 }
@@ -2137,7 +2137,7 @@ int oph_json_is_objkey_printable(char **objkeys, int objkeys_num, const char *ob
 	return 0;
 }
 
-int _oph_json_from_json_string(oph_json **json, const char *jstring, pthread_mutex_t *flag)
+int _oph_json_from_json_string(oph_json ** json, const char *jstring, pthread_mutex_t * flag)
 {
 	if (!jstring || !json)
 		return OPH_JSON_BAD_PARAM_ERROR;
@@ -3196,12 +3196,12 @@ int _oph_json_from_json_string(oph_json **json, const char *jstring, pthread_mut
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_from_json_string(oph_json **json, const char *jstring)
+int oph_json_from_json_string(oph_json ** json, const char *jstring)
 {
 	return _oph_json_from_json_string(json, jstring, &global_flag);
 }
 
-int oph_json_from_json_string_unsafe(oph_json **json, const char *jstring)
+int oph_json_from_json_string_unsafe(oph_json ** json, const char *jstring)
 {
 	return _oph_json_from_json_string(json, jstring, NULL);
 }

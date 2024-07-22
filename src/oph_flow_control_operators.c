@@ -58,7 +58,7 @@ extern oph_service_info *service_info;
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
 
-int _oph_wait_stat(oph_workflow *wf, int task_index, char *command, char *markerid, struct oph_plugin_data *state)
+int _oph_wait_stat(oph_workflow * wf, int task_index, char *command, char *markerid, struct oph_plugin_data *state)
 {
 	int success = 1;
 
@@ -141,7 +141,7 @@ int _oph_wait_stat(oph_workflow *wf, int task_index, char *command, char *marker
 	return success;
 }
 
-void *_oph_wait(oph_notify_data *data)
+void *_oph_wait(oph_notify_data * data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -473,7 +473,7 @@ void *_oph_wait(oph_notify_data *data)
 }
 
 // Thread unsafe
-int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, char skip_the_next, int *exit_output)
+int oph_set_status_of_selection_block(oph_workflow * wf, int task_index, enum oph__oph_odb_job_status status, int parent, int nk, char skip_the_next, int *exit_output)
 {
 	if (wf->tasks[task_index].dependents_indexes_num) {
 		if (!wf->tasks[task_index].dependents_indexes) {
@@ -544,7 +544,7 @@ int oph_set_status_of_selection_block(oph_workflow *wf, int task_index, enum oph
 }
 
 // Thread unsafe
-int oph_if_impl(oph_workflow *wf, int i, char *error_message, int *exit_output)
+int oph_if_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 {
 	*error_message = 0;
 
@@ -654,7 +654,7 @@ int oph_if_impl(oph_workflow *wf, int i, char *error_message, int *exit_output)
 }
 
 // Thread unsafe
-int oph_else_impl(oph_workflow *wf, int i, char *error_message, int *exit_output)
+int oph_else_impl(oph_workflow * wf, int i, char *error_message, int *exit_output)
 {
 	*error_message = 0;
 
@@ -987,7 +987,7 @@ int oph_extract_from_json(char **key, const char *json_string)
 }
 
 // Thread unsafe
-int oph_check_input_response(oph_workflow *wf, int i, char ***svalues, int *svalues_num, char *arg_value)
+int oph_check_input_response(oph_workflow * wf, int i, char ***svalues, int *svalues_num, char *arg_value)
 {
 	if (!wf || !svalues || !svalues_num || !arg_value)
 		return OPH_SERVER_NULL_POINTER;
@@ -1147,7 +1147,7 @@ int oph_check_input_response(oph_workflow *wf, int i, char ***svalues, int *sval
 }
 
 // Thread unsafe
-int oph_set_impl(oph_workflow *wf, int i, char *error_message, struct oph_plugin_data *state, char has_action)
+int oph_set_impl(oph_workflow * wf, int i, char *error_message, struct oph_plugin_data *state, char has_action)
 {
 	*error_message = 0;
 
@@ -1571,7 +1571,7 @@ int oph_set_impl(oph_workflow *wf, int i, char *error_message, struct oph_plugin
 }
 
 // Thread unsafe
-int oph_for_impl(oph_workflow *wf, int i, char *error_message)
+int oph_for_impl(oph_workflow * wf, int i, char *error_message)
 {
 	*error_message = 0;
 
@@ -1881,7 +1881,7 @@ int oph_for_impl(oph_workflow *wf, int i, char *error_message)
 }
 
 // Thread unsafe
-int oph_endfor_impl(oph_workflow *wf, int i, char *error_message, oph_trash *trash, int *task_id, int *odb_jobid)
+int oph_endfor_impl(oph_workflow * wf, int i, char *error_message, oph_trash * trash, int *task_id, int *odb_jobid)
 {
 	*error_message = 0;
 
@@ -2000,7 +2000,7 @@ int oph_endfor_impl(oph_workflow *wf, int i, char *error_message, oph_trash *tra
 	return OPH_SERVER_OK;
 }
 
-int oph_wait_impl(oph_workflow *wf, int i, char *error_message, char **message, oph_notify_data *data)
+int oph_wait_impl(oph_workflow * wf, int i, char *error_message, char **message, oph_notify_data * data)
 {
 	*error_message = 0;
 
@@ -2376,7 +2376,7 @@ int oph_wait_impl(oph_workflow *wf, int i, char *error_message, char **message, 
 
 int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *request, const int ncores, const char *sessionid, const char *markerid, int *odb_wf_id, int *task_id,
 				     int *light_task_id, int *odb_jobid, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, const char *os_username,
-				     const char *taskname, const char *operator_name, pthread_t *tid)
+				     const char *taskname, const char *operator_name, pthread_t * tid)
 {
 	UNUSED(ncores);
 	UNUSED(request);

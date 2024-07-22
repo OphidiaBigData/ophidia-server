@@ -37,7 +37,7 @@ int oph_output_data_free(char **output, int num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_free(oph_workflow *workflow)
+int oph_workflow_free(oph_workflow * workflow)
 {
 	if (!workflow)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -207,7 +207,7 @@ int oph_workflow_free(oph_workflow *workflow)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_task_free(oph_workflow_task *task)
+int oph_workflow_task_free(oph_workflow_task * task)
 {
 	if (!task)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -319,7 +319,7 @@ int oph_workflow_task_free(oph_workflow_task *task)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_dep_free(oph_workflow_dep *dep)
+int oph_workflow_dep_free(oph_workflow_dep * dep)
 {
 	if (!dep)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -354,7 +354,7 @@ int oph_workflow_dep_free(oph_workflow_dep *dep)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
+int oph_workflow_light_task_free(oph_workflow_light_task * light_task)
 {
 	if (!light_task)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -394,7 +394,7 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-char *oph_workflow_input_of(oph_workflow_task *task)
+char *oph_workflow_input_of(oph_workflow_task * task)
 {
 	if (!task)
 		return NULL;
@@ -473,7 +473,7 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 	return (value ? strdup(value) : NULL);
 }
 
-int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
+int oph_workflow_save_task_output(oph_workflow_task * task, oph_workflow_task_out ** task_out)
 {
 	if (!task || !task_out)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -529,7 +529,7 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_push(oph_workflow *workflow, int caller, char *name, char **svalues, int *ivalues, int values_num)
+int oph_workflow_push(oph_workflow * workflow, int caller, char *name, char **svalues, int *ivalues, int values_num)
 {
 	if (!workflow || !name || (values_num <= 0))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -591,7 +591,7 @@ int oph_workflow_push(oph_workflow *workflow, int caller, char *name, char **sva
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_pop(oph_workflow *workflow, oph_workflow_stack *prev)
+int oph_workflow_pop(oph_workflow * workflow, oph_workflow_stack * prev)
 {
 	if (!workflow)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -644,7 +644,7 @@ int oph_workflow_pop(oph_workflow *workflow, oph_workflow_stack *prev)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_expand(oph_workflow *wf, int tasks_num)
+int oph_workflow_expand(oph_workflow * wf, int tasks_num)
 {
 	if (!wf)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -668,7 +668,7 @@ int oph_workflow_expand(oph_workflow *wf, int tasks_num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_copy_task(oph_workflow_task *s, oph_workflow_task *d, int suffix)
+int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suffix)
 {
 	if (!s || !d)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -760,7 +760,7 @@ int oph_workflow_copy_task(oph_workflow_task *s, oph_workflow_task *d, int suffi
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list *list)
+oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list)
 {
 	oph_workflow_ordered_list *c, *p = NULL, *result = NULL;
 
@@ -780,7 +780,7 @@ oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list *lis
 	return result;
 }
 
-int oph_workflow_free_list(oph_workflow_ordered_list *list)
+int oph_workflow_free_list(oph_workflow_ordered_list * list)
 {
 	oph_workflow_ordered_list *c;
 

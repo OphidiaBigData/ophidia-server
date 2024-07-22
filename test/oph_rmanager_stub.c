@@ -87,7 +87,7 @@ extern pthread_cond_t waiting_flag;
     ]\
 }"
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess) (int), int id)
 {
 	UNUSED(error);
 	UNUSED(state);
@@ -183,17 +183,17 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 	return OPH_SERVER_OK;
 }
 
-int initialize_rmanager(oph_rmanager *orm)
+int initialize_rmanager(oph_rmanager * orm)
 {
 	return OPH_SERVER_OK;
 }
 
-int oph_read_rmanager_conf(oph_rmanager *orm)
+int oph_read_rmanager_conf(oph_rmanager * orm)
 {
 	return OPH_SERVER_OK;
 }
 
-int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager *orm, int jobid, const char *username, const char *project,
+int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project,
 			 const char *taskname, int wid, char **cmd, char type)
 {
 	return OPH_SERVER_OK;
@@ -209,7 +209,7 @@ int oph_get_result_from_file_unsafe(char *filename, char **response)
 	return OPH_SERVER_OK;
 }
 
-int free_oph_rmanager(oph_rmanager *orm)
+int free_oph_rmanager(oph_rmanager * orm)
 {
 	return OPH_SERVER_OK;
 }

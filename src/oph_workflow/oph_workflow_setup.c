@@ -58,7 +58,7 @@ int oph_get_session_code(char *session_id, char *session_code);
 
 // API functions
 
-int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num)
+int oph_workflow_indexing(oph_workflow_task * tasks, int tasks_num)
 {
 	if (!tasks || tasks_num < 1) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -110,7 +110,7 @@ int oph_workflow_indexing(oph_workflow_task *tasks, int tasks_num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_validate(oph_workflow *workflow)
+int oph_workflow_validate(oph_workflow * workflow)
 {
 	if (!workflow || !(workflow->tasks)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -299,7 +299,7 @@ int oph_workflow_validate(oph_workflow *workflow)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num)
+int oph_workflow_init(oph_workflow_task * tasks, int tasks_num, int **initial_tasks_indexes, int *initial_tasks_indexes_num)
 {
 	if (!tasks || tasks_num < 1 || !initial_tasks_indexes || !initial_tasks_indexes_num) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -339,7 +339,7 @@ int oph_workflow_init(oph_workflow_task *tasks, int tasks_num, int **initial_tas
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_gparent_of(oph_workflow *wf, int k)
+int oph_gparent_of(oph_workflow * wf, int k)
 {
 	if (k < 0)
 		return -2;
@@ -356,7 +356,7 @@ int oph_gparent_of(oph_workflow *wf, int k)
 
 // Other internal functions
 
-int workflow_s_add(workflow_s_nodes *s, workflow_node *node)
+int workflow_s_add(workflow_s_nodes * s, workflow_node * node)
 {
 	if (!s || !node) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -390,7 +390,7 @@ int workflow_s_add(workflow_s_nodes *s, workflow_node *node)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_s_remove(workflow_s_nodes *s, workflow_node **node)
+int workflow_s_remove(workflow_s_nodes * s, workflow_node ** node)
 {
 	if (!s || !node) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -415,7 +415,7 @@ int workflow_s_remove(workflow_s_nodes *s, workflow_node **node)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_s_nodes_free(workflow_s_nodes *s)
+int workflow_s_nodes_free(workflow_s_nodes * s)
 {
 	if (!s)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -432,7 +432,7 @@ int workflow_s_nodes_free(workflow_s_nodes *s)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int workflow_node_free(workflow_node *node)
+int workflow_node_free(workflow_node * node)
 {
 	if (!node)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
@@ -451,7 +451,7 @@ int workflow_node_free(workflow_node *node)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_is_child_of(oph_workflow *wf, int p, int c)
+int oph_workflow_is_child_of(oph_workflow * wf, int p, int c)
 {
 	if (!wf || (p >= wf->tasks_num) || (c < 0) || (c >= wf->tasks_num))
 		return 0;
@@ -466,7 +466,7 @@ int oph_workflow_is_child_of(oph_workflow *wf, int p, int c)
 	return 0;
 }
 
-unsigned int workflow_number_of(oph_workflow *wf, int k, int p, int gp, const char *op, const char *nop, char *flag, char *level, int bracket_number, int *child)
+unsigned int workflow_number_of(oph_workflow * wf, int k, int p, int gp, const char *op, const char *nop, char *flag, char *level, int bracket_number, int *child)
 {
 	if (!wf || (k < 0) || (k >= wf->tasks_num))
 		return 0;
@@ -520,7 +520,7 @@ unsigned int workflow_number_of(oph_workflow *wf, int k, int p, int gp, const ch
 	return res;
 }
 
-int oph_workflow_validate_fco(oph_workflow *wf)
+int oph_workflow_validate_fco(oph_workflow * wf)
 {
 	if (!wf) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer!\n");
@@ -714,7 +714,7 @@ int oph_workflow_validate_fco(oph_workflow *wf)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_set_basic_var(oph_workflow *wf)
+int oph_workflow_set_basic_var(oph_workflow * wf)
 {
 	if (!wf) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");

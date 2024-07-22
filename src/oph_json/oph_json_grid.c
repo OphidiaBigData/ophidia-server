@@ -41,7 +41,7 @@ int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_
 /***********OPH_JSON_OBJ_GRID INTERNAL FUNCTIONS***********/
 
 // Free a grid object contents
-int oph_json_free_grid(oph_json_obj_grid *obj)
+int oph_json_free_grid(oph_json_obj_grid * obj)
 {
 	if (obj) {
 		if (obj->description) {
@@ -102,7 +102,7 @@ int oph_json_free_grid(oph_json_obj_grid *obj)
 
 /***********OPH_JSON_OBJ_GRID FUNCTIONS***********/
 
-int _oph_json_add_grid(oph_json *json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num, pthread_mutex_t *flag)
+int _oph_json_add_grid(oph_json * json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num, pthread_mutex_t * flag)
 {
 	if (!json || !objkey || !title || !keys || keys_num < 1 || !fieldtypes || fieldtypes_num < 1) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -427,17 +427,17 @@ int _oph_json_add_grid(oph_json *json, const char *objkey, const char *title, co
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_grid(oph_json *json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num)
+int oph_json_add_grid(oph_json * json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num)
 {
 	return _oph_json_add_grid(json, objkey, title, description, keys, keys_num, fieldtypes, fieldtypes_num, &global_flag);
 }
 
-int oph_json_add_grid_unsafe(oph_json *json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num)
+int oph_json_add_grid_unsafe(oph_json * json, const char *objkey, const char *title, const char *description, char **keys, int keys_num, char **fieldtypes, int fieldtypes_num)
 {
 	return _oph_json_add_grid(json, objkey, title, description, keys, keys_num, fieldtypes, fieldtypes_num, NULL);
 }
 
-int _oph_json_add_grid_row(oph_json *json, const char *objkey, char **values, pthread_mutex_t *flag)
+int _oph_json_add_grid_row(oph_json * json, const char *objkey, char **values, pthread_mutex_t * flag)
 {
 	if (!json || !objkey || !values) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -515,12 +515,12 @@ int _oph_json_add_grid_row(oph_json *json, const char *objkey, char **values, pt
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_grid_row(oph_json *json, const char *objkey, char **values)
+int oph_json_add_grid_row(oph_json * json, const char *objkey, char **values)
 {
 	return _oph_json_add_grid_row(json, objkey, values, &global_flag);
 }
 
-int oph_json_add_grid_row_unsafe(oph_json *json, const char *objkey, char **values)
+int oph_json_add_grid_row_unsafe(oph_json * json, const char *objkey, char **values)
 {
 	return _oph_json_add_grid_row(json, objkey, values, NULL);
 }

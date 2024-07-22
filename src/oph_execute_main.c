@@ -217,6 +217,42 @@ int oph_add_extra(char **jstring, char **keys, char **values, unsigned int n)
 	return OPH_SERVER_OK;
 }
 
+typedef struct __ophExecuteMain_data {
+	struct soap *soap;
+	xsd__string request;
+} _ophExecuteMain_data;
+
+void *_ophExecuteMain(_ophExecuteMain_data * data)
+{
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_detach(pthread_self());
+	oph_service_info_thread_incr(service_info);
+#endif
+
+	struct oph__ophResponse new_response;
+
+	oph__ophExecuteMain(data->soap, data->request, &new_response);
+
+	if (data->soap->userid)
+		free((char *) data->soap->userid);
+	if (data->soap->passwd)
+		free((char *) data->soap->passwd);
+
+	soap_destroy(data->soap);	/* for C++ */
+	soap_end(data->soap);
+	soap_free(data->soap);
+
+	free(data->request);
+	free(data);
+
+#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	oph_service_info_thread_decr(service_info);
+	mysql_thread_end();
+#endif
+
+	return (void *) NULL;;
+}
+
 int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophResponse *response)
 {
 	if (service_info) {
@@ -404,7 +440,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	// Load workflow
 	oph_workflow *wf = NULL;
 	if (oph_workflow_load(request, userid, _host, &wf)) {
-#ifdef COMMAND_TO_JSON
+#ifdef COMMAND_TO_JSON		// Deprecated after release 1.8.0
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for JSON conversion\n", jobid);
 		char *json = NULL;
 		if (oph_workflow_command_to_json(request, &json)) {
