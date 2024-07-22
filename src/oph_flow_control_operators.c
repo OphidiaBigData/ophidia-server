@@ -2383,6 +2383,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 	UNUSED(jobid_response);
 	UNUSED(exit_output);
 	UNUSED(os_username);
+	UNUSED(taskname);
 
 	int error = OPH_SERVER_UNKNOWN;
 
