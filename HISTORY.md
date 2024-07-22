@@ -1,6 +1,10 @@
 
 ## Next release
 
+### Added:
+
+- Option 'extended_output' as output format [#66](https://github.com/OphidiaBigData/ophidia-server/pull/66)
+
 ### Removed:
 
 - Parsing input data as a single command: only JSON Requests are admitted
