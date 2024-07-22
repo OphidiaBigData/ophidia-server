@@ -16,10 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <time.h>
 
 #include "oph_workflow_structs.h"
 
@@ -176,6 +178,22 @@ int oph_workflow_free(oph_workflow *workflow)
 			free(workflow->output->response);
 			workflow->output->response = NULL;
 		}
+		if (workflow->output->input) {
+			free(workflow->output->input);
+			workflow->output->input = NULL;
+		}
+		if (workflow->output->output) {
+			free(workflow->output->output);
+			workflow->output->output = NULL;
+		}
+		if (workflow->output->begin_time) {
+			free(workflow->output->begin_time);
+			workflow->output->begin_time = NULL;
+		}
+		if (workflow->output->end_time) {
+			free(workflow->output->end_time);
+			workflow->output->end_time = NULL;
+		}
 		free(workflow->output);
 		workflow->output = tmp;
 	}
@@ -282,6 +300,18 @@ int oph_workflow_task_free(oph_workflow_task *task)
 		free(task->on_exit);
 		task->on_exit = NULL;
 	}
+	if (task->output) {
+		free(task->output);
+		task->output = NULL;
+	}
+	if (task->begin_time) {
+		free(task->begin_time);
+		task->begin_time = NULL;
+	}
+	if (task->end_time) {
+		free(task->end_time);
+		task->end_time = NULL;
+	}
 	if (task->checkpoint) {
 		free(task->checkpoint);
 		task->checkpoint = NULL;
@@ -349,7 +379,98 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 		free(light_task->response);
 		light_task->response = NULL;
 	}
+	if (light_task->input) {
+		free(light_task->input);
+		light_task->input = NULL;
+	}
+	if (light_task->output) {
+		free(light_task->output);
+		light_task->output = NULL;
+	}
+	if (light_task->end_time) {
+		free(light_task->end_time);
+		light_task->end_time = NULL;
+	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+char *oph_workflow_input_of(oph_workflow_task *task)
+{
+	if (!task)
+		return NULL;
+	int i;
+	char *value = NULL, *tmp = NULL, *tmp2 = NULL, cube = 1;
+	if (task->light_tasks_num) {
+		char *tmp2 = NULL;
+		for (i = 0; i < task->light_tasks_num; ++i) {
+			if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->light_tasks[i].input) <= 0)
+				break;
+			if (tmp)
+				free(tmp);
+			tmp = tmp2;
+		}
+	}
+	for (i = 0; i < task->arguments_num; ++i) {
+		if (!task->arguments_values[i])
+			continue;
+		if (!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_INPUT)) {	// The highest priority
+			if (!task->operator || strncasecmp(task->operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;	// Useless
+				break;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? "|" : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
+			}
+		}
+		if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_SRC_PATH)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_FILE)) {	// Mean priority
+			if (!task->operator || strncasecmp(task->operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? "|" : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
+			}
+		}
+		if (cube) {
+			if (!strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBES)) {	// Less priority
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;
+				continue;
+			}
+			if ((!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE)) || !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_CUBE2)) {	// The lowest priority
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->arguments_values[i]) <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
+			}
+		}
+	}
+	if (tmp)
+		return (tmp);
+	return (value ? strdup(value) : NULL);
 }
 
 int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
@@ -361,12 +482,31 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	if (!(*task_out))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
+	time_t nowtime;
+	struct tm nowtm;
+	char buffer[128];
+	*buffer = 0;
+	time(&nowtime);
+	if (localtime_r(&nowtime, &nowtm))
+		strftime(buffer, 128, "%Y-%m-%d %H:%M:%S", &nowtm);
+
 	(*task_out)->name = strdup(task->name);
 	(*task_out)->markerid = task->markerid;
 	(*task_out)->status = task->status;
 	(*task_out)->light_tasks_num = task->light_tasks_num;
 	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
+	(*task_out)->input = oph_workflow_input_of(task);
+	if (!(*task_out)->input)
+		(*task_out)->input = strdup("");
+	(*task_out)->output = task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file] ? strdup(task->outputs_values[task->outputs_file]) : strdup("");
+	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
+	(*task_out)->end_time = strdup(buffer);
 	(*task_out)->next = NULL;
+
+	if (!task->output)
+		task->output = strdup((*task_out)->output);
+	if (!task->end_time)
+		task->end_time = strdup((*task_out)->end_time);
 
 	if (task->light_tasks_num) {
 		(*task_out)->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));
