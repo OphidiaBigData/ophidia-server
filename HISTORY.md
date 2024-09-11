@@ -1,6 +1,10 @@
 
 ## Next release
 
+### Fixed:
+
+- Bug causing a possible buffer overflow
+
 ### Added:
 
 - Option 'extended_output' as output format [#66](https://github.com/OphidiaBigData/ophidia-server/pull/66)

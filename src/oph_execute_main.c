@@ -4900,7 +4900,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 													if (is_extended) {
 														jjj++;
 														oph_workflow_task *task = item->wf->tasks + i;
-														jsonvalues[jjj] = strdup(oph_workflow_input_of(task));
+														jsonvalues[jjj] = oph_workflow_input_of(task);
+														if (!jsonvalues[jjj])
+															jsonvalues[jjj] = strdup("");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
 															      jobid);
@@ -4940,7 +4942,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = task->begin_time ? strdup(task->begin_time) : strdup("");
+														jsonvalues[jjj] = strdup(task->begin_time ? task->begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
 															      jobid);
@@ -4952,7 +4954,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = task->end_time ? strdup(task->end_time) : strdup("");
+														jsonvalues[jjj] = strdup(task->end_time ? task->end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
 															      jobid);
@@ -5739,6 +5741,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 														jsonvalues[jjj] =
 														    oph_workflow_input_of_l(item->wf->tasks[task_index].light_tasks + i,
 																	    item->wf->tasks[task_index].operator);
+														if (!jsonvalues[jjj])
+															jsonvalues[jjj] = strdup("");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5752,7 +5756,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															oph_workflow_var_substitute(item->wf, task_index, i, jsonvalues + jjj, NULL,
 																		    NULL);
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].output);
+														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].output ? item->wf->tasks[task_index].light_tasks[i].output : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5769,10 +5773,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															jsonvalues[jjj] = strdup("");
 														}
 														jjj++;
-														jsonvalues[jjj] =
-														    item->wf->tasks[task_index].begin_time ? strdup(item->wf->
-																				    tasks[task_index].begin_time) :
-														    strdup("");
+														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].begin_time ? item->wf->tasks[task_index].begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5783,11 +5784,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] =
-														    item->wf->tasks[task_index].light_tasks[i].end_time ? strdup(item->wf->tasks
-																						 [task_index].light_tasks
-																						 [i].end_time) :
-														    strdup("");
+														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->wf->tasks[task_index].light_tasks[i].end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)

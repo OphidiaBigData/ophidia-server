@@ -58,7 +58,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 		snprintf(_host, OPH_SHORT_STRING_SIZE, "%s", soap->host);
 
 	char *userid = (char *) soap->userid;
-	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "N0: received a notification from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "N0: received a notification from %s:%d sent by user '%s'\n", _host, soap->port, userid ? userid : "NONE");
 
 	if (!response) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "N0: null pointer\n");
@@ -108,6 +108,7 @@ int oph__oph_notify(struct soap *soap, xsd__string data, xsd__string output_json
 	int jobid;
 	pthread_mutex_lock(&global_flag);
 	jobid = ++*state->jobid;
+	pmesg(LOG_INFO, __FILE__, __LINE__, "N%d: received a notification from %s:%d\n", jobid, _host, soap->port);
 	pthread_mutex_unlock(&global_flag);
 
 	if (output_json && strlen(output_json)) {

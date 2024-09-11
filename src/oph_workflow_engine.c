@@ -1434,7 +1434,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 			// Add the number of branches to workflow environment
 			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
 			char number_of_loops[name_size];
-			snprintf(number_of_loops, var_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
+			snprintf(number_of_loops, name_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
 			if (!hashtbl_get(wf->vars, number_of_loops)) {
 				var.caller = -1;	// Global scope
 				var.ivalue = 1;	// Non used
@@ -4592,6 +4592,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									if (is_extended) {
 										jjj++;
 										jsonvalues[jjj] = oph_workflow_input_of_l(wf->tasks[task_index].light_tasks + i, wf->tasks[task_index].operator);
+										if (!jsonvalues[jjj])
+											jsonvalues[jjj] = strdup("");
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)
@@ -4604,7 +4606,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										if (jsonvalues[jjj] && strlen(jsonvalues[jjj]))
 											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
 										jjj++;
-										jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].output);
+										jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].output ? wf->tasks[task_index].light_tasks[i].output : "");
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)
@@ -4621,7 +4623,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											jsonvalues[jjj] = strdup("");
 										}
 										jjj++;
-										jsonvalues[jjj] = wf->tasks[task_index].begin_time ? strdup(wf->tasks[task_index].begin_time) : strdup("");
+										jsonvalues[jjj] = strdup(wf->tasks[task_index].begin_time ? wf->tasks[task_index].begin_time : "");
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)
@@ -4632,7 +4634,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											break;
 										}
 										jjj++;
-										jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].end_time);
+										jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].end_time ? wf->tasks[task_index].light_tasks[i].end_time : "");
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)
