@@ -4621,7 +4621,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 											jsonvalues[jjj] = strdup("");
 										}
 										jjj++;
-										jsonvalues[jjj] = strdup(wf->tasks[task_index].begin_time ? wf->tasks[task_index].begin_time) : "");
+										jsonvalues[jjj] = strdup(wf->tasks[task_index].begin_time ? wf->tasks[task_index].begin_time : "");
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 											for (iii = 0; iii < jjj; iii++)

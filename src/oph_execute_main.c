@@ -4940,7 +4940,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = task->begin_time ? strdup(task->begin_time) : strdup("");
+														jsonvalues[jjj] = strdup(task->begin_time ? task->begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
 															      jobid);
@@ -4952,7 +4952,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = task->end_time ? strdup(task->end_time) : strdup("");
+														jsonvalues[jjj] = strdup(task->end_time ? task->end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
 															      jobid);
@@ -5769,7 +5769,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															jsonvalues[jjj] = strdup("");
 														}
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].begin_time ? item->wf->tasks[task_index].begin_time) : "");
+														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].begin_time ? item->wf->tasks[task_index].begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5780,7 +5780,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->wf->tasks[task_index].light_tasks[i].end_time) : "");
+														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->wf->tasks[task_index].light_tasks[i].end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
