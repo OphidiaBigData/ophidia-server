@@ -409,7 +409,7 @@ int oph_abort_request(int jobid, const char *username, char *command)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
 		}
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n", jobid);
 #endif
 	}
 	return RMANAGER_SUCCESS;
