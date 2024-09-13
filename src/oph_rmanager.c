@@ -362,11 +362,13 @@ int oph_abort_request(int jobid, const char *username, char *command)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
 		char *taskname = NULL;
 		while (orm && orm->subm_cmd_check) {
+			char prefix[1 + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_INT_STRING_SIZE];
+			sprintf(prefix, "%s%s%d", oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 			char outfile[OPH_MAX_STRING_SIZE];
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, "job", "queue");
 			size_t len = 4 + strlen(orm->subm_cmd_check) + strlen(outfile);
 			char cmd[len];
-			snprintf(cmd, len, "%s > %s", orm->subm_cmd_check, outfile);
+			snprintf(cmd, len, "%s %s > %s", orm->subm_cmd_check, prefix, outfile);
 			if (oph_ssh_submit(cmd)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 				break;
@@ -374,8 +376,6 @@ int oph_abort_request(int jobid, const char *username, char *command)
 			char *response = NULL;
 			if (oph_get_result_from_file(outfile, &response) || !response)
 				break;
-			char prefix[1 + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_INT_STRING_SIZE];
-			sprintf(prefix, "%s%s%d", oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 			char *pch, *pch2, *save_pointer = NULL;
 			for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer))
 				if ((pch2 = strstr(pch, prefix))) {
