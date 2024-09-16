@@ -2,7 +2,7 @@
 
 /*
     Ophidia Server
-    Copyright (C) 2012-2023 CMCC Foundation
+    Copyright (C) 2012-2024 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@
 ?>
 <!--
     Ophidia Server
-    Copyright (C) 2012-2023 CMCC Foundation
+    Copyright (C) 2012-2024 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
