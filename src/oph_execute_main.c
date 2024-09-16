@@ -5756,7 +5756,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															oph_workflow_var_substitute(item->wf, task_index, i, jsonvalues + jjj, NULL,
 																		    NULL);
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].output ? item->wf->tasks[task_index].light_tasks[i].output : "");
+														jsonvalues[jjj] =
+														    strdup(item->wf->tasks[task_index].light_tasks[i].output ? item->
+															   wf->tasks[task_index].light_tasks[i].output : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5773,7 +5775,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															jsonvalues[jjj] = strdup("");
 														}
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].begin_time ? item->wf->tasks[task_index].begin_time : "");
+														jsonvalues[jjj] =
+														    strdup(item->wf->tasks[task_index].begin_time ? item->wf->
+															   tasks[task_index].begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5784,7 +5788,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															break;
 														}
 														jjj++;
-														jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->wf->tasks[task_index].light_tasks[i].end_time : "");
+														jsonvalues[jjj] =
+														    strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->
+															   wf->tasks[task_index].light_tasks[i].end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
