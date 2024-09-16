@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2023 CMCC Foundation
+    Copyright (C) 2012-2024 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -4918,9 +4918,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 															jsonvalues[jjj] = strdup("");
 														else if (task->outputs_file >= 0)
 															jsonvalues[jjj] =
-															    strdup(task->
-																   outputs_values[task->outputs_file] ? task->outputs_values[task->
-																							     outputs_file]
+															    strdup(task->outputs_values[task->outputs_file] ? task->
+																   outputs_values[task->outputs_file]
 																   : "");
 														else {
 															for (iii = 0; iii < task->outputs_num; ++iii)
@@ -4928,8 +4927,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																    (task->outputs_keys[iii], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE))
 																	break;
 															jsonvalues[jjj] = strdup((iii < task->outputs_num)
-																		 && task->
-																		 outputs_values[iii] ? task->outputs_values[iii] : "");
+																		 && task->outputs_values[iii] ? task->
+																		 outputs_values[iii] : "");
 														}
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype,
@@ -5757,8 +5756,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																		    NULL);
 														jjj++;
 														jsonvalues[jjj] =
-														    strdup(item->wf->tasks[task_index].light_tasks[i].output ? item->
-															   wf->tasks[task_index].light_tasks[i].output : "");
+														    strdup(item->wf->tasks[task_index].light_tasks[i].output ? item->wf->
+															   tasks[task_index].light_tasks[i].output : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5776,8 +5775,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 														}
 														jjj++;
 														jsonvalues[jjj] =
-														    strdup(item->wf->tasks[task_index].begin_time ? item->wf->
-															   tasks[task_index].begin_time : "");
+														    strdup(item->wf->tasks[task_index].begin_time ? item->wf->tasks[task_index].
+															   begin_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
@@ -5789,8 +5788,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 														}
 														jjj++;
 														jsonvalues[jjj] =
-														    strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->
-															   wf->tasks[task_index].light_tasks[i].end_time : "");
+														    strdup(item->wf->tasks[task_index].light_tasks[i].end_time ? item->wf->
+															   tasks[task_index].light_tasks[i].end_time : "");
 														if (!jsonvalues[jjj]) {
 															pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
 															for (iii = 0; iii < jjj; iii++)
