@@ -1,4 +1,22 @@
 
+## v1.9.0 - 2024-09-23
+
+### Fixed:
+
+- Bug causing a possible buffer overflow
+
+### Added:
+
+- Option 'extended_output' as output format [#66](https://github.com/OphidiaBigData/ophidia-server/pull/66)
+
+### Removed:
+
+- Parsing input data as a single command: only JSON Requests are admitted
+
+### Changed:
+
+- Script to start Ophidia I/O Servers by means of OPH_CLUSTER
+
 ## v1.8.0 - 2023-07-31
 
 ### Fixed:
@@ -105,7 +123,6 @@
 - File check of OPH_WAIT from 'stat' to OPH_FS [#57](https://github.com/OphidiaBigData/ophidia-server/pull/57)
 - Activate service without authorization procedure in case authorization directory is not found
 
-
 ## v1.6.1 - 2021-03-16
 
 ### Fixed:
@@ -115,7 +132,6 @@
 ### Changed:
 
 - Order of the arguments 'workflowid' and 'project' of oph_submit.sh
-
 
 ## v1.6.0 - 2021-03-05
 
@@ -167,7 +183,6 @@
 - Useless variables from oph_plugin
 - Status OPH_ODB_STATUS_CLOSED from list of possible states
 
-
 ## v1.5.1 - 2019-04-16
 
 ### Fixed:
@@ -183,7 +198,6 @@
 
 - Accounting features to log a line for each massive task [#45](https://github.com/OphidiaBigData/ophidia-server/pull/45)
 - Default value of parameter 'action' of OPH_MANAGE_SESSION
-
 
 ## v1.5.0 - 2019-01-24
 
@@ -214,7 +228,6 @@
 ### Removed:
 
 - References to hidden containers [#39](https://github.com/OphidiaBigData/ophidia-server/issues/39)
-
 
 ## v1.4.0 - 2018-07-27
 

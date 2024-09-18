@@ -26,6 +26,14 @@
 
 #include "hashtbl.h"
 
+#define OPH_WORKFLOW_ARG_INPUT "input"
+#define OPH_WORKFLOW_ARG_SRC_PATH "src_path"
+#define OPH_WORKFLOW_ARG_FILE "file"
+#define OPH_WORKFLOW_ARG_CUBE "cube"
+#define OPH_WORKFLOW_ARG_CUBE2 "cube2"
+#define OPH_WORKFLOW_ARG_CUBES "cubes"
+#define OPH_WORKFLOW_OPERATOR "oph_concat"
+
 typedef struct _oph_workflow_ordered_list {
 	char *key;
 	char *object;
@@ -67,6 +75,9 @@ typedef struct _oph_workflow_light_task {
 	int arguments_num;
 	char *response;
 	char is_marked_to_be_aborted;
+	char *input;
+	char *output;
+	char *end_time;
 } oph_workflow_light_task;
 
 /* \brief Struct for an OPH_WORKFLOW dependency
@@ -187,6 +198,9 @@ typedef struct _oph_workflow_task {
 	char is_known;
 	char forward;
 	double timestamp;
+	char *output;
+	char *begin_time;
+	char *end_time;
 	char is_marked_to_be_aborted;
 	int backoff_time;
 	char backoff_type;
@@ -221,6 +235,10 @@ typedef struct _oph_workflow_task_out {
 	oph_workflow_light_task_out *light_task_outs;
 	int light_tasks_num;
 	char *response;
+	char *input;
+	char *output;
+	char *begin_time;
+	char *end_time;
 	struct _oph_workflow_task_out *next;
 } oph_workflow_task_out;
 
@@ -383,6 +401,7 @@ int oph_workflow_expand(oph_workflow * workflow, int tasks_num);
 int oph_workflow_copy_task(oph_workflow_task * stask, oph_workflow_task * dtask, int suffix);
 oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list);
 int oph_workflow_free_list(oph_workflow_ordered_list * list);
+char *oph_workflow_input_of(oph_workflow_task * task);
 
 // Others
 int oph_output_data_free(char **output, int num);

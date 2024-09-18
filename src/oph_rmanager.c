@@ -362,11 +362,14 @@ int oph_abort_request(int jobid, const char *username, char *command)
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Try to stop task %d\n", jobid);
 		char *taskname = NULL;
 		while (orm && orm->subm_cmd_check) {
+			size_t len = 1 + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_INT_STRING_SIZE;
+			char prefix[len];
+			snprintf(prefix, len, "%s%s%d", oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 			char outfile[OPH_MAX_STRING_SIZE];
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, "job", "queue");
-			size_t len = 4 + strlen(orm->subm_cmd_check) + strlen(outfile);
+			len += 5 + strlen(orm->subm_cmd_check) + strlen(outfile);
 			char cmd[len];
-			snprintf(cmd, len, "%s > %s", orm->subm_cmd_check, outfile);
+			snprintf(cmd, len, "%s %s > %s", orm->subm_cmd_check, prefix, outfile);
 			if (oph_ssh_submit(cmd)) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 				break;
@@ -374,8 +377,6 @@ int oph_abort_request(int jobid, const char *username, char *command)
 			char *response = NULL;
 			if (oph_get_result_from_file(outfile, &response) || !response)
 				break;
-			char prefix[1 + strlen(oph_server_port) + strlen(OPH_RMANAGER_PREFIX) + OPH_INT_STRING_SIZE];
-			sprintf(prefix, "%s%s%d", oph_server_port, OPH_RMANAGER_PREFIX, jobid);
 			char *pch, *pch2, *save_pointer = NULL;
 			for (pch = strtok_r(response, "\n", &save_pointer); pch; pch = strtok_r(NULL, "\n", &save_pointer))
 				if ((pch2 = strstr(pch, prefix))) {
@@ -408,7 +409,7 @@ int oph_abort_request(int jobid, const char *username, char *command)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 			return RMANAGER_ERROR;
 		}
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n");
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d has been stopped\n", jobid);
 #endif
 	}
 	return RMANAGER_SUCCESS;
@@ -563,7 +564,7 @@ int oph_get_available_host_number(int *size, int jobid)
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project,
 			 const char *taskname, int wid, char **cmd, char type)
 {
-	if (!orm) {
+	if (!orm || !ncores) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
 		return RMANAGER_NULL_PARAM;
 	}
@@ -622,7 +623,8 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	}
 
 	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
-		request, ncores == 1 ? orm->subm_queue_high : orm->subm_queue_low, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", orm->subm_postfix);
+		request, type
+		|| (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
@@ -847,6 +849,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 			snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 	}
 #ifdef LOCAL_FRAMEWORK
+	UNUSED(wid);
 	char command[OPH_MAX_STRING_SIZE];
 #ifdef USE_MPI
 	snprintf(command, OPH_MAX_STRING_SIZE, "rm -f %s; mpirun -np %d %s \"%s\" >> %s 2>> %s", outfile, _ncores, oph_operator_client, request, outfile, outfile);
