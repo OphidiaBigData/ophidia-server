@@ -1,0 +1,16 @@
+ALTER USER 'root'@'localhost' IDENTIFIED BY '$PASSWORD';
+CREATE USER 'root'@'%' IDENTIFIED BY '$PASSWORD';
+GRANT ALL privileges ON *.* TO 'root'@'%' WITH GRANT OPTION;
+GRANT SUPER on *.* to 'root'@'%';
+GRANT EXECUTE on mysql.* to 'root'@'%';
+FLUSH PRIVILEGES;
+
+CREATE DATABASE ophidiadb;
+CREATE DATABASE oph_dimensions;
+CREATE USER '$USER'@'%' IDENTIFIED BY '$PASSWORD';
+GRANT ALL PRIVILEGES ON ophidiadb.* TO '$USER'@'%';
+GRANT ALL PRIVILEGES ON oph_dimensions.* TO '$USER'@'%';
+GRANT SUPER on *.* to '$USER'@'%';
+GRANT TRIGGER ON ophidiadb.* TO '$USER'@'%';
+FLUSH PRIVILEGES;
+SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));

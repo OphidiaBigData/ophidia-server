@@ -1,0 +1,31 @@
+ControlMachine=localhost
+ControlAddr=127.0.0.1
+AuthInfo=socket=$HOME/.ophidia/var_run_munge/munge.socket.2
+AuthType=auth/munge
+CryptoType=crypto/munge
+MpiDefault=none
+ProctrackType=proctrack/pgid
+ReturnToService=1
+SlurmctldPidFile=$HOME/.ophidia/var/run/slurm/slurmctld.pid
+SlurmdPidFile=$HOME/.ophidia/var/run/slurm/slurmd.pid
+SlurmdSpoolDir=$HOME/.ophidia/var/spool/slurmd
+SlurmUser=$USER
+SlurmdUser=$USER
+StateSaveLocation=$HOME/.ophidia/var/spool/slurmd
+SwitchType=switch/none
+TaskPlugin=task/none
+SchedulerType=sched/backfill
+#SelectType=select/linear
+SelectType=select/cons_res
+SelectTypeParameters=CR_CPU
+#FastSchedule=1
+AccountingStorageType=accounting_storage/none
+ClusterName=cluster
+JobCompType=jobcomp/none
+JobAcctGatherType=jobacct_gather/none
+SlurmctldDebug=3
+SlurmctldLogFile=$HOME/.ophidia/var/log/slurmctld/slurmctld.log
+SlurmdDebug=3
+SlurmdLogFile=$HOME/.ophidia/var/log/slurm/slurmd.log
+NodeName=localhost NodeAddr=127.0.0.1 State=UNKNOWN Procs=$PROCS
+PartitionName=main Nodes=localhost Default=YES MaxTime=INFINITE State=UP

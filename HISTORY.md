@@ -1,5 +1,5 @@
 
-## v1.9.0 - 2024-09-23
+## v1.9.0 - 2024-10-10
 
 ### Fixed:
 
@@ -7,6 +7,7 @@
 
 ### Added:
 
+- Configuration files for spack-based installation [#67](https://github.com/OphidiaBigData/ophidia-server/pull/67)
 - Option 'extended_output' as output format [#66](https://github.com/OphidiaBigData/ophidia-server/pull/66)
 
 ### Removed:
