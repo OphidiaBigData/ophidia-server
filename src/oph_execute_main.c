@@ -5757,7 +5757,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																		    NULL);
 														jjj++;
 														if (item->wf->tasks[task_index].light_tasks[i].output)
-															jsonvalues[jjj] = strdup(wf->tasks[task_index].light_tasks[i].output);
+															jsonvalues[jjj] = strdup(item->wf->tasks[task_index].light_tasks[i].output);
 														else
 															jsonvalues[jjj] = strdup("");
 														if (!jsonvalues[jjj]) {
