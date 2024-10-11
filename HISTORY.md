@@ -1,14 +1,9 @@
 
-## Next release
-
-### Fixed:
-
-- Bug in reporting the output of light tasks of running workflows
-
 ## v1.9.0 - 2024-10-10
 
 ### Fixed:
 
+- Bug in reporting the output of light tasks of running workflows
 - Bug causing a possible buffer overflow
 
 ### Added:
