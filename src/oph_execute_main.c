@@ -514,12 +514,20 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		return SOAP_OK;
 	}
 	// Validate the workflow
-	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf) || oph_workflow_parallel_fco(wf, 0, state) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
+	if (oph_workflow_validate(wf) || oph_workflow_validate_fco(wf)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: workflow '%s' is not valid\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 		oph_workflow_free(wf);
 		return SOAP_OK;
 	}
+#ifdef OPH_PRE_EXPANSION
+	if (oph_workflow_parallel_fco(wf, 0, state) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
+		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: workflow '%s' is not valid\n", jobid, wf->name);
+		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		oph_workflow_free(wf);
+		return SOAP_OK;
+	}
+#endif
 	// Control on workflow parameters
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_NCORES, OPH_ARG_NHOSTS);
 	int ncores = wf->ncores, nhosts = wf->nhosts;

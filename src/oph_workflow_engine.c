@@ -855,7 +855,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		*remake_submission_string = 0;
 
 	int i, j = -1;
-	oph_workflow_task *task = &(wf->tasks[task_index]);
+	oph_workflow_task *task = wf->tasks + task_index;
 
 	char auto_retry = oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1);
 	char manual_retry = task->residual_retry_num && (task->retry_num > 1);
@@ -1203,6 +1203,7 @@ int oph_workflow_mark_children_of(oph_workflow *wf, int k, int p)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
+#ifdef OPH_PRE_EXPANSION
 // Thread safe
 int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_plugin_data *state)
 {
@@ -1437,7 +1438,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 			snprintf(number_of_loops, name_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
 			if (!hashtbl_get(wf->vars, number_of_loops)) {
 				var.caller = -1;	// Global scope
-				var.ivalue = 1;	// Non used
+				var.ivalue = 1;	// Not used
 				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
 				if (var.svalue)
 					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", svalues_num);
@@ -1455,13 +1456,13 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 				memcpy(var_buffer, (void *) &var, var_size);
 				memcpy(var_buffer + var_size, var.svalue, svalue_size);
 				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
-					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
-						   number_of_loops, wf->tasks[j].name);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of workflow '%s'. Maybe it already exists.\n",
+						   number_of_loops, wf->name);
 					free(var.svalue);
 					free(var_buffer);
 					break;
 				}
-				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", number_of_loops, var.svalue, wf->tasks[j].name);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", number_of_loops, var.svalue, wf->name);
 				free(var.svalue);
 				free(var_buffer);
 			}
@@ -1701,6 +1702,502 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
+#else
+// Thread unsafe
+int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_plugin_data *state)
+{
+	if (!wf || !wf->tasks) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+
+	char *pch, *save_pointer = NULL, *name = NULL, **svalues = NULL;
+	int *ivalues = NULL;	// If not allocated then it is equal to [1:values_num]
+	int i, j, jj, k, kk, svalues_num = 0, ivalues_num = 0, new_branch_num, replied_num, old_tasks_num, new_index[wf->tasks_num];
+	int old_dependents_indexes_num, *old_dependents_indexes = NULL, old_deps_num;
+	unsigned int kkk, kkkk, lll = strlen(OPH_WORKFLOW_SEPARATORS);
+	long value;
+	oph_workflow_dep *old_deps = NULL;
+	oph_workflow_var var;
+	void *var_buffer;
+	size_t var_size = sizeof(oph_workflow_var), svalue_size;
+	int jobid;
+
+	char exploded = 0, found = 0;	// Found a FOR with higher nesting_level
+	for (i = 0; i < wf->tasks_num; ++i) {
+		if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
+			if (wf->tasks[i].parallel_mode)
+				continue;	// The current task is a parallel-for already exploded
+
+			// Pre-parsing for possible file list
+			if (!wf->tasks[i].massive_expansion) {
+				jj = -1;
+				for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+					if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_INPUT) && strlen(wf->tasks[i].arguments_values[j])
+					    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+						jj = j;
+						break;
+					}
+				if (jj < 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_SRC_PATH) && strlen(wf->tasks[i].arguments_values[j])
+						    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+							jj = j;
+							break;
+						}
+				}
+
+				jobid = *state->jobid;
+				oph_check_for_massive_operation(state, 'F', jobid, wf, i, ophDB, NULL, NULL, NULL, NULL);
+
+				if (jj >= 0) {
+					for (j = 0; j < wf->tasks[i].arguments_num; ++j)
+						if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES)) {
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Override value of parameter '%s' of task '%s' with '%s'\n", OPH_ARG_VALUES,
+							      wf->tasks[i].name, wf->tasks[i].arguments_values[jj]);
+							free(wf->tasks[i].arguments_values[j]);
+							wf->tasks[i].arguments_values[j] = strdup(wf->tasks[i].arguments_values[jj]);
+							break;
+						}
+					if (j >= wf->tasks[i].arguments_num) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Override key of parameter '%s' of task '%s' with '%s'\n", wf->tasks[i].arguments_keys[jj],
+						      wf->tasks[i].name, OPH_ARG_VALUES);
+						free(wf->tasks[i].arguments_keys[jj]);
+						wf->tasks[i].arguments_keys[jj] = strdup(OPH_ARG_VALUES);
+					}
+					wf->tasks[i].massive_expansion = 1;
+				}
+			}
+
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
+					if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES))
+						wf->parallel_mode = wf->tasks[i].parallel_mode = 1;
+					else if (strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NO))
+						break;
+				}
+			}
+			if (j < wf->tasks[i].arguments_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_OPERATOR_PARAMETER_PARALLEL, wf->tasks[i].name);
+				break;
+			}
+			if (!wf->tasks[i].parallel_mode)
+				continue;
+
+			if (wf->tasks[i].nesting_level > nesting_level) {
+				wf->tasks[i].parallel_mode = 0;	// Skip this parallel-for now 
+				found = 1;
+				continue;
+			}
+
+			name = NULL;
+			if (ivalues) {
+				free(ivalues);
+				ivalues = NULL;
+			}
+			if (svalues) {
+				for (kk = 0; kk < svalues_num; ++kk)
+					if (svalues[kk])
+						free(svalues[kk]);
+				free(svalues);
+				svalues = NULL;
+			}
+			svalues_num = ivalues_num = 0;
+
+			// Extract the other arguments
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_KEY) && !name)
+					name = wf->tasks[i].arguments_values[j];
+				else if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_ARG_VALUES) && !svalues && strlen(wf->tasks[i].arguments_values[j])
+					 && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+					char *pch1;
+					pch = strchr(wf->tasks[i].arguments_values[j], OPH_SEPARATOR_SUBPARAM);
+					for (svalues_num++; pch; svalues_num++) {
+						pch1 = pch + 1;
+						if (!pch1 || !*pch1)
+							break;
+						pch = strchr(pch1, OPH_SEPARATOR_SUBPARAM);
+					}
+					svalues = (char **) malloc(svalues_num * sizeof(char *));
+					if (!svalues)
+						break;
+					char *tmp = strdup(wf->tasks[i].arguments_values[j]);
+					if (!tmp)
+						break;
+					pch = strtok_r(tmp, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+					for (kk = 0; kk < svalues_num; ++kk) {
+						svalues[kk] = strndup(pch, OPH_WORKFLOW_MAX_STRING);
+						if (!svalues[kk])
+							break;
+						pch = strtok_r(NULL, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
+					}
+					free(tmp);
+					if (kk < svalues_num)
+						break;
+				}
+			}
+			if (j < wf->tasks[i].arguments_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n", wf->tasks[i].name);
+				break;
+			}
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_COUNTER) && !ivalues && strlen(wf->tasks[i].arguments_values[j])
+				    && strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_NULL)) {
+					oph_subset *subset_struct = NULL;
+					if (oph_subset_init(&subset_struct)) {
+						oph_subset_free(subset_struct);
+						break;
+					}
+					if (oph_subset_parse(wf->tasks[i].arguments_values[j], strlen(wf->tasks[i].arguments_values[j]), subset_struct, svalues_num)) {
+						oph_subset_free(subset_struct);
+						break;
+					}
+					ivalues_num = subset_struct->total;
+					ivalues = (int *) malloc(ivalues_num * sizeof(int));
+					if (!ivalues) {
+						oph_subset_free(subset_struct);
+						break;
+					}
+					for (kk = kkk = 0; (kk < ivalues_num) && (kkk < subset_struct->number); ++kkk) {
+						value = subset_struct->start[kkk];
+						do {
+							ivalues[kk++] = (int) value;
+							value += subset_struct->stride[kkk];
+						}
+						while ((kk < ivalues_num) && (value <= subset_struct->end[kkk]));
+					}
+					oph_subset_free(subset_struct);
+				}
+			}
+			if (j < wf->tasks[i].arguments_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Generic error in parsing arguments of task '%s'.\n", wf->tasks[i].name);
+				break;
+			}
+			for (kk = 0; name && (kk < (int) strlen(name)); ++kk)	// check compliance with IEEE Std 1003.1-2001 conventions
+			{
+				if ((name[kk] == '_') || ((name[kk] >= 'A') && (name[kk] <= 'Z')) || ((name[kk] >= 'a') && (name[kk] <= 'z')) || (kk && (name[kk] >= '0') && (name[kk] <= '9')))
+					continue;
+				for (kkk = 0; kkk < lll; ++kkk)
+					if (name[kk] == OPH_WORKFLOW_SEPARATORS[kkk]) {
+						name = NULL;
+						break;
+					}
+				break;
+			}
+			if (!name) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Bad argument '%s' of task '%s'.\n", OPH_ARG_KEY, wf->tasks[i].name);
+				break;
+			}
+			if (svalues_num) {
+				if (ivalues_num && (ivalues_num != svalues_num)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Arguments '%s' and '%s' have different sizes.\n", OPH_ARG_VALUES, OPH_OPERATOR_PARAMETER_COUNTER, wf->tasks[i].name);
+					break;
+				}
+			} else
+				svalues_num = ivalues_num ? ivalues_num : 1;	// One loop is executed by default
+			new_branch_num = svalues_num - 1;	// Number of new branches
+
+			// Mark inner tasks
+			replied_num = 0;
+			for (j = 0; j < wf->tasks_num; ++j)
+				wf->tasks[j].is_marked = 0;
+			if (oph_workflow_mark_children_of(wf, i, i)) {
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in processing task '%s'.\n", wf->tasks[i].name);
+				break;
+			}
+			// Count inner tasks
+			for (j = 0; j < wf->tasks_num; ++j)
+				if (wf->tasks[j].is_marked)
+					replied_num++;
+			if (!replied_num)
+				continue;
+
+			// Add the number of branches to workflow environment
+			size_t name_size = 2 + strlen(name) + strlen(OPH_WORKFLOW_COUNTER_SIZE);
+			char number_of_loops[name_size];
+			snprintf(number_of_loops, name_size, "%s_" OPH_WORKFLOW_COUNTER_SIZE, name);
+			if (!hashtbl_get(wf->vars, number_of_loops)) {
+				var.caller = -1;	// Global scope
+				var.ivalue = 1;	// Not used
+				var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+				if (var.svalue)
+					snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", svalues_num);
+				if (!var.svalue) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					break;
+				}
+				svalue_size = strlen(var.svalue) + 1;
+				var_buffer = malloc(var_size + svalue_size);
+				if (!var_buffer) {
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+					free(var.svalue);
+					break;
+				}
+				memcpy(var_buffer, (void *) &var, var_size);
+				memcpy(var_buffer + var_size, var.svalue, svalue_size);
+				if (hashtbl_insert_with_size(wf->vars, number_of_loops, var_buffer, var_size + svalue_size)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", number_of_loops, wf->name);
+					free(var.svalue);
+					free(var_buffer);
+					break;
+				}
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of workflow '%s'.\n", number_of_loops, var.svalue, wf->name);
+				free(var.svalue);
+				free(var_buffer);
+			}
+			// In case no additional branch has to be created, simply add for-variable as task local variable to marked tasks
+			if (!new_branch_num) {
+				for (j = 0; j < wf->tasks_num; ++j)
+					if (wf->tasks[j].is_marked) {
+						var.caller = i;
+						if (ivalues)
+							var.ivalue = ivalues[0];
+						else
+							var.ivalue = 1;	// Non C-like indexing
+						if (svalues)
+							var.svalue = strdup(svalues[0]);
+						else {
+							var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+							if (var.svalue)
+								snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+						}
+						if (!var.svalue) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							break;
+						}
+						svalue_size = strlen(var.svalue) + 1;
+						var_buffer = malloc(var_size + svalue_size);
+						if (!var_buffer) {
+							pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+							free(var.svalue);
+							break;
+						}
+						memcpy(var_buffer, (void *) &var, var_size);
+						memcpy(var_buffer + var_size, var.svalue, svalue_size);
+						if (hashtbl_insert_with_size(wf->tasks[j].vars, name, var_buffer, var_size + svalue_size)) {
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n",
+							      name, wf->tasks[j].name);
+							free(var.svalue);
+							free(var_buffer);
+							break;
+						}
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", name, var.svalue, wf->tasks[j].name);
+						free(var.svalue);
+						free(var_buffer);
+					}
+				continue;
+			}
+
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%d task%s will be replied %d time%s.\n", replied_num, replied_num == 1 ? "" : "s", new_branch_num, new_branch_num == 1 ? "" : "s");
+
+			// Expand tasks
+			old_tasks_num = wf->tasks_num;
+			if (oph_workflow_expand(wf, old_tasks_num + replied_num * new_branch_num)) {
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in processing task '%s'.\n", wf->tasks[i].name);
+				break;
+			}
+			// Fill new tasks
+			for (j = 0; j < new_branch_num; ++j) {
+				for (kk = kkk = 0; kk < replied_num; kkk++) {
+					if (wf->tasks[kkk].is_marked) {
+						kkkk = old_tasks_num + j * replied_num + kk;
+						if (oph_workflow_copy_task(wf->tasks + kkk, wf->tasks + kkkk, 2 + j)) {
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in copy task '%s'.\n", wf->tasks[kkk].name);
+							break;
+						}
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task '%s' (index %d) has been copied with index %d.\n", wf->tasks[kkk].name, kkk, kkkk);
+						if (!j)
+							new_index[kkk] = kk;
+						kk++;
+					}
+				}
+				if (kk < replied_num)
+					break;
+			}
+			for (j = 0; j < old_tasks_num; ++j)
+				if (wf->tasks[j].is_marked) {
+					size_t length = strlen(wf->tasks[j].name) - 1;
+					char tmp[length + OPH_WORKFLOW_MIN_STRING];
+					if (wf->tasks[j].name[length] == OPH_WORKFLOW_NAME_EXPANSION_END) {
+						wf->tasks[j].name[length] = 0;
+						sprintf(tmp, OPH_WORKFLOW_NAME_EXPANSION2, wf->tasks[j].name, 1);
+					} else
+						sprintf(tmp, OPH_WORKFLOW_NAME_EXPANSION1, wf->tasks[j].name, 1);
+					free(wf->tasks[j].name);
+					wf->tasks[j].name = strdup(tmp);
+				}
+			int real_task_index;
+			for (j = 0; j < new_branch_num; ++j)
+				for (kk = 0; kk < replied_num; kk++) {
+					kkkk = old_tasks_num + j * replied_num + kk;
+					for (k = 0; k < wf->tasks[kkkk].dependents_indexes_num; k++)
+						if (wf->tasks[wf->tasks[kkkk].dependents_indexes[k]].is_marked)
+							wf->tasks[kkkk].dependents_indexes[k] = old_tasks_num + j * replied_num + new_index[wf->tasks[kkkk].dependents_indexes[k]];
+					for (k = 0; k < wf->tasks[kkkk].deps_num; k++) {
+						real_task_index = wf->tasks[kkkk].deps[k].task_index;
+						if (real_task_index < 0)
+							real_task_index += wf->tasks[kkkk].deps_num;
+						if (wf->tasks[real_task_index].is_marked) {
+							wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
+							if (wf->tasks[kkkk].deps[k].task_index < 0)
+								wf->tasks[kkkk].deps[k].task_index -= wf->tasks[kkkk].deps_num;
+						}
+						if (wf->tasks[kkkk].deps[k].task_name)
+							free(wf->tasks[kkkk].deps[k].task_name);
+						wf->tasks[kkkk].deps[k].task_name = strdup(wf->tasks[real_task_index].name);
+					}
+				}
+
+			// Update dependence data
+			for (j = 0; j < old_tasks_num; ++j) {
+				if (!wf->tasks[j].is_marked) {
+					kkk = 0;
+					int tmp_array[new_branch_num * replied_num];
+					for (k = 0; k < wf->tasks[j].dependents_indexes_num; k++)
+						if (wf->tasks[wf->tasks[j].dependents_indexes[k]].is_marked)
+							for (kk = 0; kk < new_branch_num; ++kk)
+								tmp_array[kkk++] = old_tasks_num + kk * replied_num + new_index[wf->tasks[j].dependents_indexes[k]];
+					if (kkk) {
+						old_dependents_indexes_num = wf->tasks[j].dependents_indexes_num;
+						old_dependents_indexes = wf->tasks[j].dependents_indexes;
+						wf->tasks[j].dependents_indexes_num += kkk;
+						wf->tasks[j].dependents_indexes = (int *) malloc(wf->tasks[j].dependents_indexes_num * sizeof(int));
+						memcpy(wf->tasks[j].dependents_indexes, old_dependents_indexes, old_dependents_indexes_num * sizeof(int));
+						memcpy(wf->tasks[j].dependents_indexes + old_dependents_indexes_num, tmp_array, kkk * sizeof(int));
+						free(old_dependents_indexes);
+					}
+
+					kkk = 0;
+					oph_workflow_dep tmp_array_dep[new_branch_num * replied_num];
+					for (k = 0; k < wf->tasks[j].deps_num; k++) {
+						real_task_index = wf->tasks[j].deps[k].task_index;
+						if (real_task_index < 0)
+							real_task_index += wf->tasks[j].deps_num;
+						if (wf->tasks[real_task_index].is_marked)
+							for (kk = 0; kk < new_branch_num; ++kk) {
+								memcpy(tmp_array_dep + kkk, wf->tasks[j].deps + k, sizeof(oph_workflow_dep));
+								if (wf->tasks[j].deps[k].argument && !((tmp_array_dep[kkk].argument = strdup(wf->tasks[j].deps[k].argument))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].order && !((tmp_array_dep[kkk].order = strdup(wf->tasks[j].deps[k].order))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].type && !((tmp_array_dep[kkk].type = strdup(wf->tasks[j].deps[k].type))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].filter && !((tmp_array_dep[kkk].filter = strdup(wf->tasks[j].deps[k].filter))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].output_argument && !((tmp_array_dep[kkk].output_argument = strdup(wf->tasks[j].deps[k].output_argument))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].output_order && !((tmp_array_dep[kkk].output_order = strdup(wf->tasks[j].deps[k].output_order))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								tmp_array_dep[kkk].task_index = old_tasks_num + kk * replied_num + new_index[real_task_index];
+								if (!((tmp_array_dep[kkk].task_name = strdup(wf->tasks[tmp_array_dep[kkk].task_index].name))))
+									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+								if (wf->tasks[j].deps[k].task_index < 0)
+									tmp_array_dep[kkk].task_index -= wf->tasks[j].deps_num;
+								kkk++;
+							}
+					}
+					if (kkk) {
+						old_deps_num = wf->tasks[j].deps_num;
+						old_deps = wf->tasks[j].deps;
+						wf->tasks[j].deps_num += kkk;
+						wf->tasks[j].residual_deps_num += kkk;
+						wf->tasks[j].deps = (oph_workflow_dep *) malloc(wf->tasks[j].deps_num * sizeof(oph_workflow_dep));
+						memcpy(wf->tasks[j].deps, old_deps, old_deps_num * sizeof(oph_workflow_dep));
+						memcpy(wf->tasks[j].deps + old_deps_num, tmp_array_dep, kkk * sizeof(oph_workflow_dep));
+						free(old_deps);
+					}
+				} else
+					for (k = 0; k < wf->tasks[j].deps_num; k++) {
+						if (wf->tasks[j].deps[k].task_name)
+							free(wf->tasks[j].deps[k].task_name);
+						real_task_index = wf->tasks[j].deps[k].task_index;
+						if (real_task_index < 0)
+							real_task_index += wf->tasks[j].deps_num;
+						wf->tasks[j].deps[k].task_name = strdup(wf->tasks[real_task_index].name);
+					}
+			}
+			for (j = 0; j < old_tasks_num; ++j)
+				for (k = 0; k < wf->tasks[j].deps_num; ++k) {
+					kk = wf->tasks[j].deps[k].task_index;
+					if (kk < 0)
+						kk += wf->tasks[j].deps_num;
+					if (wf->tasks[kk].is_marked && (kk < old_tasks_num)) {
+						if (wf->tasks[j].deps[k].task_name)
+							free(wf->tasks[j].deps[k].task_name);
+						wf->tasks[j].deps[k].task_name = strdup(wf->tasks[kk].name);
+					}
+				}
+
+			// Add for-variable as task local variable
+			for (j = 0; j < wf->tasks_num; ++j)
+				if (wf->tasks[j].is_marked) {
+					if (j < old_tasks_num)
+						k = 0;
+					else
+						k = 1 + (j - old_tasks_num) / replied_num;
+					var.caller = i;
+					if (ivalues)
+						var.ivalue = ivalues[k];
+					else
+						var.ivalue = 1 + k;	// Non C-like indexing
+					if (svalues)
+						var.svalue = strdup(svalues[k]);
+					else {
+						var.svalue = (char *) calloc(OPH_WORKFLOW_MIN_STRING, sizeof(char));
+						if (var.svalue)
+							snprintf(var.svalue, OPH_WORKFLOW_MIN_STRING, "%d", var.ivalue);
+					}
+					if (!var.svalue) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+						break;
+					}
+					svalue_size = strlen(var.svalue) + 1;
+					var_buffer = malloc(var_size + svalue_size);
+					if (!var_buffer) {
+						pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+						free(var.svalue);
+						break;
+					}
+					memcpy(var_buffer, (void *) &var, var_size);
+					memcpy(var_buffer + var_size, var.svalue, svalue_size);
+					if (hashtbl_insert_with_size(wf->tasks[j].vars, name, var_buffer, var_size + svalue_size)) {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Unable to store variable '%s' in environment of task '%s'. Maybe it already exists.\n", name, wf->tasks[j].name);
+						free(var.svalue);
+						free(var_buffer);
+						break;
+					}
+					if (svalues)
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%s' in environment of task '%s'.\n", name, var.svalue, wf->tasks[j].name);
+					else
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Added variable '%s=%d' in environment of task '%s'.\n", name, var.ivalue, wf->tasks[j].name);
+					free(var.svalue);
+					free(var_buffer);
+				}
+
+			exploded = 1;
+			break;
+		}
+	}
+	if (ivalues)
+		free(ivalues);
+	if (svalues) {
+		for (kk = 0; kk < svalues_num; ++kk)
+			if (svalues[kk])
+				free(svalues[kk]);
+		free(svalues);
+	}
+	if (i < wf->tasks_num) {
+		if (exploded)
+			return oph_workflow_parallel_fco(wf, nesting_level, state);
+		else
+			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
+	if (found)
+		return oph_workflow_parallel_fco(wf, nesting_level + 1, state);
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+#endif
 
 // Thread safe
 int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow *wf, int *tasks_indexes, int tasks_indexes_num, ophidiadb *oDB, char **jobid_response)
@@ -5106,7 +5603,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									return SOAP_OK;
 								} else
 									(wf->tasks[dep_task_index].residual_deps_num)--;
-								wf->tasks[dep_task_index].deps[j].task_index = -1;
+								wf->tasks[dep_task_index].deps[j].task_index -= wf->tasks[dep_task_index].deps_num;
 							}
 						}
 					}

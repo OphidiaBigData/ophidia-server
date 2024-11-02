@@ -2523,6 +2523,19 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		int i = *task_id, idjob = wf->tasks[i].idjob;
 		wf->tasks[i].is_known = 1;
 
+#ifndef OPH_PRE_EXPANSION
+		if (!wf->parallel_mode) {
+			int j;
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
+					if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES))
+						oph_workflow_parallel_fco(wf, 0, state);	// Thread unsafe
+					break;
+				}
+			}
+		}
+#endif
+
 		// JSON Response creation
 		int success = 0;
 		oph_json *oper_json = NULL;
