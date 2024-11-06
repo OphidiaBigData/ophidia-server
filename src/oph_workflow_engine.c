@@ -2037,11 +2037,11 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 					for (k = 0; k < wf->tasks[kkkk].deps_num; k++) {
 						real_task_index = wf->tasks[kkkk].deps[k].task_index;
 						if ((negative = (real_task_index < 0)))	// '=' is correct
-							real_task_index += wf->tasks[kkkk].deps_num;
+							real_task_index += old_tasks_num;
 						if (wf->tasks[real_task_index].is_marked) {
 							real_task_index = wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
 							if (negative)
-								wf->tasks[kkkk].deps[k].task_index -= wf->tasks[kkkk].deps_num;
+								wf->tasks[kkkk].deps[k].task_index -= wf->tasks_num;
 						}
 						if (wf->tasks[kkkk].deps[k].task_name)
 							free(wf->tasks[kkkk].deps[k].task_name);
@@ -2073,7 +2073,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 					for (k = 0; k < wf->tasks[j].deps_num; k++) {
 						real_task_index = wf->tasks[j].deps[k].task_index;
 						if (real_task_index < 0)
-							real_task_index += wf->tasks[j].deps_num;
+							real_task_index += old_tasks_num;
 						if (wf->tasks[real_task_index].is_marked)
 							for (kk = 0; kk < new_branch_num; ++kk) {
 								memcpy(tmp_array_dep + kkk, wf->tasks[j].deps + k, sizeof(oph_workflow_dep));
@@ -2093,7 +2093,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 								if (!((tmp_array_dep[kkk].task_name = strdup(wf->tasks[tmp_array_dep[kkk].task_index].name))))
 									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 								if (wf->tasks[j].deps[k].task_index < 0)
-									tmp_array_dep[kkk].task_index -= wf->tasks[j].deps_num;
+									tmp_array_dep[kkk].task_index -= wf->tasks_num;
 								kkk++;
 							}
 					}
@@ -2113,7 +2113,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 							free(wf->tasks[j].deps[k].task_name);
 						real_task_index = wf->tasks[j].deps[k].task_index;
 						if (real_task_index < 0)
-							real_task_index += wf->tasks[j].deps_num;
+							real_task_index += old_tasks_num;
 						wf->tasks[j].deps[k].task_name = strdup(wf->tasks[real_task_index].name);
 					}
 			}
@@ -2121,7 +2121,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 				for (k = 0; k < wf->tasks[j].deps_num; ++k) {
 					kk = wf->tasks[j].deps[k].task_index;
 					if (kk < 0)
-						kk += wf->tasks[j].deps_num;
+						kk += old_tasks_num;
 					if (wf->tasks[kk].is_marked && (kk < old_tasks_num)) {
 						if (wf->tasks[j].deps[k].task_name)
 							free(wf->tasks[j].deps[k].task_name);
@@ -5604,7 +5604,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									return SOAP_OK;
 								} else
 									(wf->tasks[dep_task_index].residual_deps_num)--;
-								wf->tasks[dep_task_index].deps[j].task_index -= wf->tasks[dep_task_index].deps_num;
+								wf->tasks[dep_task_index].deps[j].task_index -= wf->tasks_num;
 							}
 						}
 					}
