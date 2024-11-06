@@ -659,7 +659,8 @@ int oph_workflow_expand(oph_workflow *wf, int tasks_num)
 		wf->tasks = old_tasks;
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
-	wf->tasks_num = wf->residual_tasks_num = tasks_num;
+	wf->tasks_num = tasks_num;
+	wf->residual_tasks_num += tasks_num - old_tasks_num;
 
 	memcpy(wf->tasks, old_tasks, old_tasks_num * sizeof(oph_workflow_task));
 	memcpy(wf->tasks + wf->tasks_num, old_tasks + old_tasks_num, sizeof(oph_workflow_task));	// Copy the final task
