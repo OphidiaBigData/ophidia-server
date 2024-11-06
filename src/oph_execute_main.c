@@ -6511,10 +6511,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		if (fil) {
 			fprintf(fil, "%s", jstring);
 			fclose(fil);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: extended JSON Request saved\n", jobid);
 		} else
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: unable to save the extended JSON Request\n", jobid);
 
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: extended JSON Request saved\n", jobid);
 		if (jstring)
 			free(jstring);
 

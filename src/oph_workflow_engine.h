@@ -25,6 +25,8 @@
 
 #include "oph_workflow_library.h"
 
+#define OPH_PRE_EXPANSION
+
 int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack * stack, int *tasks_num);
 int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int first_task, int last_task);
 

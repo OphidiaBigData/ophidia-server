@@ -2026,6 +2026,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 					free(wf->tasks[j].name);
 					wf->tasks[j].name = strdup(tmp);
 				}
+			char negative;
 			int real_task_index;
 			for (j = 0; j < new_branch_num; ++j)
 				for (kk = 0; kk < replied_num; kk++) {
@@ -2035,11 +2036,11 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 							wf->tasks[kkkk].dependents_indexes[k] = old_tasks_num + j * replied_num + new_index[wf->tasks[kkkk].dependents_indexes[k]];
 					for (k = 0; k < wf->tasks[kkkk].deps_num; k++) {
 						real_task_index = wf->tasks[kkkk].deps[k].task_index;
-						if (real_task_index < 0)
+						if ((negative = (real_task_index < 0)))	// '=' is correct
 							real_task_index += wf->tasks[kkkk].deps_num;
 						if (wf->tasks[real_task_index].is_marked) {
-							wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
-							if (wf->tasks[kkkk].deps[k].task_index < 0)
+							real_task_index = wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
+							if (negative)
 								wf->tasks[kkkk].deps[k].task_index -= wf->tasks[kkkk].deps_num;
 						}
 						if (wf->tasks[kkkk].deps[k].task_name)
