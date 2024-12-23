@@ -7861,14 +7861,18 @@ int oph_workflow_create_hp(oph_workflow *wf, ophidiadb *oDB)
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 
 	int id_user = 0;
-	if (oph_odb_retrieve_user_id(oDB, wf->username, &id_user))
+	if (oph_odb_retrieve_user_id(oDB, wf->username, &id_user)) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to find id of user '%s'\n", wf->username);
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	}
 
 	char pname[OPH_SHORT_STRING_SIZE];
 	snprintf(pname, OPH_SHORT_STRING_SIZE, "_%d", wf->idjob);
 
-	if (oph_odb_create_hp(oDB, pname, wf->host_partition, id_user))
+	if (oph_odb_create_hp(oDB, pname, wf->host_partition, id_user)) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create host partition '%s'.\n", pname);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
 
 	if (wf->host_partition_orig)
 		free(wf->host_partition_orig);
@@ -7888,8 +7892,10 @@ int oph_workflow_destroy_hp(oph_workflow *wf, ophidiadb *oDB)
 	if (!wf->host_partition || !strlen(wf->host_partition))
 		return OPH_WORKFLOW_EXIT_SUCCESS;
 
-	if (oph_odb_destroy_hp(oDB, wf->host_partition))
+	if (oph_odb_destroy_hp(oDB, wf->host_partition)) {
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to destroy host partition '%s'.\n", wf->host_partition);
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
