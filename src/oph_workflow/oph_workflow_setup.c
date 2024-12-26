@@ -473,6 +473,8 @@ unsigned int workflow_number_of(oph_workflow * wf, int k, int p, int gp, const c
 	int i, j, res = 0, bn;
 	for (i = 0; i < wf->tasks[k].dependents_indexes_num; ++i) {
 		j = wf->tasks[k].dependents_indexes[i];
+		if (j == k)	// Skip unselected branches
+			continue;
 		bn = bracket_number;
 		if (level[j] < bn + level[p])
 			level[j] = bn + level[p];

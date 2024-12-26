@@ -1715,12 +1715,8 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 				free(svalues[kk]);
 		free(svalues);
 	}
-	if (i < wf->tasks_num) {
-		if (exploded)
-			return oph_workflow_parallel_fco(wf, nesting_level, state);
-		else
-			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	}
+	if (i < wf->tasks_num)
+		return exploded ? oph_workflow_parallel_fco(wf, nesting_level, state) : OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (found)
 		return oph_workflow_parallel_fco(wf, nesting_level + 1, state);
 
