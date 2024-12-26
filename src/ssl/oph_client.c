@@ -127,7 +127,7 @@ static const unsigned char d[] = {
 	66, 66, 66, 66, 66, 66
 };
 
-int base64decode(const char *in, size_t inLen, char *out, size_t *outLen)
+int base64decode(const char *in, size_t inLen, char *out, size_t * outLen)
 {
 	const char *end = in + inLen;
 	char iter = 0;

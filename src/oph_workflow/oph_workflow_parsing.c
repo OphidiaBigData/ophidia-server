@@ -45,7 +45,7 @@ int _oph_workflow_add_to_json(json_t * oph_json, const char *name, const char *v
 /* Skip comments from input JSON file */
 int _oph_workflow_skip_comments(const char *json_string, char **clean_json_string);
 
-int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow **workflow)
+int oph_workflow_load(char *json_string, const char *username, const char *ip_address, oph_workflow ** workflow)
 {
 	if (!json_string || !username || !workflow) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1019,7 +1019,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 }
 
 // Thread_unsafe
-int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *checkpoint)
+int oph_workflow_store(oph_workflow * workflow, char **jstring, const char *checkpoint)
 {
 	if (!workflow || !jstring) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1417,7 +1417,7 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 
 // OTHER INTERNAL FUNCTIONS
 
-int _oph_workflow_add_to_json(json_t *item, const char *name, const char *value)
+int _oph_workflow_add_to_json(json_t * item, const char *name, const char *value)
 {
 	if (value && json_object_set_new(item, name, json_string(value))) {
 		if (item)
@@ -1427,7 +1427,7 @@ int _oph_workflow_add_to_json(json_t *item, const char *name, const char *value)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int _oph_workflow_alloc(oph_workflow **workflow)
+int _oph_workflow_alloc(oph_workflow ** workflow)
 {
 	if (!workflow) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1487,7 +1487,7 @@ int _oph_workflow_alloc(oph_workflow **workflow)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task *tasks, int tasks_num)
+int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task * tasks, int tasks_num)
 {
 	if (!key || !value || !tasks || tasks_num < 1) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1659,7 +1659,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task *task
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int _oph_workflow_substitute_cube(char *pid, oph_workflow_task *tasks, int tasks_num)
+int _oph_workflow_substitute_cube(char *pid, oph_workflow_task * tasks, int tasks_num)
 {
 	if (!pid || !tasks || tasks_num < 1) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");

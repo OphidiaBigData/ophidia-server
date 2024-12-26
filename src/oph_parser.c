@@ -22,7 +22,7 @@
 extern pthread_mutex_t global_flag;
 #endif
 
-int oph_init_args(oph_argument **args)
+int oph_init_args(oph_argument ** args)
 {
 	if (!args)
 		return OPH_SERVER_NULL_POINTER;
@@ -30,7 +30,7 @@ int oph_init_args(oph_argument **args)
 	return OPH_SERVER_OK;
 }
 
-int oph_cleanup_args(oph_argument **args)
+int oph_cleanup_args(oph_argument ** args)
 {
 	if (!args)
 		return OPH_SERVER_NULL_POINTER;
@@ -52,7 +52,7 @@ int oph_cleanup_args(oph_argument **args)
 	return OPH_SERVER_OK;
 }
 
-int oph_init_args_list(oph_arguments **list)
+int oph_init_args_list(oph_arguments ** list)
 {
 	if (!list)
 		return OPH_SERVER_NULL_POINTER;
@@ -60,7 +60,7 @@ int oph_init_args_list(oph_arguments **list)
 	return OPH_SERVER_OK;
 }
 
-int oph_append_args_list(oph_arguments **list, oph_argument *item, int id)
+int oph_append_args_list(oph_arguments ** list, oph_argument * item, int id)
 {
 	if (!list || !item)
 		return OPH_SERVER_NULL_POINTER;
@@ -74,7 +74,7 @@ int oph_append_args_list(oph_arguments **list, oph_argument *item, int id)
 	return OPH_SERVER_OK;
 }
 
-int oph_order_args_list(oph_arguments **list)
+int oph_order_args_list(oph_arguments ** list)
 {
 	if (!list)
 		return OPH_SERVER_NULL_POINTER;
@@ -107,7 +107,7 @@ int oph_order_args_list(oph_arguments **list)
 	return OPH_SERVER_OK;
 }
 
-int oph_cleanup_args_list(oph_arguments **list)
+int oph_cleanup_args_list(oph_arguments ** list)
 {
 	if (!list)
 		return OPH_SERVER_NULL_POINTER;
@@ -122,7 +122,7 @@ int oph_cleanup_args_list(oph_arguments **list)
 	return OPH_SERVER_OK;
 }
 
-int oph_parse_program(oph_argument **args, unsigned int *counter, const char *task_string)
+int oph_parse_program(oph_argument ** args, unsigned int *counter, const char *task_string)
 {
 	if (!task_string || !counter || !args)
 		return OPH_SERVER_NULL_POINTER;
@@ -181,7 +181,7 @@ int oph_parse_program(oph_argument **args, unsigned int *counter, const char *ta
 	return OPH_SERVER_OK;
 }
 
-int oph_parse_query(oph_argument **args, unsigned int *counter, const char *task_string)
+int oph_parse_query(oph_argument ** args, unsigned int *counter, const char *task_string)
 {
 	if (!task_string || !args || !counter)
 		return OPH_SERVER_NULL_POINTER;
@@ -259,7 +259,7 @@ int oph_parse_query(oph_argument **args, unsigned int *counter, const char *task
 	return OPH_SERVER_OK;
 }
 
-int oph_get_arg(oph_argument *args, const char *key, char *value)
+int oph_get_arg(oph_argument * args, const char *key, char *value)
 {
 	if (!args || !key || !value)
 		return OPH_SERVER_NULL_POINTER;
@@ -274,7 +274,7 @@ int oph_get_arg(oph_argument *args, const char *key, char *value)
 	return OPH_SERVER_UNKNOWN;
 }
 
-int oph_set_arg(oph_argument **args, const char *key, const char *value)
+int oph_set_arg(oph_argument ** args, const char *key, const char *value)
 {
 	if (!args || !key || !value)
 		return OPH_SERVER_NULL_POINTER;
@@ -305,7 +305,7 @@ int oph_set_arg(oph_argument **args, const char *key, const char *value)
 	return OPH_SERVER_OK;
 }
 
-int oph_arg_to_string(oph_argument *args, char *string, int add_datacube_input)
+int oph_arg_to_string(oph_argument * args, char *string, int add_datacube_input)
 {
 	if (!string)
 		return OPH_SERVER_NULL_POINTER;

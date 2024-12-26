@@ -58,8 +58,8 @@ void freeBlock(char ***block, unsigned int count)
 	}
 }
 
-int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow *wf, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd,
-		     char *sessionid, int *running, int is_src_path, ophidiadb *oDB, char **_query, pthread_mutex_t *flag)
+int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow * wf, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *task_string, char *cwd, char *cdd,
+		     char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **_query, pthread_mutex_t * flag)
 {
 	if (!task_string || !datacube_inputs || !measure_name || !counter || !sessionid || !running)
 		return OPH_SERVER_NULL_POINTER;
@@ -377,8 +377,8 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow *wf, int task_i
 	return OPH_SERVER_OK;
 }
 
-int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow *workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
-			char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb *oDB, char **query, pthread_mutex_t *flag)
+int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
+			char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query, pthread_mutex_t * flag)
 {
 	if (!datacube_input || !datacube_inputs || !measure_name || !counter || !sessionid || !running)
 		return OPH_SERVER_NULL_POINTER;
@@ -587,14 +587,14 @@ int _oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow *workflow, i
 	return OPH_SERVER_OK;
 }
 
-int oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow *workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
-		       char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb *oDB, char **query)
+int oph_mf_parse_query(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input, char *cwd,
+		       char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query)
 {
 	return _oph_mf_parse_query(state, workflow, task_index, datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, &global_flag);
 }
 
-int oph_mf_parse_query_unsafe(struct oph_plugin_data *state, oph_workflow *workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input,
-			      char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb *oDB, char **query)
+int oph_mf_parse_query_unsafe(struct oph_plugin_data *state, oph_workflow * workflow, int task_index, char ***datacube_inputs, char ***measure_name, unsigned int *counter, char *datacube_input,
+			      char *cwd, char *cdd, char *sessionid, int *running, int is_src_path, ophidiadb * oDB, char **query)
 {
 	return _oph_mf_parse_query(state, workflow, task_index, datacube_inputs, measure_name, counter, datacube_input, cwd, cdd, sessionid, running, is_src_path, oDB, query, NULL);
 }

@@ -4421,7 +4421,7 @@ int _check_oph_server(const char *function, int option)
 	return 1;
 }
 
-int check_oph_server(int *i, int *f, int n, const char *function, int option, int abort_on_first_error, FILE *file)
+int check_oph_server(int *i, int *f, int n, const char *function, int option, int abort_on_first_error, FILE * file)
 {
 	(*i)++;
 	pmesg(LOG_DEBUG, __FILE__, __LINE__, "TEST %d/%d: function '%s' input %d\n", *i, n, function, 1 + option);

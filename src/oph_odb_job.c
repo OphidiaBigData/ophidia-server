@@ -26,7 +26,7 @@ extern int last_idjob;
 extern pthread_mutex_t global_flag;
 #endif
 
-int _oph_odb_retrieve_user_id(ophidiadb *oDB, char *username, int *id_user, pthread_mutex_t *flag)
+int _oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user, pthread_mutex_t * flag)
 {
 	if (!oDB || !username || !id_user) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -82,17 +82,17 @@ int _oph_odb_retrieve_user_id(ophidiadb *oDB, char *username, int *id_user, pthr
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_retrieve_user_id(ophidiadb *oDB, char *username, int *id_user)
+int oph_odb_retrieve_user_id(ophidiadb * oDB, char *username, int *id_user)
 {
 	return _oph_odb_retrieve_user_id(oDB, username, id_user, &global_flag);
 }
 
-int oph_odb_retrieve_user_id_unsafe(ophidiadb *oDB, char *username, int *id_user)
+int oph_odb_retrieve_user_id_unsafe(ophidiadb * oDB, char *username, int *id_user)
 {
 	return _oph_odb_retrieve_user_id(oDB, username, id_user, NULL);
 }
 
-int _oph_odb_retrieve_session_id(ophidiadb *oDB, const char *sessionid, int *id_session, pthread_mutex_t *flag)
+int _oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id_session, pthread_mutex_t * flag)
 {
 	if (!oDB || !sessionid || !id_session) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -148,17 +148,17 @@ int _oph_odb_retrieve_session_id(ophidiadb *oDB, const char *sessionid, int *id_
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_retrieve_session_id(ophidiadb *oDB, const char *sessionid, int *id_session)
+int oph_odb_retrieve_session_id(ophidiadb * oDB, const char *sessionid, int *id_session)
 {
 	return _oph_odb_retrieve_session_id(oDB, sessionid, id_session, &global_flag);
 }
 
-int oph_odb_retrieve_session_id_unsafe(ophidiadb *oDB, const char *sessionid, int *id_session)
+int oph_odb_retrieve_session_id_unsafe(ophidiadb * oDB, const char *sessionid, int *id_session)
 {
 	return _oph_odb_retrieve_session_id(oDB, sessionid, id_session, NULL);
 }
 
-int _oph_odb_retrieve_job_id(ophidiadb *oDB, char *sessionid, char *markerid, int *id_job, pthread_mutex_t *flag)
+int _oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, int *id_job, pthread_mutex_t * flag)
 {
 	if (!oDB || !sessionid || !markerid || !id_job) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -215,17 +215,17 @@ int _oph_odb_retrieve_job_id(ophidiadb *oDB, char *sessionid, char *markerid, in
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_retrieve_job_id(ophidiadb *oDB, char *sessionid, char *markerid, int *id_job)
+int oph_odb_retrieve_job_id(ophidiadb * oDB, char *sessionid, char *markerid, int *id_job)
 {
 	return _oph_odb_retrieve_job_id(oDB, sessionid, markerid, id_job, &global_flag);
 }
 
-int oph_odb_retrieve_job_id_unsafe(ophidiadb *oDB, char *sessionid, char *markerid, int *id_job)
+int oph_odb_retrieve_job_id_unsafe(ophidiadb * oDB, char *sessionid, char *markerid, int *id_job)
 {
 	return _oph_odb_retrieve_job_id(oDB, sessionid, markerid, id_job, NULL);
 }
 
-int _oph_odb_update_folder_table(ophidiadb *oDB, char *folder_name, int *id_folder, pthread_mutex_t *flag)
+int _oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_folder, pthread_mutex_t * flag)
 {
 	if (!oDB || !folder_name || !id_folder) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -258,17 +258,17 @@ int _oph_odb_update_folder_table(ophidiadb *oDB, char *folder_name, int *id_fold
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_folder_table(ophidiadb *oDB, char *folder_name, int *id_folder)
+int oph_odb_update_folder_table(ophidiadb * oDB, char *folder_name, int *id_folder)
 {
 	return _oph_odb_update_folder_table(oDB, folder_name, id_folder, &global_flag);
 }
 
-int oph_odb_update_folder_table_unsafe(ophidiadb *oDB, char *folder_name, int *id_folder)
+int oph_odb_update_folder_table_unsafe(ophidiadb * oDB, char *folder_name, int *id_folder)
 {
 	return _oph_odb_update_folder_table(oDB, folder_name, id_folder, NULL);
 }
 
-int _oph_odb_update_session_table(ophidiadb *oDB, char *sessionid, int id_user, int *id_session, pthread_mutex_t *flag)
+int _oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session, pthread_mutex_t * flag)
 {
 	if (!oDB || !sessionid || !id_session) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -317,18 +317,18 @@ int _oph_odb_update_session_table(ophidiadb *oDB, char *sessionid, int id_user, 
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_session_table(ophidiadb *oDB, char *sessionid, int id_user, int *id_session)
+int oph_odb_update_session_table(ophidiadb * oDB, char *sessionid, int id_user, int *id_session)
 {
 	return _oph_odb_update_session_table(oDB, sessionid, id_user, id_session, &global_flag);
 }
 
-int oph_odb_update_session_table_unsafe(ophidiadb *oDB, char *sessionid, int id_user, int *id_session)
+int oph_odb_update_session_table_unsafe(ophidiadb * oDB, char *sessionid, int id_user, int *id_session)
 {
 	return _oph_odb_update_session_table(oDB, sessionid, id_user, id_session, NULL);
 }
 
-int _oph_odb_update_job_table(ophidiadb *oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid,
-			      pthread_mutex_t *flag)
+int _oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid,
+			      pthread_mutex_t * flag)
 {
 	if (!oDB || !markerid || !task_string || !status || !id_job) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -390,17 +390,17 @@ int _oph_odb_update_job_table(ophidiadb *oDB, char *markerid, char *task_string,
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_job_table(ophidiadb *oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid)
+int oph_odb_update_job_table(ophidiadb * oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid)
 {
 	return _oph_odb_update_job_table(oDB, markerid, task_string, status, id_user, id_session, nchildren, id_job, parentid, workflowid, &global_flag);
 }
 
-int oph_odb_update_job_table_unsafe(ophidiadb *oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid)
+int oph_odb_update_job_table_unsafe(ophidiadb * oDB, char *markerid, char *task_string, char *status, int id_user, int id_session, int nchildren, int *id_job, char *parentid, char *workflowid)
 {
 	return _oph_odb_update_job_table(oDB, markerid, task_string, status, id_user, id_session, nchildren, id_job, parentid, workflowid, NULL);
 }
 
-int _oph_odb_create_job(ophidiadb *oDB, char *task_string, HASHTBL *task_tbl, int nchildren, int *id_job, pthread_mutex_t *flag)
+int _oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, int nchildren, int *id_job, pthread_mutex_t * flag)
 {
 	if (!task_tbl) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter task table\n");
@@ -462,12 +462,12 @@ int _oph_odb_create_job(ophidiadb *oDB, char *task_string, HASHTBL *task_tbl, in
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_create_job(ophidiadb *oDB, char *task_string, HASHTBL *task_tbl, int nchildren, int *id_job)
+int oph_odb_create_job(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, int nchildren, int *id_job)
 {
 	return _oph_odb_create_job(oDB, task_string, task_tbl, nchildren, id_job, &global_flag);
 }
 
-int oph_odb_create_job_unsafe(ophidiadb *oDB, char *task_string, HASHTBL *task_tbl, int nchildren, int *id_job)
+int oph_odb_create_job_unsafe(ophidiadb * oDB, char *task_string, HASHTBL * task_tbl, int nchildren, int *id_job)
 {
 	return _oph_odb_create_job(oDB, task_string, task_tbl, nchildren, id_job, NULL);
 }
@@ -535,12 +535,12 @@ const char *oph_odb_convert_status_to_str(enum oph__oph_odb_job_status status)
 	return OPH_ODB_STATUS_UNKNOWN_STR;
 }
 
-int oph_odb_set_job_status(int id_job, enum oph__oph_odb_job_status status, ophidiadb *oDB)
+int oph_odb_set_job_status(int id_job, enum oph__oph_odb_job_status status, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status_and_nchildrencompleted(id_job, status, -1, 0, oDB);
 }
 
-int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_job_status status, int nchildren, int force_nchildren_saving, ophidiadb *oDB)
+int oph_odb_set_job_status_and_nchildrencompleted(int id_job, enum oph__oph_odb_job_status status, int nchildren, int force_nchildren_saving, ophidiadb * oDB)
 {
 	if (!oDB) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -671,32 +671,32 @@ int oph_odb_remove_job(int idjob)
 	return oph_odb_change_job_status(idjob, OPH_ODB_STATUS_UNKNOWN);
 }
 
-int oph_odb_enque_job_fast(int idjob, ophidiadb *oDB)
+int oph_odb_enque_job_fast(int idjob, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status(idjob, OPH_ODB_STATUS_PENDING, oDB);
 }
 
-int oph_odb_start_job_fast(int idjob, ophidiadb *oDB)
+int oph_odb_start_job_fast(int idjob, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status(idjob, OPH_ODB_STATUS_RUNNING, oDB);
 }
 
-int oph_odb_stop_job_fast(int idjob, ophidiadb *oDB)
+int oph_odb_stop_job_fast(int idjob, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status(idjob, OPH_ODB_STATUS_COMPLETED, oDB);
 }
 
-int oph_odb_abort_job_fast(int idjob, ophidiadb *oDB)
+int oph_odb_abort_job_fast(int idjob, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status(idjob, OPH_ODB_STATUS_ERROR, oDB);
 }
 
-int oph_odb_remove_job_fast(int idjob, ophidiadb *oDB)
+int oph_odb_remove_job_fast(int idjob, ophidiadb * oDB)
 {
 	return oph_odb_set_job_status(idjob, OPH_ODB_STATUS_UNKNOWN, oDB);
 }
 
-int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb *oDB)
+int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb * oDB)
 {
 	if (!oDB || !parent_idjob) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -758,7 +758,7 @@ int oph_odb_get_parent_job_id(int idjob, int *parent_idjob, ophidiadb *oDB)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb *oDB)
+int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb * oDB)
 {
 	if (!oDB || !number) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -821,7 +821,7 @@ int oph_odb_get_uncompleted_job_number(int parent_idjob, int *number, ophidiadb 
 	return OPH_ODB_SUCCESS;
 }
 
-int _oph_odb_update_session_label(ophidiadb *oDB, const char *sessionid, char *label, pthread_mutex_t *flag)
+int _oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *label, pthread_mutex_t * flag)
 {
 	if (!oDB || !sessionid) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -860,17 +860,17 @@ int _oph_odb_update_session_label(ophidiadb *oDB, const char *sessionid, char *l
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_update_session_label(ophidiadb *oDB, const char *sessionid, char *label)
+int oph_odb_update_session_label(ophidiadb * oDB, const char *sessionid, char *label)
 {
 	return _oph_odb_update_session_label(oDB, sessionid, label, &global_flag);
 }
 
-int oph_odb_update_session_label_unsafe(ophidiadb *oDB, const char *sessionid, char *label)
+int oph_odb_update_session_label_unsafe(ophidiadb * oDB, const char *sessionid, char *label)
 {
 	return _oph_odb_update_session_label(oDB, sessionid, label, NULL);
 }
 
-int _oph_odb_get_last_id(ophidiadb *oDB, int *idjob, pthread_mutex_t *flag)
+int _oph_odb_get_last_id(ophidiadb * oDB, int *idjob, pthread_mutex_t * flag)
 {
 	if (!oDB || !idjob)
 		return OPH_ODB_NULL_PARAM;
@@ -917,17 +917,17 @@ int _oph_odb_get_last_id(ophidiadb *oDB, int *idjob, pthread_mutex_t *flag)
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_get_last_id(ophidiadb *oDB, int *idjob)
+int oph_odb_get_last_id(ophidiadb * oDB, int *idjob)
 {
 	return _oph_odb_get_last_id(oDB, idjob, &global_flag);
 }
 
-int oph_odb_get_last_id_unsafe(ophidiadb *oDB, int *idjob)
+int oph_odb_get_last_id_unsafe(ophidiadb * oDB, int *idjob)
 {
 	return _oph_odb_get_last_id(oDB, idjob, NULL);
 }
 
-int _oph_odb_copy_job(ophidiadb *oDB, int idjob, int idparent, pthread_mutex_t *flag)
+int _oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -958,17 +958,17 @@ int _oph_odb_copy_job(ophidiadb *oDB, int idjob, int idparent, pthread_mutex_t *
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_copy_job(ophidiadb *oDB, int idjob, int idparent)
+int oph_odb_copy_job(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_copy_job(oDB, idjob, idparent, &global_flag);
 }
 
-int oph_odb_copy_job_unsafe(ophidiadb *oDB, int idjob, int idparent)
+int oph_odb_copy_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_copy_job(oDB, idjob, idparent, NULL);
 }
 
-int _oph_odb_drop_job(ophidiadb *oDB, int idjob, int idparent, pthread_mutex_t *flag)
+int _oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent, pthread_mutex_t * flag)
 {
 	if (!oDB)
 		return OPH_ODB_NULL_PARAM;
@@ -1001,17 +1001,17 @@ int _oph_odb_drop_job(ophidiadb *oDB, int idjob, int idparent, pthread_mutex_t *
 	return OPH_ODB_SUCCESS;
 }
 
-int oph_odb_drop_job(ophidiadb *oDB, int idjob, int idparent)
+int oph_odb_drop_job(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_drop_job(oDB, idjob, idparent, &global_flag);
 }
 
-int oph_odb_drop_job_unsafe(ophidiadb *oDB, int idjob, int idparent)
+int oph_odb_drop_job_unsafe(ophidiadb * oDB, int idjob, int idparent)
 {
 	return _oph_odb_drop_job(oDB, idjob, idparent, NULL);
 }
 
-int oph_odb_start_wf_fast(int idjob, ophidiadb *oDB)
+int oph_odb_start_wf_fast(int idjob, ophidiadb * oDB)
 {
 	if (!oDB) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");

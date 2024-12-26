@@ -35,7 +35,7 @@ extern char *oph_status_log_file_name;
 extern pthread_cond_t termination_flag;
 #endif
 
-int oph_free_children_list(oph_child_job_info *child)
+int oph_free_children_list(oph_child_job_info * child)
 {
 	oph_child_job_info *temp;
 	for (temp = child; temp; temp = child) {
@@ -45,7 +45,7 @@ int oph_free_children_list(oph_child_job_info *child)
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_create_job_list(oph_job_list **list)
+int oph_create_job_list(oph_job_list ** list)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -57,7 +57,7 @@ int oph_create_job_list(oph_job_list **list)
 	return OPH_JOB_LIST_OK;
 }
 
-oph_job_info *oph_find_job_in_job_list(oph_job_list *list, int jobid, oph_job_info **prev)
+oph_job_info *oph_find_job_in_job_list(oph_job_list * list, int jobid, oph_job_info ** prev)
 {
 	if (!list)
 		return NULL;
@@ -95,7 +95,7 @@ oph_job_info *oph_find_job_in_job_list(oph_job_list *list, int jobid, oph_job_in
 	return NULL;
 }
 
-int oph_insert_into_job_list(oph_job_list *list, oph_job_info *item)
+int oph_insert_into_job_list(oph_job_list * list, oph_job_info * item)
 {
 	int result = OPH_JOB_LIST_OK;
 	if (!list)
@@ -120,7 +120,7 @@ int oph_insert_into_job_list(oph_job_list *list, oph_job_info *item)
 	return result;
 }
 
-int oph_drop_from_job_list(oph_job_list *list, oph_job_info *item, oph_job_info *prev)
+int oph_drop_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -137,7 +137,7 @@ int oph_drop_from_job_list(oph_job_list *list, oph_job_info *item, oph_job_info 
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_save_job_in_job_list2(oph_job_list *list, oph_job_info *item, char remove)
+int oph_save_job_in_job_list2(oph_job_list * list, oph_job_info * item, char remove)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -155,24 +155,24 @@ int oph_save_job_in_job_list2(oph_job_list *list, oph_job_info *item, char remov
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_save_job_in_job_list(oph_job_list *list, oph_job_info *item)
+int oph_save_job_in_job_list(oph_job_list * list, oph_job_info * item)
 {
 	return oph_save_job_in_job_list2(list, item, 1);
 }
 
-int oph_delete_from_job_list2(oph_job_list *list, oph_job_info *item, oph_job_info *prev, char remove)
+int oph_delete_from_job_list2(oph_job_list * list, oph_job_info * item, oph_job_info * prev, char remove)
 {
 	if (oph_drop_from_job_list(list, item, prev))
 		return OPH_JOB_LIST_ERROR;
 	return oph_save_job_in_job_list2(list, item, remove);
 }
 
-int oph_delete_from_job_list(oph_job_list *list, oph_job_info *item, oph_job_info *prev)
+int oph_delete_from_job_list(oph_job_list * list, oph_job_info * item, oph_job_info * prev)
 {
 	return oph_delete_from_job_list2(list, item, prev, 1);
 }
 
-int oph_delete_saved_jobs_from_job_list(oph_job_list *list, int hysteresis)
+int oph_delete_saved_jobs_from_job_list(oph_job_list * list, int hysteresis)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -196,7 +196,7 @@ int oph_delete_saved_jobs_from_job_list(oph_job_list *list, int hysteresis)
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_free_job_list(oph_job_list *list)
+int oph_free_job_list(oph_job_list * list)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -213,7 +213,7 @@ int oph_free_job_list(oph_job_list *list)
 	return OPH_JOB_LIST_OK;
 }
 
-int oph_destroy_job_list(oph_job_list *list)
+int oph_destroy_job_list(oph_job_list * list)
 {
 	if (!list)
 		return OPH_JOB_LIST_ERROR;
@@ -223,7 +223,7 @@ int oph_destroy_job_list(oph_job_list *list)
 	return OPH_JOB_LIST_OK;
 }
 
-oph_job_info *oph_find_job_in_children_job_lists(oph_job_list *list, int jobid, oph_job_info **prev)
+oph_job_info *oph_find_job_in_children_job_lists(oph_job_list * list, int jobid, oph_job_info ** prev)
 {
 	if (!list)
 		return NULL;
@@ -269,7 +269,7 @@ oph_job_info *oph_find_job_in_children_job_lists(oph_job_list *list, int jobid, 
 }
 
 
-oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list *list, const char *sessionid, int workflowid, oph_job_info **prev)
+oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list * list, const char *sessionid, int workflowid, oph_job_info ** prev)
 {
 	if (!list)
 		return NULL;
@@ -330,12 +330,12 @@ oph_job_info *oph_find_workflow_in_job_list_to_drop(oph_job_list *list, const ch
 	return result;
 }
 
-oph_job_info *oph_find_workflow_in_job_list(oph_job_list *list, const char *sessionid, int workflowid)
+oph_job_info *oph_find_workflow_in_job_list(oph_job_list * list, const char *sessionid, int workflowid)
 {
 	return oph_find_workflow_in_job_list_to_drop(list, sessionid, workflowid, NULL);
 }
 
-oph_job_info *oph_find_marker_in_job_list(oph_job_list *list, const char *sessionid, int markerid, int *task_index, int *light_task_index)
+oph_job_info *oph_find_marker_in_job_list(oph_job_list * list, const char *sessionid, int markerid, int *task_index, int *light_task_index)
 {
 	if (!list)
 		return NULL;
@@ -391,7 +391,7 @@ oph_job_info *oph_find_marker_in_job_list(oph_job_list *list, const char *sessio
 	return NULL;
 }
 
-oph_job_info *oph_find_unstarted_in_job_list(oph_job_list *list)
+oph_job_info *oph_find_unstarted_in_job_list(oph_job_list * list)
 {
 	if (!list)
 		return NULL;
@@ -432,7 +432,7 @@ oph_job_info *oph_find_unstarted_in_job_list(oph_job_list *list)
 	return NULL;
 }
 
-int oph_get_new_jobid_from_job_list(oph_job_list *list, int *jobid)
+int oph_get_new_jobid_from_job_list(oph_job_list * list, int *jobid)
 {
 	if (!list || !jobid)
 		return OPH_JOB_LIST_ERROR;

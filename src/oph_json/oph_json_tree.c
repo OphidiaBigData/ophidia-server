@@ -41,7 +41,7 @@ int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_
 /***********OPH_JSON_OBJ_TREE INTERNAL FUNCTIONS***********/
 
 // Free a tree object contents
-int oph_json_free_tree(oph_json_obj_tree *obj)
+int oph_json_free_tree(oph_json_obj_tree * obj)
 {
 	if (obj) {
 		if (obj->description) {
@@ -118,7 +118,7 @@ int oph_json_free_tree(oph_json_obj_tree *obj)
 
 /***********OPH_JSON_OBJ_TREE FUNCTIONS***********/
 
-int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t *flag)
+int _oph_json_add_tree(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t * flag)
 {
 	if (!json || !objkey || !title || nodekeys_num < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -380,17 +380,17 @@ int _oph_json_add_tree(oph_json *json, const char *objkey, const char *title, co
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_tree(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+int oph_json_add_tree(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
 {
 	return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, &global_flag);
 }
 
-int oph_json_add_tree_unsafe(oph_json *json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+int oph_json_add_tree_unsafe(oph_json * json, const char *objkey, const char *title, const char *description, char **nodekeys, int nodekeys_num)
 {
 	return _oph_json_add_tree(json, objkey, title, description, nodekeys, nodekeys_num, NULL);
 }
 
-int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalues, pthread_mutex_t *flag)
+int _oph_json_add_tree_node(oph_json * json, const char *objkey, char **nodevalues, pthread_mutex_t * flag)
 {
 	if (!json || !objkey) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -505,17 +505,17 @@ int _oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalue
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_tree_node(oph_json *json, const char *objkey, char **nodevalues)
+int oph_json_add_tree_node(oph_json * json, const char *objkey, char **nodevalues)
 {
 	return _oph_json_add_tree_node(json, objkey, nodevalues, &global_flag);
 }
 
-int oph_json_add_tree_node_unsafe(oph_json *json, const char *objkey, char **nodevalues)
+int oph_json_add_tree_node_unsafe(oph_json * json, const char *objkey, char **nodevalues)
 {
 	return _oph_json_add_tree_node(json, objkey, nodevalues, NULL);
 }
 
-int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pthread_mutex_t *flag)
+int _oph_json_set_tree_root(oph_json * json, const char *objkey, int rootnode, pthread_mutex_t * flag)
 {
 	if (!json || !objkey || rootnode < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -566,17 +566,17 @@ int _oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode, pt
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_set_tree_root(oph_json *json, const char *objkey, int rootnode)
+int oph_json_set_tree_root(oph_json * json, const char *objkey, int rootnode)
 {
 	return _oph_json_set_tree_root(json, objkey, rootnode, &global_flag);
 }
 
-int oph_json_set_tree_root_unsafe(oph_json *json, const char *objkey, int rootnode)
+int oph_json_set_tree_root_unsafe(oph_json * json, const char *objkey, int rootnode)
 {
 	return _oph_json_set_tree_root(json, objkey, rootnode, NULL);
 }
 
-int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description, pthread_mutex_t *flag)
+int _oph_json_add_tree_link(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description, pthread_mutex_t * flag)
 {
 	if (!json || !objkey || sourcenode < 0 || targetnode < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -673,12 +673,12 @@ int _oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, 
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_tree_link(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description)
+int oph_json_add_tree_link(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description)
 {
 	return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, &global_flag);
 }
 
-int oph_json_add_tree_link_unsafe(oph_json *json, const char *objkey, int sourcenode, int targetnode, const char *description)
+int oph_json_add_tree_link_unsafe(oph_json * json, const char *objkey, int sourcenode, int targetnode, const char *description)
 {
 	return _oph_json_add_tree_link(json, objkey, sourcenode, targetnode, description, NULL);
 }

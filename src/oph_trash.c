@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int oph_trash_create(oph_trash **trash)
+int oph_trash_create(oph_trash ** trash)
 {
 	if (!trash)
 		return OPH_TRASH_ERROR;
@@ -32,7 +32,7 @@ int oph_trash_create(oph_trash **trash)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_destroy(oph_trash *trash)
+int oph_trash_destroy(oph_trash * trash)
 {
 	if (!trash)
 		return OPH_TRASH_ERROR;
@@ -52,7 +52,7 @@ int oph_trash_destroy(oph_trash *trash)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_append(oph_trash *trash, const char *key, int item)
+int oph_trash_append(oph_trash * trash, const char *key, int item)
 {
 	if (!trash)
 		return OPH_TRASH_ERROR;
@@ -93,7 +93,7 @@ int oph_trash_append(oph_trash *trash, const char *key, int item)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_extract(oph_trash *trash, const char *key, int *item)
+int oph_trash_extract(oph_trash * trash, const char *key, int *item)
 {
 	if (!trash || !item)
 		return OPH_TRASH_ERROR;
@@ -128,7 +128,7 @@ int oph_trash_extract(oph_trash *trash, const char *key, int *item)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_order(oph_trash *trash, const char *key)
+int oph_trash_order(oph_trash * trash, const char *key)
 {
 	if (!trash)
 		return OPH_TRASH_ERROR;
@@ -157,7 +157,7 @@ int oph_trash_order(oph_trash *trash, const char *key)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_size(oph_trash *trash, const char *key, unsigned int *size)
+int oph_trash_size(oph_trash * trash, const char *key, unsigned int *size)
 {
 	if (!trash || !size)
 		return OPH_TRASH_ERROR;
