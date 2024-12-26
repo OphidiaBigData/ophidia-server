@@ -84,7 +84,7 @@ typedef struct _oph_workflow_light_task {
  * \param argument Name of the argument of the current task (default=cube)
  * \param order Argument position in case of multiple arguments (default=0)
  * \param task_name Name of task the current task depends on
- * \param task_index Index of task the current task depends on. It is initialized to -1, set correctly by the function oph_workflow_indexing and re-set to -1 by the engine when the dependence is satisfied
+ * \param task_index Index of task the current task depends on. It is initialized to -1, set correctly by the function oph_workflow_indexing and reduced by tasks_num (becoming negative) by the engine when the dependence is satisfied
  * \param type Type of dependency: all, single or embedded (default=embedded)
  * \param filter Optional filter (default=all)
  * \param output_argument Name of the output of the "pointed" task (default=cube)

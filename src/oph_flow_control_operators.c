@@ -26,6 +26,7 @@
 #include "oph_subset_library.h"
 #include "oph_service_info.h"
 #include "oph_rmanager.h"
+#include "oph_session_report.h"
 
 #include <math.h>
 #include <time.h>
@@ -52,6 +53,7 @@ extern pthread_mutex_t curl_flag;
 extern pthread_cond_t waiting_flag;
 #endif
 extern char *oph_base_src_path;
+extern char *oph_web_server;
 extern char *oph_web_server_location;
 extern oph_service_info *service_info;
 
@@ -2523,10 +2525,29 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		int i = *task_id, idjob = wf->tasks[i].idjob;
 		wf->tasks[i].is_known = 1;
 
+#ifndef OPH_PRE_EXPANSION
+		if (!wf->parallel_mode) {
+			int j;
+			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
+				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
+					if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES)) {
+						j = wf->tasks_num;
+						if (oph_workflow_parallel_fco(wf, 0, state) || ((j < wf->tasks_num) && oph_workflow_validate_fco(wf))) {	// Thread unsafe
+							pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in expanding parallel task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->name);
+							pthread_mutex_unlock(&global_flag);
+							return OPH_SERVER_SYSTEM_ERROR;
+						}
+					}
+					break;
+				}
+			}
+		}
+#endif
+
 		// JSON Response creation
 		int success = 0;
 		oph_json *oper_json = NULL;
-		char error_message[OPH_MAX_STRING_SIZE];
+		char error_message[OPH_MAX_STRING_SIZE], session_code[OPH_MAX_STRING_SIZE];
 		snprintf(error_message, OPH_MAX_STRING_SIZE, "Failure in obtaining JSON data!");
 		while (!success) {
 			if (oph_json_alloc(&oper_json)) {
@@ -2537,7 +2558,6 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
 				break;
 			}
-			char session_code[OPH_MAX_STRING_SIZE];
 			if (oph_get_session_code(sessionid, session_code)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
 				break;
@@ -2585,16 +2605,52 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_unlock(&global_flag);
 
+#ifndef OPH_PRE_EXPANSION
+		if (success && wf->parallel_mode) {
+			// Save the extended JSON request
+			char *jstring = NULL;
+			pthread_mutex_lock(&global_flag);
+			if (oph_workflow_store(wf, &jstring, NULL)) {
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to create the extended JSON Request\n");
+				pthread_mutex_unlock(&global_flag);
+				if (jstring)
+					free(jstring);
+				oph_json_free(oper_json);
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+			pthread_mutex_unlock(&global_flag);
+
+			char linkname[OPH_SHORT_STRING_SIZE], filename[OPH_MAX_STRING_SIZE];
+			snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server_location, session_code, wf->workflowid);
+			FILE *fil = fopen(filename, "w");
+			if (fil) {
+				fprintf(fil, "%s", jstring);
+				fclose(fil);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Extended JSON Request saved\n");
+			} else
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Unable to save the extended JSON Request\n");
+
+			if (jstring)
+				free(jstring);
+
+			snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_EXT, wf->workflowid);
+			snprintf(filename, OPH_MAX_STRING_SIZE, OPH_SESSION_JSON_REQUEST_FOLDER_TEMPLATE "/" OPH_SESSION_OUTPUT_EXT, oph_web_server, session_code, wf->workflowid);
+			oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, filename, 'R');
+		}
+#endif
+
 		ophidiadb oDB;
 		oph_odb_initialize_ophidiadb(&oDB);
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 
@@ -2691,11 +2747,13 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 
@@ -2793,11 +2851,13 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 
@@ -2890,11 +2950,13 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 
@@ -3244,11 +3306,13 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		if (oph_odb_read_config_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 		if (oph_odb_connect_to_ophidiadb(&oDB)) {
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
 			oph_odb_disconnect_from_ophidiadb(&oDB);
+			oph_json_free(oper_json);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
 

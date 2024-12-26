@@ -257,7 +257,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 		else
 			snprintf(replaced_value + offset, new_size, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
 
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Value '%s' will be replaced by '%s'\n", *submit_string, replaced_value);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Value '%s' will be replaced by '%s'\n", *submit_string, replaced_value);
 		free(*submit_string);
 		*submit_string = replaced_value;
 
