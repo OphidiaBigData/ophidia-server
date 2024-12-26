@@ -1,4 +1,10 @@
 
+## Next release
+
+### Changed:
+
+- Setting of parallel branches at runtime [#68](https://github.com/OphidiaBigData/ophidia-server/pull/68)
+
 ## v1.9.0 - 2024-10-10
 
 ### Fixed:
