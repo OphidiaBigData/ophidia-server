@@ -1,5 +1,9 @@
 
-## Next release
+## v1.9.1 - 2025-01-04
+
+### Fixed:
+
+- Bug in installing SLURM by means of spack-based installation
 
 ### Changed:
 

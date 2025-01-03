@@ -30,6 +30,9 @@ spack load munge
 spack load slurm
 export MUNGE_DIR=`spack location -i munge`
 export SLURM_DIR=`spack location -i slurm`
+
+mkdir -p $HOME/.ophidia/
+chmod 700 $HOME/.ophidia/
 cd $HOME/.ophidia/
 mkdir -p var/log/slurm
 mkdir -p var/run/slurm
@@ -47,6 +50,7 @@ chmod 700 var/log/munge
 chmod 700 etc/munge
 chmod 755 $PREFIX
 ln -s $MUNGE_DIR/var/run/munge $HOME/.ophidia/var_run_munge
+echo "[LOG] MUNGE CONFIGURED"
 
 echo "[LOG] SLURM CONFIGURATION"
 cd $SLURM_DIR
