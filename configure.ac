@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [1.9.0], [ophidia-info@cmcc.it])
+AC_INIT([ophidia-server], [1.9.1], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -510,7 +510,6 @@ AM_CONDITIONAL([AAA_SUPPORT], [test "x$aaa" = "xyes"])
 OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
-
 #Disable direct output in case of single tasks
 direct_output=yes
 AC_ARG_ENABLE(direct_output,
@@ -521,6 +520,15 @@ AM_CONDITIONAL([DIRECT_OUTPUT], [test "x$direct_output" = "xyes"])
 OPH_DIRECT_OUTPUT=$direct_output
 AC_SUBST(OPH_DIRECT_OUTPUT)
 
+#Disable dynamic expansion of parallel OPH_FOR
+dynamic_expansion=yes
+AC_ARG_ENABLE(dynamic_expansion,
+            [  --disable-dynamic-expansion	Disable dynamic expansion of parallel OPH_FOR in workflows],
+                     [dynamic_expansion=no],
+                     [dynamic_expansion=yes])
+AM_CONDITIONAL([DYNAMIC_EXPANSION], [test "x$dynamic_expansion" = "xyes"])
+OPH_DYNAMIC_EXPANSION=$dynamic_expansion
+AC_SUBST(OPH_DYNAMIC_EXPANSION)
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS

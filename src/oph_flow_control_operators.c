@@ -2525,7 +2525,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 		int i = *task_id, idjob = wf->tasks[i].idjob;
 		wf->tasks[i].is_known = 1;
 
-#ifndef OPH_PRE_EXPANSION
+#ifdef OPH_DYNAMIC_EXPANSION
 		if (!wf->parallel_mode) {
 			int j;
 			for (j = 0; j < wf->tasks[i].arguments_num; ++j) {
@@ -2605,7 +2605,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 
 		pthread_mutex_unlock(&global_flag);
 
-#ifndef OPH_PRE_EXPANSION
+#ifdef OPH_DYNAMIC_EXPANSION
 		if (success && wf->parallel_mode) {
 			// Save the extended JSON request
 			char *jstring = NULL;

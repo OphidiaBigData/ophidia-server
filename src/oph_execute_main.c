@@ -520,7 +520,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		oph_workflow_free(wf);
 		return SOAP_OK;
 	}
-#ifdef OPH_PRE_EXPANSION
+#ifndef OPH_DYNAMIC_EXPANSION
 	if (oph_workflow_parallel_fco(wf, 0, state) || ((i < wf->tasks_num) && oph_workflow_validate_fco(wf))) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: workflow '%s' is not valid\n", jobid, wf->name);
 		response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;

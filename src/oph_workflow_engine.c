@@ -1205,10 +1205,10 @@ int oph_workflow_mark_children_of(oph_workflow * wf, int k, int p)
 
 int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_plugin_data *state)
 {
-#ifdef OPH_PRE_EXPANSION
-	pthread_mutex_t *flag = &global_flag;	// Thread safe
-#else
+#ifdef OPH_DYNAMIC_EXPANSION
 	pthread_mutex_t *flag = NULL;	// Thread unsafe
+#else
+	pthread_mutex_t *flag = &global_flag;	// Thread safe
 #endif
 
 	if (!wf || !wf->tasks) {
