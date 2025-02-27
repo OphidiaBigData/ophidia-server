@@ -88,7 +88,7 @@ void free_string_vector(char **ctime, int n)
 	}
 }
 
-int oph_check_operator(const char *operator, int *ncores, int *nhosts, int *role)
+int oph_check_operator(const char *operator, int *ncores, int *nhosts, int *role, char *minmax)
 {
 	if (!ncores || !nhosts) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Null pointer\n");
@@ -100,7 +100,7 @@ int oph_check_operator(const char *operator, int *ncores, int *nhosts, int *role
 	*value = *op_role = 0;
 
 	snprintf(task_string, OPH_MAX_STRING_SIZE, "%s=%d;", OPH_ARG_NCORES, *ncores);
-	int result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NCORES, value, op_role);
+	int result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NCORES, value, op_role, minmax);
 	if (result == OPH_TP_TASK_SYSTEM_ERROR)
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	if (strlen(value))
@@ -111,7 +111,7 @@ int oph_check_operator(const char *operator, int *ncores, int *nhosts, int *role
 
 	*value = 0;
 	snprintf(task_string, OPH_MAX_STRING_SIZE, "%s=%d;", OPH_ARG_NHOSTS, *nhosts);
-	result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NHOSTS, value, op_role);
+	result = oph_tp_task_param_checker_and_role(operator, task_string, OPH_ARG_NHOSTS, value, op_role, NULL);
 	if (result == OPH_TP_TASK_SYSTEM_ERROR)
 		return OPH_SERVER_WRONG_PARAMETER_ERROR;
 	if (strlen(value))
@@ -222,7 +222,7 @@ typedef struct __ophExecuteMain_data {
 	xsd__string request;
 } _ophExecuteMain_data;
 
-void *_ophExecuteMain(_ophExecuteMain_data * data)
+void *_ophExecuteMain(_ophExecuteMain_data *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -532,7 +532,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: check for %s and %s\n", jobid, OPH_ARG_NCORES, OPH_ARG_NHOSTS);
 	int ncores = wf->ncores, nhosts = wf->nhosts;
 	for (i = 0; i < wf->tasks_num; ++i) {
-		if (oph_check_operator(wf->tasks[i].operator, &(wf->tasks[i].ncores), &(wf->tasks[i].nhosts), &(wf->tasks[i].role))) {
+		if (oph_check_operator(wf->tasks[i].operator, &(wf->tasks[i].ncores), &(wf->tasks[i].nhosts), &(wf->tasks[i].role), &(wf->tasks[i].serial))) {
 			pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "R%d: error in check operator '%s'\n", jobid, wf->tasks[i].operator);
 			response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
 			oph_workflow_free(wf);

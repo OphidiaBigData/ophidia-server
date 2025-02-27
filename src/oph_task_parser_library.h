@@ -76,7 +76,7 @@ int oph_tp_free_multiple_value_param_list(char **value_list, int value_num);
 int oph_tp_task_param_checker(const char *operator, const char *task_string, char *key, char *value);
 
 // Check the value of a key changed in order to extract the permission
-int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *op_role);
+int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *op_role, char *minmax);
 
 //Start xml parsing
 int oph_tp_start_xml_parser();

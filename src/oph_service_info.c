@@ -24,7 +24,7 @@
 extern pthread_mutex_t service_flag;
 #endif
 
-void oph_service_info_thread_incr(oph_service_info * service_info)
+void oph_service_info_thread_incr(oph_service_info *service_info)
 {
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -43,7 +43,7 @@ void oph_service_info_thread_incr(oph_service_info * service_info)
 	}
 }
 
-void oph_service_info_thread_decr(oph_service_info * service_info)
+void oph_service_info_thread_decr(oph_service_info *service_info)
 {
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)

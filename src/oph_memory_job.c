@@ -23,7 +23,7 @@
 extern pthread_mutex_t global_flag;
 #endif
 
-int oph_wf_list_append(oph_job_list * job_info, oph_workflow * wf)
+int oph_wf_list_append(oph_job_list *job_info, oph_workflow *wf)
 {
 	int k;
 	oph_job_info *item = (oph_job_info *) malloc(sizeof(oph_job_info));
@@ -53,7 +53,7 @@ int oph_wf_list_append(oph_job_list * job_info, oph_workflow * wf)
 	return OPH_SERVER_OK;
 }
 
-int oph_wf_list_drop2(oph_job_list * job_info, int jobid, char remove)
+int oph_wf_list_drop2(oph_job_list *job_info, int jobid, char remove)
 {
 	int result;
 	oph_job_info *item, *prev;
@@ -71,7 +71,7 @@ int oph_wf_list_drop2(oph_job_list * job_info, int jobid, char remove)
 	return OPH_SERVER_OK;
 }
 
-int oph_wf_list_drop(oph_job_list * job_info, int jobid)
+int oph_wf_list_drop(oph_job_list *job_info, int jobid)
 {
 	return oph_wf_list_drop2(job_info, jobid, 1);
 }

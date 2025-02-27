@@ -1046,7 +1046,7 @@ int gsi_authorization_callback(struct soap *soap, char *distinguished_name)
  *
 \******************************************************************************/
 
-Sigfunc *set_signal_handler(int signo, Sigfunc * func)
+Sigfunc *set_signal_handler(int signo, Sigfunc *func)
 {
 	struct sigaction act, oact;
 

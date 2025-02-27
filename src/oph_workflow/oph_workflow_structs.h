@@ -206,6 +206,7 @@ typedef struct _oph_workflow_task {
 	char backoff_type;
 	char *checkpoint;
 	char massive_expansion;
+	char serial;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

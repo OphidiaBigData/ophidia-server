@@ -73,6 +73,7 @@ typedef struct _oph_request_data {
 	char *submission_string;
 	char *markerid;
 	int ncores;
+	char serial;
 	int *status;
 	char *error_notification;
 	char *output_json;
@@ -89,7 +90,7 @@ typedef struct _oph_monitor_data {
 	struct oph_plugin_data *state;
 } oph_monitor_data;
 
-int oph_request_data_init(oph_request_data * item)
+int oph_request_data_init(oph_request_data *item)
 {
 	if (item) {
 		item->submission_string = NULL;
@@ -102,7 +103,7 @@ int oph_request_data_init(oph_request_data * item)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_request_data_free(oph_request_data * item)
+int oph_request_data_free(oph_request_data *item)
 {
 	if (item) {
 		if (item->submission_string)
@@ -121,7 +122,7 @@ int oph_request_data_free(oph_request_data * item)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_request_data_vector_init(oph_request_data * item, int num)
+int oph_request_data_vector_init(oph_request_data *item, int num)
 {
 	int i;
 	if (item)
@@ -130,7 +131,7 @@ int oph_request_data_vector_init(oph_request_data * item, int num)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_request_data_vector_free(oph_request_data * item, int num)
+int oph_request_data_vector_free(oph_request_data *item, int num)
 {
 	int i;
 	if (item) {
@@ -241,7 +242,7 @@ int oph_build_hash(char *str, unsigned int len)
 	return OPH_SERVER_OK;
 }
 
-int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *checkpoint)
+int oph_workflow_save(oph_workflow *wf, const char *session_code, const char *checkpoint)
 {
 	if (!wf || !checkpoint)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -286,7 +287,7 @@ int oph_workflow_save(oph_workflow * wf, const char *session_code, const char *c
 }
 
 // Thread unsafe
-int oph_workflow_set_status(char ttype, int jobid, oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, enum oph__oph_odb_job_status status)
+int oph_workflow_set_status(char ttype, int jobid, oph_workflow *wf, int *dependents_indexes, int dependents_indexes_num, enum oph__oph_odb_job_status status)
 {
 	if (dependents_indexes_num) {
 		if (!dependents_indexes) {
@@ -317,7 +318,7 @@ int oph_workflow_set_status(char ttype, int jobid, oph_workflow * wf, int *depen
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack * stack, int *tasks_num)
+int oph_workflow_reset_task(oph_workflow *wf, int *dependents_indexes, int dependents_indexes_num, int last_task, oph_workflow_stack *stack, int *tasks_num)
 {
 	if (dependents_indexes_num) {
 		if (!dependents_indexes) {
@@ -422,7 +423,7 @@ int oph_workflow_reset_task(oph_workflow * wf, int *dependents_indexes, int depe
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int dependents_indexes_num, int first_task, int last_task)
+int oph_workflow_disable_deps(oph_workflow *wf, int *dependents_indexes, int dependents_indexes_num, int first_task, int last_task)
 {
 	if (dependents_indexes_num) {
 		if (!dependents_indexes) {
@@ -451,7 +452,7 @@ int oph_workflow_disable_deps(oph_workflow * wf, int *dependents_indexes, int de
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_load_aggregate_response(oph_workflow * wf, int level)
+int oph_workflow_load_aggregate_response(oph_workflow *wf, int level)
 {
 	if (!wf)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -506,7 +507,7 @@ int oph_workflow_load_aggregate_response(oph_workflow * wf, int level)
 }
 
 // Thread unsafe
-int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
+int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow *wf, int *num_sessions, int max_sessions, int timeout_value, int *markerid, char *str_markerid,
 			   int *workflowid, char *str_workflowid, char *oph_jobid, int prev_markerid)
 {
 	if (!wf || !oph_jobid)
@@ -840,7 +841,7 @@ int oph_generate_oph_jobid(struct oph_plugin_data *state, char ttype, int jobid,
 }
 
 // Thread unsafe
-int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int task_index, ophidiadb * oDB, char ***output_list, int *output_list_dim, char **query,
+int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow *wf, int task_index, ophidiadb *oDB, char ***output_list, int *output_list_dim, char **query,
 				    char *remake_submission_string)
 {
 	if (!wf) {
@@ -1079,7 +1080,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 }
 
 // Thread unsafe
-int oph_save_basic_json(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index, const char *message_type, const char *message, char **output_json)
+int oph_save_basic_json(char ttype, int jobid, oph_workflow *wf, int task_index, int light_task_index, const char *message_type, const char *message, char **output_json)
 {
 	if (!wf || !message_type) {
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: null parameter\n", ttype, jobid);
@@ -1180,7 +1181,7 @@ int oph_save_basic_json(char ttype, int jobid, oph_workflow * wf, int task_index
 	return OPH_SERVER_OK;
 }
 
-int oph_workflow_mark_children_of(oph_workflow * wf, int k, int p)
+int oph_workflow_mark_children_of(oph_workflow *wf, int k, int p)
 {
 	if (!wf || !wf->tasks || (k < 0) || (k >= wf->tasks_num) || (p < 0) || (p >= wf->tasks_num)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -1203,7 +1204,7 @@ int oph_workflow_mark_children_of(oph_workflow * wf, int k, int p)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_plugin_data *state)
+int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_plugin_data *state)
 {
 #ifdef OPH_DYNAMIC_EXPANSION
 	pthread_mutex_t *flag = NULL;	// Thread unsafe
@@ -1724,7 +1725,7 @@ int oph_workflow_parallel_fco(oph_workflow * wf, int nesting_level, struct oph_p
 }
 
 // Thread safe
-int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow * wf, int *tasks_indexes, int tasks_indexes_num, ophidiadb * oDB, char **jobid_response)
+int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, oph_workflow *wf, int *tasks_indexes, int tasks_indexes_num, ophidiadb *oDB, char **jobid_response)
 {
 	if (!state || !wf || !oDB) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: wrong parameters\n", ttype, jobid);
@@ -2843,6 +2844,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].submission_string = submission_string_ext;
 					request_data[k][j].markerid = strdup(str_markerid);
 					request_data[k][j].ncores = wf->tasks[i].light_tasks[j].ncores;
+					request_data[k][j].serial = wf->tasks[i].serial;
 					request_data[k][j].status = &(wf->tasks[i].light_tasks[j].status);
 					request_data[k][j].task_id = i;
 					request_data[k][j].light_task_id = j;
@@ -2900,6 +2902,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->submission_string = submission_string_ext;
 				request_data[k]->markerid = strdup(str_markerid);
 				request_data[k]->ncores = wf->tasks[i].ncores;
+				request_data[k]->serial = wf->tasks[i].serial;
 				request_data[k]->status = &(wf->tasks[i].status);
 				request_data[k]->task_id = i;
 				request_data[k]->light_task_id = -1;
@@ -3006,7 +3009,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username, project, request_data[k][j].taskname, wid)) != OPH_SERVER_OK) {
+							   os_username, project, request_data[k][j].taskname, wid, request_data[k][j].serial)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -3206,7 +3209,7 @@ size_t function_pt(void *ptr, size_t size, size_t nmemb, void *stream)
 	return total_size;
 }
 
-int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_index, int light_task_index, char massive_task)
+int oph_workflow_abort_task(char ttype, int jobid, oph_workflow *wf, int task_index, int light_task_index, char massive_task)
 {
 	if (!wf || (task_index < 0) || (task_index > wf->tasks_num) || (light_task_index >= wf->tasks[task_index].light_tasks_num))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -3308,7 +3311,7 @@ int oph_workflow_abort_task(char ttype, int jobid, oph_workflow * wf, int task_i
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-char *oph_workflow_input_of_l(oph_workflow_light_task * task, char *operator)
+char *oph_workflow_input_of_l(oph_workflow_light_task *task, char *operator)
 {
 	if (!task)
 		return NULL;
@@ -7139,7 +7142,7 @@ int oph_workflow_command_to_json(const char *command, char **json)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-void *_oph_workflow_check_job_queue(oph_monitor_data * data)
+void *_oph_workflow_check_job_queue(oph_monitor_data *data)
 {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_detach(pthread_self());
@@ -7375,7 +7378,7 @@ int oph_workflow_check_job_queue(struct oph_plugin_data *state)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
+int oph_workflow_create_hp(oph_workflow *wf, ophidiadb *oDB)
 {
 	if (!wf || !oDB)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -7407,7 +7410,7 @@ int oph_workflow_create_hp(oph_workflow * wf, ophidiadb * oDB)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
+int oph_workflow_destroy_hp(oph_workflow *wf, ophidiadb *oDB)
 {
 	if (!wf || !oDB)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -7423,7 +7426,7 @@ int oph_workflow_destroy_hp(oph_workflow * wf, ophidiadb * oDB)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_get_progress_ratio_of(oph_workflow * wf, double *wpr, char **cdate)
+int oph_get_progress_ratio_of(oph_workflow *wf, double *wpr, char **cdate)
 {
 	if (!wf || !wpr) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
@@ -7585,7 +7588,7 @@ int oph_get_info_of(char *sessionid, int workflowid, char **status, char **cdate
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list ** list)
+int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list **list)
 {
 	if (!key || !object || !list)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -7612,7 +7615,7 @@ int oph_workflow_add_to_list(char *key, char *object, oph_workflow_ordered_list 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
+int oph_workflow_print_list(oph_workflow_ordered_list *list, char **string)
 {
 	if (!list || !string)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;

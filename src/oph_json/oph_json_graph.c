@@ -41,7 +41,7 @@ int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_
 /***********OPH_JSON_OBJ_GRAPH INTERNAL FUNCTIONS***********/
 
 // Free a (di)graph object contents
-int oph_json_free_graph(oph_json_obj_graph * obj)
+int oph_json_free_graph(oph_json_obj_graph *obj)
 {
 	if (obj) {
 		if (obj->description) {
@@ -114,7 +114,7 @@ int oph_json_free_graph(oph_json_obj_graph * obj)
 
 /***********OPH_JSON_OBJ_GRAPH FUNCTIONS***********/
 
-int _oph_json_add_graph(oph_json * json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t * flag)
+int _oph_json_add_graph(oph_json *json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num, pthread_mutex_t *flag)
 {
 	if (!json || !objkey || is_digraph < 0 || is_digraph > 1 || !title || nodekeys_num < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -388,17 +388,17 @@ int _oph_json_add_graph(oph_json * json, const char *objkey, int is_digraph, con
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_graph(oph_json * json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+int oph_json_add_graph(oph_json *json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num)
 {
 	return _oph_json_add_graph(json, objkey, is_digraph, title, description, nodekeys, nodekeys_num, &global_flag);
 }
 
-int oph_json_add_graph_unsafe(oph_json * json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num)
+int oph_json_add_graph_unsafe(oph_json *json, const char *objkey, int is_digraph, const char *title, const char *description, char **nodekeys, int nodekeys_num)
 {
 	return _oph_json_add_graph(json, objkey, is_digraph, title, description, nodekeys, nodekeys_num, NULL);
 }
 
-int _oph_json_add_graph_node(oph_json * json, const char *objkey, char **nodevalues, pthread_mutex_t * flag)
+int _oph_json_add_graph_node(oph_json *json, const char *objkey, char **nodevalues, pthread_mutex_t *flag)
 {
 	if (!json || !objkey) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -513,17 +513,17 @@ int _oph_json_add_graph_node(oph_json * json, const char *objkey, char **nodeval
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_graph_node(oph_json * json, const char *objkey, char **nodevalues)
+int oph_json_add_graph_node(oph_json *json, const char *objkey, char **nodevalues)
 {
 	return _oph_json_add_graph_node(json, objkey, nodevalues, &global_flag);
 }
 
-int oph_json_add_graph_node_unsafe(oph_json * json, const char *objkey, char **nodevalues)
+int oph_json_add_graph_node_unsafe(oph_json *json, const char *objkey, char **nodevalues)
 {
 	return _oph_json_add_graph_node(json, objkey, nodevalues, NULL);
 }
 
-int _oph_json_add_graph_link(oph_json * json, const char *objkey, int node1, int node2, const char *description, pthread_mutex_t * flag)
+int _oph_json_add_graph_link(oph_json *json, const char *objkey, int node1, int node2, const char *description, pthread_mutex_t *flag)
 {
 	if (!json || !objkey || node1 < 0 || node2 < 0) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -648,12 +648,12 @@ int _oph_json_add_graph_link(oph_json * json, const char *objkey, int node1, int
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_graph_link(oph_json * json, const char *objkey, int node1, int node2, const char *description)
+int oph_json_add_graph_link(oph_json *json, const char *objkey, int node1, int node2, const char *description)
 {
 	return _oph_json_add_graph_link(json, objkey, node1, node2, description, &global_flag);
 }
 
-int oph_json_add_graph_link_unsafe(oph_json * json, const char *objkey, int node1, int node2, const char *description)
+int oph_json_add_graph_link_unsafe(oph_json *json, const char *objkey, int node1, int node2, const char *description)
 {
 	return _oph_json_add_graph_link(json, objkey, node1, node2, description, NULL);
 }

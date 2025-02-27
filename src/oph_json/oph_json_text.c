@@ -41,7 +41,7 @@ int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_
 /***********OPH_JSON_OBJ_TEXT INTERNAL FUNCTIONS***********/
 
 // Free a text object contents
-int oph_json_free_text(oph_json_obj_text * obj)
+int oph_json_free_text(oph_json_obj_text *obj)
 {
 	if (obj) {
 		if (obj->title) {
@@ -58,7 +58,7 @@ int oph_json_free_text(oph_json_obj_text * obj)
 
 /***********OPH_JSON_OBJ_TEXT FUNCTIONS***********/
 
-int _oph_json_add_text(oph_json * json, const char *objkey, const char *title, const char *message, pthread_mutex_t * flag)
+int _oph_json_add_text(oph_json *json, const char *objkey, const char *title, const char *message, pthread_mutex_t *flag)
 {
 	if (!json || !objkey || !title) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -218,12 +218,12 @@ int _oph_json_add_text(oph_json * json, const char *objkey, const char *title, c
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_text(oph_json * json, const char *objkey, const char *title, const char *message)
+int oph_json_add_text(oph_json *json, const char *objkey, const char *title, const char *message)
 {
 	return _oph_json_add_text(json, objkey, title, message, &global_flag);
 }
 
-int oph_json_add_text_unsafe(oph_json * json, const char *objkey, const char *title, const char *message)
+int oph_json_add_text_unsafe(oph_json *json, const char *objkey, const char *title, const char *message)
 {
 	return _oph_json_add_text(json, objkey, title, message, NULL);
 }

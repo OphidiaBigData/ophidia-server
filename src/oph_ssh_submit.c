@@ -50,7 +50,7 @@ extern char *oph_subm_user_publk;
 extern char *oph_subm_user_privk;
 
 #ifdef SSH_SUPPORT
-int waitsocket(int socket_fd, LIBSSH2_SESSION * session)
+int waitsocket(int socket_fd, LIBSSH2_SESSION *session)
 {
 	struct timeval timeout;
 	int rc;

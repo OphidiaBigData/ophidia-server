@@ -23,7 +23,7 @@
 
 #include "debug.h"
 
-void _oph_subset_free(oph_subset * subset)
+void _oph_subset_free(oph_subset *subset)
 {
 	if (subset->type) {
 		free(subset->type);
@@ -47,7 +47,7 @@ void _oph_subset_free(oph_subset * subset)
 	}
 }
 
-int oph_subset_init(oph_subset ** subset)
+int oph_subset_init(oph_subset **subset)
 {
 	if (!subset) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null pointer\n");
@@ -61,7 +61,7 @@ int oph_subset_init(oph_subset ** subset)
 	return OPH_SUBSET_LIB_OK;
 }
 
-int oph_subset_parse(const char *cond, unsigned long len, oph_subset * subset, long max)
+int oph_subset_parse(const char *cond, unsigned long len, oph_subset *subset, long max)
 {
 	char *result, *result2, temp0[OPH_SUBSET_LIB_MAX_STRING_LENGTH], temp1[OPH_SUBSET_LIB_MAX_STRING_LENGTH], temp2[OPH_SUBSET_LIB_MAX_STRING_LENGTH], *next, *temp, *savepointer = NULL;
 	unsigned int number;
@@ -189,7 +189,7 @@ int oph_subset_parse(const char *cond, unsigned long len, oph_subset * subset, l
 	return retval;
 }
 
-int oph_subset_free(oph_subset * subset)
+int oph_subset_free(oph_subset *subset)
 {
 	if (subset) {
 		_oph_subset_free(subset);

@@ -81,7 +81,7 @@ void pmesg(int level, const char *source, long int line_number, const char *form
 #endif				/* NDEBUG */
 }
 
-void pmesg_safe(pthread_mutex_t * flag, int level, const char *source, long int line_number, const char *format, ...)
+void pmesg_safe(pthread_mutex_t *flag, int level, const char *source, long int line_number, const char *format, ...)
 {
 #ifdef NDEBUG
 	/* Empty body, so a good compiler will optimise calls to pmesg away */
@@ -150,7 +150,7 @@ void set_debug_level(int level)
 	msglevel = level;
 }
 
-void set_log_file(FILE * file)
+void set_log_file(FILE *file)
 {
 	log_file = file;
 }

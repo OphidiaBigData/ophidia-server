@@ -4367,7 +4367,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							char *cmd = NULL;
-							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, taskname, wid, &cmd, 1 + host_type)) {
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, taskname, wid, &cmd, 1 + host_type, 0)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 								if (cmd) {

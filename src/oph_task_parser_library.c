@@ -401,7 +401,7 @@ int oph_tp_validate_xml_document(xmlDocPtr document)
 	return OPH_TP_TASK_PARSER_SUCCESS;
 }
 
-int oph_tp_match_value_in_xml_value_list(const char *value, const xmlChar * values)
+int oph_tp_match_value_in_xml_value_list(const char *value, const xmlChar *values)
 {
 	if (!value || !values)
 		return OPH_TP_TASK_SYSTEM_ERROR;
@@ -427,10 +427,13 @@ int oph_tp_match_value_in_xml_value_list(const char *value, const xmlChar * valu
 	return OPH_TP_TASK_PARSER_ERROR;
 }
 
-int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_node, const char *param, char *value)
+int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_node, const char *param, char *value, char *minmax)
 {
 	if (!task_string || !param || !value || !xml_node)
 		return OPH_TP_TASK_SYSTEM_ERROR;
+
+	if (minmax)
+		*minmax = 0;
 
 	xmlChar *attribute_type, *attribute_mandatory, *attribute_minvalue, *attribute_maxvalue, *attribute_default, *attribute_values;
 	char *tmp_value = strdup(task_string);
@@ -478,6 +481,8 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_maxvalue);
 					if (min_value == max_value) {
 						sprintf(tmp_value, "%d", min_value);
+						if (minmax)
+							*minmax = 1;
 					} else {
 						if (numeric_value < min_value) {
 							xmlFree(attribute_type);
@@ -520,7 +525,8 @@ int oph_tp_validate_task_string_param(const char *task_string, xmlNodePtr xml_no
 					xmlFree(attribute_maxvalue);
 					if (min_value == max_value) {
 						sprintf(tmp_value, "%f", min_value);
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "Param '%s' is changed to the only possible value %f\n", param, min_value);
+						if (minmax)
+							*minmax = 1;
 					} else {
 						if (numeric_value < min_value) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "Param '%s' is lower than minvalue %f\n", param, min_value);
@@ -589,7 +595,7 @@ int oph_tp_end_xml_parser()
 	return 0;
 }
 
-int oph_tp_task_params_parser(const char *operator, const char *task_string, HASHTBL ** hashtbl)
+int oph_tp_task_params_parser(const char *operator, const char *task_string, HASHTBL **hashtbl)
 {
 	if (!operator || ! hashtbl)
 		return OPH_TP_TASK_SYSTEM_ERROR;
@@ -670,7 +676,7 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 							return OPH_TP_TASK_PARSER_ERROR;
 						}
 						//Get and check value for parameter
-						if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1)) {
+						if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1, NULL)) {
 							xmlFree(content);
 							xmlFreeDoc(document);
 							free(value1);
@@ -681,7 +687,7 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 						if (attribute_allownot) {
 							if (!xmlStrcmp((const xmlChar *) "yes", attribute_allownot)) {
 								snprintf(key1, OPH_TP_TASKLEN, "%s!", (char *) content);
-								if (oph_tp_validate_task_string_param(task_string, subnode, key1, value1)) {
+								if (oph_tp_validate_task_string_param(task_string, subnode, key1, value1, NULL)) {
 									xmlFree(attribute_allownot);
 									xmlFree(content);
 									xmlFreeDoc(document);
@@ -711,10 +717,10 @@ int oph_tp_task_params_parser(const char *operator, const char *task_string, HAS
 
 int oph_tp_task_param_checker(const char *operator, const char *task_string, char *key, char *value)
 {
-	return oph_tp_task_param_checker_and_role(operator, task_string, key, value, NULL);
+	return oph_tp_task_param_checker_and_role(operator, task_string, key, value, NULL, NULL);
 }
 
-int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *role)
+int oph_tp_task_param_checker_and_role(const char *operator, const char *task_string, char *key, char *value, char *role, char *minmax)
 {
 	if (!operator || ! task_string || !key || !value)
 		return OPH_TP_TASK_SYSTEM_ERROR;
@@ -781,7 +787,7 @@ int oph_tp_task_param_checker_and_role(const char *operator, const char *task_st
 								return OPH_TP_TASK_PARSER_ERROR;
 							}
 							//Get and check value for parameter
-							if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1)) {
+							if (oph_tp_validate_task_string_param(task_string, subnode, (char *) content, value1, minmax)) {
 								xmlFree(content);
 								xmlFreeDoc(document);
 								free(value1);

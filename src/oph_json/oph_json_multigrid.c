@@ -41,7 +41,7 @@ int _oph_json_add_responseKey(oph_json * json, const char *responseKey, pthread_
 /***********OPH_JSON_OBJ_MULTIGRID INTERNAL FUNCTIONS***********/
 
 // Free a multigrid object contents
-int oph_json_free_multigrid(oph_json_obj_multigrid * obj)
+int oph_json_free_multigrid(oph_json_obj_multigrid *obj)
 {
 	if (obj) {
 		if (obj->colfieldtypes) {
@@ -174,9 +174,9 @@ int oph_json_free_multigrid(oph_json_obj_multigrid * obj)
 
 /***********OPH_JSON_OBJ_MULTIGRID FUNCTIONS***********/
 
-int _oph_json_add_multigrid(oph_json * json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
+int _oph_json_add_multigrid(oph_json *json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
 			    char **colkeys, int colkeys_num, char **colfieldtypes, int colfieldtypes_num, char ***colvalues, int colvalues_num, const char *measurename, const char *measuretype,
-			    pthread_mutex_t * flag)
+			    pthread_mutex_t *flag)
 {
 	if (!json || !objkey || !title || !rowkeys || rowkeys_num < 1 || !rowfieldtypes || rowfieldtypes_num < 1 || !colkeys || colkeys_num < 1 || !colfieldtypes || colfieldtypes_num < 1 || !colvalues
 	    || colvalues_num < 1 || !measurename || !measuretype) {
@@ -775,21 +775,21 @@ int _oph_json_add_multigrid(oph_json * json, const char *objkey, const char *tit
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_multigrid(oph_json * json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
+int oph_json_add_multigrid(oph_json *json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
 			   char **colkeys, int colkeys_num, char **colfieldtypes, int colfieldtypes_num, char ***colvalues, int colvalues_num, const char *measurename, const char *measuretype)
 {
 	return _oph_json_add_multigrid(json, objkey, title, description, rowkeys, rowkeys_num, rowfieldtypes, rowfieldtypes_num, colkeys, colkeys_num, colfieldtypes, colfieldtypes_num, colvalues,
 				       colvalues_num, measurename, measuretype, &global_flag);
 }
 
-int oph_json_add_multigrid_unsafe(oph_json * json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
+int oph_json_add_multigrid_unsafe(oph_json *json, const char *objkey, const char *title, const char *description, char **rowkeys, int rowkeys_num, char **rowfieldtypes, int rowfieldtypes_num,
 				  char **colkeys, int colkeys_num, char **colfieldtypes, int colfieldtypes_num, char ***colvalues, int colvalues_num, const char *measurename, const char *measuretype)
 {
 	return _oph_json_add_multigrid(json, objkey, title, description, rowkeys, rowkeys_num, rowfieldtypes, rowfieldtypes_num, colkeys, colkeys_num, colfieldtypes, colfieldtypes_num, colvalues,
 				       colvalues_num, measurename, measuretype, NULL);
 }
 
-int _oph_json_add_multigrid_row(oph_json * json, const char *objkey, char **rowvalues, char **measurevalues, pthread_mutex_t * flag)
+int _oph_json_add_multigrid_row(oph_json *json, const char *objkey, char **rowvalues, char **measurevalues, pthread_mutex_t *flag)
 {
 	if (!json || !objkey || !rowvalues || !measurevalues) {
 		pmesg_safe(flag, LOG_ERROR, __FILE__, __LINE__, OPH_JSON_LOG_BAD_PARAM_ERROR, "(NULL parameters)");
@@ -900,12 +900,12 @@ int _oph_json_add_multigrid_row(oph_json * json, const char *objkey, char **rowv
 	return OPH_JSON_SUCCESS;
 }
 
-int oph_json_add_multigrid_row(oph_json * json, const char *objkey, char **rowvalues, char **measurevalues)
+int oph_json_add_multigrid_row(oph_json *json, const char *objkey, char **rowvalues, char **measurevalues)
 {
 	return _oph_json_add_multigrid_row(json, objkey, rowvalues, measurevalues, &global_flag);
 }
 
-int oph_json_add_multigrid_row_unsafe(oph_json * json, const char *objkey, char **rowvalues, char **measurevalues)
+int oph_json_add_multigrid_row_unsafe(oph_json *json, const char *objkey, char **rowvalues, char **measurevalues)
 {
 	return _oph_json_add_multigrid_row(json, objkey, rowvalues, measurevalues, NULL);
 }
