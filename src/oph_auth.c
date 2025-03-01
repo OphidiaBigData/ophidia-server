@@ -211,14 +211,10 @@ int oph_load_file(const char *filename, oph_argument **args)
 						break;
 					}
 					tmp = (oph_argument *) malloc(sizeof(oph_argument));
-					if (strlen(pch) <= 1)
-						tmp->value = strdup("");
-					else
-						tmp->value = strndup(pch + 1, OPH_MAX_STRING_SIZE);
+					tmp->value = strdup(strlen(pch) > 1 ? 1 + pch : "");
 					pch[0] = 0;
 					tmp->key = strndup(buffer, OPH_MAX_STRING_SIZE);
 					tmp->next = NULL;
-
 					if (tail)
 						tail->next = tmp;
 					else
@@ -262,14 +258,10 @@ int oph_load_file2(const char *filename, oph_argument **args)
 						break;
 					}
 					tmp = (oph_argument *) malloc(sizeof(oph_argument));
-					if (strlen(pch) <= 1)
-						tmp->value = strdup("");
-					else
-						tmp->value = strndup(pch + 1, OPH_MAX_STRING_SIZE);
+					tmp->value = strdup(strlen(pch) > 1 ? 1 + pch : "");
 					pch[0] = 0;
 					tmp->key = strndup(buffer, OPH_MAX_STRING_SIZE);
 					tmp->next = NULL;
-
 					if (tail)
 						tail->next = tmp;
 					else

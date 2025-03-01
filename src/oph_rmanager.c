@@ -46,6 +46,8 @@
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
 #define OPH_RMANAGER_HOST_FILE		"%s/oph_count_%d.log"
 
+#define USE_QUEUE_HIGH_FOR_ANY_SERIAL_TASK
+
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 extern pthread_mutex_t service_flag;
@@ -621,6 +623,10 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 		pthread_mutex_unlock(&global_flag);
 		internal_request = 1;
 	}
+#ifdef USE_QUEUE_HIGH_FOR_ANY_SERIAL_TASK
+	if (!serial)
+		serial = 1;
+#endif
 
 	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
 		request, type || !serial
