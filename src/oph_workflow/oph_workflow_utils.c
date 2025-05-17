@@ -27,6 +27,12 @@
 #include "debug.h"
 #include "oph_auth.h"
 
+#define OPH_WORKFLOW_OFFSET_PLUS '+'
+#define OPH_WORKFLOW_OFFSET_MINUS '-'
+#define OPH_WORKFLOW_SUFFIX_SEPARATOR '/'
+#define OPH_WORKFLOW_SUFFIX_PATH "_path"
+#define OPH_WORKFLOW_SUFFIX_FILE "_file"
+
 int oph_workflow_get_argument_size(oph_workflow *workflow, int task_index, size_t *max)
 {
 	if (!workflow || !max)
@@ -111,9 +117,9 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 	}
 
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
-	char *p, *ep, firstc, lastc, lastcc, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL;
+	char *p, *ep, firstc, lastc, lastcc, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL, *subtarget_value = NULL, *subtarget_value2;
 	oph_workflow_var *var = NULL;
-	int index, new_size, return_error;
+	int index, new_size, return_error, base_size, voffset, suffix;
 
 	while (((p = strchr(*submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(*submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
@@ -176,6 +182,28 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 
 		key = target_value + 1 + lastc;
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' in workflow '%s'\n", key, workflow->name);
+		if ((subtarget_value = strchr(key, OPH_WORKFLOW_OFFSET_PLUS))) {	// '=' is correct
+			*subtarget_value = 0;
+			subtarget_value++;
+			voffset = (int) strtol(subtarget_value, NULL, 10);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset);
+		} else if ((subtarget_value = strchr(key, OPH_WORKFLOW_OFFSET_MINUS))) {	// '=' is correct
+			*subtarget_value = 0;
+			subtarget_value++;
+			voffset = -((int) strtol(subtarget_value, NULL, 10));
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset);
+		} else
+			voffset = 0;
+		if ((subtarget_value = strstr(key, OPH_WORKFLOW_SUFFIX_PATH)) && !subtarget_value[5]) {	// '=' is correct
+			*subtarget_value = 0;
+			suffix = -1;
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider the path to file for '%s'\n", key);
+		} else if ((subtarget_value = strstr(key, OPH_WORKFLOW_SUFFIX_FILE)) && !subtarget_value[5]) {	// '=' is correct
+			*subtarget_value = 0;
+			suffix = 1;
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider the file name only for '%s'\n", key);
+		} else
+			suffix = 0;
 		if (lastc != lastcc)
 			return_error = 1;
 		else if (!strlen(key))
@@ -235,10 +263,37 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 		}
 		offset = p - *submit_string;
 
+		subtarget_value2 = NULL;
+
 		if (prefix)
 			new_size = 1 + snprintf(NULL, 0, "%d", return_error ? index : var->ivalue) + strlen(ep);
-		else
-			new_size = 1 + strlen(return_error ? value : (char *) var + sizeof(oph_workflow_var)) + strlen(ep);
+		else {
+			subtarget_value = return_error ? value : (char *) var + sizeof(oph_workflow_var);
+			if (suffix > 0) {	// Consider the file name
+				subtarget_value2 = strrchr(subtarget_value, OPH_WORKFLOW_SUFFIX_SEPARATOR);
+				if (subtarget_value2) {
+					subtarget_value = subtarget_value2 + 1;
+					subtarget_value2 = NULL;
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "File name to be considered: %s\n", subtarget_value);
+				}
+			} else if (suffix < 0) {	// Consider the path to file
+				subtarget_value2 = strrchr(subtarget_value, OPH_WORKFLOW_SUFFIX_SEPARATOR);
+				if (subtarget_value2)
+					subtarget_value = subtarget_value2 = strndup(subtarget_value, subtarget_value2 - subtarget_value);
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Path to file to be considered: %s\n", subtarget_value);
+			}
+			base_size = strlen(subtarget_value);
+			if (voffset > 0) {
+				if (voffset > base_size)
+					voffset = base_size;
+				base_size -= voffset;
+			} else if (voffset < 0) {
+				if (voffset < -base_size)
+					voffset = -base_size;
+				base_size += voffset;
+			}
+			new_size = 1 + base_size + strlen(ep);
+		}
 
 		replaced_value = (char *) malloc((new_size + offset) * sizeof(char));
 		if (!replaced_value) {
@@ -254,8 +309,18 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 		replaced_value[offset] = 0;
 		if (prefix)
 			snprintf(replaced_value + offset, new_size, "%d%s", return_error ? index : var->ivalue, ep);
-		else
-			snprintf(replaced_value + offset, new_size, "%s%s", return_error ? value : (char *) var + sizeof(oph_workflow_var), ep);
+		else {
+			if (voffset > 0)
+				subtarget_value += voffset;
+			else if (voffset < 0)
+				subtarget_value = strndup(subtarget_value, base_size);
+			snprintf(replaced_value + offset, new_size, "%s%s", subtarget_value, ep);
+			if (voffset < 0)
+				free(subtarget_value);
+		}
+
+		if (subtarget_value2)
+			free(subtarget_value2);
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Value '%s' will be replaced by '%s'\n", *submit_string, replaced_value);
 		free(*submit_string);
