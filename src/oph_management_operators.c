@@ -67,7 +67,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error for '%s %s'\n", operator_name, request);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -284,7 +284,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error for '%s %s'\n", operator_name, request);
 			oph_odb_disconnect_from_ophidiadb(&oDB);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
@@ -2275,7 +2275,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s task parser error\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error for '%s %s'\n", operator_name, request);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -2701,7 +2701,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		HASHTBL *task_tbl = NULL;
 		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error for '%s %s'\n", operator_name, request);
 			if (task_tbl)
 				hashtbl_destroy(task_tbl);
 			return OPH_SERVER_WRONG_PARAMETER_ERROR;
