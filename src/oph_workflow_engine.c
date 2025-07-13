@@ -4627,7 +4627,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												free(jsonvalues);
 											break;
 										}
-										if (jsonvalues[jjj] && strlen(jsonvalues[jjj]))
+										if (strlen(jsonvalues[jjj]))
 											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
 										jjj++;
 										jsonvalues[jjj] =
@@ -5381,6 +5381,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					else if (oph_workflow_save_task_output(&(wf->tasks[task_index]), &wtmp2) || !wtmp2)
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task '%s' of '%s' cannot be traced\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
 					else {
+						// wtmp2->task_index = task_index; // It is not necessary since the substitution is being done now
 						if (wtmp2->input && strlen(wtmp2->input))
 							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->input, NULL, NULL);
 						if (wf->tasks[task_index].outputs_file < 0) {	// Check for a cube in case no file is returned
@@ -6625,6 +6626,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									free(jsonvalues);
 								break;
 							}
+							/* // Not necessary since the substituion has been done on saving the output
+							   if (strlen(jsonvalues[jjj]))
+							   oph_workflow_var_substitute(wf, wtmp->task_index, -1, jsonvalues + jjj, NULL, NULL); */
 							jjj++;
 							jsonvalues[jjj] = strdup(wtmp->output);
 							if (!jsonvalues[jjj]) {

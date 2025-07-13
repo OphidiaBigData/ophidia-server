@@ -4921,6 +4921,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																free(jsonvalues);
 															break;
 														}
+														if (strlen(jsonvalues[jjj]))
+															oph_workflow_var_substitute(item->wf, i, -1, jsonvalues + jjj, NULL, NULL);
 														jjj++;
 														if (!task->outputs_values)
 															jsonvalues[jjj] = strdup("");
@@ -5760,7 +5762,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																free(jsonvalues);
 															break;
 														}
-														if (jsonvalues[jjj] && strlen(jsonvalues[jjj]))
+														if (strlen(jsonvalues[jjj]))
 															oph_workflow_var_substitute(item->wf, task_index, i, jsonvalues + jjj, NULL,
 																		    NULL);
 														jjj++;
