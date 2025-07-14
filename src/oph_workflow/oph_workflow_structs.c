@@ -401,7 +401,6 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 	int i;
 	char *value = NULL, *tmp = NULL, *tmp2 = NULL, cube = 1;
 	if (task->light_tasks_num) {
-		char *tmp2 = NULL;
 		for (i = 0; i < task->light_tasks_num; ++i) {
 			if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->light_tasks[i].input) <= 0)
 				break;
@@ -473,6 +472,48 @@ char *oph_workflow_input_of(oph_workflow_task *task)
 	return (value ? strdup(value) : NULL);
 }
 
+char *oph_workflow_output_of(oph_workflow_task *task)
+{
+	if (!task)
+		return NULL;
+	int i;
+	char *value = NULL, *tmp = NULL, *tmp2 = NULL, cube = 1;
+	if (task->light_tasks_num) {
+		for (i = 0; i < task->light_tasks_num; ++i) {
+			if (asprintf(&tmp2, "%s%s%s", tmp ? tmp : "", tmp ? "|" : "", task->light_tasks[i].output) <= 0)
+				break;
+			if (tmp)
+				free(tmp);
+			tmp = tmp2;
+		}
+	}
+	for (i = 0; i < task->arguments_num; ++i) {
+		if (!task->arguments_values[i])
+			continue;
+		if (!task->light_tasks_num && !strcmp(task->arguments_keys[i], OPH_WORKFLOW_ARG_OUTPUT)) {
+			if (!task->operator || strncasecmp(task->operator, OPH_WORKFLOW_OPERATOR, strlen(OPH_WORKFLOW_OPERATOR))) {
+				value = task->arguments_values[i];
+				if (tmp) {
+					free(tmp);
+					tmp = NULL;
+				}
+				cube = 0;	// Useless
+				break;
+			} else {
+				tmp2 = NULL;
+				if (asprintf(&tmp2, "%s%s%s", task->arguments_values[i], tmp ? "|" : "", tmp ? tmp : "") <= 0)	// Order is important
+					break;
+				if (tmp)
+					free(tmp);
+				tmp = tmp2;
+			}
+		}
+	}
+	if (tmp)
+		return (tmp);
+	return (value ? strdup(value) : NULL);
+}
+
 int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
 {
 	if (!task || !task_out)
@@ -484,7 +525,7 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 
 	time_t nowtime;
 	struct tm nowtm;
-	char buffer[128];
+	char buffer[128], *manual_output = NULL;
 	*buffer = 0;
 	time(&nowtime);
 	if (localtime_r(&nowtime, &nowtm))
@@ -498,7 +539,12 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	(*task_out)->input = oph_workflow_input_of(task);
 	if (!(*task_out)->input)
 		(*task_out)->input = strdup("");
-	(*task_out)->output = task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file] ? strdup(task->outputs_values[task->outputs_file]) : strdup("");
+	if (task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file])
+		(*task_out)->output = strdup(task->outputs_values[task->outputs_file]);
+	else if ((manual_output = oph_workflow_output_of(task))) {
+		(*task_out)->output = manual_output;
+	} else
+		(*task_out)->output = strdup("");
 	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
 	(*task_out)->end_time = strdup(buffer);
 	(*task_out)->next = NULL;

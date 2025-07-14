@@ -27,6 +27,7 @@
 #include "hashtbl.h"
 
 #define OPH_WORKFLOW_ARG_INPUT "input"
+#define OPH_WORKFLOW_ARG_OUTPUT "output"
 #define OPH_WORKFLOW_ARG_SRC_PATH "src_path"
 #define OPH_WORKFLOW_ARG_FILE "file"
 #define OPH_WORKFLOW_ARG_CUBE "cube"

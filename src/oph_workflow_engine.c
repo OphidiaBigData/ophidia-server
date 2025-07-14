@@ -4641,6 +4641,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												free(jsonvalues);
 											break;
 										}
+										if (strlen(jsonvalues[jjj]))
+											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
 										if (strlen(jsonvalues[jjj - 1]) && strlen(jsonvalues[jjj]) && !strcmp(jsonvalues[jjj - 1], jsonvalues[jjj])) {	// Remove reference in case no new data is produced
 											free(jsonvalues[jjj - 1]);
 											free(jsonvalues[jjj]);
@@ -5393,6 +5395,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									break;
 								}
 						}
+						if (wtmp2->output && strlen(wtmp2->output))
+							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->output, NULL, NULL);
 						if (strlen(wtmp2->input) && strlen(wtmp2->output) && !strcmp(wtmp2->input, wtmp2->output)) {	// Remove reference in case no new data is produced
 							free(wtmp2->input);
 							free(wtmp2->output);
@@ -6640,6 +6644,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									free(jsonvalues);
 								break;
 							}
+							/* // Not necessary since the substituion has been done on saving the output
+							   if (strlen(jsonvalues[jjj]))
+							   oph_workflow_var_substitute(wf, wtmp->task_index, -1, jsonvalues + jjj, NULL, NULL); */
 							jjj++;
 							jsonvalues[jjj] = strdup(wtmp->begin_time);
 							if (!jsonvalues[jjj]) {
