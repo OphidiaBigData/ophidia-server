@@ -159,6 +159,7 @@
 // OPH_SERVICE
 #define OPH_JSON_OBJKEY_SERVICE_STATUS				"service_status"
 #define OPH_JSON_OBJKEY_SERVICE_TASKS				"service_tasks"
+#define OPH_JSON_OBJKEY_SERVICE_PARAMETERS			"service_parameters"
 
 // OPH_MANAGE_SESSION
 #define OPH_JSON_OBJKEY_MANAGE_SESSION_LIST			"manage_session_list"
