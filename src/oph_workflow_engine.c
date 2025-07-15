@@ -962,7 +962,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 			datacube_inputs = NULL;
 		}
 		// Do not consider input for OPH_IMPORTNCS as massive, but expand the value of the parameter
-		if (datacube_inputs && src_path && number && (!strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) || !strcasecmp(task->operator, OPH_OPERATOR_FOR)) && (j >= 0)) {
+		if (datacube_inputs && src_path && number
+		    && (!strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) || !strcasecmp(task->operator, OPH_OPERATOR_FOR) || !strcasecmp(task->operator, OPH_OPERATOR_GENERIC)) && (j >= 0)) {
 			size_t max_dim = number * OPH_LONG_STRING_SIZE;
 			char *tmp = (char *) malloc(max_dim);
 			if (!tmp) {

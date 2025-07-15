@@ -113,6 +113,7 @@
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
 #define OPH_OPERATOR_IMPORTNCS "oph_importncs"
+#define OPH_OPERATOR_GENERIC "oph_generic"
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
