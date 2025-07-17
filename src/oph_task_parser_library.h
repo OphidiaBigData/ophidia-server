@@ -44,6 +44,7 @@
 #define OPH_TP_XML_ARGS "args"
 #define OPH_TP_XML_ARGUMENT "argument"
 #define OPH_TP_XML_INFO "info"
+#define OPH_TP_XML_CATEGORY "category"
 #define OPH_TP_XML_PERMISSION "permission"
 
 #define OPH_TP_XML_ATTRIBUTE_TYPE "type"

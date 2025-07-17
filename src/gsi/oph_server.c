@@ -111,6 +111,7 @@ char oph_cluster_deployment = 0;
 char oph_cluster_increase = 0;
 char oph_auth_enabled = 1;
 char oph_cancel_all_enabled = 0;
+HASHTBL *oph_operators_list = 0;
 #ifdef OPH_DIRECT_OUTPUT
 char oph_direct_output = 1;
 #else
@@ -130,6 +131,11 @@ int set_global_values(const char *configuration_file)
 
 	oph_server_params = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
 	if (!oph_server_params) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+		return OPH_SERVER_SYSTEM_ERROR;
+	}
+	oph_operators_list = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
+	if (!oph_operators_list) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
@@ -368,6 +374,8 @@ void cleanup()
 	}
 	if (oph_server_params)
 		hashtbl_destroy(oph_server_params);
+	if (oph_operators_list)
+		hashtbl_destroy(oph_operators_list);
 #ifdef OPH_SERVER_LOCATION
 	if (oph_server_location)
 		free(oph_server_location);

@@ -368,7 +368,8 @@ int oph_workflow_get_submission_string(oph_workflow *workflow, int task_index, i
 	*long_submission_string = NULL;
 	if (short_submission_string)
 		*short_submission_string = NULL;
-	if ((task_index < 0) || (task_index > workflow->tasks_num) || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
+	if ((task_index < 0) || (task_index > workflow->tasks_num)
+	    || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_REMOVING_TASK))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Index out of boundaries\n");
 		if (error)
 			*error = strdup("Index out of boundaries");
@@ -529,7 +530,8 @@ int oph_workflow_get_submitted_string(oph_workflow *workflow, int task_index, in
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Null param\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
-	if ((task_index < 0) || (task_index > workflow->tasks_num) || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK))) {
+	if ((task_index < 0) || (task_index > workflow->tasks_num)
+	    || ((task_index == workflow->tasks_num) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_FINAL_TASK) && strcmp(workflow->tasks[task_index].name, OPH_WORKFLOW_REMOVING_TASK))) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Index out of boundaries\n");
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}

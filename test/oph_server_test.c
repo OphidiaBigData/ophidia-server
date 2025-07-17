@@ -96,6 +96,7 @@ unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment;
 char oph_cluster_increase = 0;
 char oph_cancel_all_enabled = 0;
+HASHTBL *oph_operators_list = 0;
 #ifdef OPH_DIRECT_OUTPUT
 char oph_direct_output = 1;
 #else

@@ -24,6 +24,7 @@
 
 typedef struct _oph_trash_item {
 	int item;
+	int index;
 	struct _oph_trash_item *next;
 } oph_trash_item;
 
@@ -40,9 +41,14 @@ typedef struct _oph_trash {
 
 int oph_trash_create(oph_trash ** trash);
 int oph_trash_destroy(oph_trash * trash);
-int oph_trash_append(oph_trash * trash, const char *key, int item);
-int oph_trash_extract(oph_trash * trash, const char *key, int *item);
+int oph_trash_append(oph_trash * trash, const char *key, int item, int index);
+int oph_trash_extract(oph_trash * trash, const char *key, int *item, int *index);
 int oph_trash_order(oph_trash * trash, const char *key);
 int oph_trash_size(oph_trash * trash, const char *key, unsigned int *size);
+
+int oph_trash_get_head(oph_trash * trash, const char *key, oph_trash_item ** node);
+int oph_trash_get_next(oph_trash_item * node, int *item, int *index, oph_trash_item ** next);
+
+int oph_trash_delete(oph_trash * trash, const char *key, oph_trash_item ** item);
 
 #endif				/* OPH_TRASH_H */

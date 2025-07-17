@@ -6867,7 +6867,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	int odb_jobid = 0;
 
 	// Save the job in OphidiaDB
-	HASHTBL *task_tbl = hashtbl_create(5, NULL);
+	HASHTBL *task_tbl = hashtbl_create(HASHTBL_KEY_NUMBER, NULL);
 	if (!task_tbl) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: unable to create hash table.\n", jobid);
 		oph_odb_disconnect_from_ophidiadb(&oDB);

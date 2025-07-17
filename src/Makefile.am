@@ -281,10 +281,11 @@ liboph_ophidiadb_fs_library_la_LDFLAGS = -shared
 liboph_ophidiadb_fs_library_la_LIBADD = $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -loph_ophidiadb
 
 LIBRARY += liboph_task_parser_library.la
+liboph_task_parser_library_la_DEPENDENCIES= libhashtbl.la
 liboph_task_parser_library_la_SOURCES = oph_task_parser_library.c
 liboph_task_parser_library_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${LIBXML_INCLUDE}
 liboph_task_parser_library_la_LDFLAGS = -shared
-liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBXML_LIB}
+liboph_task_parser_library_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBXML_LIB} -L. -lhashtbl
 
 LIBRARY += liboph_filters.la
 liboph_filters_la_DEPENDENCIES= liboph_task_parser_library.la liboph_ophidiadb_fs_library.la liboph_subset_library.la

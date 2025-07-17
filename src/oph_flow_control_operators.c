@@ -1957,7 +1957,7 @@ int oph_endfor_impl(oph_workflow *wf, int i, char *error_message, oph_trash *tra
 
 				oph_odb_remove_job(wf->tasks[i].idjob);	// Drop line of oph_endfor from OphDB
 
-				if (oph_trash_append(trash, wf->sessionid, wf->tasks[i].markerid))
+				if (oph_trash_append(trash, wf->sessionid, wf->tasks[i].markerid, -1))
 					pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to release markerid.\n");
 				else
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Release markerid '%d'.\n", wf->tasks[i].markerid);

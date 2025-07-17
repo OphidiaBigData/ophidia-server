@@ -20,6 +20,7 @@
 
 #include "oph_task_parser_library.h"
 #include "oph_gather.h"
+#include "hashtbl.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,6 +46,7 @@
 
 extern char *oph_server_location;
 extern char *oph_xml_operator_dir;
+extern HASHTBL *oph_operators_list;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
 #endif
@@ -817,6 +819,13 @@ int oph_tp_task_param_checker_and_role(const char *operator, const char *task_st
 					content = xmlNodeGetContent(subnode->xmlChildrenNode);
 					if (content) {
 						strcpy(role, (char *) content);
+						xmlFree(content);
+					}
+					break;
+				} else if (oph_operators_list && !xmlStrcmp(subnode->name, (const xmlChar *) OPH_TP_XML_CATEGORY)) {
+					content = xmlNodeGetContent(subnode->xmlChildrenNode);
+					if (content) {
+						hashtbl_insert(oph_operators_list, operator, (char *) content);
 						xmlFree(content);
 					}
 					break;

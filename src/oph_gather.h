@@ -183,6 +183,8 @@
 // External XML
 #define OPH_SERVER_XML_EXT_PATH "/usr/local/ophidia/oph-cluster/oph-analytics-framework/etc/operators_xml"
 #define OPH_SERVER_XML_EXT_FILE "%s/%s"
+// Some XML values
+#define OPH_OPERATOR_DATA_ANALYSIS "Data Analysis"
 
 // Job status
 #define OPH_ODB_STATUS_UNKNOWN_STR "OPH_STATUS_UNKNOWN"

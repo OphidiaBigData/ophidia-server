@@ -52,7 +52,7 @@ int oph_trash_destroy(oph_trash *trash)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_append(oph_trash *trash, const char *key, int item)
+int oph_trash_append(oph_trash *trash, const char *key, int item, int index)
 {
 	if (!trash)
 		return OPH_TRASH_ERROR;
@@ -61,6 +61,7 @@ int oph_trash_append(oph_trash *trash, const char *key, int item)
 	if (!itmp)
 		return OPH_TRASH_ERROR;
 	itmp->item = item;
+	itmp->index = index;
 	itmp->next = NULL;
 
 	oph_trash_node *tmp;
@@ -93,11 +94,13 @@ int oph_trash_append(oph_trash *trash, const char *key, int item)
 	return OPH_TRASH_OK;
 }
 
-int oph_trash_extract(oph_trash *trash, const char *key, int *item)
+int oph_trash_extract(oph_trash *trash, const char *key, int *item, int *index)
 {
 	if (!trash || !item)
 		return OPH_TRASH_ERROR;
 	*item = 0;
+	if (index)
+		*index = -1;
 
 	oph_trash_node *tmp, *prev = NULL;
 	for (tmp = trash->trash; tmp; tmp = tmp->next) {
@@ -109,6 +112,8 @@ int oph_trash_extract(oph_trash *trash, const char *key, int *item)
 		return OPH_TRASH_ERROR;
 
 	*item = tmp->head->item;
+	if (index)
+		*index = tmp->head->index;
 	oph_trash_item *next = tmp->head->next;
 
 	free(tmp->head);	// Item
@@ -173,6 +178,89 @@ int oph_trash_size(oph_trash *trash, const char *key, unsigned int *size)
 	oph_trash_item *temp;
 	for (temp = tmp->head; temp; temp = temp->next)
 		++ * size;
+
+	return OPH_TRASH_OK;
+}
+
+int oph_trash_get_head(oph_trash *trash, const char *key, oph_trash_item **item)
+{
+	if (!trash || !item)
+		return OPH_TRASH_ERROR;
+	*item = NULL;
+
+	oph_trash_node *tmp, *prev = NULL;
+	for (tmp = trash->trash; tmp; tmp = tmp->next) {
+		if (!key || !strcmp(tmp->key, key))
+			break;
+		prev = tmp;
+	}
+	if (!tmp)
+		return OPH_TRASH_ERROR;
+
+	*item = tmp->head;
+
+	return OPH_TRASH_OK;
+}
+
+int oph_trash_get_next(oph_trash_item *node, int *item, int *index, oph_trash_item **next)
+{
+	if (!node || !item)
+		return OPH_TRASH_ERROR;
+
+	*item = node->item;
+	if (index)
+		*index = node->index;
+	if (next)
+		*next = node->next;
+
+	return OPH_TRASH_OK;
+}
+
+int oph_trash_delete(oph_trash *trash, const char *key, oph_trash_item **item)
+{
+	if (!trash || !item || !*item)
+		return OPH_TRASH_ERROR;
+
+	oph_trash_node *tmp, *prev = NULL;
+	for (tmp = trash->trash; tmp; tmp = tmp->next) {
+		if (!key || !strcmp(tmp->key, key))
+			break;
+		prev = tmp;
+	}
+	if (!tmp || !tmp->head)
+		return OPH_TRASH_ERROR;
+
+	oph_trash_item *current = tmp->head;
+	oph_trash_item *previous = NULL;
+
+	while (current && (current != *item)) {
+		previous = current;
+		current = current->next;
+	}
+	if (!current)
+		return OPH_TRASH_OK;
+
+	if (tmp->head == tmp->tail)	// Only one item
+	{
+		if (tmp->key)
+			free(tmp->key);	// Key
+		if (prev)
+			prev->next = tmp->next;
+		else
+			trash->trash = tmp->next;
+		free(tmp);	// Node
+		*item = NULL;
+	} else if (previous) {
+		*item = previous->next = current->next;
+		if (current == tmp->tail)
+			tmp->tail = previous;
+	} else {
+		*item = tmp->head = current->next;	// More items
+		if (current == tmp->tail)
+			tmp->tail = tmp->head;
+	}
+
+	free(current);		// Item
 
 	return OPH_TRASH_OK;
 }
