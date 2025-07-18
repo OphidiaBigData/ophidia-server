@@ -3,6 +3,7 @@
 
 ### Added:
 
+- Option 'oph_fastdelete'
 - Options to refer to substrings of the value of workflow variables
 
 ## v1.9.1 - 2025-01-04
