@@ -3382,6 +3382,30 @@ char *oph_workflow_input_of_l(oph_workflow_light_task *task, char *operator)
 	return (value ? strdup(value) : NULL);
 }
 
+int _oph_workflow_are_dependents_completed(oph_workflow *wf, int task_index)
+{
+	if (!wf || (task_index < 0) || (task_index >= wf->tasks_num))
+		return 1;
+
+	int i, k;
+	char *category;
+	if (wf->tasks[task_index].dependents_indexes) {
+		for (k = wf->tasks[task_index].dependents_indexes_num - 1; k >= 0; --k) {
+			i = wf->tasks[task_index].dependents_indexes[k];
+			if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)
+				break;
+			category = oph_operators_list ? hashtbl_get(oph_operators_list, wf->tasks[i].operator) : NULL;
+			if ((!category || strcasecmp(category, OPH_OPERATOR_DATA_ANALYSIS)) && _oph_workflow_are_dependents_completed(wf, i)) {
+				break;
+			}
+		}
+		if (k >= 0)
+			return 2;
+	}
+
+	return 0;
+}
+
 int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, char *data, char *output_json, int *response)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, data ? data : "");
@@ -4939,7 +4963,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
 				}
 
-				if (status == OPH_ODB_STATUS_COMPLETED) {
+				if (task_index == wf->tasks_num) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: completed task '%s' of '%s', current state %s\n", ttype, jobid, wf->tasks[task_index].name, wf->name,
+					      oph_odb_convert_status_to_str(wf->status));
+				} else if (status == OPH_ODB_STATUS_COMPLETED) {
 					if (wf->tasks[task_index].is_skipped && (wf->tasks[task_index].status <= (int) OPH_ODB_STATUS_COMPLETED))
 						wf->tasks[task_index].status = OPH_ODB_STATUS_UNSELECTED;
 
@@ -5468,7 +5495,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				      oph_odb_convert_status_to_str(wf->tasks[task_index].status));
 		}
 
-		if (!error && update_wf_data && !wf->tasks[wf->tasks_num].name) {
+		if (!error && update_wf_data && (!wf->tasks[wf->tasks_num].name || strcmp(wf->tasks[wf->tasks_num].name, OPH_WORKFLOW_FINAL_TASK))) {
 			if (oph_odb_set_job_status_and_nchildrencompleted(odb_parentid, wf->status, wf->tasks_num - wf->residual_tasks_num, update_wf_data == 2, &oDB)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update parent job status\n", ttype, jobid);
 				*response = OPH_SERVER_IO_ERROR;
@@ -5481,22 +5508,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		if (!final && wf->exit_cubes && (!wf->tasks[wf->tasks_num].status || (wf->tasks[wf->tasks_num].status >= OPH_ODB_STATUS_COMPLETED))) {
 			oph_trash_item *node = NULL, *next = NULL;
 			if (!oph_trash_get_head(wf->exit_cubes, NULL, &node)) {
-				int i, k, cubeid, task_index_creator;
-				char *category;
+				int cubeid, task_index_creator;
 				for (; node && !oph_trash_get_next(node, &cubeid, &task_index_creator, &next) && (wf->tasks[task_index_creator].exit_action == OPH_WORKFLOW_EXIT_ACTION_FASTDELETE);
 				     node = next) {
-					if (wf->tasks[task_index_creator].dependents_indexes) {
-						for (k = wf->tasks[task_index_creator].dependents_indexes_num - 1; k >= 0; --k) {
-							i = wf->tasks[task_index_creator].dependents_indexes[k];
-							if (wf->tasks[i].status < OPH_ODB_STATUS_COMPLETED)
-								break;
-							category = oph_operators_list ? hashtbl_get(oph_operators_list, wf->tasks[i].operator) : NULL;
-							if (!category || strcasecmp(category, OPH_OPERATOR_DATA_ANALYSIS))
-								break;
-						}
-						if (k >= 0)
-							continue;
-					}
+					if (_oph_workflow_are_dependents_completed(wf, task_index_creator))
+						continue;
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: the cube with id %d can be deleted\n", ttype, jobid, cubeid);
 					if (!trash_cubes && oph_trash_create(&trash_cubes)) {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: the cube cannot be deleted\n", ttype, jobid);
@@ -5535,6 +5551,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 			if (trash_cubes) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, final ? OPH_WORKFLOW_FINAL_TASK : OPH_WORKFLOW_REMOVING_TASK);
+				task->idjob = task->markerid = 0;
 				task->status = OPH_ODB_STATUS_UNKNOWN;
 				char skip = task->name, process = 0;
 				if (skip)
