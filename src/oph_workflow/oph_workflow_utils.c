@@ -119,7 +119,7 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 	unsigned int i, l = strlen(OPH_WORKFLOW_SEPARATORS), offset, skip_until = 0;
 	char *p, *ep, firstc, lastc, lastcc, prefix, *key, *value = NULL, parse_embedded_variable, *replaced_value = NULL, *target_value = NULL, *subtarget_value = NULL, *subtarget_value2;
 	oph_workflow_var *var = NULL;
-	int index, new_size, return_error, base_size, voffset, suffix;
+	int index, new_size, return_error, base_size, voffset_pre, voffset_post, suffix;
 
 	while (((p = strchr(*submit_string + skip_until, OPH_WORKFLOW_VARIABLE_PREFIX))) || ((p = strchr(*submit_string, OPH_WORKFLOW_INDEX_PREFIX)))) {
 
@@ -182,18 +182,19 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 
 		key = target_value + 1 + lastc;
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found key '%s' in workflow '%s'\n", key, workflow->name);
+		voffset_pre = voffset_post = 0;
 		if ((subtarget_value = strchr(key, OPH_WORKFLOW_OFFSET_PLUS))) {	// '=' is correct
 			*subtarget_value = 0;
 			subtarget_value++;
-			voffset = (int) strtol(subtarget_value, NULL, 10);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset);
-		} else if ((subtarget_value = strchr(key, OPH_WORKFLOW_OFFSET_MINUS))) {	// '=' is correct
+			voffset_pre = (int) strtol(subtarget_value, NULL, 10);
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset_pre);
+		}
+		if ((subtarget_value = strchr(subtarget_value ? subtarget_value : key, OPH_WORKFLOW_OFFSET_MINUS))) {	// '=' is correct
 			*subtarget_value = 0;
 			subtarget_value++;
-			voffset = -((int) strtol(subtarget_value, NULL, 10));
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset);
-		} else
-			voffset = 0;
+			voffset_post = -((int) strtol(subtarget_value, NULL, 10));
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Consider an offset %d\n", voffset_post);
+		}
 		if ((subtarget_value = strstr(key, OPH_WORKFLOW_SUFFIX_PATH)) && !subtarget_value[5]) {	// '=' is correct
 			*subtarget_value = 0;
 			suffix = -1;
@@ -283,14 +284,15 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Path to file to be considered: %s\n", subtarget_value);
 			}
 			base_size = strlen(subtarget_value);
-			if (voffset > 0) {
-				if (voffset > base_size)
-					voffset = base_size;
-				base_size -= voffset;
-			} else if (voffset < 0) {
-				if (voffset < -base_size)
-					voffset = -base_size;
-				base_size += voffset;
+			if (voffset_pre > 0) {
+				if (voffset_pre > base_size)
+					voffset_pre = base_size;
+				base_size -= voffset_pre;
+			}
+			if (voffset_post < 0) {
+				if (voffset_post < -base_size)
+					voffset_post = -base_size;
+				base_size += voffset_post;
 			}
 			new_size = 1 + base_size + strlen(ep);
 		}
@@ -310,12 +312,12 @@ int oph_workflow_var_substitute(oph_workflow *workflow, int task_index, int ligh
 		if (prefix)
 			snprintf(replaced_value + offset, new_size, "%d%s", return_error ? index : var->ivalue, ep);
 		else {
-			if (voffset > 0)
-				subtarget_value += voffset;
-			else if (voffset < 0)
+			if (voffset_pre > 0)
+				subtarget_value += voffset_pre;
+			if (voffset_post < 0)
 				subtarget_value = strndup(subtarget_value, base_size);
 			snprintf(replaced_value + offset, new_size, "%s%s", subtarget_value, ep);
-			if (voffset < 0)
+			if (voffset_post < 0)
 				free(subtarget_value);
 		}
 
