@@ -3864,7 +3864,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							} else if (!strncmp(outputs_keys[i], OPH_ARG_LINK, OPH_MAX_STRING_SIZE)) {
 								snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_LINK, wf->tasks[task_index].light_tasks[light_task_index].markerid);
 								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
-							}
+							} else if (!strncmp(outputs_keys[i], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE))
+								pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: found an output option '%s' for the massive operation '%s': skipping\n", ttype, jobid,
+								      OPH_ARG_INPUT, wf->tasks[task_index].name);
 						}
 
 						int outputs_file = -1;
@@ -4997,6 +4999,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						} else if (!strncmp(outputs_keys[i], OPH_ARG_LINK, OPH_MAX_STRING_SIZE)) {
 							snprintf(linkname, OPH_SHORT_STRING_SIZE, OPH_SESSION_OUTPUT_LINK, wf->tasks[task_index].markerid);
 							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
+						} else if (!strncmp(outputs_keys[i], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE)) {
+							for (j = 0; j < wf->tasks[task_index].arguments_num; ++j)
+								if (!strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE)
+								    || !strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_SRC_PATH, OPH_MAX_STRING_SIZE)) {
+									if (wf->tasks[task_index].arguments_values[j])
+										free(wf->tasks[task_index].arguments_values[j]);
+									wf->tasks[task_index].arguments_values[j] = strndup(outputs_values[i], OPH_MAX_STRING_SIZE);
+								}
 						}
 					}
 
