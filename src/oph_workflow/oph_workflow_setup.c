@@ -537,13 +537,14 @@ int oph_workflow_validate_fco(oph_workflow *wf)
 	for (k = 0; k < wf->tasks_num; k++) {
 		wf->tasks[k].parent = wf->tasks[k].child = -1;
 		wf->tasks[k].branch_num = wf->tasks[k].nesting_level = 0;
-		level[k] = 0;
 	}
 
 	for (k = 0; k < wf->tasks_num; k++) {
 		if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_FOR, OPH_WORKFLOW_MAX_STRING)) {
-			for (i = 0; i < wf->tasks_num; ++i)
+			for (i = 0; i < wf->tasks_num; ++i) {
+				level[i] = 0;
 				flag[i] = 1;
+			}
 			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ENDFOR, OPH_OPERATOR_FOR, flag, level, 0, &child);
 			if (!number || (number > 1)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDFOR,
@@ -558,8 +559,10 @@ int oph_workflow_validate_fco(oph_workflow *wf)
 				break;
 			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_IF, OPH_WORKFLOW_MAX_STRING)) {
-			for (i = 0; i < wf->tasks_num; ++i)
+			for (i = 0; i < wf->tasks_num; ++i) {
+				level[i] = 0;
 				flag[i] = 1;
+			}
 			child = -1;
 			number = workflow_number_of(wf, k, k, k, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, level, 0, &child);
 			if (number > 1) {
@@ -613,8 +616,10 @@ int oph_workflow_validate_fco(oph_workflow *wf)
 			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSEIF, OPH_WORKFLOW_MAX_STRING)) {
 			kk = oph_gparent_of(wf, k);
-			for (i = 0; i < wf->tasks_num; ++i)
+			for (i = 0; i < wf->tasks_num; ++i) {
+				level[i] = 0;
 				flag[i] = 1;
+			}
 			child = -1;
 			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ELSEIF, OPH_OPERATOR_IF, flag, level, 0, &child);
 			if (number > 1) {
@@ -670,8 +675,10 @@ int oph_workflow_validate_fco(oph_workflow *wf)
 			}
 		} else if (!strncasecmp(wf->tasks[k].operator, OPH_OPERATOR_ELSE, OPH_WORKFLOW_MAX_STRING)) {
 			kk = oph_gparent_of(wf, k);
-			for (i = 0; i < wf->tasks_num; ++i)
+			for (i = 0; i < wf->tasks_num; ++i) {
+				level[i] = 0;
 				flag[i] = 1;
+			}
 			number = workflow_number_of(wf, k, k, kk, OPH_OPERATOR_ENDIF, OPH_OPERATOR_IF, flag, level, 0, &child);
 			if (!number || (number > 1)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found %s%d ways to reach '%s' corresponding to '%s'.\n", number ? "at least " : "", number, OPH_OPERATOR_ENDIF,
