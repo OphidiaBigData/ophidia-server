@@ -3632,7 +3632,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			oph_server_task_running--;
 			broadcast = 1;
 		}
-		if (oph_server_core_limit && (oph_server_core_running >= wf->tasks[task_index].ncores)) {
+		if (oph_server_core_limit && (oph_server_core_running >= (unsigned int) wf->tasks[task_index].ncores)) {
 			oph_server_core_running -= wf->tasks[task_index].ncores;
 			broadcast = 1;
 		}
@@ -5563,11 +5563,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: building '%s'\n", ttype, jobid, final ? OPH_WORKFLOW_FINAL_TASK : OPH_WORKFLOW_REMOVING_TASK);
 				task->idjob = task->markerid = 0;
 				task->status = OPH_ODB_STATUS_UNKNOWN;
-				char skip = task->name, process = 0;
-				if (skip)
+				char skip = 0, process = 0;
+				if (task->name) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: reset previous task '%s'\n", ttype, jobid, task->name);
-				if (task->name)
 					free(task->name);
+					skip = 1;
+				}
 				task->name = strdup(final ? OPH_WORKFLOW_FINAL_TASK : OPH_WORKFLOW_REMOVING_TASK);
 				if (!task->operator)
 					task->operator = strdup(OPH_WORKFLOW_DELETE);
