@@ -4559,8 +4559,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 							// Data
 							for (i = 0; i < wf->tasks[task_index].light_tasks_num; ++i) {
-								if (wf->tasks[task_index].light_tasks[i].status && (wf->tasks[task_index].light_tasks[i].status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
-								{
+								// Discard uninitialized or aborted jobs
+								if (wf->tasks[task_index].light_tasks[i].status && wf->tasks[task_index].light_tasks[i].markerid
+								    && ((wf->tasks[task_index].light_tasks[i].status < OPH_ODB_STATUS_ABORTED)
+									|| (wf->tasks[task_index].light_tasks[i].status == OPH_ODB_STATUS_UNSELECTED))) {
 									jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 									if (!jsonvalues) {
 										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
@@ -6642,8 +6644,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: inserting data into JSON file\n", ttype, jobid);
 				oph_workflow_task_out *wtmp = wf->output;	// It should be already ordered by markerid
 				while (wtmp) {
-					if (wtmp->status && (wtmp->status < OPH_ODB_STATUS_ABORTED))	// Discard uninitialized or aborted jobs
-					{
+					// Discard uninitialized or aborted jobs
+					if (wtmp->status && wtmp->markerid && ((wtmp->status < OPH_ODB_STATUS_ABORTED) || (wtmp->status == OPH_ODB_STATUS_UNSELECTED))) {
 						jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 						if (!jsonvalues) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);

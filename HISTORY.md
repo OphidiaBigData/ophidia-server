@@ -1,6 +1,10 @@
 
 ## Next release
 
+### Fixed:
+
+- Bug in listing unselected tasks
+
 ### Added:
 
 - Option 'oph_fastdelete'

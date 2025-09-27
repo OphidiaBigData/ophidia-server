@@ -2599,7 +2599,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 			for (; i < OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE; ++i)
 				smask[i] = OPH_OPERATOR_RESUME_PARAMETER_MASK_DOWN;
 		} else
-			snprintf(smask, OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE, OPH_OPERATOR_RESUME_PARAMETER_MASK);
+			strncpy(smask, OPH_OPERATOR_RESUME_PARAMETER_MASK, OPH_OPERATOR_RESUME_PARAMETER_MASK_SIZE);
 
 		if (id < 0)
 			id = 0;
@@ -5112,8 +5112,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											while (make_swap);
 
 											for (i = 0; i < item->wf->tasks_num; ++i) {
-												if (item->wf->tasks[i].status && oph_check_status_mask(item->wf->tasks[i].status, smask))	// Discard uninitialized or aborted jobs
-												{
+												// Discard uninitialized or aborted jobs
+												if (item->wf->tasks[i].status && item->wf->tasks[i].markerid
+												    && oph_check_status_mask(item->wf->tasks[i].status, smask)) {
 													jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 													if (!jsonvalues) {
 														pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
@@ -5978,8 +5979,10 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											while (make_swap);
 
 											for (i = 0; i < item->wf->tasks[task_index].light_tasks_num; ++i) {
-												if (item->wf->tasks[task_index].light_tasks[i].status && oph_check_status_mask(item->wf->tasks[task_index].light_tasks[i].status, smask))	// Discard uninitialized or aborted jobs
-												{
+												// Discard uninitialized or aborted jobs
+												if (item->wf->tasks[task_index].light_tasks[i].status
+												    && item->wf->tasks[task_index].light_tasks[i].markerid
+												    && oph_check_status_mask(item->wf->tasks[task_index].light_tasks[i].status, smask)) {
 													jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 													if (!jsonvalues) {
 														pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
