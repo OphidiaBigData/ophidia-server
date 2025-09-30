@@ -241,6 +241,7 @@ typedef struct _oph_workflow_task_out {
 	char *output;
 	char *begin_time;
 	char *end_time;
+	char *arguments;
 	struct _oph_workflow_task_out *next;
 } oph_workflow_task_out;
 
@@ -404,6 +405,9 @@ int oph_workflow_copy_task(oph_workflow_task * stask, oph_workflow_task * dtask,
 oph_workflow_ordered_list *oph_workflow_copy_list(oph_workflow_ordered_list * list);
 int oph_workflow_free_list(oph_workflow_ordered_list * list);
 char *oph_workflow_input_of(oph_workflow_task * task);
+char *oph_workflow_arguments_of_task(oph_workflow_task * task);
+char *oph_workflow_arguments_of_task(oph_workflow_task * task);
+char *oph_workflow_arguments_of_light_task(oph_workflow_light_task * task);
 
 // Others
 int oph_output_data_free(char **output, int num);

@@ -194,6 +194,10 @@ int oph_workflow_free(oph_workflow *workflow)
 			free(workflow->output->end_time);
 			workflow->output->end_time = NULL;
 		}
+		if (workflow->output->arguments) {
+			free(workflow->output->arguments);
+			workflow->output->arguments = NULL;
+		}
 		free(workflow->output);
 		workflow->output = tmp;
 	}
@@ -545,8 +549,9 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 		(*task_out)->output = manual_output;
 	} else
 		(*task_out)->output = strdup("");
-	(*task_out)->begin_time = task->begin_time ? strdup(task->begin_time) : strdup("");
+	(*task_out)->begin_time = strdup(task->begin_time ? task->begin_time : "");
 	(*task_out)->end_time = strdup(buffer);
+	(*task_out)->arguments = oph_workflow_arguments_of_task(task);
 	(*task_out)->next = NULL;
 
 	if (!task->output)
@@ -842,4 +847,32 @@ int oph_workflow_free_list(oph_workflow_ordered_list *list)
 	}
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+char *oph_workflow_arguments_of_task(oph_workflow_task *task)
+{
+	char *output = strdup(""), *prev = NULL;
+
+	int i, n;
+	for (i = 0; i < task->arguments_num; ++i) {
+		prev = output;
+		n = asprintf(&output, "%s%s=%s;", prev, task->arguments_keys[i], task->arguments_values[i]);
+		free(prev);
+	}
+
+	return output;
+}
+
+char *oph_workflow_arguments_of_light_task(oph_workflow_light_task *task)
+{
+	char *output = strdup(""), *prev = NULL;
+
+	int i, n;
+	for (i = 0; i < task->arguments_num; ++i) {
+		prev = output;
+		n = asprintf(&output, "%s%s=%s;", prev, task->arguments_keys[i], task->arguments_values[i]);
+		free(prev);
+	}
+
+	return output;
 }
