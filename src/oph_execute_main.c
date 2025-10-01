@@ -5333,6 +5333,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																free(jsonvalues);
 															break;
 														}
+														if (strlen(jsonvalues[jjj]))
+															oph_workflow_var_substitute(item->wf, i, -1, jsonvalues + jjj, NULL, NULL);
 													}
 													if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_WORKFLOW_LIST, jsonvalues)) {
 														pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);
@@ -6217,6 +6219,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 																free(jsonvalues);
 															break;
 														}
+														if (strlen(jsonvalues[jjj]))
+															oph_workflow_var_substitute(item->wf, task_index, i, jsonvalues + jjj, NULL,
+																		    NULL);
 													}
 													if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_LIST, jsonvalues)) {
 														pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: ADD GRID ROW error\n", jobid);

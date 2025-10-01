@@ -4775,6 +4775,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												free(jsonvalues);
 											break;
 										}
+										if (strlen(jsonvalues[jjj]))
+											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
 									}
 									if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_LIST, jsonvalues)) {
 										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: ADD GRID ROW error\n", jobid);
@@ -5519,6 +5521,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							wtmp2->input = strdup("");
 							wtmp2->output = strdup("");
 						}
+						if (wtmp2->arguments && strlen(wtmp2->arguments))
+							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->arguments, NULL, NULL);
 						if (prev)
 							prev->next = wtmp2;
 						else
@@ -6910,6 +6914,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									free(jsonvalues);
 								break;
 							}
+							/* // Not necessary since the substituion has been done on saving the output
+							   if (strlen(jsonvalues[jjj]))
+							   oph_workflow_var_substitute(wf, wtmp->task_index, -1, jsonvalues + jjj, NULL, NULL); */
 						}
 						if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_WORKFLOW_LIST, jsonvalues)) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);
