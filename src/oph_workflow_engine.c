@@ -3935,23 +3935,26 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							}
 						}
 
-						if (outputs_file >= 0)
-							wf->tasks[task_index].light_tasks[light_task_index].output = strdup(outputs_values[outputs_file]);
-						else {
-							for (i = 0; i < outputs_num; ++i)
-								if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
-									wf->tasks[task_index].light_tasks[light_task_index].output = strdup(outputs_values[i]);
-									break;
-								}
-						}
-						time_t nowtime;
-						struct tm nowtm;
-						char buffer[OPH_SHORT_STRING_SIZE];
-						*buffer = 0;
-						time(&nowtime);
-						if (localtime_r(&nowtime, &nowtm)) {
-							strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
-							wf->tasks[task_index].light_tasks[light_task_index].end_time = strdup(buffer);
+						// Final/removing tasks are not tracked
+						if (task_index < wf->tasks_num) {
+							if (outputs_file >= 0)
+								wf->tasks[task_index].light_tasks[light_task_index].output = strdup(outputs_values[outputs_file]);
+							else {
+								for (i = 0; i < outputs_num; ++i)
+									if (!strncmp(outputs_keys[i], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+										wf->tasks[task_index].light_tasks[light_task_index].output = strdup(outputs_values[i]);
+										break;
+									}
+							}
+							time_t nowtime;
+							struct tm nowtm;
+							char buffer[OPH_SHORT_STRING_SIZE];
+							*buffer = 0;
+							time(&nowtime);
+							if (localtime_r(&nowtime, &nowtm)) {
+								strftime(buffer, OPH_SHORT_STRING_SIZE, "%Y-%m-%d %H:%M:%S", &nowtm);
+								wf->tasks[task_index].light_tasks[light_task_index].end_time = strdup(buffer);
+							}
 						}
 
 						if (wf->tasks[task_index].outputs_keys) {
