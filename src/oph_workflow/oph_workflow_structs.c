@@ -251,7 +251,7 @@ int oph_workflow_task_free(oph_workflow_task *task)
 	}
 	if (task->light_tasks_num) {
 		for (i = 0; i < task->light_tasks_num; i++) {
-			oph_workflow_light_task_free(&(task->light_tasks[i]));
+			oph_workflow_light_task_free(task->light_tasks + i);
 		}
 		free(task->light_tasks);
 		task->light_tasks = NULL;

@@ -404,7 +404,7 @@ int oph_workflow_reset_task(oph_workflow *wf, int *dependents_indexes, int depen
 			wf->tasks[i].outputs_num = 0;
 			if (wf->tasks[i].light_tasks) {
 				for (j = 0; j < wf->tasks[i].light_tasks_num; ++j)
-					oph_workflow_light_task_free(&(wf->tasks[i].light_tasks[j]));
+					oph_workflow_light_task_free(wf->tasks[i].light_tasks + j);
 				free(wf->tasks[i].light_tasks);
 			}
 			wf->tasks[i].light_tasks_num = wf->tasks[i].residual_light_tasks_num = 0;
@@ -3767,7 +3767,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check if the notification has to be neglected\n", ttype, jobid);
 		if (light_task_index >= 0) {
-			if (!wf->tasks[task_index].light_tasks[light_task_index].status || (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
+			if (light_task_index >= wf->tasks[task_index].light_tasks_num) {
+				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' cannot be updated; skip the notification for status %s\n", ttype, jobid, light_task_index,
+				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(odb_status));
+				pthread_mutex_unlock(&global_flag);
+				process_notification = 0;
+			} else if (!wf->tasks[task_index].light_tasks[light_task_index].status || (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
 				      jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status),
 				      oph_odb_convert_status_to_str(odb_status));
@@ -4756,6 +4761,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 												free(jsonvalues);
 											break;
 										}
+										jjj++;
 										jsonvalues[jjj] = oph_workflow_arguments_of_light_task(wf->tasks[task_index].light_tasks + i);
 										if (!jsonvalues[jjj]) {
 											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
@@ -5549,7 +5555,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
-		if (!error && update_light_task_data) {
+		if (!error && update_light_task_data && (light_task_index_orig < wf->tasks[task_index].light_tasks_num)) {
 			if (oph_odb_set_job_status(wf->tasks[task_index].light_tasks[light_task_index_orig].idjob, wf->tasks[task_index].light_tasks[light_task_index_orig].status, &oDB)) {
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to update job status\n", ttype, jobid);
 				*response = OPH_SERVER_IO_ERROR;
