@@ -194,7 +194,7 @@ int oph_read_rmanager_conf(oph_rmanager *orm)
 }
 
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager *orm, int jobid, const char *username, const char *project,
-			 const char *taskname, int wid, char **cmd, char type, char serial)
+			 const char *taskname, int wid, char **cmd, char type, char serial, int dbms)
 {
 	return OPH_SERVER_OK;
 }

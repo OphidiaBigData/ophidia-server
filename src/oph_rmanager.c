@@ -564,7 +564,7 @@ int oph_get_available_host_number(int *size, int jobid)
 }
 
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager *orm, int jobid, const char *username, const char *project,
-			 const char *taskname, int wid, char **cmd, char type, char serial)
+			 const char *taskname, int wid, char **cmd, char type, char serial, int ndbms)
 {
 	if (!orm || !ncores) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -627,10 +627,12 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	if (!serial)
 		serial = 1;
 #endif
+	char str_ndbms[OPH_INT_STRING_SIZE];
+	*str_ndbms = 0;
+	if (ndbms > 0)
+		snprintf(str_ndbms, OPH_INT_STRING_SIZE, "%d", ndbms);
 
-	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME,
-		request, type || !serial
-		|| (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", orm->subm_postfix);
+	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request, type || !serial || (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", ndbms ? str_ndbms : "", orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
@@ -874,7 +876,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		return OPH_SERVER_ERROR;
 	}
 #else
-	if (oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, project, taskname, wid, &cmd, 0, serial)) {
+	if (oph_form_subm_string(request, _ncores, outfile, 0, orm, odb_jobid ? *odb_jobid : 0, username, project, taskname, wid, &cmd, 0, serial, 0)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 		if (cmd) {
 			free(cmd);

@@ -66,7 +66,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 int initialize_rmanager(oph_rmanager * orm);
 int oph_read_rmanager_conf(oph_rmanager * orm);
 int oph_form_subm_string(const char *request, const int ncores, char *outfile, short int interactive_subm, oph_rmanager * orm, int jobid, const char *username, const char *project,
-			 const char *taskname, int wid, char **cmd, char type, char serial);
+			 const char *taskname, int wid, char **cmd, char type, char serial, int dbms);
 int oph_get_result_from_file(char *filename, char **response);
 int oph_get_result_from_file_unsafe(char *filename, char **response);
 int free_oph_rmanager(oph_rmanager * orm);

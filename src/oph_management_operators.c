@@ -2724,7 +2724,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		}
 		snprintf(workflowid, OPH_MAX_STRING_SIZE, "%d", wid);
 
-		int success = 0, success2 = 1, nhosts = 0;
+		int success = 0, success2 = 1, nhosts = 0, ndbms = 1;
 		oph_json *oper_json = NULL;
 		char error_message[OPH_MAX_STRING_SIZE], *host_partition = NULL, host_type = 0, *user_filter = NULL, btype = 0;	// Get information about user-defined partitions
 		char **objkeys = NULL;
@@ -2762,6 +2762,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			nhosts = (int) strtol(value, NULL, 10);
 			if (nhosts < 0) {
 				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NHOSTS);
+				break;
+			}
+
+			value = hashtbl_get(task_tbl, OPH_ARG_NDBMS);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_NDBMS);
+				break;
+			}
+			ndbms = (int) strtol(value, NULL, 10);
+			if (ndbms < 1) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_NDBMS);
 				break;
 			}
 
@@ -4367,7 +4378,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							char *cmd = NULL;
-							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, taskname, wid, &cmd, 1 + host_type, 0)) {
+							if (oph_form_subm_string(command, nhosts, outfile, 0, orm, idjob, os_username, project, taskname, wid, &cmd, 1 + host_type, 0, ndbms)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 								if (cmd) {

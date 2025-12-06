@@ -7,6 +7,7 @@
 
 ### Added:
 
+- Argument 'ndbms' to OPH_CLUSTER
 - Column 'ARGUMENTS' to 'extended_output'
 - Option 'oph_fastdelete'
 - Options to refer to substrings of the value of workflow variables
