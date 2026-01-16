@@ -1503,7 +1503,7 @@ int _oph_workflow_substitute_var(char *key, char *value, oph_workflow_task *task
 			if (!strcmp(key, "ncores")) {
 				tasks[i].ncores = (int) strtol(value, NULL, 10);
 			} else if (!strcmp(key, "nhost")) {
-				tasks[i].nthreads = (int) strtol(value, NULL, 10);
+				tasks[i].nhosts = (int) strtol(value, NULL, 10);
 			} else if (!strcmp(key, "nthreads")) {
 				tasks[i].nthreads = (int) strtol(value, NULL, 10);
 			} else {

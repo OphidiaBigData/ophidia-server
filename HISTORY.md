@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Bug in handling threads
 - Bug in listing unselected tasks
 
 ### Added:

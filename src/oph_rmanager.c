@@ -632,7 +632,10 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 	if (ndbms > 0)
 		snprintf(str_ndbms, OPH_INT_STRING_SIZE, "%d", ndbms);
 
-	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores, outfile ? outfile : OPH_NULL_FILENAME, request, type || !serial || (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", ndbms ? str_ndbms : "", orm->subm_postfix);
+	sprintf(*cmd, "%s %s %s %s%d %d %s \"%s\" %s %s%s %d %s '%s' %s %s", orm->subm_prefix, subm_username, command, internal_request ? "_" : "", jobid, ncores,
+		outfile ? outfile : OPH_NULL_FILENAME, request, type || !serial
+		|| (ncores > 1) ? orm->subm_queue_low : orm->subm_queue_high, oph_server_port, OPH_RMANAGER_PREFIX, wid, project ? project : "''", taskname ? taskname : "", ndbms ? str_ndbms : "",
+		orm->subm_postfix);
 
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 

@@ -1020,6 +1020,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					task->light_tasks[i].markerid = 0;
 					task->light_tasks[i].status = OPH_ODB_STATUS_UNKNOWN;
 					task->light_tasks[i].ncores = task->ncores;	// Basic policy for ncores
+					task->light_tasks[i].nthreads = task->nthreads;	// Basic policy for nthreads
 					task->light_tasks[i].arguments_keys = (char **) malloc(arguments_num * sizeof(char *));
 					task->light_tasks[i].arguments_values = (char **) malloc(arguments_num * sizeof(char *));
 					task->light_tasks[i].arguments_num = arguments_num;
@@ -2859,9 +2860,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					}
 					wf->tasks[i].light_tasks[j].idjob = odb_jobid;
 
-					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
 					submission_string_ext = (char *) malloc(nnn * sizeof(char));
-					snprintf(submission_string_ext, nnn, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+					snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
 
 					if (submission_string)
 						free(submission_string);
@@ -2913,9 +2914,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			} else	// Single operation
 			{
-				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
 				submission_string_ext = (char *) malloc(nnn * sizeof(char));
-				snprintf(submission_string_ext, nnn, "%s%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid);
+				snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
 
 				if (submission_string)
 					free(submission_string);
@@ -5652,6 +5653,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				if (!task->operator)
 					task->operator = strdup(OPH_WORKFLOW_DELETE);
 				task->ncores = 1;	// Only 1-core is used for each job of final task
+				task->nthreads = 1;	// Only 1-thread is used for each job of final task
 
 				int kk = task->arguments_num, kkk = kk;
 				if (skip || !strcmp(task->arguments_keys[kk - 1], OPH_ARG_CUBE)) {	// The struct has been already used so that remove possible light tasks and skip the realloc
@@ -5760,6 +5762,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					task->name = strdup(OPH_WORKFLOW_FINAL_TASK);
 					task->operator = strdup(OPH_WORKFLOW_DELETECONTAINER);
 					task->ncores = 1;	// Only 1-core is used for each job of final task
+					task->nthreads = 1;	// Only 1-thread is used for each job of final task
 
 					int kk = task->arguments_num, kkk = kk, incr = 3;	// Specific arguments for this final operation (see below)
 					if (oph_realloc_vector(&(task->arguments_keys), &kk, incr) || (kk != incr + task->arguments_num)) {
