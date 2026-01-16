@@ -2860,6 +2860,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					}
 					wf->tasks[i].light_tasks[j].idjob = odb_jobid;
 
+					if (!wf->tasks[i].light_tasks[j].nthreads)
+						wf->tasks[i].light_tasks[j].nthreads = 1;
+
 					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
 					submission_string_ext = (char *) malloc(nnn * sizeof(char));
 					snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
@@ -2914,6 +2917,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 			} else	// Single operation
 			{
+				if (!wf->tasks[i].nthreads)
+					wf->tasks[i].nthreads = 1;
+
 				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
 				submission_string_ext = (char *) malloc(nnn * sizeof(char));
 				snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
