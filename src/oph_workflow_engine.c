@@ -1745,9 +1745,9 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	}
 
-	int i, j, k, odb_jobid, first = 1, res, nn = 0, nnn;
-	char *submission_string, *sss, *errore, str_markerid[OPH_SHORT_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], *submission_string_ext =
-	    NULL, *output_json = NULL;
+	int i, j, k, h, odb_jobid, first = 1, res, nn = 0, nnn;
+	char *submission_string, *sss, *errore, *submission_string_ext = NULL, *output_json = NULL;
+	char str_markerid[OPH_SHORT_STRING_SIZE], str_workflowid[OPH_SHORT_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], str_hosts[OPH_SHORT_STRING_SIZE], str_threads[OPH_SHORT_STRING_SIZE];
 
 	oph_request_data *request_data[tasks_indexes_num];
 	int request_data_dim[tasks_indexes_num];
@@ -2862,10 +2862,26 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 
 					if (!wf->tasks[i].light_tasks[j].nthreads)
 						wf->tasks[i].light_tasks[j].nthreads = 1;
+					for (h = 0; h < wf->tasks[i].light_tasks[j].arguments_num; ++h)
+						if (!strcmp(wf->tasks[i].light_tasks[j].arguments_keys[h], OPH_ARG_NTHREADS))
+							break;
+					if (h < wf->tasks[i].light_tasks[j].arguments_num)
+						*str_threads = 0;
+					else
+						snprintf(str_threads, OPH_SHORT_STRING_SIZE, "%s=%d;", OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
 
-					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
+					for (h = 0; h < wf->tasks[i].light_tasks[j].arguments_num; ++h)
+						if (!strcmp(wf->tasks[i].light_tasks[j].arguments_keys[h], OPH_ARG_NHOSTS))
+							break;
+					if (h < wf->tasks[i].light_tasks[j].arguments_num)
+						*str_hosts = 0;
+					else
+						snprintf(str_hosts, OPH_SHORT_STRING_SIZE, "%s=%d;", OPH_ARG_NHOSTS, wf->tasks[i].light_tasks[j].nhosts);
+
+
+					nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s%s", submission_string, OPH_ARG_JOBID, odb_jobid, str_threads, str_hosts);
 					submission_string_ext = (char *) malloc(nnn * sizeof(char));
-					snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].light_tasks[j].nthreads);
+					snprintf(submission_string_ext, nnn, "%s%s=%d;%s%s", submission_string, OPH_ARG_JOBID, odb_jobid, str_threads, str_hosts);
 
 					if (submission_string)
 						free(submission_string);
@@ -2919,10 +2935,25 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 			{
 				if (!wf->tasks[i].nthreads)
 					wf->tasks[i].nthreads = 1;
+				for (h = 0; h < wf->tasks[i].arguments_num; ++h)
+					if (!strcmp(wf->tasks[i].arguments_keys[h], OPH_ARG_NTHREADS))
+						break;
+				if (h < wf->tasks[i].arguments_num)
+					*str_threads = 0;
+				else
+					snprintf(str_threads, OPH_SHORT_STRING_SIZE, "%s=%d;", OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
 
-				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
+				for (h = 0; h < wf->tasks[i].arguments_num; ++h)
+					if (!strcmp(wf->tasks[i].arguments_keys[h], OPH_ARG_NHOSTS))
+						break;
+				if (h < wf->tasks[i].arguments_num)
+					*str_hosts = 0;
+				else
+					snprintf(str_hosts, OPH_SHORT_STRING_SIZE, "%s=%d;", OPH_ARG_NHOSTS, wf->tasks[i].nhosts);
+
+				nnn = 1 + snprintf(NULL, 0, "%s%s=%d;%s%s", submission_string, OPH_ARG_JOBID, odb_jobid, str_threads, str_hosts);
 				submission_string_ext = (char *) malloc(nnn * sizeof(char));
-				snprintf(submission_string_ext, nnn, "%s%s=%d;%s=%d;", submission_string, OPH_ARG_JOBID, odb_jobid, OPH_ARG_NTHREADS, wf->tasks[i].nthreads);
+				snprintf(submission_string_ext, nnn, "%s%s=%d;%s%s", submission_string, OPH_ARG_JOBID, odb_jobid, str_threads, str_hosts);
 
 				if (submission_string)
 					free(submission_string);
