@@ -5075,6 +5075,27 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 
 				if (wf->tasks[task_index].retry_num < 0) {
+					// Report input to output if any
+					for (j = 0; j < wf->tasks[task_index].arguments_num; ++j)
+						if (!strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE)
+						    || !strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_SRC_PATH, OPH_MAX_STRING_SIZE)
+						    || !strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_CUBE, OPH_MAX_STRING_SIZE)) {
+							i = outputs_num++;
+							outputs_keys = (char **) realloc(outputs_keys, outputs_num * sizeof(char *));
+							if (!outputs_keys) {
+								oph_output_data_free(outputs_values, outputs_num - 1);
+								outputs_num = 0;
+								break;
+							}
+							outputs_values = (char **) realloc(outputs_values, outputs_num * sizeof(char *));
+							if (!outputs_values) {
+								oph_output_data_free(outputs_keys, outputs_num);
+								outputs_num = 0;
+								break;
+							}
+							outputs_keys[i] = strdup(wf->tasks[task_index].arguments_keys[j]);
+							outputs_values[i] = strdup(wf->tasks[task_index].arguments_values[j]);
+						}
 					status = OPH_ODB_STATUS_COMPLETED;	// Skip possible errors
 					if ((wf->tasks[task_index].status > (int) OPH_ODB_STATUS_COMPLETED) && (wf->tasks[task_index].status < (int) OPH_ODB_STATUS_SKIPPED))
 						wf->tasks[task_index].status = OPH_ODB_STATUS_SKIPPED;
