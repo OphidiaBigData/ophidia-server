@@ -71,6 +71,7 @@
 #define OPH_ARG_SUBSET_TYPE "subset_type"
 #define OPH_ARG_TIME_FILTER "time_filter"
 #define OPH_ARG_INPUT "input"
+#define OPH_ARG_TIME "time"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"

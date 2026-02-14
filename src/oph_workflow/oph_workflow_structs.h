@@ -79,6 +79,7 @@ typedef struct _oph_workflow_light_task {
 	char *input;
 	char *output;
 	char *end_time;
+	char *proc_time;
 } oph_workflow_light_task;
 
 /* \brief Struct for an OPH_WORKFLOW dependency
@@ -202,6 +203,7 @@ typedef struct _oph_workflow_task {
 	char *output;
 	char *begin_time;
 	char *end_time;
+	char *proc_time;
 	char is_marked_to_be_aborted;
 	int backoff_time;
 	char backoff_type;
@@ -241,6 +243,7 @@ typedef struct _oph_workflow_task_out {
 	char *output;
 	char *begin_time;
 	char *end_time;
+	char *proc_time;
 	char *arguments;
 	struct _oph_workflow_task_out *next;
 } oph_workflow_task_out;
