@@ -49,8 +49,9 @@ void *process_request(struct soap *);
 void *status_logger(struct soap *);
 int CRYPTO_thread_setup();
 void CRYPTO_thread_cleanup();
-int oph_handle_signals();
+int oph_handle_signals(char write_backtrace);
 void oph_signal_handler(int sig);
+void oph_signal_handler2(int sig, siginfo_t * info, void *context);
 void oph_child_signal_handler(int sig);
 
 /******************************************************************************\
@@ -558,6 +559,7 @@ int main(int argc, char *argv[])
 	struct soap soap, *tsoap = NULL;
 	psoap = &soap;
 
+	char write_backtrace = 0;
 	int ch, msglevel = LOG_INFO;
 	static char *USAGE =
 	    "\nUSAGE:\noph_server [OPTIONS]\n\nOptions:\n-a: disable user autentication\n-c <wf_log_file>: set CSV log file for workflows\n-d: enable debug mode\n-h: show this help\n-l <log_file>: set main log file\n-m: enable SSH (deprecated)\n-p <port>: set server port number\n-s <log_file>: set status log file\n-t <task_log_file>: set CSV log file for tasks\n-v: show conditions\n-w: enable warning level messages\n-x: show warrenty\n-z: show license\n";
@@ -577,6 +579,7 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				msglevel = LOG_DEBUG;
+				write_backtrace = 1;
 				break;
 			case 'h':
 				fprintf(stdout, "%s", USAGE);
@@ -686,7 +689,7 @@ int main(int argc, char *argv[])
 
 	int int_port = strtol(oph_server_port, NULL, 10);
 
-	if (oph_handle_signals()) {
+	if (oph_handle_signals(write_backtrace)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "A problem occurred while setting up signal dispositions\n");
 		exit(1);
 	}
@@ -1264,7 +1267,7 @@ void CRYPTO_thread_cleanup()
  *
 \******************************************************************************/
 
-int oph_handle_signals(void)
+int oph_handle_signals(char write_backtrace)
 {
 	int rc;
 	struct sigaction act;
@@ -1340,11 +1343,6 @@ int oph_handle_signals(void)
 		return -1;
 	}
 
-	rc = sigaction(SIGSEGV, &act, NULL);
-	if (rc != 0) {
-		return -1;
-	}
-
 	rc = sigaction(SIGSYS, &act, NULL);
 	if (rc != 0) {
 		return -1;
@@ -1359,7 +1357,19 @@ int oph_handle_signals(void)
 	if (rc != 0) {
 		return -1;
 	}
-#ifdef  SA_NOCLDSTOP
+
+	if (write_backtrace) {
+		act.sa_handler = oph_signal_handler2;
+		act.sa_flags |= SA_SIGINFO;
+	}
+	rc = sigaction(SIGSEGV, &act, NULL);
+	if (rc != 0) {
+		return -1;
+	}
+	if (write_backtrace) {
+		act.sa_flags &= ~SA_SIGINFO;
+	}
+#ifdef SA_NOCLDSTOP
 	act.sa_flags |= SA_NOCLDSTOP;
 #endif
 
@@ -1379,6 +1389,42 @@ void oph_signal_handler(int sig)
 	if (sig == SIGSEGV)
 		type = LOG_ERROR;
 	pmesg(type, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
+	cleanup();
+	exit(1);
+}
+
+#include <ucontext.h>
+void oph_signal_handler2(int sig, siginfo_t *info, void *context)
+{
+	pmesg(LOG_ERROR, __FILE__, __LINE__, "CALLED oph_signal_handler2; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
+	if (sig == SIGSEGV) {
+		ucontext_t *uc = (ucontext_t *) context;
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fault address: %p\n", info->si_addr);
+#if defined(__x86_64__)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (RIP): %p\n", (void *) uc->uc_mcontext.gregs[REG_RIP]);
+#elif defined(__i386__)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (EIP): %p\n", (void *) uc->uc_mcontext.gregs[REG_EIP]);
+#elif defined(__aarch64__)
+		unsigned long pc = (unsigned long) uc->uc_mcontext.pc;
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (PC): %p\n", pc);
+		FILE *f = fopen("/proc/self/maps", "r");
+		char line[256];
+		unsigned long start, end, base = 0;
+		char perms[8], path[128];
+		while (fgets(line, sizeof(line), f)) {
+			path[0] = '\0';
+			sscanf(line, "%lx-%lx %s %*s %*s %*s %s", &start, &end, perms, path);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Module: %s\n", path);
+			if (pc >= start && pc < end) {
+				base = start;
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Base:   %p\n", base);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Offset: %p\n", pc - base);
+				break;
+			}
+		}
+		fclose(f);
+#endif
+	}
 	cleanup();
 	exit(1);
 }
