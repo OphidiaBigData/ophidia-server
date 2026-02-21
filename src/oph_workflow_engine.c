@@ -5632,6 +5632,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 				// Trace the output
 				if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR)) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: save output of task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
 					oph_workflow_task_out *wtmp = wf->output, *wtmp2 = NULL, *prev = NULL;
 					while (wtmp && (wtmp->markerid < wf->tasks[task_index].markerid)) {
 						prev = wtmp;
@@ -5681,9 +5682,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			}
 		}
 
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: free output data of task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
 		oph_output_data_free(outputs_keys, outputs_num);
 		oph_output_data_free(outputs_values, outputs_num);
 
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check for OphidiaDB update\n", ttype, jobid);
 		int error = 0;
 
 		if (update_wf_data || update_task_data || update_light_task_data || retry_task_execution) {

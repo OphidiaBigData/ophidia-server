@@ -1418,9 +1418,9 @@ void oph_signal_handler2(int sig, siginfo_t *info, void *context)
 			while (fgets(line, sizeof(line), f)) {
 				path[0] = '\0';
 				sscanf(line, "%lx-%lx %s %*s %*s %*s %s", &start, &end, perms, path);
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Module: %s\n", path);
 				if (pc >= start && pc < end) {
 					base = start;
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Module: %s\n", path);
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Base:   %p\n", base);
 					pmesg(LOG_ERROR, __FILE__, __LINE__, "Offset: %p\n", pc - base);
 					break;
