@@ -554,5 +554,5 @@ void CRYPTO_thread_cleanup()
 
 void sigpipe_handle(int x)
 {
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d\n", x);
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Caught signal %d\n", x, strsignal(x) ? strsignal(x) : "");
 }

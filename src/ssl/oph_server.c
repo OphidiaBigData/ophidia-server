@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _GNU_SOURCE
+
 #include "oph.nsmap"
 
 #include "oph_utils.h"
@@ -32,6 +34,7 @@
 #include <pthread.h>
 #endif
 #include <signal.h>
+#include <ucontext.h>
 #include <mysql.h>
 
 #define OPH_STATUS_LOG_PERIOD 1
@@ -1272,7 +1275,7 @@ int oph_handle_signals(char write_backtrace)
 	int rc;
 	struct sigaction act;
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "CALLED oph_handle_signals\n");
+	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Set signal handlers\n");
 
 	/* initialize the struct sigaction act */
 	memset(&act, 0, sizeof(act));
@@ -1388,42 +1391,44 @@ void oph_signal_handler(int sig)
 	int type = LOG_WARNING;
 	if (sig == SIGSEGV)
 		type = LOG_ERROR;
-	pmesg(type, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
+	pmesg(type, __FILE__, __LINE__, "Caught signal %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
 	cleanup();
 	exit(1);
 }
 
-#include <ucontext.h>
 void oph_signal_handler2(int sig, siginfo_t *info, void *context)
 {
-	pmesg(LOG_ERROR, __FILE__, __LINE__, "CALLED oph_signal_handler2; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
+	pmesg(LOG_ERROR, __FILE__, __LINE__, "Caught signal %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
 	if (sig == SIGSEGV) {
 		ucontext_t *uc = (ucontext_t *) context;
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fault address: %p\n", info->si_addr);
 #if defined(__x86_64__)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (RIP): %p\n", (void *) uc->uc_mcontext.gregs[REG_RIP]);
+		unsigned long pc = (unsigned long) uc->uc_mcontext.gregs[REG_RIP];
 #elif defined(__i386__)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (EIP): %p\n", (void *) uc->uc_mcontext.gregs[REG_EIP]);
+		unsigned long pc = (unsigned long) uc->uc_mcontext.gregs[REG_EIP];
 #elif defined(__aarch64__)
 		unsigned long pc = (unsigned long) uc->uc_mcontext.pc;
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer (PC): %p\n", pc);
-		FILE *f = fopen("/proc/self/maps", "r");
-		char line[256];
-		unsigned long start, end, base = 0;
-		char perms[8], path[128];
-		while (fgets(line, sizeof(line), f)) {
-			path[0] = '\0';
-			sscanf(line, "%lx-%lx %s %*s %*s %*s %s", &start, &end, perms, path);
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Module: %s\n", path);
-			if (pc >= start && pc < end) {
-				base = start;
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Base:   %p\n", base);
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Offset: %p\n", pc - base);
-				break;
-			}
-		}
-		fclose(f);
 #endif
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Instruction pointer: %p\n", (void *) pc);
+		FILE *f = fopen("/proc/self/maps", "r");
+		if (f) {
+			char line[OPH_MAX_STRING_SIZE];
+			unsigned long start, end, base = 0;
+			char perms[8], path[OPH_MAX_STRING_SIZE];
+			while (fgets(line, sizeof(line), f)) {
+				path[0] = '\0';
+				sscanf(line, "%lx-%lx %s %*s %*s %*s %s", &start, &end, perms, path);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Module: %s\n", path);
+				if (pc >= start && pc < end) {
+					base = start;
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Base:   %p\n", base);
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Offset: %p\n", pc - base);
+					break;
+				}
+			}
+			fclose(f);
+		} else
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Modules are not available\n");
 	}
 	cleanup();
 	exit(1);
