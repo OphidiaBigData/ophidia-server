@@ -5631,7 +5631,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				}
 
 				// Trace the output
-				if ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR)) {
+				if ((task_index < wf->tasks_num) && ((status == OPH_ODB_STATUS_COMPLETED) || (status == OPH_ODB_STATUS_ERROR))) {
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: save output of task '%s' of '%s'\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
 					oph_workflow_task_out *wtmp = wf->output, *wtmp2 = NULL, *prev = NULL;
 					while (wtmp && (wtmp->markerid < wf->tasks[task_index].markerid)) {
@@ -5639,11 +5639,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						wtmp = wtmp->next;
 					}
 					if (wtmp && (wtmp->markerid == wf->tasks[task_index].markerid))
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task '%s' of '%s' has been already traced\n", ttype, jobid, wf->tasks[task_index].name,
-						      wf->name);
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task has been already traced\n", ttype, jobid);
 					else if (oph_workflow_save_task_output(&(wf->tasks[task_index]), &wtmp2) || !wtmp2)
-						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task '%s' of '%s' cannot be traced\n", ttype, jobid, wf->tasks[task_index].name, wf->name);
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: output of task cannot be traced\n", ttype, jobid);
 					else {
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: create a struct to save the output\n", ttype, jobid);
 						// wtmp2->task_index = task_index; // It is not necessary since the substitution is being done now
 						if (wtmp2->input && strlen(wtmp2->input))
 							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->input, NULL, NULL);
@@ -5666,6 +5666,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						}
 						if (wtmp2->arguments && strlen(wtmp2->arguments))
 							oph_workflow_var_substitute(wf, task_index, -1, &wtmp2->arguments, NULL, NULL);
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: append the struct to output list\n", ttype, jobid);
 						if (prev)
 							prev->next = wtmp2;
 						else
