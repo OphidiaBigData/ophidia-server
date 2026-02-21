@@ -5839,7 +5839,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					// Order the exit values
 					int cubeid, write, append;
 					char *last_block, *last_index;
-					tmp2 = (char *) malloc((1 + size * OPH_INT_STRING_SIZE) * sizeof(char));
+
+					size *= OPH_INT_STRING_SIZE;
+					tmp2 = (char *) malloc((1 + size) * sizeof(char));
 					*tmp2 = 0;
 					oph_trash_order(trash_cubes, NULL);
 					while (!oph_trash_extract(trash_cubes, NULL, &cubeid, NULL)) {
@@ -5854,7 +5856,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							if (last_index) {
 								last_index++;
 								if (strtol(last_index, NULL, 10) == cubeid - 1) {
-									snprintf(last_index, OPH_MAX_STRING_SIZE - strlen(last_index), "%d", cubeid);
+									snprintf(last_index, size - (last_index - tmp2), "%d", cubeid);
 									write = append = 0;
 								}
 							} else {
@@ -5866,17 +5868,20 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							if (write)
 								snprintf(tmp3, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
 							if (append)
-								strcat(tmp2, tmp3);
+								strncat(tmp2, tmp3, size - strlen(tmp2));
 						} else
-							snprintf(tmp2, OPH_MAX_STRING_SIZE, "%d", cubeid);
+							snprintf(tmp2, size, "%d", cubeid);
 					}
-					tmp_size = 1 + snprintf(NULL, 0, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2,
-								OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
-								OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
+					tmp_size =
+					    1 + snprintf(NULL, 0, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2, OPH_SEPARATOR_PARAM,
+							 OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV, OPH_MF_ARG_VALUE_YES,
+							 OPH_SEPARATOR_SUBPARAM_CLOSE);
 					tmp = (char *) malloc(tmp_size * sizeof(char));
-					snprintf(tmp, tmp_size, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2,
-						 OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
-						 OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
+					snprintf(tmp, tmp_size, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2, OPH_SEPARATOR_PARAM,
+						 OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV, OPH_MF_ARG_VALUE_YES,
+						 OPH_SEPARATOR_SUBPARAM_CLOSE);
+					free(tmp2);
+					tmp2 = NULL;
 
 					if (task->arguments_keys[kk])
 						free(task->arguments_keys[kk]);
