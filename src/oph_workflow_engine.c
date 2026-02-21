@@ -3691,8 +3691,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		}
 	}
 
-	char session_code[OPH_MAX_STRING_SIZE], tmp[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
-	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 0, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0;
+	char session_code[OPH_MAX_STRING_SIZE], *tmp = NULL, *tmp2 = NULL, tmp3[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
+	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 0, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0, tmp_size =
+	    0;
 	oph_job_info *item = NULL, *prev = NULL;
 	ophidiadb oDB;
 	oph_workflow *wf = NULL;
@@ -4032,10 +4033,15 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								for (i = 0; i < outputs_num; ++i) {
 									if (!strncmp(outputs_keys[i], wf->tasks[task_index].outputs_keys[i], OPH_MAX_STRING_SIZE))	// It is assumed the perfect correspondence between the outputs
 									{
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", wf->tasks[task_index].outputs_values[i], OPH_SEPARATOR_SUBPARAM_STR,
+										tmp_size =
+										    1 + snprintf(NULL, 0, "%s%s%s", wf->tasks[task_index].outputs_values[i], OPH_SEPARATOR_SUBPARAM_STR,
+												 outputs_values[i]);
+										tmp = (char *) malloc(tmp_size * sizeof(char));
+										snprintf(tmp, tmp_size, "%s%s%s", wf->tasks[task_index].outputs_values[i], OPH_SEPARATOR_SUBPARAM_STR,
 											 outputs_values[i]);
 										free(wf->tasks[task_index].outputs_values[i]);
-										wf->tasks[task_index].outputs_values[i] = strdup(tmp);
+										wf->tasks[task_index].outputs_values[i] = tmp;
+										tmp = NULL;
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated output '%s=%s' of task '%s'\n", ttype, jobid,
 										      wf->tasks[task_index].outputs_keys[i], wf->tasks[task_index].outputs_values[i], wf->tasks[task_index].name);
 									} else
@@ -5399,9 +5405,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						}
 						if (!strlen(target))
 							break;
-						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_objects = NULL, tmp2[OPH_MAX_STRING_SIZE];
+						char *pch, *pch2 = NULL, *save_pointer = NULL, *output_objects = NULL;
 						for (k = 0; k < wf->tasks[task_index].outputs_num; ++k)
-							if (!strncmp(wf->tasks[task_index].outputs_keys[k], target, OPH_MAX_STRING_SIZE)) {
+							if (!strncmp(wf->tasks[task_index].outputs_keys[k], target, OPH_MAX_STRING_SIZE) && wf->tasks[task_index].outputs_values[k]) {
 								// Check input cubes in order to avoid to apply the exit action to read-only cubes
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: process '%s' to filter input cubes/containers for final operation\n", ttype, jobid,
 								      wf->tasks[task_index].outputs_values[k]);
@@ -5410,7 +5416,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									      wf->tasks[task_index].outputs_values[k]);
 									break;
 								}
-								snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s", wf->tasks[task_index].outputs_values[k]);
+								tmp2 = strdup(wf->tasks[task_index].outputs_values[k]);
+								if (!tmp2)
+									continue;
 								pch = strtok_r(tmp2, OPH_SEPARATOR_SUBPARAM_STR, &save_pointer);
 								while (pch) {
 									for (i = 0; i < wf->tasks[task_index].arguments_num; ++i)
@@ -5433,9 +5441,12 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										}
 									if (!pch2) {
 										if (output_objects) {
-											snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%s%s", output_objects, OPH_SEPARATOR_SUBPARAM_STR, pch);
+											tmp_size = 1 + snprintf(NULL, 0, "%s%s%s", output_objects, OPH_SEPARATOR_SUBPARAM_STR, pch);
+											tmp = (char *) malloc(tmp_size * sizeof(char));
+											snprintf(tmp, tmp_size, "%s%s%s", output_objects, OPH_SEPARATOR_SUBPARAM_STR, pch);
 											free(output_objects);
-											output_objects = strdup(tmp);
+											output_objects = tmp;
+											tmp = NULL;
 										} else
 											output_objects = strdup(pch);
 										pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: add '%s' to candidate list for final operation\n", ttype, jobid, pch);
@@ -5504,6 +5515,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 									output_objects = NULL;
 									pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: updated KV pair for final operation\n", ttype, jobid);
 								}
+								free(tmp2);
+								tmp2 = NULL;
 								break;
 							}
 						break;
@@ -5825,15 +5838,16 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					kk--;
 					// Order the exit values
 					int cubeid, write, append;
-					char exit_cubes[OPH_MAX_STRING_SIZE], *last_block, *last_index;
-					*exit_cubes = 0;
+					char *last_block, *last_index;
+					tmp2 = (char *) malloc((1 + size * OPH_INT_STRING_SIZE) * sizeof(char));
+					*tmp2 = 0;
 					oph_trash_order(trash_cubes, NULL);
 					while (!oph_trash_extract(trash_cubes, NULL, &cubeid, NULL)) {
-						if (strlen(exit_cubes)) {
+						if (*tmp2) {
 							write = append = 1;
-							last_block = strrchr(exit_cubes, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
+							last_block = strrchr(tmp2, OPH_SUBSET_LIB_SUBSET_SEPARATOR[0]);
 							if (!last_block)
-								last_block = exit_cubes;
+								last_block = tmp2;
 							else
 								last_block++;
 							last_index = strchr(last_block, OPH_SUBSET_LIB_PARAM_SEPARATOR[0]);
@@ -5845,18 +5859,22 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								}
 							} else {
 								if (strtol(last_block, NULL, 10) == cubeid - 1) {
-									snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
+									snprintf(tmp3, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_PARAM_SEPARATOR, cubeid);
 									write = 0;
 								}
 							}
 							if (write)
-								snprintf(tmp, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
+								snprintf(tmp3, OPH_MAX_STRING_SIZE, "%s%d", OPH_SUBSET_LIB_SUBSET_SEPARATOR, cubeid);
 							if (append)
-								strncat(exit_cubes, tmp, OPH_MAX_STRING_SIZE - strlen(exit_cubes) - 1);
+								strcat(tmp2, tmp3);
 						} else
-							snprintf(exit_cubes, OPH_MAX_STRING_SIZE, "%d", cubeid);
+							snprintf(tmp2, OPH_MAX_STRING_SIZE, "%d", cubeid);
 					}
-					snprintf(tmp, OPH_MAX_STRING_SIZE, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, exit_cubes,
+					tmp_size = 1 + snprintf(NULL, 0, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2,
+								OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
+								OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
+					tmp = (char *) malloc(tmp_size * sizeof(char));
+					snprintf(tmp, tmp_size, "%c%s%s%s%s%s%s%s%s%s%s%s%c", OPH_SEPARATOR_SUBPARAM_OPEN, OPH_MF_ARG_DATACUBE_FILTER, OPH_SEPARATOR_KV, tmp2,
 						 OPH_SEPARATOR_PARAM, OPH_MF_ARG_PATH, OPH_SEPARATOR_KV, OPH_MF_ROOT_FOLDER, OPH_SEPARATOR_PARAM, OPH_MF_ARG_RECURSIVE, OPH_SEPARATOR_KV,
 						 OPH_MF_ARG_VALUE_YES, OPH_SEPARATOR_SUBPARAM_CLOSE);
 
@@ -5865,10 +5883,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					task->arguments_keys[kk] = strdup(OPH_ARG_CUBE);
 					if (task->arguments_values[kk])
 						free(task->arguments_values[kk]);
-					task->arguments_values[kk] = strdup(tmp);
+					task->arguments_values[kk] = tmp;
 					if (task->arguments_lists[kk])
 						free(task->arguments_lists[kk]);
 					task->arguments_lists[kk] = NULL;
+					tmp = NULL;
 
 					final_task = 1;
 					final = 0;
@@ -5915,9 +5934,9 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						int containerid = 0;
 						oph_trash_extract(wf->exit_containers, NULL, &containerid, NULL);
 						if (containerid) {
-							snprintf(tmp, OPH_MAX_STRING_SIZE, "%s/%d", oph_web_server, containerid);
+							snprintf(tmp3, OPH_MAX_STRING_SIZE, "%s/%d", oph_web_server, containerid);
 							task->arguments_keys[kk] = strdup(OPH_ARG_CONTAINER_PID);
-							task->arguments_values[kk] = strdup(tmp);
+							task->arguments_values[kk] = strdup(tmp3);
 							task->arguments_lists[kk++] = NULL;
 							task->arguments_keys[kk] = strdup(OPH_ARG_CONTAINER);
 							task->arguments_values[kk] = strdup(OPH_COMMON_NULL);

@@ -1375,7 +1375,10 @@ int oph_handle_signals(void)
 
 void oph_signal_handler(int sig)
 {
-	pmesg(LOG_WARNING, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
+	int type = LOG_WARNING;
+	if (sig == SIGSEGV)
+		type = LOG_ERROR;
+	pmesg(type, __FILE__, __LINE__, "CALLED oph_signal_handler; catched signal nr %d (%s)\n", sig, strsignal(sig) ? strsignal(sig) : "");
 	cleanup();
 	exit(1);
 }
