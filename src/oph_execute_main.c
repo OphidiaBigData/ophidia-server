@@ -5168,7 +5168,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 											for (i = 0; i < item->wf->tasks_num; ++i) {
 												// Discard uninitialized or aborted jobs
 												if (item->wf->tasks[i].status && item->wf->tasks[i].markerid
-												    && oph_check_status_mask(item->wf->tasks[i].status, smask)) {
+												    && oph_check_status_mask(item->wf->tasks[i].status, smask)
+												    && strcmp(item->wf->tasks[i].name, OPH_WORKFLOW_REMOVING_TASK)) {
 													jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 													if (!jsonvalues) {
 														pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
