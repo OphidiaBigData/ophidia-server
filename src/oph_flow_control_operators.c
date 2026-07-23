@@ -2531,7 +2531,7 @@ int _oph_serve_flow_control_operator(struct oph_plugin_data *state, const char *
 				if (!strcasecmp(wf->tasks[i].arguments_keys[j], OPH_OPERATOR_PARAMETER_PARALLEL) && !wf->tasks[i].parallel_mode) {
 					if (!strcasecmp(wf->tasks[i].arguments_values[j], OPH_COMMON_YES)) {
 						j = wf->tasks_num;
-						if (oph_workflow_parallel_fco(wf, 0, state) || ((j < wf->tasks_num) && oph_workflow_validate_fco(wf))) {	// Thread unsafe
+						if (oph_workflow_parallel_fco(wf, 0, state, 0) || ((j < wf->tasks_num) && oph_workflow_validate_fco(wf))) {	// Thread unsafe
 							pmesg(LOG_WARNING, __FILE__, __LINE__, "Error in expanding parallel task '%s' of workflow '%s'\n", wf->tasks[i].name, wf->name);
 							pthread_mutex_unlock(&global_flag);
 							return OPH_SERVER_SYSTEM_ERROR;

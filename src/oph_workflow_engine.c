@@ -1208,7 +1208,7 @@ int oph_workflow_mark_children_of(oph_workflow *wf, int k, int p)
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
-int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_plugin_data *state)
+int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_plugin_data *state, int index_reduction)
 {
 #ifdef OPH_DYNAMIC_EXPANSION
 	pthread_mutex_t *flag = NULL;	// Thread unsafe
@@ -1524,6 +1524,8 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 
 			// Expand tasks
 			old_tasks_num = wf->tasks_num;
+			if (!index_reduction)
+				index_reduction = old_tasks_num;
 			if (oph_workflow_expand(wf, old_tasks_num + replied_num * new_branch_num)) {
 				pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Error in processing task '%s'.\n", wf->tasks[i].name);
 				break;
@@ -1569,11 +1571,11 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 					for (k = 0; k < wf->tasks[kkkk].deps_num; k++) {
 						real_task_index = wf->tasks[kkkk].deps[k].task_index;
 						if ((negative = (real_task_index < 0)))	// '=' is correct
-							real_task_index += old_tasks_num;
+							real_task_index += index_reduction;
 						if (wf->tasks[real_task_index].is_marked) {
 							real_task_index = wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
 							if (negative)
-								wf->tasks[kkkk].deps[k].task_index -= wf->tasks_num;
+								wf->tasks[kkkk].deps[k].task_index -= index_reduction;
 						}
 						if (wf->tasks[kkkk].deps[k].task_name)
 							free(wf->tasks[kkkk].deps[k].task_name);
@@ -1605,7 +1607,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 					for (k = 0; k < wf->tasks[j].deps_num; k++) {
 						real_task_index = wf->tasks[j].deps[k].task_index;
 						if (real_task_index < 0)
-							real_task_index += old_tasks_num;
+							real_task_index += index_reduction;
 						if (wf->tasks[real_task_index].is_marked)
 							for (kk = 0; kk < new_branch_num; ++kk) {
 								memcpy(tmp_array_dep + kkk, wf->tasks[j].deps + k, sizeof(oph_workflow_dep));
@@ -1625,7 +1627,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 								if (!((tmp_array_dep[kkk].task_name = strdup(wf->tasks[tmp_array_dep[kkk].task_index].name))))
 									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 								if (wf->tasks[j].deps[k].task_index < 0)
-									tmp_array_dep[kkk].task_index -= wf->tasks_num;
+									tmp_array_dep[kkk].task_index -= index_reduction;
 								kkk++;
 							}
 					}
@@ -1645,7 +1647,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 							free(wf->tasks[j].deps[k].task_name);
 						real_task_index = wf->tasks[j].deps[k].task_index;
 						if (real_task_index < 0)
-							real_task_index += old_tasks_num;
+							real_task_index += index_reduction;
 						wf->tasks[j].deps[k].task_name = strdup(wf->tasks[real_task_index].name);
 					}
 			}
@@ -1653,8 +1655,8 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 				for (k = 0; k < wf->tasks[j].deps_num; ++k) {
 					kk = wf->tasks[j].deps[k].task_index;
 					if (kk < 0)
-						kk += old_tasks_num;
-					if (wf->tasks[kk].is_marked && (kk < old_tasks_num)) {
+						kk += index_reduction;
+					if ((kk < old_tasks_num) && wf->tasks[kk].is_marked) {
 						if (wf->tasks[j].deps[k].task_name)
 							free(wf->tasks[j].deps[k].task_name);
 						wf->tasks[j].deps[k].task_name = strdup(wf->tasks[kk].name);
@@ -1721,9 +1723,9 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 		free(svalues);
 	}
 	if (i < wf->tasks_num)
-		return exploded ? oph_workflow_parallel_fco(wf, nesting_level, state) : OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+		return exploded ? oph_workflow_parallel_fco(wf, nesting_level, state, index_reduction) : OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (found)
-		return oph_workflow_parallel_fco(wf, nesting_level + 1, state);
+		return oph_workflow_parallel_fco(wf, nesting_level + 1, state, index_reduction);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
