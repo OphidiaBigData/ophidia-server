@@ -1575,7 +1575,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 						if (wf->tasks[real_task_index].is_marked) {
 							real_task_index = wf->tasks[kkkk].deps[k].task_index = old_tasks_num + j * replied_num + new_index[real_task_index];
 							if (negative)
-								wf->tasks[kkkk].deps[k].task_index -= index_reduction;
+								wf->tasks[kkkk].deps[k].task_index -= wf->tasks_num;
 						}
 						if (wf->tasks[kkkk].deps[k].task_name)
 							free(wf->tasks[kkkk].deps[k].task_name);
@@ -1627,7 +1627,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 								if (!((tmp_array_dep[kkk].task_name = strdup(wf->tasks[tmp_array_dep[kkk].task_index].name))))
 									return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 								if (wf->tasks[j].deps[k].task_index < 0)
-									tmp_array_dep[kkk].task_index -= index_reduction;
+									tmp_array_dep[kkk].task_index -= wf->tasks_num;
 								kkk++;
 							}
 					}
