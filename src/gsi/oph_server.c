@@ -117,6 +117,8 @@ char oph_direct_output = 1;
 #else
 char oph_direct_output = 0;
 #endif
+oph_detached_task *oph_sched_queue_head = NULL;
+oph_detached_task *oph_sched_queue_tail = NULL;
 
 int set_global_values(const char *configuration_file)
 {

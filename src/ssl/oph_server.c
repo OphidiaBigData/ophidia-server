@@ -146,6 +146,8 @@ char oph_direct_output = 1;
 #else
 char oph_direct_output = 0;
 #endif
+oph_detached_task *oph_sched_queue_head = NULL;
+oph_detached_task *oph_sched_queue_tail = NULL;
 #ifdef OPH_OPENID_SUPPORT
 char *oph_openid_endpoint = 0;
 char *oph_openid_client_id = 0;

@@ -233,10 +233,12 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow *wf, int task_i
 		char *taskname = wf->tasks[task_index].name ? strdup(wf->tasks[task_index].name) : NULL;
 
 		int response = 0, _odb_wf_id = wf->idjob, _task_id = task_index, wid = wf->workflowid;
+		char sched_policy = wf->sched_policy;
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid, 1);
+		response =
+		    oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid, 1, sched_policy);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
