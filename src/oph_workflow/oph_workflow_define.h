@@ -87,6 +87,7 @@
 
 #define OPH_WORKFLOW_SCHED_BASE			"base"
 #define OPH_WORKFLOW_SCHED_FIFO			"fifo"
+#define OPH_WORKFLOW_SCHED_LIFO			"lifo"
 
 #define OPH_WORKFLOW_REMOVING_TASK	"Removing task"
 #define OPH_WORKFLOW_FINAL_TASK		"Final task"

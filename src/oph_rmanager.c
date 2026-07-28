@@ -79,62 +79,101 @@ typedef struct _oph_command_data {
 	int delay;
 	int (*postprocess)(int);
 	int id;
+	int odb_jobid;
+	int ncores;
+	char sched_policy;
 } oph_command_data;
 
 int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
 {
-	if (sched_policy == 1) {
-		if (oph_server_task_limit || oph_server_core_limit) {
-			char just_arrived = 1;
-			oph_detached_task *tmp = NULL;
-			pthread_mutex_lock(&global_flag);
-			while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit)) || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))
-			       || (oph_sched_queue_head && (oph_sched_queue_head->id != odb_jobid))) {
-				if (just_arrived) {
-					tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
-					tmp->id = odb_jobid;
-					tmp->next = NULL;
-					if (oph_sched_queue_tail)
-						oph_sched_queue_tail->next = tmp;
-					else
-						oph_sched_queue_head = tmp;
-					oph_sched_queue_tail = tmp;
-					just_arrived = 0;
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+	switch (sched_policy) {
+		case 1:	// FIFO
+			if (oph_server_task_limit || oph_server_core_limit) {
+				char just_arrived = 1;
+				oph_detached_task *tmp = NULL;
+				pthread_mutex_lock(&global_flag);
+				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
+				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))
+				       || (oph_sched_queue_head && (oph_sched_queue_head->id != odb_jobid))) {
+					if (just_arrived) {
+						tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
+						tmp->id = odb_jobid;
+						tmp->next = NULL;
+						if (oph_sched_queue_tail)
+							oph_sched_queue_tail->next = tmp;
+						else
+							oph_sched_queue_head = tmp;
+						oph_sched_queue_tail = tmp;
+						just_arrived = 0;
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					pthread_cond_wait(&limit_flag, &global_flag);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 				}
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
-				pthread_cond_wait(&limit_flag, &global_flag);
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+				if (oph_sched_queue_head) {
+					tmp = oph_sched_queue_head;
+					oph_sched_queue_head = oph_sched_queue_head->next;
+					if (!oph_sched_queue_head)
+						oph_sched_queue_tail = NULL;
+					free(tmp);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+				}
+				if (oph_server_task_limit)
+					oph_server_task_running++;
+				if (oph_server_core_limit)
+					oph_server_core_running += ncores;
+				pthread_mutex_unlock(&global_flag);
 			}
-			if (oph_sched_queue_head) {
-				tmp = oph_sched_queue_head;
-				oph_sched_queue_head = oph_sched_queue_head->next;
-				if (!oph_sched_queue_head)
-					oph_sched_queue_tail = NULL;
-				free(tmp);
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+			break;
+		case 2:	// LIFO
+			if (oph_server_task_limit || oph_server_core_limit) {
+				char just_arrived = 1;
+				oph_detached_task *tmp = NULL;
+				pthread_mutex_lock(&global_flag);
+				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
+				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit)) || (!just_arrived && oph_sched_queue_head
+																    && (oph_sched_queue_head->id != odb_jobid))) {
+					if (just_arrived) {
+						tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
+						tmp->id = odb_jobid;
+						tmp->next = oph_sched_queue_head;
+						oph_sched_queue_head = tmp;
+						just_arrived = 0;
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+					}
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					pthread_cond_wait(&limit_flag, &global_flag);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+				}
+				if (oph_sched_queue_head && (oph_sched_queue_head->id == odb_jobid)) {
+					tmp = oph_sched_queue_head;
+					oph_sched_queue_head = oph_sched_queue_head->next;
+					free(tmp);
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+				}
+				if (oph_server_task_limit)
+					oph_server_task_running++;
+				if (oph_server_core_limit)
+					oph_server_core_running += ncores;
+				pthread_mutex_unlock(&global_flag);
 			}
-			if (oph_server_task_limit)
-				oph_server_task_running++;
-			if (oph_server_core_limit)
-				oph_server_core_running += ncores;
-			pthread_mutex_unlock(&global_flag);
-		}
-		return RMANAGER_SUCCESS;
-	}
-	// Base scheduler based on task_limit and/or core_limit, used in case sched_policy is zero
-	if (oph_server_task_limit || oph_server_core_limit) {
-		pthread_mutex_lock(&global_flag);
-		while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit)) || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))) {
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
-			pthread_cond_wait(&limit_flag, &global_flag);
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
-		}
-		if (oph_server_task_limit)
-			oph_server_task_running++;
-		if (oph_server_core_limit)
-			oph_server_core_running += ncores;
-		pthread_mutex_unlock(&global_flag);
+			break;
+		default:	// Base scheduler based on task_limit and/or core_limit, used in case sched_policy is zero
+			if (oph_server_task_limit || oph_server_core_limit) {
+				pthread_mutex_lock(&global_flag);
+				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
+				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))) {
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					pthread_cond_wait(&limit_flag, &global_flag);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+				}
+				if (oph_server_task_limit)
+					oph_server_task_running++;
+				if (oph_server_core_limit)
+					oph_server_core_running += ncores;
+				pthread_mutex_unlock(&global_flag);
+			}
 	}
 	return RMANAGER_SUCCESS;
 }
@@ -156,7 +195,7 @@ void __oph_system(oph_command_data *data)
 				int jobid;
 				pthread_mutex_lock(&global_flag);
 				jobid = ++*data->state->jobid;
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "C%d: critical error in task submission\n", jobid);
+				pmesg(LOG_WARNING, __FILE__, __LINE__, "C%d: critical error in task submission\n", jobid);
 				pthread_mutex_unlock(&global_flag);
 
 				if (data->error) {
@@ -185,6 +224,9 @@ void *_oph_system(oph_command_data *data)
 	pthread_detach(pthread_self());
 	oph_service_info_thread_incr(service_info);
 #endif
+	// Check for limits (known operators do not use resources)
+	oph_sched_task(data->odb_jobid, data->ncores, data->sched_policy);
+	// Execute task
 	__oph_system(data);
 	if (data) {
 		if (data->id)
@@ -198,7 +240,7 @@ void *_oph_system(oph_command_data *data)
 	return (void *) NULL;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id, int odb_jobid, int ncores, char sched_policy)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -251,9 +293,12 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	data->delay = delay;
 	data->postprocess = postprocess;
 	data->id = id;
+	data->odb_jobid = odb_jobid;
+	data->ncores = ncores;
+	data->sched_policy = sched_policy;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (!blocking) {
+	if (!blocking || sched_policy) {
 		pthread_t tid;
 		pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_system, data);
 		return RMANAGER_SUCCESS;
@@ -861,9 +906,6 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 				      username, project, taskname)) != OPH_SERVER_UNKNOWN)
 		return result;
 
-	// Check for limits: known operators do not use resources
-	oph_sched_task(odb_jobid ? *odb_jobid : 0, _ncores, sched_policy);
-
 	char *cmd = NULL;
 
 	if (!orm) {
@@ -918,7 +960,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Execute command: %s\n", command);
-	if (oph_system(command, error, state, delay, 0, NULL, 0)) {
+	if (oph_system(command, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, sched_policy)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on executing the command\n");
 		if (cmd) {
 			free(cmd);
@@ -935,7 +977,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		}
 		return OPH_SERVER_ERROR;
 	}
-	if (oph_system(cmd, error, state, delay, 0, NULL, 0)) {
+	if (oph_system(cmd, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, sched_policy)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {
 			free(cmd);

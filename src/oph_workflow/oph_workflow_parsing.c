@@ -322,6 +322,8 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	if (sched_policy && strlen(sched_policy)) {
 		if (!strcmp(sched_policy, OPH_WORKFLOW_SCHED_FIFO))
 			(*workflow)->sched_policy = 1;
+		else if (!strcmp(sched_policy, OPH_WORKFLOW_SCHED_LIFO))
+			(*workflow)->sched_policy = 2;
 		else if (strcmp(sched_policy, OPH_WORKFLOW_SCHED_BASE)) {
 			oph_workflow_free(*workflow);
 			if (jansson)
@@ -1114,6 +1116,9 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 		switch (workflow->sched_policy) {
 			case 1:
 				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_FIFO);
+				break;
+			case 2:
+				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_LIFO);
 				break;
 			default:
 				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_BASE);
