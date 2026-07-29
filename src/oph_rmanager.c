@@ -94,7 +94,7 @@ int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
 				pthread_mutex_lock(&global_flag);
 				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
 				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))
-				       || (oph_sched_queue_head && (oph_sched_queue_head->id != odb_jobid))) {
+				       || (oph_sched_queue_head && (just_arrived || (oph_sched_queue_head->id != odb_jobid)))) {
 					if (just_arrived) {
 						tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
 						tmp->id = odb_jobid;

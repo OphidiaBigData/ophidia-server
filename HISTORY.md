@@ -9,6 +9,8 @@
 
 ### Added:
 
+- Argument 'log_level' to OPH_SERVICE
+- Setting of task scheduler policy
 - Argument 'ndbms' to OPH_CLUSTER
 - Columns 'PROC TIME' and 'ARGUMENTS' to 'extended_output'
 - Option 'oph_fastdelete'

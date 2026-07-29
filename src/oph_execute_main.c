@@ -747,6 +747,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						oph_workflow_free(wf);
 						return SOAP_OK;
 					}
+					pmesg(LOG_INFO, __FILE__, __LINE__, "Service status: %s\n", oph_service_status ? "UP" : "DOWN");
 					pthread_mutex_unlock(&global_flag);
 				}
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_ARG_LEVEL, OPH_MAX_STRING_SIZE)) {
@@ -866,6 +867,30 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						return SOAP_OK;
 					}
 					oph_server_core_limit = new_value;
+				}
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_LOG_TYPE, OPH_MAX_STRING_SIZE)) {
+				value = wf->tasks[0].arguments_values[i];
+				if (value && strlen(value)) {
+					int msglevel = 10;
+					pthread_mutex_lock(&global_flag);
+					if (!strncasecmp(value, LOG_ERROR_MESSAGE, OPH_MAX_STRING_SIZE))
+						msglevel += LOG_ERROR;
+					else if (!strncasecmp(value, LOG_INFO_MESSAGE, OPH_MAX_STRING_SIZE))
+						msglevel += LOG_INFO;
+					else if (!strncasecmp(value, LOG_WARNING_MESSAGE, OPH_MAX_STRING_SIZE))
+						msglevel += LOG_WARNING;
+					else if (!strncasecmp(value, LOG_DEBUG_MESSAGE, OPH_MAX_STRING_SIZE))
+						msglevel += LOG_DEBUG;
+					else {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong log type '%s'\n", jobid, value);
+						pthread_mutex_unlock(&global_flag);
+						response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						oph_workflow_free(wf);
+						return SOAP_OK;
+					}
+					pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
+					set_debug_level(msglevel);
+					pthread_mutex_unlock(&global_flag);
 				}
 			}
 		}
