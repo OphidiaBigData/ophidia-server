@@ -65,6 +65,7 @@ extern unsigned int oph_server_task_limit;
 extern unsigned int oph_server_core_limit;
 extern unsigned int oph_server_task_running;
 extern unsigned int oph_server_core_running;
+extern char oph_sched_policy;
 extern oph_detached_task *oph_sched_queue_head;
 extern oph_detached_task *oph_sched_queue_tail;
 
@@ -81,11 +82,13 @@ typedef struct _oph_command_data {
 	int id;
 	int odb_jobid;
 	int ncores;
-	char sched_policy;
 } oph_command_data;
 
-int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
+int oph_sched_task(int odb_jobid, int ncores)
 {
+	pthread_mutex_lock(&global_flag);
+	char sched_policy = oph_sched_policy;
+	pthread_mutex_unlock(&global_flag);
 	switch (sched_policy) {
 		case 1:	// FIFO
 			if (oph_server_task_limit || oph_server_core_limit) {
@@ -107,9 +110,9 @@ int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
 						just_arrived = 0;
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
 					}
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 				}
 				if (oph_sched_queue_head) {
 					tmp = oph_sched_queue_head;
@@ -142,15 +145,15 @@ int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
 						just_arrived = 0;
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
 					}
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 				}
 				if (oph_sched_queue_head && (oph_sched_queue_head->id == odb_jobid)) {
 					tmp = oph_sched_queue_head;
 					oph_sched_queue_head = oph_sched_queue_head->next;
 					free(tmp);
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
 				}
 				if (oph_server_task_limit)
 					oph_server_task_running++;
@@ -159,14 +162,14 @@ int oph_sched_task(int odb_jobid, int ncores, char sched_policy)
 				pthread_mutex_unlock(&global_flag);
 			}
 			break;
-		default:	// Base scheduler based on task_limit and/or core_limit, used in case sched_policy is zero
+		default:	// BASE
 			if (oph_server_task_limit || oph_server_core_limit) {
 				pthread_mutex_lock(&global_flag);
 				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
 				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))) {
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 				}
 				if (oph_server_task_limit)
 					oph_server_task_running++;
@@ -225,7 +228,7 @@ void *_oph_system(oph_command_data *data)
 	oph_service_info_thread_incr(service_info);
 #endif
 	// Check for limits (known operators do not use resources)
-	oph_sched_task(data->odb_jobid, data->ncores, data->sched_policy);
+	oph_sched_task(data->odb_jobid, data->ncores);
 	// Execute task
 	__oph_system(data);
 	if (data) {
@@ -240,7 +243,7 @@ void *_oph_system(oph_command_data *data)
 	return (void *) NULL;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id, int odb_jobid, int ncores, char sched_policy)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id, int odb_jobid, int ncores)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -295,9 +298,11 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	data->id = id;
 	data->odb_jobid = odb_jobid;
 	data->ncores = ncores;
-	data->sched_policy = sched_policy;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
+	pthread_mutex_lock(&global_flag);
+	char sched_policy = oph_sched_policy;
+	pthread_mutex_unlock(&global_flag);
 	if (!blocking || sched_policy) {
 		pthread_t tid;
 		pthread_create(&tid, NULL, (void *(*)(void *)) &_oph_system, data);
@@ -875,7 +880,7 @@ int oph_get_result_from_file_unsafe(char *filename, char **response)
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
 		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project,
-		      char *taskname, int wid, char serial, char sched_policy)
+		      char *taskname, int wid, char serial)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
@@ -960,7 +965,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Execute command: %s\n", command);
-	if (oph_system(command, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, sched_policy)) {
+	if (oph_system(command, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on executing the command\n");
 		if (cmd) {
 			free(cmd);
@@ -977,7 +982,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		}
 		return OPH_SERVER_ERROR;
 	}
-	if (oph_system(cmd, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, sched_policy)) {
+	if (oph_system(cmd, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {
 			free(cmd);

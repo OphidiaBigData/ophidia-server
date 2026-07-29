@@ -69,7 +69,7 @@ int _oph_wait_stat(oph_workflow *wf, int task_index, char *command, char *marker
 
 	response =
 	    oph_serve_request(command, 1, wf->sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, wf->os_username, wf->project, wf->tasks[task_index].name,
-			      wf->workflowid, 1, wf->sched_policy);
+			      wf->workflowid, 1);
 	if (response) {
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to scan file system: error %s. Aborting...\n", response);
 		return -1;

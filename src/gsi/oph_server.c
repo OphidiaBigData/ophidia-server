@@ -117,6 +117,7 @@ char oph_direct_output = 1;
 #else
 char oph_direct_output = 0;
 #endif
+char oph_sched_policy = 0;
 oph_detached_task *oph_sched_queue_head = NULL;
 oph_detached_task *oph_sched_queue_tail = NULL;
 
@@ -333,6 +334,18 @@ int set_global_values(const char *configuration_file)
 	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CANCEL_ALL);
 	if (value && !strcasecmp(value, OPH_DEFAULT_YES))
 		oph_cancel_all_enabled = 1;
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WORKING_DIR);
+	if (value && chdir(value))
+		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to change working directory to '%s'\n", value);
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SCHED_POLICY);
+	if (value) {
+		if (!strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_FIFO))
+			oph_sched_policy = 1;
+		else if (!strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO))
+			oph_sched_policy = 2;
+		else if (strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BASE))
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong value '%s' for scheduler policy\n", value);
+	}
 
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 

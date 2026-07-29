@@ -146,6 +146,7 @@ char oph_direct_output = 1;
 #else
 char oph_direct_output = 0;
 #endif
+char oph_sched_policy = 0;
 oph_detached_task *oph_sched_queue_head = NULL;
 oph_detached_task *oph_sched_queue_tail = NULL;
 #ifdef OPH_OPENID_SUPPORT
@@ -404,6 +405,15 @@ int set_global_values(const char *configuration_file)
 	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_WORKING_DIR);
 	if (value && chdir(value))
 		pmesg(LOG_WARNING, __FILE__, __LINE__, "Unable to change working directory to '%s'\n", value);
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_SCHED_POLICY);
+	if (value) {
+		if (!strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_FIFO))
+			oph_sched_policy = 1;
+		else if (!strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO))
+			oph_sched_policy = 2;
+		else if (strcasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BASE))
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Wrong value '%s' for scheduler policy\n", value);
+	}
 #ifdef OPH_OPENID_SUPPORT
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_OPENID_TOKEN_TIMEOUT)))
 		oph_openid_token_timeout = (unsigned int) strtol(value, NULL, 10);

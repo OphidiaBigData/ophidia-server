@@ -89,11 +89,11 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
 	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL, *save =
-	    NULL, *checkpoint = NULL, *direct_output = NULL, *sched_policy = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid",
+	    NULL, *checkpoint = NULL, *direct_output = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid",
 		    &sessionid, "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command,
 		    "on_exit", &on_exit, "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project,
-		    "save", &save, "checkpoint", &checkpoint, "direct_output", &direct_output, "sched_policy", &sched_policy);
+		    "save", &save, "checkpoint", &checkpoint, "direct_output", &direct_output);
 
 	//add global vars
 	if (!name) {
@@ -315,20 +315,6 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			if (jansson)
 				json_decref(jansson);
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'direct_output'\n");
-			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-		}
-	}
-	(*workflow)->sched_policy = 0;
-	if (sched_policy && strlen(sched_policy)) {
-		if (!strcmp(sched_policy, OPH_WORKFLOW_SCHED_FIFO))
-			(*workflow)->sched_policy = 1;
-		else if (!strcmp(sched_policy, OPH_WORKFLOW_SCHED_LIFO))
-			(*workflow)->sched_policy = 2;
-		else if (strcmp(sched_policy, OPH_WORKFLOW_SCHED_BASE)) {
-			oph_workflow_free(*workflow);
-			if (jansson)
-				json_decref(jansson);
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "error in parsing parameter 'sched_policy'\n");
 			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 		}
 	}
@@ -1112,20 +1098,6 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 	}
 	if (_oph_workflow_add_to_json(request, "direct_output", workflow->direct_output ? OPH_WORKFLOW_NO : OPH_WORKFLOW_NO))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	if (workflow->sched_policy) {
-		switch (workflow->sched_policy) {
-			case 1:
-				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_FIFO);
-				break;
-			case 2:
-				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_LIFO);
-				break;
-			default:
-				snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, OPH_WORKFLOW_SCHED_BASE);
-		}
-		if (_oph_workflow_add_to_json(request, "sched_policy", jsontmp))
-			return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
-	}
 
 	json_t *tasks = json_array();
 	if (!tasks) {

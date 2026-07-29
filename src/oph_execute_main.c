@@ -68,6 +68,7 @@ extern unsigned int oph_server_farm_size;
 extern unsigned int oph_server_queue_size;
 extern unsigned int oph_server_task_limit;
 extern unsigned int oph_server_core_limit;
+extern char oph_sched_policy;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 extern pthread_mutex_t global_flag;
@@ -747,7 +748,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						oph_workflow_free(wf);
 						return SOAP_OK;
 					}
-					pmesg(LOG_INFO, __FILE__, __LINE__, "Service status: %s\n", oph_service_status ? "UP" : "DOWN");
+					pmesg(LOG_INFO, __FILE__, __LINE__, "R%d: service status: %s\n", jobid, oph_service_status ? "UP" : "DOWN");
 					pthread_mutex_unlock(&global_flag);
 				}
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_ARG_LEVEL, OPH_MAX_STRING_SIZE)) {
@@ -868,6 +869,26 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					}
 					oph_server_core_limit = new_value;
 				}
+			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_SERVER_CONF_SCHED_POLICY, OPH_MAX_STRING_SIZE)) {
+				value = wf->tasks[0].arguments_values[i];
+				if (value && strlen(value)) {
+					pthread_mutex_lock(&global_flag);
+					if (!strncasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BASE, OPH_MAX_STRING_SIZE))
+						oph_sched_policy = 0;
+					else if (!strncasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_FIFO, OPH_MAX_STRING_SIZE))
+						oph_sched_policy = 1;
+					else if (!strncasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO, OPH_MAX_STRING_SIZE))
+						oph_sched_policy = 2;
+					else {
+						pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong scheduler policy '%s'\n", jobid, value);
+						pthread_mutex_unlock(&global_flag);
+						response->error = OPH_SERVER_WRONG_PARAMETER_ERROR;
+						oph_workflow_free(wf);
+						return SOAP_OK;
+					}
+					pmesg(LOG_INFO, __FILE__, __LINE__, "R%d: selected scheduler policy '%s'\n", jobid, value);
+					pthread_mutex_unlock(&global_flag);
+				}
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_LOG_TYPE, OPH_MAX_STRING_SIZE)) {
 				value = wf->tasks[0].arguments_values[i];
 				if (value && strlen(value)) {
@@ -888,7 +909,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						oph_workflow_free(wf);
 						return SOAP_OK;
 					}
-					pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
+					pmesg(LOG_INFO, __FILE__, __LINE__, "R%d: selected log level '%s'\n", jobid, value);
 					set_debug_level(msglevel);
 					pthread_mutex_unlock(&global_flag);
 				}
