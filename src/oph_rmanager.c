@@ -109,6 +109,9 @@ int oph_sched_task(int odb_jobid, int ncores)
 						oph_sched_queue_tail = tmp;
 						just_arrived = 0;
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+						if (get_debug_level() == LOG_DEBUG)
+							for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
 					}
 					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
@@ -121,6 +124,9 @@ int oph_sched_task(int odb_jobid, int ncores)
 						oph_sched_queue_tail = NULL;
 					free(tmp);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+					if (get_debug_level() == LOG_DEBUG)
+						for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
 				}
 				if (oph_server_task_limit)
 					oph_server_task_running++;
@@ -144,6 +150,9 @@ int oph_sched_task(int odb_jobid, int ncores)
 						oph_sched_queue_head = tmp;
 						just_arrived = 0;
 						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+						if (get_debug_level() == LOG_DEBUG)
+							for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
+								pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
 					}
 					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
@@ -154,6 +163,9 @@ int oph_sched_task(int odb_jobid, int ncores)
 					oph_sched_queue_head = oph_sched_queue_head->next;
 					free(tmp);
 					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+					if (get_debug_level() == LOG_DEBUG)
+						for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
+							pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
 				}
 				if (oph_server_task_limit)
 					oph_server_task_running++;

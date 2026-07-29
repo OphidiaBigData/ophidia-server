@@ -886,22 +886,23 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						oph_workflow_free(wf);
 						return SOAP_OK;
 					}
+					new_value = oph_sched_policy;
 					pmesg(LOG_INFO, __FILE__, __LINE__, "R%d: selected scheduler policy '%s'\n", jobid, value);
 					pthread_mutex_unlock(&global_flag);
 				}
 			} else if (wf->tasks[0].arguments_keys[i] && !strncasecmp(wf->tasks[0].arguments_keys[i], OPH_OPERATOR_PARAMETER_LOG_TYPE, OPH_MAX_STRING_SIZE)) {
 				value = wf->tasks[0].arguments_values[i];
 				if (value && strlen(value)) {
-					int msglevel = 10;
+					new_value = 10;
 					pthread_mutex_lock(&global_flag);
 					if (!strncasecmp(value, LOG_ERROR_MESSAGE, OPH_MAX_STRING_SIZE))
-						msglevel += LOG_ERROR;
+						new_value += LOG_ERROR;
 					else if (!strncasecmp(value, LOG_INFO_MESSAGE, OPH_MAX_STRING_SIZE))
-						msglevel += LOG_INFO;
+						new_value += LOG_INFO;
 					else if (!strncasecmp(value, LOG_WARNING_MESSAGE, OPH_MAX_STRING_SIZE))
-						msglevel += LOG_WARNING;
+						new_value += LOG_WARNING;
 					else if (!strncasecmp(value, LOG_DEBUG_MESSAGE, OPH_MAX_STRING_SIZE))
-						msglevel += LOG_DEBUG;
+						new_value += LOG_DEBUG;
 					else {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong log type '%s'\n", jobid, value);
 						pthread_mutex_unlock(&global_flag);
@@ -910,7 +911,7 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						return SOAP_OK;
 					}
 					pmesg(LOG_INFO, __FILE__, __LINE__, "R%d: selected log level '%s'\n", jobid, value);
-					set_debug_level(msglevel);
+					set_debug_level(new_value);
 					pthread_mutex_unlock(&global_flag);
 				}
 			}
@@ -1899,6 +1900,98 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 				jjj++;
 				snprintf(jsontmp, OPH_SHORT_STRING_SIZE, "%d", oph_server_core_limit);
 				jsonvalues[jjj] = strdup(jsontmp);
+				if (!jsonvalues[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < jjj; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_SERVICE_PARAMETERS, jsonvalues)) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD GRID ROW error\n", jobid);
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				for (iii = 0; iii < num_fields; iii++)
+					if (jsonvalues[iii])
+						free(jsonvalues[iii]);
+				jjj = 0;
+				jsonvalues[jjj] = strdup(OPH_SERVER_CONF_SCHED_POLICY);
+				if (!jsonvalues[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < jjj; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				jjj++;
+				switch (oph_sched_policy) {
+					case 1:
+						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_FIFO);
+						break;
+					case 2:
+						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO);
+						break;
+					default:
+						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BASE);
+				}
+				if (!jsonvalues[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < jjj; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_SERVICE_PARAMETERS, jsonvalues)) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: ADD GRID ROW error\n", jobid);
+					for (iii = 0; iii < num_fields; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				for (iii = 0; iii < num_fields; iii++)
+					if (jsonvalues[iii])
+						free(jsonvalues[iii]);
+				jjj = 0;
+				jsonvalues[jjj] = strdup(OPH_ARG_LOG_TYPE);
+				if (!jsonvalues[jjj]) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
+					for (iii = 0; iii < jjj; iii++)
+						if (jsonvalues[iii])
+							free(jsonvalues[iii]);
+					if (jsonvalues)
+						free(jsonvalues);
+					break;
+				}
+				jjj++;
+				switch (get_debug_level()) {
+					case 1:
+						jsonvalues[jjj] = strdup(LOG_ERROR_MESSAGE);
+						break;
+					case 2:
+						jsonvalues[jjj] = strdup(LOG_INFO_MESSAGE);
+						break;
+					case 3:
+						jsonvalues[jjj] = strdup(LOG_WARNING_MESSAGE);
+						break;
+					case 4:
+						jsonvalues[jjj] = strdup(LOG_DEBUG_MESSAGE);
+						break;
+					default:
+						jsonvalues[jjj] = strdup(LOG_UNKNOWN_MESSAGE);
+				}
 				if (!jsonvalues[jjj]) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "R%d: Error allocating memory\n", jobid);
 					for (iii = 0; iii < jjj; iii++)
