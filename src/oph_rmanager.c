@@ -82,9 +82,10 @@ typedef struct _oph_command_data {
 	int id;
 	int odb_jobid;
 	int ncores;
+	short priority;
 } oph_command_data;
 
-int oph_sched_task(int odb_jobid, int ncores)
+int oph_sched_task(int odb_jobid, int ncores, short priority)
 {
 	pthread_mutex_lock(&global_flag);
 	char sched_policy = oph_sched_policy;
@@ -96,26 +97,34 @@ int oph_sched_task(int odb_jobid, int ncores)
 				oph_detached_task *tmp = NULL;
 				pthread_mutex_lock(&global_flag);
 				while ((oph_server_task_limit && (oph_server_task_running >= oph_server_task_limit))
-				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit))
-				       || (oph_sched_queue_head && (just_arrived || (oph_sched_queue_head->id != odb_jobid)))) {
+				       || (oph_server_core_limit && (oph_server_core_running + ncores > oph_server_core_limit)) || ((priority >= 0) && oph_sched_queue_head
+																    && (just_arrived || (oph_sched_queue_head->id != odb_jobid)))) {
 					if (just_arrived) {
 						tmp = (oph_detached_task *) malloc(sizeof(oph_detached_task));
 						tmp->id = odb_jobid;
 						tmp->next = NULL;
-						if (oph_sched_queue_tail)
-							oph_sched_queue_tail->next = tmp;
-						else
+						if (priority >= 0) {
+							if (oph_sched_queue_tail)
+								oph_sched_queue_tail->next = tmp;
+							else
+								oph_sched_queue_head = tmp;
+							oph_sched_queue_tail = tmp;
+						} else {	// Max priority
+							if (!oph_sched_queue_head)
+								oph_sched_queue_tail = tmp;
+							tmp->next = oph_sched_queue_head;
 							oph_sched_queue_head = tmp;
-						oph_sched_queue_tail = tmp;
+						}
 						just_arrived = 0;
-						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued\n", odb_jobid);
+						pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d enqueued%s\n", odb_jobid, priority >= 0 ? "" : " with high priority (%d-%d)", oph_server_task_running,
+						      oph_server_core_running);
 						if (get_debug_level() == LOG_DEBUG)
 							for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
 								pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
 					}
-					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Waiting for a task to be completed\n");
 					pthread_cond_wait(&limit_flag, &global_flag);
-					//pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A task has been completed\n");
 				}
 				if (oph_sched_queue_head) {
 					tmp = oph_sched_queue_head;
@@ -123,7 +132,8 @@ int oph_sched_task(int odb_jobid, int ncores)
 					if (!oph_sched_queue_head)
 						oph_sched_queue_tail = NULL;
 					free(tmp);
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued\n", odb_jobid);
+					pmesg(LOG_DEBUG, __FILE__, __LINE__, "Task %d dequeued%s\n", odb_jobid, priority >= 0 ? "" : " with high priority (%d-%d)", oph_server_task_running,
+					      oph_server_core_running);
 					if (get_debug_level() == LOG_DEBUG)
 						for (tmp = oph_sched_queue_head; tmp; tmp = tmp->next)
 							pmesg(LOG_DEBUG, __FILE__, __LINE__, "\t%d\n", tmp->id);
@@ -240,7 +250,7 @@ void *_oph_system(oph_command_data *data)
 	oph_service_info_thread_incr(service_info);
 #endif
 	// Check for limits (known operators do not use resources)
-	oph_sched_task(data->odb_jobid, data->ncores);
+	oph_sched_task(data->odb_jobid, data->ncores, data->priority);
 	// Execute task
 	__oph_system(data);
 	if (data) {
@@ -255,7 +265,7 @@ void *_oph_system(oph_command_data *data)
 	return (void *) NULL;
 }
 
-int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id, int odb_jobid, int ncores)
+int oph_system(const char *command, const char *error, struct oph_plugin_data *state, int delay, char blocking, int (*postprocess)(int), int id, int odb_jobid, int ncores, short priority)
 {
 	if (!command) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Null input parameter\n");
@@ -310,6 +320,7 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 	data->id = id;
 	data->odb_jobid = odb_jobid;
 	data->ncores = ncores;
+	data->priority = priority;
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	pthread_mutex_lock(&global_flag);
@@ -892,7 +903,7 @@ int oph_get_result_from_file_unsafe(char *filename, char **response)
 
 int oph_serve_request(const char *request, const int ncores, const char *sessionid, const char *markerid, const char *error, struct oph_plugin_data *state, int *odb_wf_id, int *task_id,
 		      int *light_task_id, int *odb_jobid, int delay, char **response, char **jobid_response, enum oph__oph_odb_job_status *exit_code, int *exit_output, char *username, char *project,
-		      char *taskname, int wid, char serial)
+		      char *taskname, int wid, char serial, short priority)
 {
 	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Incoming request '%s' to run job '%s#%s' with %d cores\n", request, sessionid, markerid, ncores);
 
@@ -977,7 +988,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "MPI is disabled. Only one core will be used\n");
 #endif
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Execute command: %s\n", command);
-	if (oph_system(command, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores)) {
+	if (oph_system(command, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, priority)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on executing the command\n");
 		if (cmd) {
 			free(cmd);
@@ -994,7 +1005,7 @@ int oph_serve_request(const char *request, const int ncores, const char *session
 		}
 		return OPH_SERVER_ERROR;
 	}
-	if (oph_system(cmd, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores)) {
+	if (oph_system(cmd, error, state, delay, 0, NULL, 0, odb_jobid ? *odb_jobid : 0, _ncores, priority)) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error during remote submission\n");
 		if (cmd) {
 			free(cmd);

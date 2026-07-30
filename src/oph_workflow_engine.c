@@ -84,6 +84,7 @@ typedef struct _oph_request_data {
 	char run;
 	int delay;
 	char *taskname;
+	short priority;
 } oph_request_data;
 
 typedef struct _oph_monitor_data {
@@ -2929,6 +2930,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].light_task_id = j;
 					request_data[k][j].run = wf->tasks[i].run;
 					request_data[k][j].delay = 0;
+					request_data[k][j].priority = i < wf->tasks_num ? 0 : -1;
 
 					nnn =
 					    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
@@ -3005,6 +3007,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->light_task_id = -1;
 				request_data[k]->run = wf->tasks[i].run;
 				request_data[k]->delay = 0;
+				request_data[k]->priority = i < wf->tasks_num ? 0 : -1;
 
 				if (wf->tasks[i].backoff_time > 0) {
 					int retry_num = 0;
@@ -3106,7 +3109,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					 oph_serve_request(request_data[k][j].submission_string, request_data[k][j].ncores, sessionid, request_data[k][j].markerid,
 							   request_data[k][j].error_notification, state, &odb_jobid, &request_data[k][j].task_id, &request_data[k][j].light_task_id,
 							   &request_data[k][j].jobid, request_data[k][j].delay, &json_response, jobid_response, &exit_code, &exit_output,
-							   os_username, project, request_data[k][j].taskname, wid, request_data[k][j].serial)) != OPH_SERVER_OK) {
+							   os_username, project, request_data[k][j].taskname, wid, request_data[k][j].serial, request_data[k][j].priority)) != OPH_SERVER_OK) {
 					if (response == OPH_SERVER_NO_RESPONSE) {
 						if (exit_code != OPH_ODB_STATUS_WAIT) {
 							pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: notification auto-sending with code %s\n", ttype, jobid,
@@ -3732,6 +3735,8 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			oph_server_core_running -= wf->tasks[task_index].ncores;
 			broadcast = 1;
 		}
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: task '%s' is completed, free the resources for other tasks (%d-%d)\n", ttype, jobid, wf->tasks[task_index].name, oph_server_task_running,
+		      oph_server_core_running);
 		if (broadcast)
 			pthread_cond_broadcast(&limit_flag);
 	}

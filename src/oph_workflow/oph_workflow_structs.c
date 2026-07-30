@@ -589,7 +589,7 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 			(*task_out)->light_task_outs[i].status = task->light_tasks[i].status;
 			(*task_out)->light_task_outs[i].response = task->light_tasks[i].response;	// No copy for oph_set!!!
 			task->light_tasks[i].response = NULL;
-			current_proc_time = strtof(task->light_tasks[i].proc_time, NULL);
+			current_proc_time = task->light_tasks[i].proc_time ? strtof(task->light_tasks[i].proc_time, NULL) : 0.0;
 			if (max_proc_time < current_proc_time)
 				max_proc_time = current_proc_time;
 		}

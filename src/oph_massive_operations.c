@@ -236,7 +236,7 @@ int _oph_mf_parse_KV(struct oph_plugin_data *state, oph_workflow *wf, int task_i
 
 		if (!flag)
 			pthread_mutex_unlock(&global_flag);
-		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid, 1);
+		response = oph_serve_request(command, 1, sessionid, markerid, "", state, &_odb_wf_id, &_task_id, NULL, NULL, 0, NULL, NULL, NULL, NULL, os_username, project, taskname, wid, 1, -1);
 		if (!flag)
 			pthread_mutex_lock(&global_flag);
 
