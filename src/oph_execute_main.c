@@ -305,7 +305,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 	pthread_mutex_unlock(&global_flag);
 
 	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "R%d: received a request from %s:%d sent by user '%s'\n", jobid, _host, soap->port, userid ? userid : "NONE");
-	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
+	//pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow:\n%s\n", jobid, jobid, request);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "R%d: assigned label R%d to workflow\n", jobid, jobid);
 
 	if (service_info) {
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
@@ -879,6 +880,8 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						oph_sched_policy = 1;
 					else if (!strncasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO, OPH_MAX_STRING_SIZE))
 						oph_sched_policy = 2;
+					else if (!strncasecmp(value, OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BIBO, OPH_MAX_STRING_SIZE))
+						oph_sched_policy = 3;
 					else {
 						pmesg(LOG_WARNING, __FILE__, __LINE__, "R%d: received wrong scheduler policy '%s'\n", jobid, value);
 						pthread_mutex_unlock(&global_flag);
@@ -1939,6 +1942,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 						break;
 					case 2:
 						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_LIFO);
+						break;
+					case 3:
+						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BIBO);
 						break;
 					default:
 						jsonvalues[jjj] = strdup(OPH_OPERATOR_SERVICE_PARAMETER_SCHED_BASE);

@@ -1412,7 +1412,7 @@ int oph_workflow_store(oph_workflow *workflow, char **jstring, const char *check
 	if (request)
 		json_decref(request);
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Saving the following request:\n%s\n", *jstring);
+	//pmesg(LOG_DEBUG, __FILE__, __LINE__, "Saving the following request:\n%s\n", *jstring);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }

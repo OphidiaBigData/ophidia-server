@@ -210,6 +210,7 @@ typedef struct _oph_workflow_task {
 	char *checkpoint;
 	char massive_expansion;
 	char serial;
+	short branch_id;
 } oph_workflow_task;
 
 /* \brief Struct for the output of an OPH_WORKFLOW light task for massive operations

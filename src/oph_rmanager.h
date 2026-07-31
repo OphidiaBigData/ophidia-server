@@ -36,6 +36,7 @@
 
 typedef struct _oph_detached_task {
 	int id;
+	short priority;
 	struct _oph_detached_task *next;
 } oph_detached_task;
 

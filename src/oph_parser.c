@@ -224,7 +224,7 @@ int oph_parse_query(oph_argument **args, unsigned int *counter, const char *task
 			*args = tmp;
 		}
 
-		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "New pair added '%s=%s'\n", tmp->key, tmp->value);
+		//pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "New pair added '%s=%s'\n", tmp->key, tmp->value);
 
 		(*counter)++;
 

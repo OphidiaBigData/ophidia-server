@@ -1532,6 +1532,11 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 				pmesg_safe(flag, LOG_WARNING, __FILE__, __LINE__, "Error in processing task '%s'.\n", wf->tasks[i].name);
 				break;
 			}
+			short max = 0;
+			for (j = 0; j < old_tasks_num; ++j)
+				if (max < wf->tasks[j].branch_id)
+					max = wf->tasks[j].branch_id;
+			max++;
 			// Fill new tasks
 			for (j = 0; j < new_branch_num; ++j) {
 				for (kk = kkk = 0; kk < replied_num; kkk++) {
@@ -1545,6 +1550,7 @@ int oph_workflow_parallel_fco(oph_workflow *wf, int nesting_level, struct oph_pl
 						if (!j)
 							new_index[kkk] = kk;
 						kk++;
+						wf->tasks[kkk].branch_id = max + j;
 					}
 				}
 				if (kk < replied_num)
@@ -2930,7 +2936,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 					request_data[k][j].light_task_id = j;
 					request_data[k][j].run = wf->tasks[i].run;
 					request_data[k][j].delay = 0;
-					request_data[k][j].priority = i < wf->tasks_num ? 0 : -1;
+					request_data[k][j].priority = i < wf->tasks_num ? wf->tasks[i].branch_id : -1;
 
 					nnn =
 					    1 + snprintf(NULL, 0, OPH_WORKFLOW_BASE_NOTIFICATION, wf->idjob, request_data[k][j].task_id, request_data[k][j].light_task_id,
@@ -3007,7 +3013,7 @@ int oph_workflow_execute(struct oph_plugin_data *state, char ttype, int jobid, o
 				request_data[k]->light_task_id = -1;
 				request_data[k]->run = wf->tasks[i].run;
 				request_data[k]->delay = 0;
-				request_data[k]->priority = i < wf->tasks_num ? 0 : -1;
+				request_data[k]->priority = i < wf->tasks_num ? wf->tasks[i].branch_id : -1;
 
 				if (wf->tasks[i].backoff_time > 0) {
 					int retry_num = 0;
@@ -3518,14 +3524,13 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	oph_argument *args = NULL, *aitem;
 	unsigned int ii, counter;
 
-	if (oph_parse_query(&args, &counter, data))	// Parse notification string
-	{
+	if (oph_parse_query(&args, &counter, data)) {
 		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "%c%d: error in parsing '%s'\n", ttype, jobid, data);
 		*response = OPH_SERVER_SYSTEM_ERROR;
 		return SOAP_OK;
 	}
 
-	char *ctmp, *sessionid = NULL;
+	char *sessionid = NULL;
 	int i, j, odb_jobid = -1, odb_status = -1, odb_parentid = -1, task_index = -1, light_task_index = -1, light_task_index_orig = -1, marker_id = -1, outputs_num = 0;
 #ifdef OPH_OPENID_SUPPORT
 	char *access_token = NULL, *refresh_token = NULL, *userinfo = NULL;
@@ -3541,40 +3546,42 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 			oph_cleanup_args(&args);
 			return SOAP_OK;
 		}
-		ctmp = aitem->value;
 		outputs_index[ii] = 0;
-		if (!strncmp(aitem->key, OPH_ARG_JOBID, OPH_MAX_STRING_SIZE))
-			odb_jobid = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_STATUS, OPH_MAX_STRING_SIZE))
-			odb_status = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_PARENTID, OPH_MAX_STRING_SIZE))
-			odb_parentid = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_TASKINDEX, OPH_MAX_STRING_SIZE))
-			task_index = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_LIGHTTASKINDEX, OPH_MAX_STRING_SIZE))
-			light_task_index = light_task_index_orig = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_SESSIONID, OPH_MAX_STRING_SIZE))
-			sessionid = strdup(ctmp);
-		else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
-			marker_id = strtol(ctmp, NULL, 10);
-		else if (!strncmp(aitem->key, OPH_ARG_INFO, OPH_MAX_STRING_SIZE)) {
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: %s\n", ttype, jobid, ctmp);
-			if (sessionid)
-				free(sessionid);
-			oph_cleanup_args(&args);
-			return SOAP_OK;
-		}
+		if (!strncmp(aitem->key, OPH_ARG_STATUS, OPH_MAX_STRING_SIZE)) {
+			odb_status = strtol(aitem->value, NULL, 10);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: found pair '%s=%s'\n", ttype, jobid, aitem->key, oph_odb_convert_status_to_str(odb_status));
+		} else {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%c%d: found pair '%s=%s'\n", ttype, jobid, aitem->key, aitem->value);
+			if (!strncmp(aitem->key, OPH_ARG_JOBID, OPH_MAX_STRING_SIZE))
+				odb_jobid = strtol(aitem->value, NULL, 10);
+			else if (!strncmp(aitem->key, OPH_ARG_PARENTID, OPH_MAX_STRING_SIZE))
+				odb_parentid = strtol(aitem->value, NULL, 10);
+			else if (!strncmp(aitem->key, OPH_ARG_TASKINDEX, OPH_MAX_STRING_SIZE))
+				task_index = strtol(aitem->value, NULL, 10);
+			else if (!strncmp(aitem->key, OPH_ARG_LIGHTTASKINDEX, OPH_MAX_STRING_SIZE))
+				light_task_index = light_task_index_orig = strtol(aitem->value, NULL, 10);
+			else if (!strncmp(aitem->key, OPH_ARG_SESSIONID, OPH_MAX_STRING_SIZE))
+				sessionid = strdup(aitem->value);
+			else if (!strncmp(aitem->key, OPH_ARG_MARKERID, OPH_MAX_STRING_SIZE))
+				marker_id = strtol(aitem->value, NULL, 10);
+			else if (!strncmp(aitem->key, OPH_ARG_INFO, OPH_MAX_STRING_SIZE)) {
+				if (sessionid)
+					free(sessionid);
+				oph_cleanup_args(&args);
+				return SOAP_OK;
+			}
 #ifdef OPH_OPENID_SUPPORT
-		else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
-			access_token = ctmp;
-		else if (!strncmp(aitem->key, OPH_ARG_REFRESH_TOKEN, OPH_MAX_STRING_SIZE))
-			refresh_token = ctmp;
-		else if (!strncmp(aitem->key, OPH_ARG_USERINFO, OPH_MAX_STRING_SIZE))
-			userinfo = ctmp;
+			else if (!strncmp(aitem->key, OPH_ARG_ACCESS_TOKEN, OPH_MAX_STRING_SIZE))
+				access_token = aitem->value;
+			else if (!strncmp(aitem->key, OPH_ARG_REFRESH_TOKEN, OPH_MAX_STRING_SIZE))
+				refresh_token = aitem->value;
+			else if (!strncmp(aitem->key, OPH_ARG_USERINFO, OPH_MAX_STRING_SIZE))
+				userinfo = aitem->value;
 #endif
-		else {
-			outputs_num++;
-			outputs_index[ii] = 1;
+			else {
+				outputs_num++;
+				outputs_index[ii] = 1;
+			}
 		}
 	}
 
