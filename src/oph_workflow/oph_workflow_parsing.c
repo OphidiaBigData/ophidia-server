@@ -402,7 +402,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		if (type) {
-			if (strcmp(type, OPH_TYPE_OPHIDIA) && strcmp(type, OPH_TYPE_CDO) && strcmp(type, OPH_TYPE_GENERIC) && strcmp(type, OPH_TYPE_CONTROL)) {
+			if (strcmp(type, OPH_TYPE_OPHIDIA) && strcmp(type, OPH_TYPE_CDO) && strcmp(type, OPH_TYPE_GENERIC) && strcmp(type, OPH_TYPE_CONTROL) && strcmp(type, OPH_TYPE_DISCOVERY)) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -968,19 +968,36 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	}
 	// Support for non-Ophidia operators
 	char *tmp = NULL;
+	int added_tasks = 1;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
+		// Handle task for discovery
+		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_DISCOVERY)) {
+			free((*workflow)->tasks[i].type);
+			(*workflow)->tasks[i].type = strdup(OPH_TYPE_GENERIC);
+			for (j = 0; j < (*workflow)->tasks[i].arguments_num; ++j)
+				if ((*workflow)->tasks[i].arguments_keys[j] && !strcmp((*workflow)->tasks[i].arguments_keys[j], OPH_WORKFLOW_ARG_INPUT)) {
+					if ((*workflow)->tasks[i].arguments_values[j] && strncmp((*workflow)->tasks[i].arguments_values[j], OPH_PREFIX_CATALOG, strlen(OPH_PREFIX_CATALOG))) {
+						if (asprintf(&tmp, "%s:%s", OPH_PREFIX_CATALOG, (*workflow)->tasks[i].arguments_values[j]) <= 0)
+							break;
+						free((*workflow)->tasks[i].arguments_values[j]);
+						(*workflow)->tasks[i].arguments_values[j] = tmp;
+						added_tasks++;
+					}
+					break;
+				}
+		}
 		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_CDO) || !strcmp((*workflow)->tasks[i].type, OPH_TYPE_GENERIC)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
 			int kk = (*workflow)->tasks[i].arguments_num, kkk = kk;
-			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, 1) || (kk != 1 + (*workflow)->tasks[i].arguments_num)) {
+			if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_keys), &kk, added_tasks) || (kk != added_tasks + (*workflow)->tasks[i].arguments_num)) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			} else if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_values), &kkk, 1) || (kk != kkk)) {
+			} else if (oph_realloc_vector(&((*workflow)->tasks[i].arguments_values), &kkk, added_tasks) || (kk != kkk)) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-			} else if (oph_realloc_vector2(&((*workflow)->tasks[i].arguments_lists), &((*workflow)->tasks[i].arguments_num), 1) || (kk != (*workflow)->tasks[i].arguments_num)) {
+			} else if (oph_realloc_vector2(&((*workflow)->tasks[i].arguments_lists), &((*workflow)->tasks[i].arguments_num), added_tasks) || (kk != (*workflow)->tasks[i].arguments_num)) {
 				oph_workflow_free(*workflow);
 				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to reallocate vector\n");
 				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
@@ -989,6 +1006,12 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			(*workflow)->tasks[i].arguments_keys[kk] = strdup(OPH_ARG_COMMAND);
 			(*workflow)->tasks[i].arguments_values[kk] = strdup((*workflow)->tasks[i].operator);
 			(*workflow)->tasks[i].arguments_lists[kk] = NULL;
+			if (added_tasks > 1) {
+				kk--;
+				(*workflow)->tasks[i].arguments_keys[kk] = strdup(OPH_ARG_EXTRACT);
+				(*workflow)->tasks[i].arguments_values[kk] = strdup(OPH_WORKFLOW_YES);
+				(*workflow)->tasks[i].arguments_lists[kk] = NULL;
+			}
 
 			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].type) <= 0) {
 				oph_workflow_free(*workflow);

@@ -109,9 +109,13 @@
 #define OPH_OPERATOR_INPUT		"oph_input"
 
 #define OPH_ARG_COMMAND			"command"
+#define OPH_ARG_EXTRACT			"extract"
 #define OPH_TYPE_OPHIDIA		"ophidia"
 #define OPH_TYPE_CDO			"cdo"
 #define OPH_TYPE_GENERIC		"generic"
 #define OPH_TYPE_CONTROL		"control"
+#define OPH_TYPE_DISCOVERY		"discovery"
+
+#define OPH_PREFIX_CATALOG		"catalog"
 
 #endif				//__OPH_WORKFLOW_DEFINE_H

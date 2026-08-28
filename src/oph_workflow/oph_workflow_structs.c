@@ -530,13 +530,13 @@ char *oph_workflow_output_of(oph_workflow_task *task)
 	return (value ? strdup(value) : NULL);
 }
 
-int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **task_out)
+int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out **pointer_to_task_out)
 {
-	if (!task || !task_out)
+	if (!task || !pointer_to_task_out)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	*task_out = (oph_workflow_task_out *) malloc(sizeof(oph_workflow_task_out));
-	if (!(*task_out))
+	oph_workflow_task_out *task_out = *pointer_to_task_out = (oph_workflow_task_out *) malloc(sizeof(oph_workflow_task_out));
+	if (!task_out)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	time_t nowtime;
@@ -547,56 +547,56 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	if (localtime_r(&nowtime, &nowtm))
 		strftime(buffer, 128, "%Y-%m-%d %H:%M:%S", &nowtm);
 
-	(*task_out)->name = strdup(task->name);
-	(*task_out)->markerid = task->markerid;
-	(*task_out)->status = task->status;
-	(*task_out)->light_tasks_num = task->light_tasks_num;
-	(*task_out)->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
-	(*task_out)->input = oph_workflow_input_of(task);
-	if (!(*task_out)->input)
-		(*task_out)->input = strdup("");
+	task_out->name = strdup(task->name);
+	task_out->markerid = task->markerid;
+	task_out->status = task->status;
+	task_out->light_tasks_num = task->light_tasks_num;
+	task_out->response = task->response ? strdup(task->response) : NULL;	// The copy is used for oph_set
+	task_out->input = oph_workflow_input_of(task);
+	if (!task_out->input)
+		task_out->input = strdup("");
 	if (task->outputs_values && (task->outputs_file >= 0) && task->outputs_values[task->outputs_file])
-		(*task_out)->output = strdup(task->outputs_values[task->outputs_file]);
+		task_out->output = strdup(task->outputs_values[task->outputs_file]);
 	else if ((manual_output = oph_workflow_output_of(task))) {
-		(*task_out)->output = manual_output;
+		task_out->output = manual_output;
 	} else
-		(*task_out)->output = strdup("");
-	(*task_out)->begin_time = strdup(task->begin_time ? task->begin_time : "");
-	(*task_out)->end_time = strdup(buffer);
-	(*task_out)->proc_time = strdup(task->proc_time ? task->proc_time : "0.0");
-	(*task_out)->arguments = oph_workflow_arguments_of_task(task);
-	(*task_out)->next = NULL;
+		task_out->output = strdup("");
+	task_out->begin_time = strdup(task->begin_time ? task->begin_time : "");
+	task_out->end_time = strdup(buffer);
+	task_out->proc_time = strdup(task->proc_time ? task->proc_time : "0.0");
+	task_out->arguments = oph_workflow_arguments_of_task(task);
+	task_out->next = NULL;
 
 	if (!task->output)
-		task->output = strdup((*task_out)->output);
+		task->output = strdup(task_out->output);
 	if (!task->end_time)
-		task->end_time = strdup((*task_out)->end_time);
+		task->end_time = strdup(task_out->end_time);
 	if (!task->proc_time)
-		task->proc_time = strdup((*task_out)->proc_time);
+		task->proc_time = strdup(task_out->proc_time);
 
 	if (task->light_tasks_num) {
-		(*task_out)->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));
-		if (!((*task_out)->light_task_outs)) {
-			free(*task_out);
-			*task_out = NULL;
+		task_out->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));
+		if (!(task_out->light_task_outs)) {
+			free(task_out);
+			*pointer_to_task_out = NULL;
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 
 		int i;
-		float max_proc_time = strtof((*task_out)->proc_time, NULL), current_proc_time;
+		float max_proc_time = strtof(task_out->proc_time, NULL), current_proc_time;
 		for (i = 0; i < task->light_tasks_num; ++i) {
-			(*task_out)->light_task_outs[i].markerid = task->light_tasks[i].markerid;
-			(*task_out)->light_task_outs[i].status = task->light_tasks[i].status;
-			(*task_out)->light_task_outs[i].response = task->light_tasks[i].response;	// No copy for oph_set!!!
+			task_out->light_task_outs[i].markerid = task->light_tasks[i].markerid;
+			task_out->light_task_outs[i].status = task->light_tasks[i].status;
+			task_out->light_task_outs[i].response = task->light_tasks[i].response;	// No copy for oph_set!!!
 			task->light_tasks[i].response = NULL;
 			current_proc_time = task->light_tasks[i].proc_time ? strtof(task->light_tasks[i].proc_time, NULL) : 0.0;
 			if (max_proc_time < current_proc_time)
 				max_proc_time = current_proc_time;
 		}
-		free((*task_out)->proc_time);
-		i = asprintf(&(*task_out)->proc_time, "%f", max_proc_time);
+		free(task_out->proc_time);
+		i = asprintf(&task_out->proc_time, "%f", max_proc_time);
 	} else
-		(*task_out)->light_task_outs = NULL;
+		task_out->light_task_outs = NULL;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
