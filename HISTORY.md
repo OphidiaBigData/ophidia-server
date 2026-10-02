@@ -3,6 +3,7 @@
 
 ### Fixed:
 
+- Avoid management operators to be massive
 - Bug in handling nested loops
 - Bug in handling threads
 - Bug in listing unselected tasks

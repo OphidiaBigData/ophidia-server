@@ -860,6 +860,9 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 	int i, j = -1;
 	oph_workflow_task *task = wf->tasks + task_index;
 
+	if (oph_is_known_operator(task->operator) == 1)	// Management operators cannot be massive
+		return OPH_SERVER_OK;
+
 	char auto_retry = oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1);
 	char manual_retry = task->residual_retry_num && (task->retry_num > 1);
 	if (auto_retry || manual_retry) {

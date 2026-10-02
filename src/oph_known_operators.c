@@ -137,7 +137,9 @@ int oph_is_known_operator(const char *operator_name)
 {
 	if (!operator_name)
 		return 0;
-	if (oph_is_flow_control_operator(operator_name))
-		return 1;
-	return oph_is_management_operator(operator_name);
+	int result = oph_is_management_operator(operator_name);
+	if (result)
+		return result;
+	result = oph_is_flow_control_operator(operator_name);
+	return result;
 }

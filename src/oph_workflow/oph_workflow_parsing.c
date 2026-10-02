@@ -968,8 +968,9 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 	}
 	// Support for non-Ophidia operators
 	char *tmp = NULL;
-	int added_tasks = 1;
+	int added_tasks;
 	for (i = 0; i < (*workflow)->tasks_num; i++) {
+		added_tasks = 1;
 		// Handle task for discovery
 		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_DISCOVERY)) {
 			free((*workflow)->tasks[i].type);
@@ -981,10 +982,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 							break;
 						free((*workflow)->tasks[i].arguments_values[j]);
 						(*workflow)->tasks[i].arguments_values[j] = tmp;
-						added_tasks++;
 					}
 					break;
 				}
+			added_tasks++;
 		}
 		if (!strcmp((*workflow)->tasks[i].type, OPH_TYPE_CDO) || !strcmp((*workflow)->tasks[i].type, OPH_TYPE_GENERIC)) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
