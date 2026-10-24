@@ -3708,8 +3708,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	}
 
 	char session_code[OPH_MAX_STRING_SIZE], *tmp = NULL, *tmp2 = NULL, tmp3[OPH_MAX_STRING_SIZE], *my_output_json = NULL, *failed_task = NULL;
-	int res, update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 0, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0, tmp_size =
-	    0;
+	int update_wf_data = 0, update_task_data = 0, update_light_task_data = 0, task_completed = 0, final = 0, retry_task_execution = 0, check_for_constraint = 0, connection_up = 0, tmp_size = 0;
 	oph_job_info *item = NULL, *prev = NULL;
 	ophidiadb oDB;
 	oph_workflow *wf = NULL;
@@ -3734,6 +3733,42 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 	if (sessionid)
 		free(sessionid);
 
+	// Check for possible rescheduling due to OPH_FOR
+	if (task_index >= wf->tasks_num) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) not found. Skipping the notification\n", ttype, jobid, odb_jobid, task_index);
+		pthread_mutex_unlock(&global_flag);
+		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		oph_output_data_free(outputs_keys, outputs_num);
+		oph_output_data_free(outputs_values, outputs_num);
+		return SOAP_OK;
+	}
+	if (light_task_index >= wf->tasks[task_index].light_tasks_num) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) (light_task %d) not found. Check it as final job...\n", ttype, jobid, odb_jobid, task_index, light_task_index);
+		task_index = wf->tasks_num;
+		if (light_task_index >= wf->tasks[task_index].light_tasks_num) {
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: final job %d (task %d) (light_task %d) not found. Skipping the notification\n", ttype, jobid, odb_jobid, task_index,
+			      light_task_index);
+			pthread_mutex_unlock(&global_flag);
+			*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+			oph_output_data_free(outputs_keys, outputs_num);
+			oph_output_data_free(outputs_values, outputs_num);
+			return SOAP_OK;
+		}
+	}
+	int res = 0;
+	if (light_task_index >= 0) {
+		if (odb_jobid != wf->tasks[task_index].light_tasks[light_task_index].idjob)
+			res = 1;
+	} else if (odb_jobid != wf->tasks[task_index].idjob)
+		res = 1;
+	if (res) {
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) (light_task %d) not found. Skipping the notification\n", ttype, jobid, odb_jobid, task_index, light_task_index);
+		pthread_mutex_unlock(&global_flag);
+		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
+		oph_output_data_free(outputs_keys, outputs_num);
+		oph_output_data_free(outputs_values, outputs_num);
+		return SOAP_OK;
+	}
 	// Update limits: known operators do not use resources
 	if ((status >= OPH_ODB_STATUS_COMPLETED) && !oph_is_known_operator(wf->tasks[task_index].operator)) {
 		char broadcast = 0;
