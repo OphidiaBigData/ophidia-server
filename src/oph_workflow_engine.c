@@ -3734,7 +3734,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		free(sessionid);
 
 	// Check for possible rescheduling due to OPH_FOR
-	if (task_index >= wf->tasks_num) {
+	if (task_index > wf->tasks_num) {
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) not found. Skipping the notification\n", ttype, jobid, odb_jobid, task_index);
 		pthread_mutex_unlock(&global_flag);
 		*response = OPH_SERVER_WRONG_PARAMETER_ERROR;
@@ -3743,7 +3743,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 		return SOAP_OK;
 	}
 	if (light_task_index >= wf->tasks[task_index].light_tasks_num) {
-		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) (light_task %d) not found. Check it as final job...\n", ttype, jobid, odb_jobid, task_index, light_task_index);
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: job %d (task %d) (light_task %d) not found. Check if it is a final job...\n", ttype, jobid, odb_jobid, task_index, light_task_index);
 		task_index = wf->tasks_num;
 		if (light_task_index >= wf->tasks[task_index].light_tasks_num) {
 			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: final job %d (task %d) (light_task %d) not found. Skipping the notification\n", ttype, jobid, odb_jobid, task_index,
