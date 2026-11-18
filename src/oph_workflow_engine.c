@@ -1034,6 +1034,8 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					task->light_tasks[i].output = NULL;
 					task->light_tasks[i].end_time = NULL;
 					task->light_tasks[i].proc_time = NULL;
+					task->light_tasks[i].checksum = NULL;
+					task->light_tasks[i].tracking_id = NULL;
 					for (j = 0; j < task->arguments_num; ++j) {
 						if (!task->arguments_keys[j]) {
 							pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: unable to set arguments of light tasks from task '%s'\n", ttype, jobid, task->name);
@@ -4017,6 +4019,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 							} else if (!strncmp(outputs_keys[i], OPH_ARG_TIME, OPH_MAX_STRING_SIZE)) {
 								wf->tasks[task_index].light_tasks[light_task_index].proc_time = strdup(outputs_values[i]);
+							} else if (!strncmp(outputs_keys[i], OPH_ARG_CHECKSUM, OPH_MAX_STRING_SIZE)) {
+								wf->tasks[task_index].light_tasks[light_task_index].checksum = strdup(outputs_values[i]);
+							} else if (!strncmp(outputs_keys[i], OPH_ARG_TRACKING_ID, OPH_MAX_STRING_SIZE)) {
+								wf->tasks[task_index].light_tasks[light_task_index].tracking_id = strdup(outputs_values[i]);
 							} else if (!strncmp(outputs_keys[i], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE))
 								pmesg(LOG_WARNING, __FILE__, __LINE__, "%c%d: found an output option '%s' for the massive operation '%s': skipping\n", ttype, jobid,
 								      OPH_ARG_INPUT, wf->tasks[task_index].name);
@@ -4195,11 +4201,11 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								is_extended = 0;
 								break;
 							case 1:	// EXTENDED
-								num_fields = 12;
+								num_fields = 14;
 								is_compact = 0;
 								break;
 							default:
-								num_fields = 8;
+								num_fields = 10;
 						}
 
 						success = 0;
@@ -4537,6 +4543,28 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										free(jsonkeys);
 									break;
 								}
+								jjj++;
+								jsonkeys[jjj] = strdup("CHECKSUM");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
+								jjj++;
+								jsonkeys[jjj] = strdup("TRACKING ID");
+								if (!jsonkeys[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < jjj; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									break;
+								}
 							}
 							fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
 							if (!fieldtypes) {
@@ -4715,6 +4743,38 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 								}
 								jjj++;
 								fieldtypes[jjj] = strdup(OPH_JSON_FLOAT);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+								if (!fieldtypes[jjj]) {
+									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+									for (iii = 0; iii < num_fields; iii++)
+										if (jsonkeys[iii])
+											free(jsonkeys[iii]);
+									if (jsonkeys)
+										free(jsonkeys);
+									for (iii = 0; iii < jjj; iii++)
+										if (fieldtypes[iii])
+											free(fieldtypes[iii]);
+									if (fieldtypes)
+										free(fieldtypes);
+									break;
+								}
+								jjj++;
+								fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 								if (!fieldtypes[jjj]) {
 									pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 									for (iii = 0; iii < num_fields; iii++)
@@ -4942,6 +5002,30 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 										}
 										if (strlen(jsonvalues[jjj]))
 											oph_workflow_var_substitute(wf, task_index, i, jsonvalues + jjj, NULL, NULL);
+										jjj++;
+										jsonvalues[jjj] =
+										    strdup(wf->tasks[task_index].light_tasks[i].checksum ? wf->tasks[task_index].light_tasks[i].checksum : "");
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
+										jjj++;
+										jsonvalues[jjj] =
+										    strdup(wf->tasks[task_index].light_tasks[i].tracking_id ? wf->tasks[task_index].light_tasks[i].tracking_id : "");
+										if (!jsonvalues[jjj]) {
+											pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: Error allocating memory\n", jobid);
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
 									}
 									if (oph_json_add_grid_row_unsafe(oper_json, OPH_JSON_OBJKEY_MASSIVE_LIST, jsonvalues)) {
 										pmesg(LOG_ERROR, __FILE__, __LINE__, "N%d: ADD GRID ROW error\n", jobid);
@@ -5264,6 +5348,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							oph_session_report_append_link(session_code, wf->workflowid, NULL, linkname, outputs_values[i], 'L');
 						} else if (!strncmp(outputs_keys[i], OPH_ARG_TIME, OPH_MAX_STRING_SIZE)) {
 							wf->tasks[task_index].proc_time = strdup(outputs_values[i]);
+						} else if (!strncmp(outputs_keys[i], OPH_ARG_CHECKSUM, OPH_MAX_STRING_SIZE)) {
+							wf->tasks[task_index].checksum = strdup(outputs_values[i]);
+						} else if (!strncmp(outputs_keys[i], OPH_ARG_TRACKING_ID, OPH_MAX_STRING_SIZE)) {
+							wf->tasks[task_index].tracking_id = strdup(outputs_values[i]);
 						} else if (!strncmp(outputs_keys[i], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE)) {
 							for (j = 0; j < wf->tasks[task_index].arguments_num; ++j)
 								if (!strncmp(wf->tasks[task_index].arguments_keys[j], OPH_ARG_INPUT, OPH_MAX_STRING_SIZE)
@@ -5875,6 +5963,14 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					if (task->proc_time) {
 						free(task->proc_time);
 						task->proc_time = NULL;
+					}
+					if (task->checksum) {
+						free(task->checksum);
+						task->checksum = NULL;
+					}
+					if (task->tracking_id) {
+						free(task->tracking_id);
+						task->tracking_id = NULL;
 					}
 				} else {
 					if (oph_realloc_vector(&(task->arguments_keys), &kk, 1) || (kk != 1 + task->arguments_num)) {
@@ -6554,10 +6650,10 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 						num_fields = 4;
 						break;
 					case 1:	// EXTENDED
-						num_fields = 14;
+						num_fields = 16;
 						break;
 					default:
-						num_fields = 10;
+						num_fields = 12;
 				}
 				jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 				if (!jsonkeys) {
@@ -6714,6 +6810,28 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 					}
 					jjj++;
 					jsonkeys[jjj] = strdup("ARGUMENTS");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("CHECKSUM");
+					if (!jsonkeys[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < jjj; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						break;
+					}
+					jjj++;
+					jsonkeys[jjj] = strdup("TRACKING ID");
 					if (!jsonkeys[jjj]) {
 						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
 						for (iii = 0; iii < jjj; iii++)
@@ -6963,6 +7081,38 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							free(fieldtypes);
 						break;
 					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
+					jjj++;
+					fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+					if (!fieldtypes[jjj]) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+						for (iii = 0; iii < num_fields; iii++)
+							if (jsonkeys[iii])
+								free(jsonkeys[iii]);
+						if (jsonkeys)
+							free(jsonkeys);
+						for (iii = 0; iii < jjj; iii++)
+							if (fieldtypes[iii])
+								free(fieldtypes[iii]);
+						if (fieldtypes)
+							free(fieldtypes);
+						break;
+					}
 				}
 				if (oph_json_add_grid(oper_json, OPH_JSON_OBJKEY_WORKFLOW_LIST, "Workflow Task List", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID error\n", ttype, jobid);
@@ -7173,6 +7323,28 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 							/* // Not necessary since the substituion has been done on saving the output
 							   if (strlen(jsonvalues[jjj]))
 							   oph_workflow_var_substitute(wf, wtmp->task_index, -1, jsonvalues + jjj, NULL, NULL); */
+							jjj++;
+							jsonvalues[jjj] = strdup(wtmp->checksum);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
+							jjj++;
+							jsonvalues[jjj] = strdup(wtmp->tracking_id);
+							if (!jsonvalues[jjj]) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: Error allocating memory\n", ttype, jobid);
+								for (iii = 0; iii < jjj; iii++)
+									if (jsonvalues[iii])
+										free(jsonvalues[iii]);
+								if (jsonvalues)
+									free(jsonvalues);
+								break;
+							}
 						}
 						if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_WORKFLOW_LIST, jsonvalues)) {
 							pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%c%d: ADD GRID ROW error\n", ttype, jobid);

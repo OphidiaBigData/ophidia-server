@@ -202,6 +202,14 @@ int oph_workflow_free(oph_workflow *workflow)
 			free(workflow->output->arguments);
 			workflow->output->arguments = NULL;
 		}
+		if (workflow->output->checksum) {
+			free(workflow->output->checksum);
+			workflow->output->checksum = NULL;
+		}
+		if (workflow->output->tracking_id) {
+			free(workflow->output->tracking_id);
+			workflow->output->tracking_id = NULL;
+		}
 		free(workflow->output);
 		workflow->output = tmp;
 	}
@@ -328,6 +336,14 @@ int oph_workflow_task_free(oph_workflow_task *task)
 		free(task->checkpoint);
 		task->checkpoint = NULL;
 	}
+	if (task->checksum) {
+		free(task->checksum);
+		task->checksum = NULL;
+	}
+	if (task->tracking_id) {
+		free(task->tracking_id);
+		task->tracking_id = NULL;
+	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
@@ -406,6 +422,14 @@ int oph_workflow_light_task_free(oph_workflow_light_task *light_task)
 	if (light_task->proc_time) {
 		free(light_task->proc_time);
 		light_task->proc_time = NULL;
+	}
+	if (light_task->checksum) {
+		free(light_task->checksum);
+		light_task->checksum = NULL;
+	}
+	if (light_task->tracking_id) {
+		free(light_task->tracking_id);
+		light_task->tracking_id = NULL;
 	}
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
@@ -565,6 +589,8 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 	task_out->end_time = strdup(buffer);
 	task_out->proc_time = strdup(task->proc_time ? task->proc_time : "0.0");
 	task_out->arguments = oph_workflow_arguments_of_task(task);
+	task_out->checksum = strdup(task->checksum ? task->checksum : "");
+	task_out->tracking_id = strdup(task->tracking_id ? task->tracking_id : "");
 	task_out->next = NULL;
 
 	if (!task->output)
@@ -573,6 +599,10 @@ int oph_workflow_save_task_output(oph_workflow_task *task, oph_workflow_task_out
 		task->end_time = strdup(task_out->end_time);
 	if (!task->proc_time)
 		task->proc_time = strdup(task_out->proc_time);
+	if (!task->checksum)
+		task->checksum = strdup(task_out->checksum);
+	if (!task->tracking_id)
+		task->tracking_id = strdup(task_out->tracking_id);
 
 	if (task->light_tasks_num) {
 		task_out->light_task_outs = (oph_workflow_light_task_out *) malloc(task->light_tasks_num * sizeof(oph_workflow_light_task_out));

@@ -14,7 +14,7 @@
 - Argument 'log_level' to OPH_SERVICE
 - Setting of task scheduler policy
 - Argument 'ndbms' to OPH_CLUSTER
-- Columns 'PROC TIME' and 'ARGUMENTS' to 'extended_output'
+- Columns 'PROC TIME', 'ARGUMENTS', 'CHECKSUM' and 'TRACKING_ID' to 'extended_output'
 - Option 'oph_fastdelete'
 - Options to refer to substrings of the value of workflow variables
 

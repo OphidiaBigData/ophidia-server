@@ -72,6 +72,8 @@
 #define OPH_ARG_TIME_FILTER "time_filter"
 #define OPH_ARG_INPUT "input"
 #define OPH_ARG_TIME "time"
+#define OPH_ARG_CHECKSUM "checksum"
+#define OPH_ARG_TRACKING_ID "trackingid"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
